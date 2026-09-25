@@ -39,7 +39,7 @@ resources:
         # "Advanced: on-behalf-of-user auth" section of agent_app/README.md.
         - name: 'llm_endpoint'
           serving_endpoint:
-            name: 'databricks-claude-sonnet-4'
+            name: 'databricks-qwen35-122b-a10b'
             permission: 'CAN_QUERY'
 
 targets:

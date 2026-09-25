@@ -41,7 +41,7 @@ def _notify_chat_app(thread_id: str) -> None:
 
 
 mlflow.langchain.autolog()
-_llm = ChatDatabricks(endpoint="databricks-claude-sonnet-4")
+_llm = ChatDatabricks(endpoint="databricks-qwen35-122b-a10b")
 LAKEBASE_INSTANCE_NAME = os.getenv("LAKEBASE_INSTANCE_NAME", "")
 # Dedicated Postgres schema for the LangGraph checkpointer. Using a
 # per-accelerator schema avoids the Postgres 14+ default where only the DB
