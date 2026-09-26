@@ -16,12 +16,27 @@ resources:
       parameters:
         - name: catalog
           default: ${var.catalog}
+        - name: schema_prefix
+          default: bank
         - name: landing_path
           default: /Volumes/${var.catalog}/bank_bronze/landing
+        - name: source
+          default: archive        # s3: copy from Factored's bucket | archive: extract uploaded .tar.gz | landing: as is
+        - name: tables
+          default: all            # comma-separated subset to sync from S3
         - name: reset
-          default: "false"
+          default: "false"        # true: rebuild bronze from scratch (drops bronze tables + checkpoints)
+        - name: fail_on_critical
+          default: "true"
       tasks:
+        - task_key: acquire
+          notebook_task:
+            notebook_path: ./pipeline/00_acquire.py
         - task_key: bronze
+          depends_on: [{task_key: acquire}]
+          # Auto Loader (addNewColumns) stops once when a new source column appears; the retry resumes with it.
+          max_retries: 2
+          min_retry_interval_millis: 10000
           notebook_task:
             notebook_path: ./pipeline/01_bronze.py
         - task_key: silver
@@ -32,6 +47,18 @@ resources:
           depends_on: [{task_key: silver}]
           notebook_task:
             notebook_path: ./pipeline/03_gold.py
+
+    # TEST FIXTURE: proves incremental/late/duplicate/schema-evolution handling in isolated test_update_* schemas.
+    bank_data_update_test:
+      name: bank-assistant-data-update-test
+      max_concurrent_runs: 1
+      parameters:
+        - name: catalog
+          default: ${var.catalog}
+      tasks:
+        - task_key: update_correctness
+          notebook_task:
+            notebook_path: ./pipeline/90_test_update_correctness.py
 
 sync:
   exclude:

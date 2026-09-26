@@ -24,8 +24,14 @@ as_of = spark.sql("SELECT to_date(max(transaction_date)) FROM bank_silver.transa
 print(f"as_of_date = {as_of}")
 
 
+# Credit products, in the source's Spanish labels (real data) and English labels (dummy data).
+CREDIT_TYPES = ("Tarjeta Crédito", "Préstamo Personal", "Préstamo Hipotecario",
+                "Credit Card", "Personal Loan", "Mortgage")
+CREDIT_SQL = "(" + ", ".join(f"'{t}'" for t in CREDIT_TYPES) + ")"
+
+
 def sql(query: str):
-    return spark.sql(query.replace("${bank.as_of}", str(as_of)))
+    return spark.sql(query.replace("${bank.as_of}", str(as_of)).replace("${credit_types}", CREDIT_SQL))
 
 # COMMAND ----------
 
@@ -54,7 +60,8 @@ WITH rate AS (
   QUALIFY row_number() OVER (PARTITION BY source_currency ORDER BY date DESC) = 1
 )
 SELECT
-  p.product_id, p.customer_id, p.product_type, p.product_status, p.currency,
+  p.product_id, p.customer_id, p.product_type, p.product_type IN ${credit_types} AS is_credit_product,
+  p.product_status, p.currency,
   right(p.product_number, 4) AS product_number_last4,
   p.current_balance, p.credit_limit,
   CASE WHEN p.currency = 'USD' THEN p.current_balance ELSE round(p.current_balance * rate.exchange_rate, 2) END AS current_balance_usd,
@@ -114,8 +121,9 @@ WITH prod AS (
          count(*) AS products_total,
          count_if(product_status = 'Active') AS products_active,
          collect_set(product_type) AS product_types,
-         round(sum(CASE WHEN product_type NOT IN ('Credit Card', 'Personal Loan', 'Mortgage') THEN current_balance_usd END), 2) AS deposit_balance_usd,
-         round(sum(CASE WHEN product_type IN ('Credit Card', 'Personal Loan', 'Mortgage') THEN current_balance_usd END), 2) AS credit_balance_usd,
+         mode(currency) AS primary_currency,
+         round(sum(CASE WHEN NOT is_credit_product THEN current_balance_usd END), 2) AS deposit_balance_usd,
+         round(sum(CASE WHEN is_credit_product THEN current_balance_usd END), 2) AS credit_balance_usd,
          max(coalesce(days_past_due, 0)) AS max_days_past_due,
          count_if(product_status = 'Blocked') AS products_blocked
   FROM bank_gold.customer_products GROUP BY customer_id
@@ -154,7 +162,7 @@ SELECT
   c.customer_id, c.first_name, c.last_name, c.document_type,
   right(c.document_number, 4) AS document_number_last4,
   c.country, c.city, c.state,
-  CASE c.country WHEN 'Mexico' THEN 'MXN' WHEN 'Colombia' THEN 'COP' WHEN 'Argentina' THEN 'ARS' END AS local_currency,
+  prod.primary_currency,  -- from the customer's products: in the real data Mexico operates in USD, not MXN
   c.detected_accent, c.segment, c.customer_status, c.registration_date,
   floor(months_between(to_date('${bank.as_of}'), c.date_of_birth) / 12) AS age,
   c.credit_score, c.estimated_monthly_income, c.accepts_marketing,

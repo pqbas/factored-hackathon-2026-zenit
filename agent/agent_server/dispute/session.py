@@ -22,14 +22,13 @@ import os
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
-# Default fixture: Active customers with recent purchases in data/generate_dummy_data.py (seed 42).
-# Re-point these when the real dataset replaces the dummy one.
+# Default fixture: real customers of the organizer's dataset (Active, no open cases, recent purchases).
 _DEFAULT_SESSIONS = {
-    "demo-mx-1": {"customer_id": "CUS00000113", "expires_at": "2099-01-01T00:00:00Z"},
-    "demo-co-1": {"customer_id": "CUS00000121", "expires_at": "2099-01-01T00:00:00Z"},
-    "demo-ar-1": {"customer_id": "CUS00000452", "expires_at": "2099-01-01T00:00:00Z"},
-    "demo-closed": {"customer_id": "CUS00000002", "expires_at": "2099-01-01T00:00:00Z"},  # customer_status=Closed
-    "demo-expired": {"customer_id": "CUS00000113", "expires_at": "2020-01-01T00:00:00Z"},
+    "demo-mx-1": {"customer_id": "CLI-FLEUCGTWGAHL", "expires_at": "2099-01-01T00:00:00Z"},  # Santiago, México, USD
+    "demo-co-1": {"customer_id": "CLI-7MPS3ZOPSN4Q", "expires_at": "2099-01-01T00:00:00Z"},  # Javier, Colombia, COP
+    "demo-ar-1": {"customer_id": "CLI-714PN0OOE0WX", "expires_at": "2099-01-01T00:00:00Z"},  # Daniela, Argentina, ARS
+    "demo-closed": {"customer_id": "CLI-02Y493OHFA18", "expires_at": "2099-01-01T00:00:00Z"},  # customer_status=Closed
+    "demo-expired": {"customer_id": "CLI-FLEUCGTWGAHL", "expires_at": "2020-01-01T00:00:00Z"},
 }
 
 

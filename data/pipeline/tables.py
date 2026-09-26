@@ -366,3 +366,15 @@ FOREIGN_KEYS: list[tuple[str, str, str, str]] = [
     ("satisfaction_surveys", "interaction_id", "call_center_interactions", "interaction_id"),
     ("complaints", "origin_interaction_id", "call_center_interactions", "interaction_id"),
 ]
+
+
+# Canonical values for columns whose source spelling is inconsistent (the real data mixes "México" and "Mexico").
+VALUE_ALIASES: dict[str, dict[str, str]] = {
+    col: {"Mexico": "México"}
+    for col in ("country", "transaction_country", "target_country", "country_of_origin", "ip_country", "open_country")
+}
+
+# Silver quality thresholds. Cast failures above the limit block the table (last good version stays, job fails);
+# duplicate keys above the limit only raise a warning, because resends and late corrections are legitimate.
+MAX_DUPLICATE_PK_PCT = 5.0
+MAX_CAST_FAILURE_PCT = 1.0
