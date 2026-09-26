@@ -2,6 +2,8 @@ import asyncio
 import logging
 import os
 import uuid
+from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import AsyncGenerator, Optional
 
 import mlflow
@@ -15,33 +17,21 @@ from mlflow.types.responses import (
     ResponsesAgentStreamEvent,
     to_chat_completions_input,
 )
+from langgraph.checkpoint.memory import MemorySaver
 
-import json
-import urllib.request
-
-from agent_server.langgraph_agent import build_graph
+from agent_server.dispute.data import InMemoryBankData, WarehouseBankData
+from agent_server.dispute.graph import build_dispute_graph
+from agent_server.dispute.session import resolve_session
 from agent_server.utils import process_agent_astream_events
 
 logger = logging.getLogger(__name__)
 
 
-def _notify_chat_app(thread_id: str) -> None:
-    """Best-effort notification to the chat frontend (same as send_background_check.py)."""
-    port = os.getenv("CHAT_APP_PORT", "3000")
-    url = f"http://localhost:{port}/api/internal/background-check-received"
-    data = json.dumps({"chatId": thread_id}).encode()
-    req = urllib.request.Request(
-        url, data=data, headers={"Content-Type": "application/json"}, method="POST"
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=5) as resp:
-            logger.info("Chat app notified (HTTP %s).", resp.status)
-    except Exception as exc:
-        logger.debug("Could not notify chat app at %s: %s", url, exc)
-
-
 mlflow.langchain.autolog()
-_llm = ChatDatabricks(endpoint="databricks-qwen35-122b-a10b")
+# Non-reasoning model: the LLM only does intent + slot extraction, where it matched the reasoning
+# model's accuracy on our checks at ~1s instead of ~9s per turn.
+LLM_ENDPOINT = os.getenv("LLM_ENDPOINT", "databricks-qwen3-next-80b-a3b-instruct")
+_llm = ChatDatabricks(endpoint=LLM_ENDPOINT, temperature=0)
 LAKEBASE_INSTANCE_NAME = os.getenv("LAKEBASE_INSTANCE_NAME", "")
 # Dedicated Postgres schema for the LangGraph checkpointer. Using a
 # per-accelerator schema avoids the Postgres 14+ default where only the DB
@@ -53,11 +43,27 @@ CHECKPOINT_SCHEMA = os.getenv("CHECKPOINT_SCHEMA", "agent_checkpoints")
 _CHECKPOINTER_SETUP_DONE = False
 _CHECKPOINTER_SETUP_LOCK: Optional[asyncio.Lock] = None
 
-if not LAKEBASE_INSTANCE_NAME:
-    raise ValueError(
-        "LAKEBASE_INSTANCE_NAME environment variable is required but not set. "
-        "Please set it in your environment or in `agent_app/.env`."
-    )
+# Without Lakebase (local dev) conversation state lives in process memory and is lost on restart.
+_MEMORY_SAVER = None if LAKEBASE_INSTANCE_NAME else MemorySaver()
+if _MEMORY_SAVER is not None:
+    logger.warning("LAKEBASE_INSTANCE_NAME not set: using in-memory checkpointer (local dev only)")
+
+
+def _make_bank_data():
+    """SQL warehouse over Unity Catalog when DATABRICKS_WAREHOUSE_ID is set; dummy CSVs otherwise."""
+    warehouse_id = os.getenv("DATABRICKS_WAREHOUSE_ID")
+    if warehouse_id:
+        return WarehouseBankData(warehouse_id, catalog=os.getenv("BANK_CATALOG", "workspace"))
+    csv_dir = os.getenv("BANK_DATA_CSV_DIR", str(Path(__file__).resolve().parents[2] / "data" / "dummy_output"))
+    logger.warning("DATABRICKS_WAREHOUSE_ID not set: using dummy CSVs from %s", csv_dir)
+    return InMemoryBankData.from_csv_dir(csv_dir)
+
+
+_BANK_DATA = _make_bank_data()
+
+
+def build_graph(checkpointer):
+    return build_dispute_graph(_BANK_DATA, llm=_llm, checkpointer=checkpointer)
 
 
 async def _ensure_checkpointer_setup(checkpointer: AsyncCheckpointSaver) -> None:
@@ -111,39 +117,23 @@ async def streaming(
 
     custom_inputs = dict(request.custom_inputs or {})
     config = {"configurable": {"thread_id": thread_id}}
+    # Identity is resolved from the trusted session token on every turn, never from chat text.
+    session = resolve_session(custom_inputs)
     input_state = {
-        "messages": to_chat_completions_input([i.model_dump() for i in request.input]),
-        "stub_scenario": custom_inputs.get("stub_scenario", "happy_path"),
+        "messages": to_chat_completions_input([i.model_dump() for i in request.input])[-1:],
+        "session": session.as_dict(),
+        "thread_id": thread_id,
     }
-    bg_result = custom_inputs.get("background_check_result")
 
     # One-shot retry guards against a transient psycopg OperationalError that
     # sometimes fires on the first Lakebase checkpoint write after a cold
     # start ("SSL error: unexpected eof while reading"). We only retry when
-    # no events have been streamed to the client yet, so late failures still
-    # surface to the caller. TODO: replace with a process-level connection
-    # pool + explicit keepalive; this wrapper is a workaround, not the root
-    # cause.
+    # no events have been streamed to the client yet.
     for attempt in range(2):
         events_yielded = 0
         try:
-            if bg_result:
-                async with AsyncCheckpointSaver(
-                    instance_name=LAKEBASE_INSTANCE_NAME, schema=CHECKPOINT_SCHEMA,
-                ) as checkpointer:
-                    await _ensure_checkpointer_setup(checkpointer)
-                    graph = build_graph(checkpointer=checkpointer, llm=_llm)
-                    await graph.aupdate_state(
-                        config, {"background_check_result": bg_result}
-                    )
-                await asyncio.to_thread(_notify_chat_app, thread_id)
-                return
-
-            async with AsyncCheckpointSaver(
-                instance_name=LAKEBASE_INSTANCE_NAME, schema=CHECKPOINT_SCHEMA,
-            ) as checkpointer:
-                await _ensure_checkpointer_setup(checkpointer)
-                graph = build_graph(checkpointer=checkpointer, llm=_llm)
+            async with _checkpointer() as checkpointer:
+                graph = build_graph(checkpointer)
                 async for event in process_agent_astream_events(
                     graph.astream(input_state, config, stream_mode=["updates", "messages"])
                 ):
@@ -151,15 +141,15 @@ async def streaming(
                     events_yielded += 1
 
                 try:
-                    state = await graph.aget_state(config)
-                    values = state.values
-                    field_values = values.get("field_values") or {}
+                    values = (await graph.aget_state(config)).values
                     yield ResponsesAgentStreamEvent(
                         type="workflow.state.updated",
                         custom_outputs={
                             "workflow_stage": values.get("stage", ""),
-                            "workflow_intent": values.get("intent", ""),
-                            "workflow_customer_name": field_values.get("customer_id", ""),
+                            "workflow_intent": (values.get("understanding") or {}).get("intent", ""),
+                            "case": values.get("case"),
+                            "decision": values.get("decision"),
+                            "handoff": values.get("handoff"),
                         },
                     )
                     events_yielded += 1
@@ -174,3 +164,15 @@ async def streaming(
                 )
                 continue
             raise
+
+
+@asynccontextmanager
+async def _checkpointer():
+    if _MEMORY_SAVER is not None:
+        yield _MEMORY_SAVER
+        return
+    async with AsyncCheckpointSaver(
+        instance_name=LAKEBASE_INSTANCE_NAME, schema=CHECKPOINT_SCHEMA,
+    ) as checkpointer:
+        await _ensure_checkpointer_setup(checkpointer)
+        yield checkpointer

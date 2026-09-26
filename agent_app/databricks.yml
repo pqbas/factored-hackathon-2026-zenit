@@ -39,8 +39,14 @@ resources:
         # "Advanced: on-behalf-of-user auth" section of agent_app/README.md.
         - name: 'llm_endpoint'
           serving_endpoint:
-            name: 'databricks-qwen35-122b-a10b'
+            name: 'databricks-qwen3-next-80b-a3b-instruct'
             permission: 'CAN_QUERY'
+        # SQL warehouse used to read bank_gold.* and write bank_ops.dispute_cases.
+        # The app's service principal also needs UC grants (see data/README.md).
+        - name: 'sql_warehouse'
+          sql_warehouse:
+            id: '07ca55766c9c5097'
+            permission: 'CAN_USE'
 
 targets:
   dev:
