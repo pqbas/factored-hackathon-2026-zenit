@@ -1,0 +1,44 @@
+# Data pipeline bundle, separate from agent_app so deploying it creates no billable app/Lakebase resources.
+# The job runs on serverless compute.
+bundle:
+  name: bank-assistant-data
+
+variables:
+  catalog:
+    description: Unity Catalog catalog that holds bank_bronze / bank_silver / bank_gold
+    default: workspace
+
+resources:
+  jobs:
+    bank_data_pipeline:
+      name: bank-assistant-data-pipeline
+      max_concurrent_runs: 1
+      parameters:
+        - name: catalog
+          default: ${var.catalog}
+        - name: landing_path
+          default: /Volumes/${var.catalog}/bank_bronze/landing
+        - name: reset
+          default: "false"
+      tasks:
+        - task_key: bronze
+          notebook_task:
+            notebook_path: ./pipeline/01_bronze.py
+        - task_key: silver
+          depends_on: [{task_key: bronze}]
+          notebook_task:
+            notebook_path: ./pipeline/02_silver.py
+        - task_key: gold
+          depends_on: [{task_key: silver}]
+          notebook_task:
+            notebook_path: ./pipeline/03_gold.py
+
+sync:
+  exclude:
+    - dummy_output/**
+
+targets:
+  dev:
+    default: true
+    workspace:
+      host: https://dbc-184e79fe-04dc.cloud.databricks.com

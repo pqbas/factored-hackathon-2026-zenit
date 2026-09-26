@@ -28,3 +28,6 @@ build/
 .env.local
 .env.*.local
 !.env.example
+
+# Generated dummy data
+data/dummy_output/
