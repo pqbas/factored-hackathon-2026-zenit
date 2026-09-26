@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "private": true,
   "workspaces": [
-    "client",
     "server",
     "packages/*"
   ],
@@ -12,11 +11,9 @@
     "npm": ">=8.0.0"
   },
   "scripts": {
-    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev": "npm run dev:server",
     "dev:server": "npm run dev --workspace=@databricks/chatbot-server",
-    "dev:client": "npm run dev --workspace=@databricks/chatbot-client",
-    "build": "npm run db:migrate && npm run build:client && npm run build:server",
-    "build:client": "npm run build --workspace=@databricks/chatbot-client",
+    "build": "npm run db:migrate && npm run build:server && npm run copy:front",
     "build:server": "npm run build --workspace=@databricks/chatbot-server",
     "start": "npm run start --workspace=@databricks/chatbot-server",
     "lint": "biome lint --write --unsafe",
@@ -32,7 +29,8 @@
     "db:up": "drizzle-kit up",
     "test": "npm run test:with-db && npm run test:ephemeral",
     "test:with-db": "PLAYWRIGHT=True TEST_MODE=with-db npx playwright test",
-    "test:ephemeral": "PLAYWRIGHT=True TEST_MODE=ephemeral npx playwright test"
+    "test:ephemeral": "PLAYWRIGHT=True TEST_MODE=ephemeral npx playwright test",
+    "copy:front": "node scripts/copy-front.mjs"
   },
   "dependencies": {
     "dotenv": "^17.2.3",

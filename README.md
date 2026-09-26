@@ -6,9 +6,9 @@ An AI-first customer-service agent for the Factored AI & Data Hackathon 2026. It
 
 ```mermaid
 flowchart TB
-    subgraph BACK["back/ · Databricks App"]
-        UI["React chat UI"]
-        EX["Express server<br/>(auth · proxy · chat history)"]
+    subgraph WEB["Databricks App (chat)"]
+        UI["front/ · React chat UI"]
+        EX["back/ · Express server<br/>(serves front · auth · proxy · chat history)"]
     end
     subgraph AGENT["agent/ · Databricks App"]
         AS["MLflow AgentServer<br/>POST /invocations"]
@@ -56,7 +56,8 @@ Dashed arrows are designed but not built yet ([docs/agent_architecture.md](docs/
 | `agent/agent_server/dispute/` | Workflow: session, NLU, policy, data access, graph ([details](agent/DISPUTE_WORKFLOW.md)) |
 | `agent/tests/` | Workflow tests |
 | `data/` | Data contract, dummy data generator, bronze/silver/gold pipeline ([details](data/README.md)) |
-| `back/` | Chat UI (separate app; calls the agent over HTTP) |
+| `front/` | Chat UI (React + Vite) |
+| `back/` | Express server for the chat: serves `front/`, auth, chat history, proxies to the agent over HTTP |
 | `ml/` | Fraud risk model: features, training, batch scoring ([proposal](docs/ml_fraud_model_proposal.md)) |
 
 ## Run
@@ -70,8 +71,11 @@ cd data && databricks bundle deploy && databricks bundle run bank_data_pipeline
 # Agent API on http://localhost:8000/invocations (needs agent/.env, see DISPUTE_WORKFLOW.md)
 cd agent && uv run start-server
 
-# Chat UI on http://localhost:3000 (back/.env: DATABRICKS_CONFIG_PROFILE, API_PROXY=http://localhost:8000/invocations)
+# Chat UI: build front, then back serves it on http://localhost:3000
+# (back/.env: DATABRICKS_CONFIG_PROFILE, API_PROXY=http://localhost:8000/invocations)
+cd front && npm install && npm run build
 cd back && npm install && npm run build && npm run start
+# UI dev with hot reload: `npm run dev` in back (port 3001) and in front (port 3000)
 
 # Tests
 cd agent && uv run --group dev pytest tests -q

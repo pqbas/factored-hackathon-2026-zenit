@@ -18,11 +18,11 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
-      "@chat-template/db": ["../packages/db/src/index.ts"],
-      "@chat-template/ai-sdk-providers": ["../packages/ai-sdk-providers/src/index.ts"],
-      "@chat-template/auth": ["../packages/auth/src/index.ts"],
-      "@chat-template/core": ["../packages/core/src/index.ts"],
-      "@chat-template/core/errors": ["../packages/core/src/errors.ts"]
+      "@chat-template/db": ["../back/packages/db/src/index.ts"],
+      "@chat-template/ai-sdk-providers": ["../back/packages/ai-sdk-providers/src/index.ts"],
+      "@chat-template/auth": ["../back/packages/auth/src/index.ts"],
+      "@chat-template/core": ["../back/packages/core/src/index.ts"],
+      "@chat-template/core/errors": ["../back/packages/core/src/errors.ts"]
     }
   },
   "include": ["src"],

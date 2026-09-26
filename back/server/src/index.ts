@@ -8,6 +8,7 @@ import express, {
   type Express,
 } from 'express';
 import cors from 'cors';
+import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
@@ -59,7 +60,14 @@ app.use('/api/internal', internalRouter);
 
 // Serve static files in production
 if (!isDevelopment) {
-  const clientBuildPath = path.join(__dirname, '../../client/dist');
+  // UI built from ../front: copied to server/public by `npm run build` (npm run copy:front),
+  // or read straight from ../front/dist in a local checkout. FRONT_DIST_DIR overrides both.
+  const clientBuildPath =
+    process.env.FRONT_DIST_DIR ??
+    [path.join(__dirname, '../public'), path.join(__dirname, '../../../front/dist')].find((p) =>
+      existsSync(path.join(p, 'index.html')),
+    ) ??
+    path.join(__dirname, '../public');
   app.use(express.static(clientBuildPath));
 
   // SPA fallback - serve index.html for all non-API routes

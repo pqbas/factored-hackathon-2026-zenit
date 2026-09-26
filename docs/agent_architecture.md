@@ -14,7 +14,7 @@ Estado: **propuesta para discutir en el equipo**. El código actual (`agent/agen
 
 ```mermaid
 flowchart TB
-    UI["back/ · Chat UI<br/>(React + Express)"] <-->|"SSE · API_PROXY"| AS["agent/ · MLflow AgentServer"]
+    UI["front/ + back/ · Chat<br/>(React + Express)"] <-->|"SSE · API_PROXY"| AS["agent/ · MLflow AgentServer"]
     AS <--> G["LangGraph<br/>(núcleo + casos de uso)"]
     G -->|checkpoint| LB[("Lakebase<br/>estado de conversación")]
     G -->|intención + datos| LLM["LLM (Databricks FM API)"]

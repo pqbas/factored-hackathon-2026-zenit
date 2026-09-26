@@ -1,3 +1,5 @@
+> **Note (bank-assistant):** upstream README. The React client moved to `../front`; this folder holds the Express server, shared packages and DB migrations. See the root `README.md` to run it.
+
 <a href="https://docs.databricks.com/aws/en/generative-ai/agent-framework/chat-app">
   <h1 align="center">Databricks Agent Chat Template</h1>
 </a>

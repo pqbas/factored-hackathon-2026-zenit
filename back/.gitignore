@@ -46,3 +46,6 @@ yarn-error.log*
 /playwright/*
 tsconfig.tsbuildinfo
 .idea
+
+# UI build copied from ../front (npm run copy:front)
+server/public/

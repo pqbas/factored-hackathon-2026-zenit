@@ -7,4 +7,5 @@ By using this repository, you consent to Databricks collection and use of usage 
 This accelerator depends on third-party open-source software. Complete attribution for bundled dependencies is available in the respective package manifests:
 
 - `agent/pyproject.toml`
+- `front/package.json`
 - `back/package.json` (and each workspace `package.json`)

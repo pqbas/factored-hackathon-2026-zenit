@@ -86,11 +86,11 @@ echo
 # ===================================================================
 echo "Verifying directory..."
 
-if [ ! -f "databricks.yml" ] || [ ! -f "package.json" ] || [ ! -d "client" ] || [ ! -d "server" ]; then
+if [ ! -f "databricks.yml" ] || [ ! -f "package.json" ] || [ ! -d "server" ]; then
     echo "❌ Error: This script must be run from the e2e-chatbot-app-next/ directory"
     echo "   Current directory: $(pwd)"
     echo "   Expected files: databricks.yml, package.json"
-    echo "   Expected directories: client/, server/"
+    echo "   Expected directories: server/ (UI lives in ../front)"
     exit 1
 fi
 

@@ -11,6 +11,11 @@ resources:
       # Chat history is ephemeral (no Lakebase). To persist it, add a database resource
       # (see README.md "Database modes").
 
+sync:
+  # The built UI is gitignored but must be uploaded: run `npm run build` in ../front and here first.
+  include:
+    - server/public/**
+
 targets:
   dev:
     mode: development
