@@ -14,7 +14,7 @@ Estado: **propuesta para discutir en el equipo**. El código actual (`agent/agen
 
 ```mermaid
 flowchart TB
-    UI["Chat UI (Next.js)"] <-->|SSE| AS["MLflow AgentServer"]
+    UI["back/ · Chat UI<br/>(React + Express)"] <-->|"SSE · API_PROXY"| AS["agent/ · MLflow AgentServer"]
     AS <--> G["LangGraph<br/>(núcleo + casos de uso)"]
     G -->|checkpoint| LB[("Lakebase<br/>estado de conversación")]
     G -->|intención + datos| LLM["LLM (Databricks FM API)"]
@@ -27,8 +27,8 @@ flowchart TB
     OPS --> CON
     CON -->|"POST /invocations<br/>review_result / takeover"| AS
     AS -.->|webhook| UI
-    DATA["Pipeline bronze→silver→gold"] --> GOLD
-    ML["Job de scoring de fraude"] --> GOLD
+    DATA["data/ · pipeline bronze→silver→gold"] --> GOLD
+    ML["ml/ · job de scoring de fraude"] --> GOLD
 ```
 
 ## 3. Qué pasa en cada mensaje

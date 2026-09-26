@@ -6,27 +6,48 @@ An AI-first customer-service agent for the Factored AI & Data Hackathon 2026. It
 
 ```mermaid
 flowchart TB
-    UI["Next.js Chat UI<br/>(workflow-aware sidebar)"]
-    AS["MLflow AgentServer<br/>(@invoke / @stream)"]
-    LG["LangGraph state machine<br/>(deterministic routing)"]
-    LB[("Lakebase Postgres<br/>(LangGraph AsyncCheckpointer)")]
-    EXT["External async system<br/>(compliance / fraud / credit bureau /<br/>any human approval)"]
+    subgraph BACK["back/ · Databricks App"]
+        UI["React chat UI"]
+        EX["Express server<br/>(auth · proxy · chat history)"]
+    end
+    subgraph AGENT["agent/ · Databricks App"]
+        AS["MLflow AgentServer<br/>POST /invocations"]
+        LG["LangGraph state machine<br/>(deterministic routing)"]
+    end
+    LLM["LLM · Databricks FM API<br/>(intent + slots only)"]
+    LB[("Lakebase Postgres<br/>conversation checkpoints")]
+    subgraph UC["Unity Catalog · via SQL warehouse"]
+        GOLD[("bank_gold.*<br/>customer_360 · customer_transactions")]
+        OPS[("bank_ops.dispute_cases")]
+    end
+    subgraph DATA["data/ · serverless job"]
+        PIPE["CSV → bronze → silver → gold"]
+    end
+    ML["ml/ · fraud risk scoring<br/>(planned)"]
+    SUP["Supervisor console / analyst<br/>(planned)"]
 
-    UI <-->|SSE| AS
+    UI <--> EX
+    EX <-->|SSE · API_PROXY| AS
     AS <--> LG
-    LG -->|checkpoint read/write| LB
-    AS -->|"graph.aupdate_state on bg_result POST"| LB
-    EXT -->|"POST /invocations with<br/>custom_inputs.background_check_result"| AS
-    EXT -.->|webhook| UI
+    LG -->|understand message| LLM
+    LG <-->|checkpoint read/write| LB
+    LG -->|reads scoped to session customer| GOLD
+    LG -->|write + verify case| OPS
+    PIPE --> GOLD
+    ML -.->|transaction_risk| GOLD
+    OPS -.-> SUP
+    SUP -.->|"POST /invocations<br/>review_result"| AS
 ```
 
-Three architectural choices make this work:
+Dashed arrows are designed but not built yet ([docs/agent_architecture.md](docs/agent_architecture.md)).
 
 | Layer | Choice | Why |
 |---|---|---|
-| Agent control flow | LangGraph with `_route_by_stage` conditional edge | Every transition is named, testable, and auditable. LLM output never changes the graph's next step. |
-| Checkpointing | Databricks Lakebase Postgres via `AsyncCheckpointSaver` | Serverless managed Postgres; survives restarts; supports concurrent async writes from external systems. |
-| HIL resume | External system POSTs the result to `/invocations`; the handler calls `graph.aupdate_state()` to write into Lakebase and fires an internal webhook to the chat UI | No long-lived sockets, no polling; the next user message picks up the injected result from the checkpoint. |
+| Agent control flow | LangGraph graph routed by code (`dispute/graph.py`) | Every transition is named, testable and auditable. LLM output never picks the next step. |
+| Understanding | LLM with validated JSON output; keyword baseline as fallback | The model only reads language; policy, permissions and actions stay in code. |
+| Data access | SQL warehouse over Unity Catalog, every query filtered by the session's customer | A prompt cannot widen what the agent sees. |
+| Checkpointing | Lakebase Postgres via `AsyncCheckpointSaver` (in memory for local dev) | Conversations survive restarts; an external reviewer can write into a paused thread. |
+| Human review | Escalated cases carry a handoff packet; the reviewer answers via `/invocations` (planned) | No long-lived sockets; the next turn picks up the decision from the checkpoint. |
 
 ## Layout
 
