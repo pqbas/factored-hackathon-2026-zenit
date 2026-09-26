@@ -5,7 +5,7 @@ An AI-first customer-service agent for the Factored AI & Data Hackathon 2026. It
 ## Architecture
 
 ```mermaid
-flowchart LR
+flowchart TB
     UI["Next.js Chat UI<br/>(workflow-aware sidebar)"]
     AS["MLflow AgentServer<br/>(@invoke / @stream)"]
     LG["LangGraph state machine<br/>(deterministic routing)"]
