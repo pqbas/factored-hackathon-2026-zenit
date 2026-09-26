@@ -81,6 +81,21 @@ cd back && npm install && npm run build && npm run start
 cd agent && uv run --group dev pytest tests -q
 ```
 
+## TODO
+
+- [ ] **Vista de supervisor** para ver las conversaciones de los usuarios con los agentes (y las alertas: fraude, churn, SLA). Diseño: [docs/agent_architecture.md §6](docs/agent_architecture.md).
+- [ ] **Crear y entrenar el modelo de ML de clasificación de fraude**. Propuesta: [docs/ml_fraud_model_proposal.md](docs/ml_fraud_model_proposal.md); código en `ml/`.
+- [ ] **Definir los casos de uso del agente de IA**, con el comportamiento esperado de cada uno. Posibles casos:
+  - [x] UC-01 Cargo no reconocido (implementado)
+  - [ ] UC-02 Cargo duplicado
+  - [ ] UC-03 "Me cobraron pero fue rechazado" (declinado o pendiente)
+  - [ ] UC-04 Reembolso o reverso no recibido
+  - [ ] UC-05 Suscripción no cancelada
+  - [ ] UC-06 Posible tarjeta comprometida (usa el modelo de fraude)
+  - [ ] UC-07 Seguimiento de un reclamo
+- [ ] **Validar el pipeline de procesamiento de datos** con el dataset real de Factored (bronze → silver → gold, reporte de calidad `bank_silver._dq_report`). Guía: [data/README.md](data/README.md).
+- [ ] **Definir la arquitectura del agente**: núcleo compartido + un playbook por caso de uso, y revisión humana con reanudación. Propuesta: [docs/agent_architecture.md](docs/agent_architecture.md).
+
 ## License
 
 Derived from the Databricks [banking-agent-accelerator](https://github.com/databricks-industry-solutions/banking-agent-accelerator) and modified by the team. See [LICENSE.md](LICENSE.md) and [NOTICE.md](NOTICE.md).
