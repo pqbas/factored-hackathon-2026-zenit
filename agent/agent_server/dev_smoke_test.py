@@ -1,6 +1,6 @@
 """In-process smoke tests for the banking workflow state machine.
 
-Run:  cd agent_app && python -m agent_server.dev_smoke_test
+Run:  cd agent && python -m agent_server.dev_smoke_test
 
 Uses MemorySaver (no Lakebase / Databricks credentials required).
 """

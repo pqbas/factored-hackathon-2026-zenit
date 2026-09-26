@@ -271,11 +271,11 @@ curl -X POST "$APP_URL/invocations" \
 
 ```bash
 # Approve
-cd agent_app && python -m agent_server.send_background_check \
+cd agent && python -m agent_server.send_background_check \
     --thread-id <thread-id> --status approved
 
 # Deny
-cd agent_app && python -m agent_server.send_background_check \
+cd agent && python -m agent_server.send_background_check \
     --thread-id <thread-id> --status denied
 ```
 
@@ -286,7 +286,7 @@ The script writes the result into the checkpoint, notifies the chat app on `loca
 Run the smoke tests locally — no Lakebase, Databricks credentials, or LLM access needed:
 
 ```bash
-cd agent_app && python -m agent_server.dev_smoke_test
+cd agent && python -m agent_server.dev_smoke_test
 ```
 
 The tests use LangGraph's `MemorySaver` as the checkpointer instead of `AsyncCheckpointSaver` (Lakebase), and pass `llm=None` so all nodes use deterministic stubs.

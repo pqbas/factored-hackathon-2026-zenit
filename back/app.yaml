@@ -1,0 +1,9 @@
+command: ["npm", "run", "start"]
+runtime: nodejs20
+
+env:
+  # URL of the agent app's invocations endpoint (../agent). Set it after deploying the agent:
+  #   databricks apps get dev-agent-langgraph -o json | jq -r .url
+  # The UI app's service principal needs CAN_USE on the agent app.
+  - name: API_PROXY
+    value: "https://REPLACE-WITH-AGENT-APP-URL/invocations"

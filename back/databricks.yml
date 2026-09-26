@@ -1,0 +1,19 @@
+# Chat UI, deployed as its own Databricks App. It talks to the agent app only over HTTP (API_PROXY).
+bundle:
+  name: bank-assistant-back
+
+resources:
+  apps:
+    bank_assistant_ui:
+      name: ${bundle.target}-bank-assistant-ui
+      description: "Chat UI for the bank-assistant dispute agent"
+      source_code_path: .
+      # Chat history is ephemeral (no Lakebase). To persist it, add a database resource
+      # (see README.md "Database modes").
+
+targets:
+  dev:
+    mode: development
+    default: true
+    workspace:
+      host: https://dbc-184e79fe-04dc.cloud.databricks.com

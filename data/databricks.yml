@@ -1,4 +1,4 @@
-# Data pipeline bundle, separate from agent_app so deploying it creates no billable app/Lakebase resources.
+# Data pipeline bundle, separate from agent so deploying it creates no billable app/Lakebase resources.
 # The job runs on serverless compute.
 bundle:
   name: bank-assistant-data

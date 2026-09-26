@@ -2,7 +2,7 @@
 
 Usage (local dev with Lakebase checkpointer):
 
-    cd agent_app && python -m agent_server.send_background_check \
+    cd agent && python -m agent_server.send_background_check \
         --thread-id <thread-id> [--status approved|denied]
 
 The script connects to the same Lakebase checkpointer the server uses,

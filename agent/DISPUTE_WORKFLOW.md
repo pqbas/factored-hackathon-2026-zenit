@@ -27,11 +27,11 @@ Code: `agent_server/dispute/`. Tests: `tests/test_dispute.py` (`uv run --group d
 
 ## Run locally
 
-`agent_app/.env` (gitignored) sets `DATABRICKS_WAREHOUSE_ID` to read real Unity Catalog tables. Remove it to use `data/dummy_output`. Without `LAKEBASE_INSTANCE_NAME`, conversation state lives in memory.
+`agent/.env` (gitignored) sets `DATABRICKS_WAREHOUSE_ID` to read real Unity Catalog tables. Remove it to use `data/dummy_output`. Without `LAKEBASE_INSTANCE_NAME`, conversation state lives in memory.
 
 ```bash
-uv run start-server --port 8765
-curl -s localhost:8765/invocations -H 'Content-Type: application/json' \
+uv run start-server            # API only; the chat UI is ../back
+curl -s localhost:8000/invocations -H 'Content-Type: application/json' \
   -d '{"input":[{"role":"user","content":"No reconozco un cargo de Pemex"}],
        "custom_inputs":{"thread_id":"t1","session_token":"demo-mx-1"}}'
 ```

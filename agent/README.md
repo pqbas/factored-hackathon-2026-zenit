@@ -1,3 +1,5 @@
+> **Note (bank-assistant):** this is the upstream accelerator README. The chat UI now lives in `../back` as a separate app and `uv run start-app` was removed; see the root `README.md` for how to run the agent and the UI.
+
 # Responses API Agent
 
 This template defines a conversational agent app. The app comes with a built-in chat UI, but also exposes an API endpoint for invoking the agent so that you can serve your UI elsewhere (e.g. on your website or in a mobile app).

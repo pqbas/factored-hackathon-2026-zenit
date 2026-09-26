@@ -32,10 +32,11 @@ Three architectural choices make this work:
 
 | Path | What |
 |---|---|
-| `agent_app/agent_server/dispute/` | Workflow: session, NLU, policy, data access, graph ([details](agent_app/DISPUTE_WORKFLOW.md)) |
-| `agent_app/tests/` | Workflow tests |
+| `agent/agent_server/dispute/` | Workflow: session, NLU, policy, data access, graph ([details](agent/DISPUTE_WORKFLOW.md)) |
+| `agent/tests/` | Workflow tests |
 | `data/` | Data contract, dummy data generator, bronze/silver/gold pipeline ([details](data/README.md)) |
-| `agent_app/e2e-chatbot-app-next/` | Chat UI |
+| `back/` | Chat UI (separate app; calls the agent over HTTP) |
+| `ml/` | Fraud risk model: features, training, batch scoring ([proposal](docs/ml_fraud_model_proposal.md)) |
 
 ## Run
 
@@ -45,11 +46,14 @@ python data/generate_dummy_data.py
 databricks fs cp -r --overwrite data/dummy_output dbfs:/Volumes/workspace/bank_bronze/landing
 cd data && databricks bundle deploy && databricks bundle run bank_data_pipeline
 
-# Agent + chat UI on http://localhost:8000 (needs agent_app/.env, see DISPUTE_WORKFLOW.md)
-cd agent_app && uv run start-app
+# Agent API on http://localhost:8000/invocations (needs agent/.env, see DISPUTE_WORKFLOW.md)
+cd agent && uv run start-server
+
+# Chat UI on http://localhost:3000 (back/.env: DATABRICKS_CONFIG_PROFILE, API_PROXY=http://localhost:8000/invocations)
+cd back && npm install && npm run build && npm run start
 
 # Tests
-cd agent_app && uv run --group dev pytest tests -q
+cd agent && uv run --group dev pytest tests -q
 ```
 
 ## License

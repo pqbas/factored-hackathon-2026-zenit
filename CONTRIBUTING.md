@@ -33,7 +33,7 @@ one listed owner before merge.
 ## Repository structure
 
 ```
-agent_app/                 Python LangGraph agent (FastAPI + Lakebase)
+agent/                 Python LangGraph agent (FastAPI + Lakebase)
   agent_server/            Agent code, tools, evaluation
   e2e-chatbot-app-next/    Next.js + React chat UI (TypeScript monorepo)
   databricks.yml           Databricks Asset Bundle config
@@ -42,24 +42,24 @@ config/                    Workspace resource pointers
 
 Per-component setup, run, and deploy instructions live in:
 
-- [`agent_app/README.md`](./agent_app/README.md) — Python agent
-- [`agent_app/agent_server/README.md`](./agent_app/agent_server/README.md) — agent internals
-- [`agent_app/e2e-chatbot-app-next/README.md`](./agent_app/e2e-chatbot-app-next/README.md) — chat UI
+- [`agent/README.md`](./agent/README.md) — Python agent
+- [`agent/agent_server/README.md`](./agent/agent_server/README.md) — agent internals
+- [`back/README.md`](./back/README.md) — chat UI
 
 ## Development workflow
 
-### Python agent (`agent_app/`)
+### Python agent (`agent/`)
 
 ```bash
-cd agent_app
+cd agent
 uv run quickstart        # one-time setup
 uv run start-app         # local dev server
 ```
 
-### Chat UI (`agent_app/e2e-chatbot-app-next/`)
+### Chat UI (`back/`)
 
 ```bash
-cd agent_app/e2e-chatbot-app-next
+cd back
 ./scripts/quickstart.sh  # one-time setup
 npm run dev              # local dev server
 ```
@@ -67,7 +67,7 @@ npm run dev              # local dev server
 ### Deploy (Databricks Asset Bundle)
 
 ```bash
-cd agent_app
+cd agent
 databricks bundle deploy
 databricks bundle run agent_langgraph
 ```
@@ -82,8 +82,8 @@ databricks bundle run agent_langgraph
 
 ## Testing
 
-- **Python**: `pytest` from `agent_app/`.
-- **TypeScript**: `npm test` from `agent_app/e2e-chatbot-app-next/`
+- **Python**: `pytest` from `agent/`.
+- **TypeScript**: `npm test` from `back/`
   (Playwright + MSW). Run tests locally before opening a PR.
 
 ## Pull request process

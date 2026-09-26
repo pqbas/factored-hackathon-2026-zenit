@@ -7,7 +7,7 @@ load_dotenv(dotenv_path=".env", override=True)
 # Need to import the agent to register the functions with the server
 import agent_server.agent  # noqa: E402
 
-agent_server = AgentServer("ResponsesAgent", enable_chat_proxy=True)
+agent_server = AgentServer("ResponsesAgent", enable_chat_proxy=False)  # UI lives in ../back
 
 # Define the app as a module level variable to enable multiple workers
 app = agent_server.app  # noqa: F841

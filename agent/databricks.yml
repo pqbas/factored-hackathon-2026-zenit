@@ -36,7 +36,7 @@ resources:
         # the model when deployed. For an on-behalf-of-user (OBO) setup where
         # each user hits the endpoint with their own token, remove this
         # binding and refactor the ChatDatabricks instantiation per the
-        # "Advanced: on-behalf-of-user auth" section of agent_app/README.md.
+        # "Advanced: on-behalf-of-user auth" section of agent/README.md.
         - name: 'llm_endpoint'
           serving_endpoint:
             name: 'databricks-qwen3-next-80b-a3b-instruct'

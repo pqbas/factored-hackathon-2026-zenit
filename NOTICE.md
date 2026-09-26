@@ -6,5 +6,5 @@ By using this repository, you consent to Databricks collection and use of usage 
 
 This accelerator depends on third-party open-source software. Complete attribution for bundled dependencies is available in the respective package manifests:
 
-- `agent_app/pyproject.toml`
-- `agent_app/e2e-chatbot-app-next/package.json` (and each workspace `package.json`)
+- `agent/pyproject.toml`
+- `back/package.json` (and each workspace `package.json`)

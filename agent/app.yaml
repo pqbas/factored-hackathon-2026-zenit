@@ -1,4 +1,5 @@
-command: ["uv", "run", "start-app"]
+command: ["uv", "run", "start-server"]
+# Agent API only (POST /invocations). The chat UI is a separate app in ../back.
 # databricks apps listen by default on port 8000
 
 env:
@@ -6,12 +7,6 @@ env:
     value: "databricks"
   - name: MLFLOW_REGISTRY_URI
     value: "databricks-uc"
-  - name: API_PROXY
-    value: "http://localhost:8000/invocations"
-  - name: CHAT_APP_PORT
-    value: "3000"
-  - name: CHAT_PROXY_TIMEOUT_SECONDS
-    value: "300"
   - name: MLFLOW_EXPERIMENT_ID
     valueFrom: "experiment"
   - name: LAKEBASE_INSTANCE_NAME
@@ -22,6 +17,6 @@ env:
     value: "workspace"
   - name: LLM_ENDPOINT
     value: "databricks-qwen3-next-80b-a3b-instruct"
-  # Demo-only default identity for the chat UI (the UI does not send a session token yet).
+  # Demo-only default identity when a request carries no session token (the chat UI does not send one yet).
   - name: DEMO_SESSION_TOKEN
     value: "demo-mx-1"
