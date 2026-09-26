@@ -1,6 +1,25 @@
-# Bank Assistant: charge-dispute agent
+# Bank Assistant
 
-An AI-first customer-service agent for the Factored AI & Data Hackathon 2026. It takes a customer's report of an unrecognized charge (in Spanish or Portuguese), finds the charge, applies a deterministic policy, and either files a case or hands off to a human with full context.
+An AI-assisted customer-service platform for retail banks. AI agents talk to customers in Spanish and Portuguese and resolve routine requests on their own, within explicit bank policy. Human supervisors oversee those conversations from a console that surfaces the cases that matter most to the bank, such as possible fraud or customers at risk of leaving. The first workflow is card and account charge disputes.
+
+**Main features**
+
+- **AI customer agent (es/pt):** understands the request, finds the customer's transaction, asks when something is ambiguous, and files the case once the customer confirms.
+- **Policy outside the model:** eligibility, escalation and permissions are versioned, deterministic rules. The LLM only reads language, and every decision records the rules that fired.
+- **Secure by design:**
+  - Identity comes from a trusted session, never from chat text.
+  - Every data read is scoped to that customer.
+  - Actions are reported only after they are verified.
+- **Human handoff with context:** escalated cases carry the request, verified facts, actions taken, policy rules and open questions, so the customer never repeats themselves.
+- **Supervisor console (planned):**
+  - Watch live conversations and their traces.
+  - Take over a conversation, or approve or reject escalated cases.
+  - Receive prioritized alerts for fraud, churn risk, SLA breaches and security events.
+- **Fraud risk model (planned):** a model trained on transaction history scores each disputed charge, and the policy uses the score to route cases to fraud analysts.
+- **Governed data platform:** a bronze → silver → gold pipeline on Databricks with a data contract, quality report and lineage.
+- **Measurable:** use-case scenarios double as tests and as the evaluation set. It reports automated resolution, handoff quality, unsafe outcomes, latency and cost.
+
+Built on Databricks (Apps, Unity Catalog, Lakebase, MLflow, Foundation Model API) with LangGraph, for the Factored AI & Data Hackathon 2026.
 
 ## Architecture
 
