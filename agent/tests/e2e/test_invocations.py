@@ -337,3 +337,20 @@ def test_the_llm_receives_only_the_last_20_messages_of_a_long_history(client, mo
 
     assert response.status_code == 200
     assert [m.content for m in llm.received[1:]] == [m["content"] for m in history[-20:]]
+
+
+def test_advisor_turns_in_the_history_never_prefix_the_reply(client, monkeypatch):
+    llm = RecordingChatModel("[Asesor] Hola de nuevo, ¿en qué te ayudo?")
+    monkeypatch.setattr(main, "get_chat_model", lambda: llm)
+    monkeypatch.setattr(main, "jev_client", _greeting_jev())
+    history = [
+        {"role": "user", "content": "Quiero hablar con un asesor"},
+        {"role": "assistant", "content": "[Asesor] Hola, soy Ana. Tu reembolso se verá en 5 días hábiles."},
+        {"role": "user", "content": "Hola, gracias Ana"},
+    ]
+
+    response = _invoke_history(client, history)
+
+    assert response.status_code == 200
+    assert _output_text(response.json()) == "Hola de nuevo, ¿en qué te ayudo?"
+    assert llm.received[2].content.startswith("[Asesor]")
