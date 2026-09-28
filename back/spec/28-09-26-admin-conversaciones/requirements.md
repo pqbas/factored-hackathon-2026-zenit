@@ -30,6 +30,9 @@ Y cambia en estas cosas:
 8. Las tres rutas responden 403 si el email de la sesión no está en
    `ADMIN_EMAILS`, y 401 si no hay sesión.
 9. Sin base de datos, las tres rutas responden 204, igual que `/api/history`.
+10. `GET /api/session` devuelve además `user.role`: `'admin'` si el email está
+    en `ADMIN_EMAILS`, `'advisor'` si está en `ADVISOR_EMAILS`, y si no
+    `'customer'`. Si está en las dos listas, gana admin.
 
 ## 2. Decisions
 
@@ -53,6 +56,11 @@ Y cambia en estas cosas:
 - Los filtros `status`, `intent` y `customer` se mantienen por paridad con
   `/api/history`, aunque hoy lleguen vacíos. Se reemplazan en la Fase 3 (estado
   del agente), no en esta.
+- El rol en `/api/session` se agregó a esta fase a pedido del front (su Fase 5,
+  roles), porque reutiliza el parseo de `ADMIN_EMAILS`. Es un solo rol con
+  precedencia admin > advisor > customer, calculado en cada request. El front
+  solo lo usa para decidir qué mostrar; cada ruta sigue validando permisos en el
+  back. La matriz de acceso por rol está en `spec/roadmap.md`, Phase 2.
 - Las rutas son de solo lectura. Borrar o editar conversaciones ajenas no lo
   pidió nadie.
 

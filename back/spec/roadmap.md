@@ -52,6 +52,18 @@ desde la pantalla de admin del front.
 - [ ] Un admin abre los mensajes de una conversación ajena.
 - [ ] Un usuario que no es admin recibe 403 en esas rutas.
 - [ ] Quién es admin se configura con una lista de emails, sin tocar código.
+- [ ] La sesión informa el rol del usuario (admin, asesor o cliente) para que
+      el front decida qué mostrar; admin y asesor se configuran con listas de
+      emails, y si un email está en las dos gana admin.
+
+<!-- Matriz de acceso por rol (decisión del usuario, 28-09-26). El front solo
+     usa el rol para el menú; el back valida cada ruta:
+     - customer: su chat con el asistente y su cuenta (Mis productos).
+     - advisor: su chat con el asistente y la consola del asesor. No ve Mis
+       productos ni la vista admin.
+     - admin: todo.
+     Rutas: /api/admin → requireAdmin; API de la consola → requireAdvisor
+     (advisor o admin); rutas de cuenta/productos → customer o admin. -->
 
 ---
 
@@ -126,7 +138,8 @@ en el back y pase a un humano, sin que el cliente repita su historia.
 casos derivados.
 
 <!-- Antes dependía de las rutas /handoffs del agente; ahora la API es del
-     back y el contrato lo define el back para el front. -->
+     back y el contrato lo define el back para el front. Decidido:
+     requireAdvisor acepta advisor o admin. -->
 
 - [ ] El asesor ve la bandeja de casos pendientes, ordenada por prioridad.
 - [ ] El asesor abre un caso con su resumen y el historial del chat.

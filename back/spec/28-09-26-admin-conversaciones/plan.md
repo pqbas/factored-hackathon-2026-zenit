@@ -101,3 +101,20 @@ en `back/`.
     - Babbage (no admin) en las tres rutas → 403.
     - `GET /api/admin/chats/<uuid inexistente>/messages` como Ada → 404.
     - En modo efímero (con `skipInWithDatabaseMode`), las tres rutas → 204.
+
+---
+
+## Group 4: Rol en la sesión (agregado a pedido del front)
+
+14. Renombrar `server/src/admin.ts` a `server/src/roles.ts`: `isEmailInList`
+    (el parseo que era `isEmailInList`) y `getRole(email)` con precedencia
+    admin > advisor > customer. `requireAdmin` usa `getRole`.
+
+15. `server/src/routes/session.ts`: agregar `role: getRole(email)` a
+    `user`; en `packages/auth/src/databricks-auth.ts`, sumar `role` a
+    `ClientSession`.
+
+16. `.env.example`: documentar `ADVISOR_EMAILS`.
+
+17. Tests: `tests/ai-sdk-provider/roles.test.ts` (unit: lista y precedencia de
+    roles) y `tests/routes/session.test.ts` (ada → admin, babbage → customer).

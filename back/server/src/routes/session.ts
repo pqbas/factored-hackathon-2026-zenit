@@ -1,6 +1,12 @@
-import { Router, type Request, type Response, type Router as RouterType } from 'express';
+import {
+  Router,
+  type Request,
+  type Response,
+  type Router as RouterType,
+} from 'express';
 import { authMiddleware } from '../middleware/auth';
 import type { ClientSession } from '@chat-template/auth';
+import { getRole } from '../roles';
 
 export const sessionRouter: RouterType = Router();
 
@@ -24,6 +30,7 @@ sessionRouter.get('/', async (req: Request, res: Response) => {
       email: session.user.email,
       name: session.user.name,
       preferredUsername: session.user.preferredUsername,
+      role: getRole(session.user.email),
     },
   };
 
