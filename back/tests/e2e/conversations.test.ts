@@ -1,10 +1,12 @@
 import { expect, test } from '../fixtures';
 import { ChatPage } from '../pages/chat';
+import { mockSessionRole } from '../session-role';
 
 // /conversations is mock-only: no back/agent calls, no Databricks session, so
 // most of these run against the plain `page` fixture instead of adaContext.
 test.describe('Conversations mock view', () => {
   test.beforeEach(async ({ page }) => {
+    await mockSessionRole(page, 'advisor');
     await page.goto('/conversations');
   });
 
@@ -127,7 +129,8 @@ test.describe('Nav rail', () => {
   test('switches between the agent and the chats sections', async ({
     adaContext,
   }) => {
-    const { page } = adaContext;
+    const page = await adaContext.context.newPage();
+    await mockSessionRole(page, 'advisor');
     const chatPage = new ChatPage(page);
     await chatPage.createNewChat();
     await expect(page.getByTestId('nav-agent')).toHaveAttribute(
@@ -145,5 +148,6 @@ test.describe('Nav rail', () => {
     await page.getByTestId('nav-agent').click();
     await expect(page).toHaveURL(/\/$/);
     await expect(chatPage.multimodalInput).toBeVisible();
+    await page.close();
   });
 });

@@ -37,7 +37,7 @@ conectarla a datos reales.
 Modo oscuro revisado; móvil sin revisar. También entraron: riel de secciones
 (Agente / Chats), barra lateral unificada, historial de ejemplo del cliente en
 Agente y la quita de los filtros viejos del historial.
-Shipped en PR #<n>.
+Shipped en PR #16.
 
 ---
 
@@ -60,7 +60,7 @@ calma y amplitud de una app nativa de Mac.
 
 También entraron: color principal celeste, botón de modo claro/oscuro en el
 riel y un solo avatar de usuario (en el riel). Fase hecha sin carpeta de spec.
-Shipped en PR #<n>.
+Shipped en PR #16.
 
 ---
 
@@ -81,7 +81,7 @@ en la app de cualquier banco.
 
 Los datos son de la clienta CUS00000322 del dummy del dataset. La categoría del
 gasto (`transaction_category`) no se muestra todavía. Fase hecha sin carpeta de
-spec. Shipped en PR #<n>.
+spec. Shipped en PR #16.
 
 ---
 
@@ -141,7 +141,10 @@ en el mismo chat.
      handled_by (ai_agent | human_queue | human_agent) y use_case, y quita
      stage/intent/customerName (hoy llegan vacíos: no filtrar por ellos). La
      ruta GET de polling depende de las Fases 6 y 7 del agente, sin contrato
-     todavía; el back la pasa cuando el agente la publique. -->
+     todavía; el back la pasa cuando el agente la publique.
+     A AJUSTAR (PR #12, docs/limites-agente-back.md): el back es el único que
+     guarda conversaciones y el agente no tiene memoria; el polling va contra
+     la API del back cuando la publique. -->
 
 - [ ] El chat muestra el mensaje de sistema "Derivado a un asesor…".
 - [ ] Mientras `handled_by` no sea `ai_agent`, el chat no espera respuesta del
@@ -151,19 +154,32 @@ en el mismo chat.
 
 ---
 
-## Phase 5: Roles y navegación por rol
+## Phase 5: Roles y navegación por rol (Complete)
 
 **Goal:** que cada usuario vea las pantallas de su rol (cliente, asesor o
 admin) y ninguna otra.
 
-<!-- Depende de que el back exponga el rol en /api/session. Propuesta del back:
-     ADMIN_EMAILS (y una lista equivalente para asesores) contra el email de
-     X-Forwarded-Email; más adelante, grupos de Databricks. -->
+<!-- Contrato aprobado (va en el PR de la Fase 2 del back, junto a la API
+     admin): GET /api/session → { user: { email, name?, preferredUsername?,
+     role: 'admin' | 'advisor' | 'customer' } } o { user: null }. Un rol por
+     usuario, precedencia admin > advisor > customer (ADMIN_EMAILS,
+     ADVISOR_EMAILS). El rol solo decide qué mostrar; el back sigue validando
+     (403 en /api/admin). El admin también puede usar la consola del asesor.
 
-- [ ] La app sabe el rol del usuario al cargar la sesión.
-- [ ] El admin y el asesor ven en el menú el acceso a su pantalla; el cliente
-      no lo ve.
-- [ ] Entrar por URL a una pantalla de otro rol muestra "sin acceso".
+     Matriz de acceso (definida por el usuario):
+     | Sección del riel             | customer | advisor | admin |
+     | Asistente (chat)             |    sí    |   sí    |  sí   |
+     | Mis productos (cuenta)       |    sí    |   no    |  sí   |
+     | Chats (consola del asesor)   |    no    |   sí    |  sí   |
+     | Admin (todas las conversac.) |    no    |   no    |  sí   |
+     Back: requireAdmin en /api/admin; requireAdvisor (advisor o admin) en la
+     API de la consola; cuenta/productos solo customer y admin. -->
+
+- [x] La app sabe el rol del usuario al cargar la sesión.
+- [x] El riel muestra solo las secciones que la matriz permite al rol.
+- [x] Entrar por URL a una pantalla de otro rol muestra "sin acceso".
+
+Probado con el rol real del back (PR #15). Shipped en PR #16.
 
 ---
 
@@ -171,6 +187,9 @@ admin) y ninguna otra.
 
 **Goal:** que un admin revise las conversaciones de cualquier usuario sin poder
 modificarlas.
+
+<!-- Es una sección propia del riel ("Admin", solo admin), separada de Chats,
+     que es la consola del asesor. -->
 
 <!-- Contrato del back (Fase 2 del back, rama
      feat/pqbas-back-phase2-admin-conversaciones, sin mergear):
@@ -202,7 +221,11 @@ la cierre.
      (agent/docs/07-handoff.md §7.4), con la identidad del asesor sacada de
      X-Forwarded-Email; las rutas del proxy dependen de las Fases 6 y 7 del
      agente, sin contrato todavía. Reusa la pantalla de la Fase 4: se cambia la fuente de
-     los datos mock por el proxy. -->
+     los datos mock por el proxy.
+     A AJUSTAR (PR #12, docs/limites-agente-back.md): el back es el único que
+     guarda conversaciones y handoffs, y el agente no tiene memoria. La
+     consola consume la API del back, no un proxy a /handoffs del agente;
+     reescribir esta nota cuando el back publique su API de asesores. -->
 
 - [ ] El asesor ve la bandeja de casos pendientes, ordenada por prioridad.
 - [ ] El asesor abre un caso con su resumen y el historial del chat.
