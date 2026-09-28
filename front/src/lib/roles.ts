@@ -2,7 +2,7 @@
 // still enforces permissions on every API call.
 
 export type Role = 'customer' | 'advisor' | 'admin';
-export type Section = 'agent' | 'products' | 'chats';
+export type Section = 'agent' | 'products' | 'chats' | 'admin';
 
 const ROLES: Role[] = ['customer', 'advisor', 'admin'];
 
@@ -11,6 +11,7 @@ export const SECTION_ROLES: Record<Section, Role[]> = {
   agent: ['customer', 'advisor', 'admin'],
   products: ['customer', 'admin'],
   chats: ['advisor', 'admin'],
+  admin: ['admin'],
 };
 
 function isRole(value: unknown): value is Role {
@@ -45,5 +46,6 @@ export function canAccess(role: Role, section: Section): boolean {
 export function sectionForPath(pathname: string): Section {
   if (pathname.startsWith('/products')) return 'products';
   if (pathname.startsWith('/conversations')) return 'chats';
+  if (pathname.startsWith('/admin')) return 'admin';
   return 'agent';
 }

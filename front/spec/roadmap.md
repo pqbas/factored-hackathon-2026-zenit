@@ -37,7 +37,7 @@ conectarla a datos reales.
 Modo oscuro revisado; móvil sin revisar. También entraron: riel de secciones
 (Agente / Chats), barra lateral unificada, historial de ejemplo del cliente en
 Agente y la quita de los filtros viejos del historial.
-Shipped en PR #16.
+Shipped en PR #3.
 
 ---
 
@@ -60,7 +60,7 @@ calma y amplitud de una app nativa de Mac.
 
 También entraron: color principal celeste, botón de modo claro/oscuro en el
 riel y un solo avatar de usuario (en el riel). Fase hecha sin carpeta de spec.
-Shipped en PR #16.
+Shipped en PR #5.
 
 ---
 
@@ -81,7 +81,7 @@ en la app de cualquier banco.
 
 Los datos son de la clienta CUS00000322 del dummy del dataset. La categoría del
 gasto (`transaction_category`) no se muestra todavía. Fase hecha sin carpeta de
-spec. Shipped en PR #16.
+spec. Shipped en PR #6.
 
 ---
 
@@ -183,7 +183,7 @@ Probado con el rol real del back (PR #15). Shipped en PR #16.
 
 ---
 
-## Phase 6: Vista admin con conversaciones reales
+## Phase 6: Vista admin con conversaciones reales (Complete)
 
 **Goal:** que un admin revise las conversaciones de cualquier usuario sin poder
 modificarlas.
@@ -201,13 +201,16 @@ modificarlas.
      Errores: 401 sin sesión, 403 forbidden:chat si no es admin (ADMIN_EMAILS),
      404 not_found:chat, 204 sin base de datos. -->
 
-- [ ] La vista de conversaciones muestra las de todos los usuarios, de la más
+- [x] La vista de conversaciones muestra las de todos los usuarios, de la más
       reciente a la más antigua, con el email de cada usuario.
-- [ ] El admin filtra la lista por usuario.
-- [ ] Un chat sin email del dueño (anterior a la fase del back) se muestra como
+- [x] El admin filtra la lista por usuario.
+- [x] Un chat sin email del dueño (anterior a la fase del back) se muestra como
       "Sin email" y sigue abriéndose.
-- [ ] El admin abre una conversación y la lee completa en modo solo lectura.
-- [ ] Un usuario que no es admin ve "sin acceso" cuando el back responde 403.
+- [x] El admin abre una conversación y la lee completa en modo solo lectura.
+- [x] Un usuario que no es admin ve "sin acceso" cuando el back responde 403.
+
+También quitó del historial las insignias viejas (stage/intent/customerName).
+Shipped en PR #18.
 
 ---
 
