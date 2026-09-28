@@ -37,13 +37,15 @@ Shipped en PR #4.
 
 ---
 
-## Phase 4: UC-01 General inquiries
+## Phase 4: UC-01 General inquiries (Complete)
 
 **Goal:** the customer checks their balances and limits without human help.
 
-- [ ] The customer checks their credit card balance and limit
-- [ ] The customer checks their savings account balance
-- [ ] No message can make the agent show another customer's data
+- [x] The customer checks their credit card balance and limit
+- [x] The customer checks their savings account balance
+- [x] No message can make the agent show another customer's data
+
+Shipped en PR #14.
 
 ---
 
