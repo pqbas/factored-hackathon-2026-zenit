@@ -50,8 +50,9 @@ if (TEST_MODE === 'with-db') {
   console.log('✓ Database configuration found, tests will use database');
 }
 
-// Use default port 3000
-const PORT = process.env.PORT || 3000;
+// Not 3000/3001: those are the Vite and Express dev servers, and
+// reuseExistingServer would run the tests against whichever one is up.
+const PORT = process.env.PORT || 3100;
 const baseURL = `http://localhost:${PORT}`;
 
 /**
@@ -115,6 +116,7 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
     // Mock the environment variables for the server process
     env: {
+      PORT: String(PORT),
       PLAYWRIGHT: 'True',
       DATABRICKS_SERVING_ENDPOINT: 'mock-value',
       DATABRICKS_CLIENT_ID: 'mock-value',
