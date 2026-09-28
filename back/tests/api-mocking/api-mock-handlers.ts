@@ -49,6 +49,10 @@ export interface CapturedRequest {
     [key: string]: unknown;
   };
   hasContext: boolean;
+  customInputs?: {
+    session_token?: string;
+    [key: string]: unknown;
+  };
 }
 
 let capturedRequests: CapturedRequest[] = [];
@@ -79,11 +83,15 @@ export function getLastCapturedRequest(): CapturedRequest | undefined {
  */
 function captureRequestContext(url: string, body: unknown): void {
   const context = (body as { context?: CapturedRequest['context'] })?.context;
+  const customInputs = (
+    body as { custom_inputs?: CapturedRequest['customInputs'] }
+  )?.custom_inputs;
   capturedRequests.push({
     url,
     timestamp: Date.now(),
     context,
     hasContext: context !== undefined && context !== null,
+    customInputs,
   });
 }
 
@@ -174,8 +182,9 @@ function containsMcpApprovalResponse(body: unknown): {
 
 export const handlers = [
   // Mock chat completions (FMAPI - llm/v1/chat)
-  // Use RegExp for better URL matching - matches any URL containing /serving-endpoints/ and ending with /chat/completions
-  http.post(/\/serving-endpoints\/[^/]+\/chat\/completions$/, async (req) => {
+  // Use RegExp for better URL matching - matches any URL ending with /chat/completions,
+  // with or without an endpoint-name segment before it (the title-model call has none).
+  http.post(/\/serving-endpoints\/(?:[^/]+\/)?chat\/completions$/, async (req) => {
     const body = await req.request.clone().json();
     captureRequestContext(req.request.url, body);
     if ((body as { stream?: boolean })?.stream) {

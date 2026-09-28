@@ -8,6 +8,7 @@ import type { OAuthAwareProvider } from '@chat-template/ai-sdk-providers';
 export {
   CONTEXT_HEADER_CONVERSATION_ID,
   CONTEXT_HEADER_USER_ID,
+  CONTEXT_HEADER_SESSION_TOKEN,
   getAndClearWorkflowMetadata,
 } from '@chat-template/ai-sdk-providers';
 

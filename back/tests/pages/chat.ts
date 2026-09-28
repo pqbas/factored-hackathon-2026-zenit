@@ -25,6 +25,15 @@ export class ChatPage {
     return this.page.getByTestId('scroll-to-bottom-button');
   }
 
+  public get demoCustomerSelector() {
+    return this.page.getByTestId('demo-customer-selector');
+  }
+
+  async selectDemoCustomer(token: string) {
+    await this.demoCustomerSelector.click();
+    await this.page.getByTestId(`demo-customer-option-${token}`).click();
+  }
+
   async createNewChat() {
     await this.page.goto('/');
   }
