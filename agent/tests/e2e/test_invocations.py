@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import importlib
 import os
-from contextlib import asynccontextmanager
 
 import httpx
 import pytest
@@ -10,7 +9,6 @@ from fastapi.testclient import TestClient
 from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
 from langchain_core.messages import AIMessage
 from langchain_core.tools import StructuredTool
-from langgraph.checkpoint.memory import MemorySaver
 
 import src.main as main
 from src.llm.jev import JevClient
@@ -33,9 +31,6 @@ importlib.reload(_session_repo)
 FAKE_LLM_TEXT = "Hola, ¿en qué más te ayudo?"
 
 
-@asynccontextmanager
-async def _fake_checkpointer():
-    yield MemorySaver()
 
 
 class BindableChatModel:
@@ -151,7 +146,6 @@ class RecordingChatModel:
 
 @pytest.fixture(autouse=True)
 def _patch_main(monkeypatch):
-    monkeypatch.setattr(main, "checkpointer", _fake_checkpointer)
     monkeypatch.setattr(main, "get_chat_model", _fake_chat_model_factory)
     monkeypatch.setattr(main, "tools_for", _fake_tools_for)
     monkeypatch.setattr(

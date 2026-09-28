@@ -4,7 +4,6 @@ import asyncio
 
 from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
 from langchain_core.messages import AIMessage, ToolMessage
-from langgraph.checkpoint.memory import MemorySaver
 
 from src.graph.build import build_graph
 from src.llm.jev import JevUnavailable
@@ -143,15 +142,13 @@ def _fake_llm(text="Hola, ¿en qué te ayudo?") -> GenericFakeChatModel:
 
 
 def _build_graph(llm, jev, routes=ROUTES, threshold=THRESHOLD, intent_threshold=INTENT_THRESHOLD, tools_for=_exploding_tools_for):
-    return build_graph(llm, MemorySaver(), jev, routes, threshold, intent_threshold, tools_for)
+    return build_graph(llm, jev, routes, threshold, intent_threshold, tools_for)
 
 
-def _run(graph, message, session=VALID_SESSION, thread_id="t"):
-    config = {"configurable": {"thread_id": thread_id}}
-    return asyncio.run(graph.ainvoke(
-        {"messages": [{"role": "user", "content": message}], "session": session, "thread_id": thread_id},
-        config,
-    ))
+def _run(graph, message, session=VALID_SESSION, thread_id="t", history=None):
+    # The back sends the whole history on every request; the graph keeps nothing between runs.
+    messages = [*(history or []), {"role": "user", "content": message}]
+    return asyncio.run(graph.ainvoke({"messages": messages, "session": session, "thread_id": thread_id}))
 
 
 def _classification(**overrides) -> Classification:
@@ -176,18 +173,30 @@ def test_valid_session_gets_the_llm_reply():
     assert result["messages"][-1].content == "Hola, ¿en qué te ayudo?"
 
 
-def test_history_is_kept_across_two_turns_on_the_same_thread():
+def test_history_comes_from_the_input():
+    llm = RecordingLLM("segunda respuesta")
+    jev = FakeJev(_classification())
+    graph = _build_graph(llm, jev)
+
+    history = [{"role": "user", "content": "hola"}, {"role": "assistant", "content": "primera respuesta"}]
+    result = _run(graph, "¿qué te dije antes?", history=history)
+
+    contents = [m.content for m in result["messages"]]
+    assert contents == ["hola", "primera respuesta", "¿qué te dije antes?", "segunda respuesta"]
+    assert [m.content for m in llm.received[1:]] == ["hola", "primera respuesta", "¿qué te dije antes?"]
+
+
+def test_two_runs_with_the_same_thread_id_share_no_messages():
     llm = GenericFakeChatModel(
         messages=iter([AIMessage(content="primera respuesta"), AIMessage(content="segunda respuesta")])
     )
     jev = FakeJev(_classification())
     graph = _build_graph(llm, jev)
 
-    _run(graph, "hola", thread_id="two-turn-thread")
-    result = _run(graph, "¿qué te dije antes?", thread_id="two-turn-thread")
+    _run(graph, "hola", thread_id="same-thread")
+    result = _run(graph, "¿qué te dije antes?", thread_id="same-thread")
 
-    contents = [m.content for m in result["messages"]]
-    assert contents == ["hola", "primera respuesta", "¿qué te dije antes?", "segunda respuesta"]
+    assert [m.content for m in result["messages"]] == ["¿qué te dije antes?", "segunda respuesta"]
 
 
 def test_guardrail_above_threshold_blocks_and_skips_the_llm():
@@ -388,12 +397,15 @@ def test_failing_tool_gives_the_llm_a_toolmessage_with_the_error():
 def test_greeting_after_general_inquiry_in_the_same_thread_has_no_tools_and_clears_use_case():
     get_products = FakeMCPTool("get_products", GET_PRODUCTS_SCHEMA, result=[])
     list_transactions = FakeMCPTool("list_transactions", LIST_TRANSACTIONS_SCHEMA, result=[])
-    llm = ScriptedToolLLM([AIMessage(content="Aquí tu saldo"), AIMessage(content="Hola, ¿en qué más te ayudo?")])
-    jev = FakeJev([_classification(intent="GENERAL_INQUIRY"), _classification(intent="GREETING")])
+    llm = ScriptedToolLLM([AIMessage(content="Hola, ¿en qué más te ayudo?")])
+    jev = FakeJev(_classification(intent="GREETING"))
     graph = _build_graph(llm, jev, tools_for=_fake_tools_for(get_products, list_transactions))
 
-    _run(graph, "¿cuál es mi saldo?", thread_id="mixed-thread")
-    result = _run(graph, "hola", thread_id="mixed-thread")
+    history = [
+        {"role": "user", "content": "¿cuál es mi saldo?"},
+        {"role": "assistant", "content": "Aquí tu saldo"},
+    ]
+    result = _run(graph, "hola", history=history)
 
     assert result["messages"][-1].content == "Hola, ¿en qué más te ayudo?"
     assert result["use_case"] is None
