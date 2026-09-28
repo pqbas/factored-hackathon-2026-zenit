@@ -1,9 +1,3 @@
-"""LangGraph checkpointer: Lakebase in an app, in-process memory locally.
-
-``AsyncCheckpointSaver`` manages its own Lakebase connection, so it does not
-go through ``src/db/connection.py`` (that shared pool arrives in Phase 6).
-"""
-
 from __future__ import annotations
 
 import asyncio

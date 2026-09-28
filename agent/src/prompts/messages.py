@@ -1,9 +1,3 @@
-"""Fixed replies for a rejected session.
-
-These are templates, not LLM text: a request with no valid session never
-reaches the model, so the reply has to come from somewhere fixed.
-"""
-
 SESSION_REJECTED: dict[str, str] = {
     "missing": (
         "Para ayudarte necesito que inicies sesión en la banca digital. Por "

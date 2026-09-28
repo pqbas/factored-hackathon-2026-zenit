@@ -1,20 +1,3 @@
-"""Trusted test session service.
-
-The challenge requires that identity is proven by a trusted session, never by a
-customer number typed in the chat. This module simulates that identity service:
-the caller (chat UI / evaluation harness) sends an opaque ``session_token`` in
-``custom_inputs``; the server resolves it to a customer_id. The conversation
-text is never used to decide whose data is read.
-
-Sessions are a clearly labeled TEST FIXTURE. Configure them with the
-``DEMO_SESSIONS_JSON`` env var:
-
-    {"tok-mx-1": {"customer_id": "CUS00000002", "expires_at": "2099-01-01T00:00:00Z"}}
-
-``DEMO_SESSION_TOKEN`` sets the token used when a request carries none (local
-demo through the chat UI only; leave unset in evaluation).
-"""
-
 from __future__ import annotations
 
 import json

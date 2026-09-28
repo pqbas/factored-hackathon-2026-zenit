@@ -1,9 +1,3 @@
-"""Graph assembly: the smallest graph that answers a message.
-
-``START -> gate -> (respond | END)``. ``llm`` is injected so tests can pass a
-fake chat model instead of ``ChatDatabricks``.
-"""
-
 from functools import partial
 
 from langgraph.graph import END, START, StateGraph

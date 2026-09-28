@@ -1,5 +1,3 @@
-"""Respond node: the LLM answers with the base bank-assistant prompt."""
-
 from pathlib import Path
 
 from langchain_core.messages import SystemMessage

@@ -1,9 +1,3 @@
-"""Environment variables read in one place.
-
-Every module that needs an env var imports ``settings`` from here instead of
-calling ``os.getenv`` directly.
-"""
-
 from __future__ import annotations
 
 import os

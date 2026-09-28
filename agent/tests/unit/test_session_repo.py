@@ -1,5 +1,3 @@
-"""Unit tests for src/db/session_repo.py."""
-
 from __future__ import annotations
 
 import importlib

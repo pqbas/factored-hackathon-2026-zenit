@@ -1,5 +1,3 @@
-"""Conditional routing after each node."""
-
 from langgraph.graph import END
 
 from src.graph.state import AgentState

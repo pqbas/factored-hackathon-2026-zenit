@@ -1,5 +1,3 @@
-"""Integration tests for the gate -> respond graph, with a fake LLM and MemorySaver."""
-
 from __future__ import annotations
 
 import asyncio

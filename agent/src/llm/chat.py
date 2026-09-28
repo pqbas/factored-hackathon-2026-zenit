@@ -1,5 +1,3 @@
-"""Chat model construction."""
-
 from functools import lru_cache
 
 from databricks_langchain.chat_models import ChatDatabricks

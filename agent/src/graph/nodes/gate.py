@@ -1,5 +1,3 @@
-"""Session gate: the first and only node that reads ``session``."""
-
 from langchain_core.messages import AIMessage
 
 from src.graph.state import AgentState
