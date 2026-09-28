@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { Chat } from '@/components/chat';
 import { useSession } from '@/contexts/SessionContext';
 import { useChatData } from '@/hooks/useChatData';
+import { handledByOf } from '@/lib/handoff';
 import type { LanguageModelUsage } from 'ai';
 import type { LanguageModelV3Usage } from '@ai-sdk/provider';
 
@@ -82,6 +83,7 @@ export default function ChatPage() {
       isReadonly={isReadonly}
       session={session}
       initialLastContext={fromV3Usage(chat.lastContext)}
+      initialHandledBy={handledByOf(chat.handledBy)}
     />
   );
 }

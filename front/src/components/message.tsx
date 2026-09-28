@@ -1,7 +1,9 @@
 import { motion } from 'framer-motion';
 import { ASSISTANT_TITLE } from '@/lib/assistant';
 import React, { memo, useState } from 'react';
+import { UserRound } from 'lucide-react';
 import { BrandMark } from './brand-mark';
+import { senderOf } from '@/lib/handoff';
 import { Response } from './elements/response';
 import { MessageContent } from './elements/message';
 import {
@@ -64,6 +66,8 @@ const PurePreviewMessage = ({
 }) => {
   const [mode, setMode] = useState<'view' | 'edit'>('view');
   const [showErrors, setShowErrors] = useState(false);
+  // Advisor replies are role 'assistant' too; senderType tells them apart.
+  const isAdvisor = senderOf(message) === 'advisor';
 
   // Hook for handling MCP approval requests
   const { submitApproval, isSubmitting, pendingApprovalId } = useApproval({
@@ -126,11 +130,16 @@ const PurePreviewMessage = ({
           'justify-start': message.role === 'assistant',
         })}
       >
-        {message.role === 'assistant' && (
-          <span title={ASSISTANT_TITLE} aria-label={ASSISTANT_TITLE} className="shrink-0">
-            <BrandMark size={26} pulse={isLoading} className="mt-0.5" />
-          </span>
-        )}
+        {message.role === 'assistant' &&
+          (isAdvisor ? (
+            <span className="mt-0.5 flex size-[26px] shrink-0 items-center justify-center rounded-lg bg-secondary text-primary">
+              <UserRound className="size-4" strokeWidth={2} />
+            </span>
+          ) : (
+            <span title={ASSISTANT_TITLE} aria-label={ASSISTANT_TITLE} className="shrink-0">
+              <BrandMark size={26} pulse={isLoading} className="mt-0.5" />
+            </span>
+          ))}
 
         <div
           className={cn('flex min-w-0 flex-col gap-3', {
@@ -140,6 +149,14 @@ const PurePreviewMessage = ({
               message.role === 'user' && mode !== 'edit',
           })}
         >
+          {isAdvisor && (
+            <span
+              data-testid="advisor-label"
+              className="-mb-2 font-semibold text-muted-foreground text-xs"
+            >
+              Asesor
+            </span>
+          )}
           {attachmentsFromMessage.length > 0 && (
             <div
               data-testid={`message-attachments`}
