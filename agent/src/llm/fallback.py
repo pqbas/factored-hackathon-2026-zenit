@@ -110,9 +110,11 @@ def fallback_classify(text: str, intents: Iterable[str]) -> Classification:
     t = normalize(text)
 
     intent = "OUT_OF_SCOPE"
+    confidence = 0.0
     for pattern, label in _KEYWORD_INTENTS:
         if label in available and pattern.search(t):
             intent = label
+            confidence = 1.0
             break
 
     return Classification(
@@ -120,7 +122,7 @@ def fallback_classify(text: str, intents: Iterable[str]) -> Classification:
         guardrail_probability=0.0,
         language=detect_language(text),
         intent=intent,
-        intent_confidence=0.0,
+        intent_confidence=confidence,
         sentiment="neutral",
         source="fallback",
     )
