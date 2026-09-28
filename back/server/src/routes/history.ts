@@ -8,6 +8,8 @@ import { authMiddleware, requireAuth } from '../middleware/auth';
 import { getChats, isDatabaseAvailable } from '@chat-template/db';
 import { ChatSDKError } from '@chat-template/core/errors';
 
+import { toCustomerChat } from '../customer-view';
+
 export const historyRouter: RouterType = Router();
 
 // Apply auth middleware
@@ -62,7 +64,7 @@ historyRouter.get('/', requireAuth, async (req: Request, res: Response) => {
       useCase,
     });
 
-    res.json(chats);
+    res.json({ ...chats, chats: chats.chats.map(toCustomerChat) });
   } catch (error) {
     console.error('[/api/history] Error in handler:', error);
     res.status(500).json({ error: 'Failed to fetch chat history' });

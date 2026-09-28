@@ -15,6 +15,7 @@ import { dirname } from 'node:path';
 import { chatRouter } from './routes/chat';
 import { historyRouter } from './routes/history';
 import { adminRouter } from './routes/admin';
+import { advisorRouter } from './routes/advisor';
 import { sessionRouter } from './routes/session';
 import { messagesRouter } from './routes/messages';
 import { configRouter } from './routes/config';
@@ -55,6 +56,7 @@ app.get('/ping', (_req, res) => {
 app.use('/api/chat', chatRouter);
 app.use('/api/history', historyRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/advisor', advisorRouter);
 app.use('/api/session', sessionRouter);
 app.use('/api/messages', messagesRouter);
 app.use('/api/config', configRouter);
