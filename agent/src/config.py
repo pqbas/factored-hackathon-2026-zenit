@@ -17,6 +17,7 @@ class Settings:
     guardrail_threshold: float
     intent_threshold: float
     routing_path: str
+    uc_catalog: str
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -32,6 +33,7 @@ class Settings:
             guardrail_threshold=float(os.getenv("GUARDRAIL_THRESHOLD", "0.7")),
             intent_threshold=float(os.getenv("INTENT_THRESHOLD", "0.5")),
             routing_path=os.getenv("ROUTING_PATH", "configs/routing.yaml"),
+            uc_catalog=os.getenv("UC_CATALOG", "workspace"),
         )
 
 
