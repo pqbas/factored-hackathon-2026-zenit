@@ -3,6 +3,7 @@ import {
   MessagesSquare,
   Moon,
   Sun,
+  Wallet,
   type LucideIcon,
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
@@ -28,6 +29,13 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
+  {
+    id: 'products',
+    label: 'Mis productos',
+    to: '/products',
+    icon: Wallet,
+    isActive: (pathname) => pathname.startsWith('/products'),
+  },
   {
     id: 'agent',
     label: 'Agente',

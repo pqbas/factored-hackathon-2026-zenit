@@ -64,6 +64,27 @@ Shipped en PR #<n>.
 
 ---
 
+## Phase 3: Mis productos, con datos mock (Complete)
+
+**Goal:** que el cliente vea de un vistazo todo lo que tiene en el banco, como
+en la app de cualquier banco.
+
+<!-- Los datos mock siguen el esquema de las tablas `products` y `transactions`
+     del dataset LATAM Bank (data/pipeline/tables.py). -->
+
+- [x] Desde el riel se llega a "Mis productos", con los productos agrupados en
+      cuentas, tarjetas, créditos e inversiones y el saldo de cada uno.
+- [x] Un resumen muestra el dinero disponible, lo que se debe, lo invertido y
+      los últimos movimientos.
+- [x] Al elegir un producto se ven su saldo, sus datos (número, tasa, fechas,
+      estado) y sus movimientos; en tarjetas de crédito, cuánto del límite se usa.
+
+Los datos son de la clienta CUS00000322 del dummy del dataset. La categoría del
+gasto (`transaction_category`) no se muestra todavía. Fase hecha sin carpeta de
+spec. Shipped en PR #<n>.
+
+---
+
 ## Phase 1b: Selector de cliente demo en el chat
 
 **Goal:** que el agente sepa con qué cliente demo habla el chat.
@@ -78,7 +99,7 @@ Shipped en PR #<n>.
 
 ---
 
-## Phase 3: Roles y navegación por rol
+## Phase 4: Roles y navegación por rol
 
 **Goal:** que cada usuario vea las pantallas de su rol (cliente, asesor o
 admin) y ninguna otra.
@@ -94,7 +115,7 @@ admin) y ninguna otra.
 
 ---
 
-## Phase 4: Vista admin con conversaciones reales
+## Phase 5: Vista admin con conversaciones reales
 
 **Goal:** que un admin revise las conversaciones de cualquier usuario sin poder
 modificarlas.
@@ -109,7 +130,7 @@ modificarlas.
 
 ---
 
-## Phase 5: Consola del asesor
+## Phase 6: Consola del asesor
 
 **Goal:** que un asesor tome una conversación derivada, responda al cliente y
 la cierre.
