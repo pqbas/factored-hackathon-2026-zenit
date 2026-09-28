@@ -18,4 +18,4 @@
 
 ## Current phase
 
-[Phase 1: Create the project structure](roadmap.md#phase-1-create-the-project-structure-in-progress)
+[Phase 1: Create the project structure](roadmap.md#phase-1-create-the-project-structure-complete)

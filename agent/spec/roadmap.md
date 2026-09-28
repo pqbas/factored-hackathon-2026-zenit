@@ -1,12 +1,14 @@
 # Roadmap
 
-## Phase 1: Create the project structure (In Progress)
+## Phase 1: Create the project structure (Complete)
 
 **Goal:** make the code follow the structure in `docs/13`; current behavior may change.
 
 - [x] Folder structure defined
-- [ ] The current code is kept as reference in `legacy/`, outside the package
-- [ ] The agent starts from `src/` and answers a message end to end
+- [x] The current code is kept as reference in `legacy/`, outside the package
+- [x] The agent starts from `src/` and answers a message end to end
+
+Shipped en PR #1.
 
 ---
 
