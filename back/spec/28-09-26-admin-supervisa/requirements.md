@@ -36,23 +36,13 @@ asesores atienden. Además, todo queda bajo `/api/advisor/*` y se borra
   conversación se cerró.".
 - Errores de permiso: `403 { code: 'forbidden:chat' }`.
 
-## 2. Conversación tomada y abandonada (propuesta, NO se implementa sin OK)
+## 2. Fuera de alcance / futuro
 
-Sin `force`, si un asesor toma una conversación y se va, nadie la puede
-liberar. Propuesta mínima: **rescate por otro asesor con motivo e
-inactividad.**
-
-- `POST /api/advisor/conversations/:id/release` acepta, de un asesor que NO
-  la tiene tomada, `{ outcome, reason }` con `reason` obligatorio (10 a 500
-  caracteres), solo si pasaron **15 minutos** sin mensajes del asesor que la
-  tiene desde `assignedAt` o desde su último mensaje. Antes de eso, 409 como
-  hoy.
-- Se guarda el mensaje system genérico de siempre ("Volviste con David.") y
-  un registro de auditoría: quién la liberó, a quién se la quitó y el motivo,
-  en el log del servidor y en `metadata` del mensaje system, que no se le
-  muestra al cliente.
-- Alternativa descartada por ahora: un timeout automático, que necesita un
-  job periódico que la App no tiene.
+- Conversación tomada y abandonada: sin `force`, si un asesor toma una
+  conversación y se va, nadie la puede liberar. Una salida (rescate por otro
+  asesor con motivo e inactividad, o un timeout) es lógica de negocio de un
+  cliente real y no se implementa en la hackathon (criterio del usuario,
+  28-09-26).
 
 ## 3. Functional requirements
 
@@ -68,8 +58,8 @@ inactividad.**
   tener dos rutas que hacen lo mismo. El front ya migra a esta.
 - La lista de usuarios queda solo para admin, porque es para supervisar.
 - `force` se elimina en vez de pasar a asesores, para que la regla "dos
-  personas nunca responden el mismo chat" no tenga excepciones. La salida para
-  conversaciones abandonadas es §2, cuando se apruebe.
+  personas nunca responden el mismo chat" no tenga excepciones. Las
+  conversaciones abandonadas quedan fuera de alcance (§2).
 - `requireAdmin` queda solo para `/api/advisor/users`.
 
 ## 5. Context

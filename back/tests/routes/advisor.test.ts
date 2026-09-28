@@ -9,6 +9,14 @@ import {
 import { skipInEphemeralMode } from '../helpers';
 
 // Never curie: history.test.ts expects curie to have no chats.
+// A second advisor, via headers on babbage's context (ADVISOR_EMAILS in
+// playwright.config.ts). curie must stay chat-free, and ada is an admin, who
+// only supervises.
+const ASESOR2 = {
+  'X-Forwarded-User': 'asesor2',
+  'X-Forwarded-Email': 'asesor2@example.com',
+};
+
 async function createChat(ownerContext: { name: string }) {
   const chatId = generateUUID();
   await saveChat({
@@ -84,15 +92,66 @@ test.describe('/api/advisor (with database)', () => {
       expect(release.status()).toBe(403);
     });
 
-    test('an advisor with force gets 403 on take', async ({
+    test('the admin reads the console but gets 403 on every write', async ({
+      babbageContext,
+      adaContext,
+    }) => {
+      const chatId = await createChat(babbageContext);
+
+      const inbox = await adaContext.request.get(
+        '/api/advisor/conversations?limit=100',
+      );
+      expect(inbox.status()).toBe(200);
+      const messages = await adaContext.request.get(
+        `/api/advisor/conversations/${chatId}/messages`,
+      );
+      expect(messages.status()).toBe(200);
+
+      for (const [path, data] of [
+        ['take', {}],
+        ['messages', { text: 'hola' }],
+        ['release', { outcome: 'resolved' }],
+      ] as const) {
+        const response = await adaContext.request.post(
+          `/api/advisor/conversations/${chatId}/${path}`,
+          { data },
+        );
+        expect(response.status()).toBe(403);
+        expect((await response.json()).code).toBe('forbidden:chat');
+      }
+    });
+
+    test('/users is for the admin only', async ({
+      adaContext,
+      babbageContext,
+      curieContext,
+    }) => {
+      expect(
+        (await adaContext.request.get('/api/advisor/users')).status(),
+      ).toBe(200);
+      expect(
+        (await babbageContext.request.get('/api/advisor/users')).status(),
+      ).toBe(403);
+      expect(
+        (await curieContext.request.get('/api/advisor/users')).status(),
+      ).toBe(403);
+    });
+
+    test('force is ignored: it neither reassigns nor errors', async ({
       babbageContext,
     }) => {
       const chatId = await createChat(babbageContext);
+      await babbageContext.request.post(
+        `/api/advisor/conversations/${chatId}/take`,
+        { data: {}, headers: ASESOR2 },
+      );
+
       const response = await babbageContext.request.post(
         `/api/advisor/conversations/${chatId}/take`,
         { data: { force: true } },
       );
-      expect(response.status()).toBe(403);
+      expect(response.status()).toBe(409);
+      expect((await response.json()).assignedTo).toBe('asesor2@example.com');
     });
   });
 
@@ -145,7 +204,6 @@ test.describe('/api/advisor (with database)', () => {
 
     test('another advisor gets a 409 conflict with assignedTo', async ({
       babbageContext,
-      adaContext,
     }) => {
       const chatId = await createChat(babbageContext);
       await babbageContext.request.post(
@@ -153,9 +211,9 @@ test.describe('/api/advisor (with database)', () => {
         { data: {} },
       );
 
-      const response = await adaContext.request.post(
+      const response = await babbageContext.request.post(
         `/api/advisor/conversations/${chatId}/take`,
-        { data: {} },
+        { data: {}, headers: ASESOR2 },
       );
       expect(response.status()).toBe(409);
       const body = await response.json();
@@ -204,52 +262,21 @@ test.describe('/api/advisor (with database)', () => {
 
     test('two simultaneous takes of a free chat: exactly one wins', async ({
       babbageContext,
-      adaContext,
     }) => {
       for (let i = 0; i < 5; i++) {
         const chatId = await createChat(babbageContext);
         const statuses = (
           await Promise.all(
-            [babbageContext, adaContext].map((ctx) =>
-              ctx.request.post(`/api/advisor/conversations/${chatId}/take`, {
-                data: {},
-              }),
+            [{}, ASESOR2].map((headers) =>
+              babbageContext.request.post(
+                `/api/advisor/conversations/${chatId}/take`,
+                { data: {}, headers },
+              ),
             ),
           )
         ).map((r) => r.status());
         expect(statuses.sort()).toEqual([200, 409]);
       }
-    });
-
-    test('an admin with force reassigns and logs the generic reassignment message', async ({
-      babbageContext,
-      adaContext,
-    }) => {
-      const chatId = await createChat(babbageContext);
-      await babbageContext.request.post(
-        `/api/advisor/conversations/${chatId}/take`,
-        { data: {} },
-      );
-
-      const response = await adaContext.request.post(
-        `/api/advisor/conversations/${chatId}/take`,
-        { data: { force: true } },
-      );
-      expect(response.status()).toBe(200);
-      const { chat } = await response.json();
-      expect(chat.assignedTo).toBe(`${adaContext.name}@example.com`);
-
-      const messages = await getMessagesByChatId({ id: chatId });
-      const systemMessages = messages.filter((m) => m.role === 'system');
-      expect(systemMessages).toHaveLength(2);
-
-      const reassignMessage = systemMessages[1];
-      const text = (reassignMessage.parts as Array<{ text: string }>)[0].text;
-      expect(text).toBe('Otro asesor continúa la conversación.');
-      expect(reassignMessage.senderId).toBeNull();
-      expect(text).not.toContain(babbageContext.name);
-      expect(text).not.toContain(adaContext.name);
-      expect(text).not.toContain('@example.com');
     });
 
     test('taking a nonexistent chat returns 404', async ({
@@ -264,9 +291,8 @@ test.describe('/api/advisor (with database)', () => {
   });
 
   test.describe('messages', () => {
-    test('only the advisor who took the chat can send a message; an admin who did not gets 409', async ({
+    test('only the advisor who took the chat can send a message; another advisor gets 409', async ({
       babbageContext,
-      adaContext,
     }) => {
       const chatId = await createChat(babbageContext);
       await babbageContext.request.post(
@@ -283,11 +309,11 @@ test.describe('/api/advisor (with database)', () => {
       expect(message.senderType).toBe('human_agent');
       expect(message.senderId).toBe(`${babbageContext.name}@example.com`);
 
-      const adminAttempt = await adaContext.request.post(
+      const otherAttempt = await babbageContext.request.post(
         `/api/advisor/conversations/${chatId}/messages`,
-        { data: { text: 'yo tambien quiero responder' } },
+        { data: { text: 'yo tambien quiero responder' }, headers: ASESOR2 },
       );
-      expect(adminAttempt.status()).toBe(409);
+      expect(otherAttempt.status()).toBe(409);
     });
 
     test('an untaken chat rejects advisor messages with 409', async ({
@@ -496,12 +522,11 @@ test.describe('/api/advisor (with database)', () => {
 
     test('an advisor releasing a chat assigned to someone else gets 409', async ({
       babbageContext,
-      adaContext,
     }) => {
       const chatId = await createChat(babbageContext);
-      await adaContext.request.post(
+      await babbageContext.request.post(
         `/api/advisor/conversations/${chatId}/take`,
-        { data: {} },
+        { data: {}, headers: ASESOR2 },
       );
 
       const response = await babbageContext.request.post(
@@ -520,23 +545,6 @@ test.describe('/api/advisor (with database)', () => {
         { data: { outcome: 'returned_to_agent' } },
       );
       expect(response.status()).toBe(409);
-    });
-
-    test('an admin can release a chat assigned to someone else', async ({
-      babbageContext,
-      adaContext,
-    }) => {
-      const chatId = await createChat(babbageContext);
-      await babbageContext.request.post(
-        `/api/advisor/conversations/${chatId}/take`,
-        { data: {} },
-      );
-
-      const response = await adaContext.request.post(
-        `/api/advisor/conversations/${chatId}/release`,
-        { data: { outcome: 'resolved' } },
-      );
-      expect(response.status()).toBe(200);
     });
 
     test('release 404s for a chat that does not exist', async ({
@@ -597,7 +605,6 @@ test.describe('/api/advisor (with database)', () => {
   test.describe('bandeja filters', () => {
     test('assignedTo=me, status and handledBy filter the inbox', async ({
       babbageContext,
-      adaContext,
     }) => {
       const mine = await createChat(babbageContext);
       await babbageContext.request.post(
@@ -606,9 +613,9 @@ test.describe('/api/advisor (with database)', () => {
       );
 
       const others = await createChat(babbageContext);
-      await adaContext.request.post(
+      await babbageContext.request.post(
         `/api/advisor/conversations/${others}/take`,
-        { data: {} },
+        { data: {}, headers: ASESOR2 },
       );
 
       const mineResponse = await babbageContext.request.get(

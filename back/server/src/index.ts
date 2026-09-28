@@ -14,7 +14,6 @@ import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
 import { chatRouter } from './routes/chat';
 import { historyRouter } from './routes/history';
-import { adminRouter } from './routes/admin';
 import { advisorRouter } from './routes/advisor';
 import { sessionRouter } from './routes/session';
 import { messagesRouter } from './routes/messages';
@@ -55,7 +54,6 @@ app.get('/ping', (_req, res) => {
 // API routes
 app.use('/api/chat', chatRouter);
 app.use('/api/history', historyRouter);
-app.use('/api/admin', adminRouter);
 app.use('/api/advisor', advisorRouter);
 app.use('/api/session', sessionRouter);
 app.use('/api/messages', messagesRouter);

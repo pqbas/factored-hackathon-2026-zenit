@@ -170,6 +170,9 @@ tomarlas ni responder, y que solo los asesores atiendan.
 - [ ] La vista admin separada desaparece: la lista de clientes para el filtro
       sale de la consola, y las rutas /api/admin se eliminan.
 
+Fuera de alcance / futuro: liberar una conversación que un asesor tomó y
+abandonó (rescate o timeout).
+
 ---
 
 ## Phase 6: Handoff automático del agente
