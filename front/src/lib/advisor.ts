@@ -1,42 +1,47 @@
-import { ASSISTANT_NAME } from '@/lib/assistant';
-// The advisor console on the back's advisor API (/api/advisor/conversations).
-// Types follow back/spec/28-09-26-consola-asesor/requirements.md §1; swap them
-// for the ones in @chat-template/db once the back ships them.
+// The advisor console on the back's advisor API (/api/advisor/conversations),
+// back/spec/28-09-26-consola-asesor/requirements.md §1.
 
+import type { Chat, DBMessage } from '@chat-template/db';
+
+import { ASSISTANT_NAME } from '@/lib/assistant';
 import type { ConversationStatus } from '@/lib/conversations';
 
-export type HandledBy = 'ai_agent' | 'human_queue' | 'human_agent';
+// Row types from @chat-template/db as they arrive over JSON: dates are strings.
+type OverJson<T> = {
+  [K in keyof T]: T[K] extends Date ? string : T[K] extends Date | null ? string | null : T[K];
+};
 
-export interface AdvisorChat {
-  id: string;
-  title: string;
-  createdAt: string;
-  userId: string;
-  userEmail: string | null;
-  handledBy: HandledBy;
-  assignedTo: string | null;
-  assignedAt: string | null;
-  closedAt: string | null;
-  useCase: string | null;
-}
+export type HandledBy = Chat['handledBy'];
+
+export type AdvisorChat = OverJson<
+  Pick<
+    Chat,
+    | 'id'
+    | 'title'
+    | 'createdAt'
+    | 'userId'
+    | 'userEmail'
+    | 'handledBy'
+    | 'assignedTo'
+    | 'assignedAt'
+    | 'closedAt'
+    | 'useCase'
+  >
+>;
 
 export interface AdvisorChatPage {
   chats: AdvisorChat[];
   hasMore: boolean;
 }
 
-export type SenderType = 'customer' | 'ai_agent' | 'human_agent' | 'system';
+export type SenderType = NonNullable<DBMessage['senderType']>;
 
-export interface AdvisorMessage {
-  id: string;
-  chatId: string;
-  role: string;
+export type AdvisorMessage = OverJson<
+  Pick<DBMessage, 'id' | 'chatId' | 'role' | 'createdAt' | 'senderType' | 'senderId'>
+> & {
+  // null senderType: saved before the console existed; read it by role.
   parts: { type: string; text?: string }[];
-  createdAt: string;
-  // null on messages saved before the console existed: read them by role.
-  senderType: SenderType | null;
-  senderId: string | null;
-}
+};
 
 export type InboxFilter = 'open' | 'waiting' | 'mine' | 'assistant' | 'closed';
 
