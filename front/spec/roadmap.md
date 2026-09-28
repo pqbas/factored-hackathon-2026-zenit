@@ -41,7 +41,7 @@ Shipped en PR #<n>.
 
 ---
 
-## Phase 2: Identidad visual "Sereno estilo Mac" (In Progress)
+## Phase 2: Identidad visual "Sereno estilo Mac" (Complete)
 
 **Goal:** que la app deje de verse como una plantilla de chat y transmita la
 calma y amplitud de una app nativa de Mac.
@@ -49,14 +49,18 @@ calma y amplitud de una app nativa de Mac.
 <!-- Referencia visual: artboards "D · Sereno estilo Mac" (claro y oscuro) del
      lienzo https://claude.ai/artifact/SfN8i51oncvvSj5dskfiH9 -->
 
-- [ ] Toda la app usa la paleta sereno (oscura por defecto, con variante clara),
+- [x] Toda la app usa la paleta sereno (oscura por defecto, con variante clara),
       la tipografía del sistema y esquinas redondeadas suaves.
-- [ ] El riel y la barra lateral forman un solo panel, y el contenido flota como
+- [x] El riel y la barra lateral forman un solo panel, y el contenido flota como
       una hoja con margen y sombra suave.
-- [ ] La pantalla de inicio del agente saluda al usuario por su nombre, ofrece
+- [x] La pantalla de inicio del agente saluda al usuario por su nombre, ofrece
       cuatro acciones y recuerda que el banco nunca pide contraseña, NIP ni CVV.
-- [ ] Los textos de Agente están en español.
-- [ ] La vista de Chats usa la misma paleta.
+- [x] Los textos de Agente están en español.
+- [x] La vista de Chats usa la misma paleta.
+
+También entraron: color principal celeste, botón de modo claro/oscuro en el
+riel y un solo avatar de usuario (en el riel). Fase hecha sin carpeta de spec.
+Shipped en PR #<n>.
 
 ---
 
