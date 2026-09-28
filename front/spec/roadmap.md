@@ -276,13 +276,15 @@ Shipped en PR #33.
 
 ---
 
-## Phase 10: Contadores en las vistas de la consola
+## Phase 10: Contadores en las vistas de la consola (Complete)
 
 **Goal:** que el asesor vea cuánto hay en cada vista sin abrirla.
 
 <!-- GET /api/advisor/conversations/counts (back, fix/pqbas-back-inbox-counts):
      { total, byUseCase, withoutUseCase, unattended, mine, resolved }. -->
 
-- [ ] Cada vista (Bandeja, casos de uso, Sin atender, Mías, Resueltas) muestra
+- [x] Cada vista (Bandeja, casos de uso, Sin atender, Mías, Resueltas) muestra
       su número a la derecha; se oculta si es 0 y "Sin atender" se resalta.
-- [ ] Los números se refrescan con el polling de la bandeja y tras cada acción.
+- [x] Los números se refrescan con el polling de la bandeja y tras cada acción.
+
+Shipped en PR #<n>.
