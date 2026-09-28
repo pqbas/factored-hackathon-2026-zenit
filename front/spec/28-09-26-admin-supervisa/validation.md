@@ -20,10 +20,16 @@
 
 ## Manual Checks
 
-Pendiente hasta que la Fase 5b del back esté en `main`; la vista se revisó con
-la API mockeada en el navegador.
-- [ ] Con el back de la Fase 5b: el admin ve la bandeja completa, filtra por
-      usuario y lee; un asesor atiende normal.
+Con el back de `main` (PR #27) en local, `chatbot_dev`,
+`ADMIN_EMAILS=pcubasm1@gmail.com` y `ADVISOR_EMAILS=asesor1,asesor2`:
+
+- [x] El admin ve el riel sin Admin, arranca en Todas (19 conversaciones),
+      filtra por usuario (solo las de ese dueño) y abre una en solo lectura sin
+      controles ni composer; la API le responde 403 en take, messages y
+      release; `/admin` lleva a `/conversations`.
+- [x] asesor1 arranca en Abiertas, sin filtro de usuario; toma una
+      conversación de David, responde ("Tú") sin botón de force, el admin la ve
+      como "La atiende asesor1@example.com", y la devuelve a David.
 
 ## Definition of Done
 Todo marcado y la Fase 5b del back en `main`.
