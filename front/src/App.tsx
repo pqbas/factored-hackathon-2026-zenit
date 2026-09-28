@@ -10,6 +10,7 @@ import ChatLayout from '@/layouts/ChatLayout';
 import NewChatPage from '@/pages/NewChatPage';
 import ChatPage from '@/pages/ChatPage';
 import ConversationsPage from '@/pages/ConversationsPage';
+import ProductsPage from '@/pages/ProductsPage';
 
 function App() {
   return (
@@ -34,6 +35,7 @@ function App() {
                     path="conversations"
                     element={<ConversationsPage />}
                   />
+                  <Route path="products" element={<ProductsPage />} />
                 </Route>
               </Route>
             </Routes>
