@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { ASSISTANT_KIND, ASSISTANT_NAME } from '@/lib/assistant';
 import { useWindowSize } from 'usehooks-ts';
 
 import { SidebarToggle } from '@/components/sidebar-toggle';
@@ -37,7 +38,7 @@ export function ChatHeader({
       ? { name: 'Asesor', status: 'Te atiende una persona' }
       : handledBy === 'human_queue'
         ? { name: 'Asesor', status: 'Esperando a un asesor' }
-        : { name: 'Asistente', status: 'En línea' };
+        : { name: ASSISTANT_NAME, status: `${ASSISTANT_KIND} · En línea` };
   const navigate = useNavigate();
   const { open } = useSidebar();
   const { chatHistoryEnabled } = useConfig();

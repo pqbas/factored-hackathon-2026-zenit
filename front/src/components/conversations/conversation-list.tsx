@@ -1,4 +1,5 @@
 import { Check, ChevronDown, ListFilter, Search } from 'lucide-react';
+import { ASSISTANT_NAME } from '@/lib/assistant';
 
 import {
   DropdownMenu,
@@ -36,7 +37,7 @@ const FILTERS: { id: StatusFilter; label: string }[] = [
 ];
 
 const PREVIEW_PREFIX: Partial<Record<MockMessage['from'], string>> = {
-  assistant: 'Asistente: ',
+  assistant: `${ASSISTANT_NAME}: `,
   advisor: 'Tú: ',
 };
 

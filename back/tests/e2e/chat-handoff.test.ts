@@ -126,7 +126,7 @@ test.describe('Customer chat during a handoff', () => {
 
     server.backToAgent();
     await expect(page.getByTestId('handoff-notice')).toHaveCount(0, { timeout: 10_000 });
-    await expect(page.getByTestId('chat-peer')).toHaveText('Asistente');
+    await expect(page.getByTestId('chat-peer')).toHaveText('David');
     await expect(page.getByTestId('handoff-system-message').last()).toHaveText('Volviste con el asistente.');
     await page.close();
   });

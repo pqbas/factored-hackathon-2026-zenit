@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import { ASSISTANT_TITLE } from '@/lib/assistant';
 import React, { memo, useState } from 'react';
 import { UserRound } from 'lucide-react';
 import { BrandMark } from './brand-mark';
@@ -135,7 +136,9 @@ const PurePreviewMessage = ({
               <UserRound className="size-4" strokeWidth={2} />
             </span>
           ) : (
-            <BrandMark size={26} pulse={isLoading} className="mt-0.5" />
+            <span title={ASSISTANT_TITLE} aria-label={ASSISTANT_TITLE} className="shrink-0">
+              <BrandMark size={26} pulse={isLoading} className="mt-0.5" />
+            </span>
           ))}
 
         <div
