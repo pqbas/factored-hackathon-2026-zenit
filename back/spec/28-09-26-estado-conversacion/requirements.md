@@ -43,7 +43,7 @@ chico del agente antes de su Fase 7; `handoff` llega con su Fase 7.
 
 | Campo      | Qué hace el back                                                                                                  |
 | ---------- | ----------------------------------------------------------------------------------------------------------------- |
-| `use_case` | Lo guarda en `Chat.useCase` (el intent de la ruta, tal cual; `null` si el turno no tiene caso).                   |
+| `use_case` | Lo guarda en `Chat.useCase` si no es `null`. Un turno sin caso no lo borra: es la segmentación de la conversación. |
 | `intent`   | Lo guarda en `Chat.intent`.                                                                                       |
 | `language` | Lo guarda en `Chat.language`.                                                                                     |
 | `blocked`  | Si es `true`, marca como bloqueados el mensaje del cliente y la respuesta del agente de ese turno.                |
