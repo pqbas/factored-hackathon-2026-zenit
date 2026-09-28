@@ -41,7 +41,7 @@ class BindableChatModel:
     def __init__(self, text: str):
         self._text = text
 
-    def bind_tools(self, tools):
+    def bind_tools(self, tools, **kwargs):
         return self
 
     async def ainvoke(self, messages):
@@ -55,7 +55,7 @@ class ScriptedToolChatModel:
     def __init__(self, replies: list[AIMessage]):
         self._replies = iter(replies)
 
-    def bind_tools(self, tools):
+    def bind_tools(self, tools, **kwargs):
         return self
 
     async def ainvoke(self, messages):

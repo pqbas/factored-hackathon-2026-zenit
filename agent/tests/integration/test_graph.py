@@ -95,13 +95,23 @@ class ScriptedToolLLM:
         self.bound_tools = None
         self.received = None
 
-    def bind_tools(self, tools):
+    def bind_tools(self, tools, **kwargs):
         self.bound_tools = tools
-        return self
+        self.tool_choices = [*getattr(self, "tool_choices", []), kwargs.get("tool_choice")]
+        return _Bound(self, kwargs.get("tool_choice"))
+
+    async def ainvoke(self, messages, tool_choice=None):
+        self.received = messages
+        self.calls = [*getattr(self, "calls", []), tool_choice]
+        return next(self._replies)
+
+
+class _Bound:
+    def __init__(self, llm, tool_choice):
+        self._llm, self._tool_choice = llm, tool_choice
 
     async def ainvoke(self, messages):
-        self.received = messages
-        return next(self._replies)
+        return await self._llm.ainvoke(messages, tool_choice=self._tool_choice)
 
 
 class FakeMCPTool:
@@ -455,3 +465,18 @@ def test_a_short_message_after_a_long_portuguese_one_gets_the_portuguese_languag
     _run(graph, "Obrigado", history=history)
 
     assert llm.received[0].content.endswith("Responda em português.")
+
+
+def test_the_first_round_of_a_use_case_requires_a_tool_call():
+    get_products = FakeMCPTool("get_products", GET_PRODUCTS_SCHEMA, result=[])
+    list_transactions = FakeMCPTool("list_transactions", LIST_TRANSACTIONS_SCHEMA, result=[])
+    llm = ScriptedToolLLM([
+        AIMessage(content="", tool_calls=[{"name": "get_products", "args": {}, "id": "call_1"}]),
+        AIMessage(content="Tu límite es..."),
+    ])
+    jev = FakeJev(_classification(intent="GENERAL_INQUIRY"))
+    graph = _build_graph(llm, jev, tools_for=_fake_tools_for(get_products, list_transactions))
+
+    _run(graph, "E limite?")
+
+    assert llm.calls == ["required", None]
