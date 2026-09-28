@@ -85,7 +85,7 @@ spec. Shipped en PR #<n>.
 
 ---
 
-## Phase 4: Consola del asesor estilo CRM, con datos mock
+## Phase 4: Consola del asesor estilo CRM, con datos mock (Complete)
 
 **Goal:** que el asesor atienda desde Chats las conversaciones que el
 asistente le deriva, con el estado y el tema de cada una a la vista.
@@ -93,18 +93,21 @@ asistente le deriva, con el estado y el tema de cada una a la vista.
 <!-- Referencia visual: artboard "E · Consola del asesor (chats)" del lienzo
      https://claude.ai/artifact/SfN8i51oncvvSj5dskfiH9 -->
 
-- [ ] El asesor prende o apaga el asistente en cada conversación; con el
+- [x] El asesor prende o apaga el asistente en cada conversación; con el
       asistente apagado, el asesor escribe y el asistente no responde.
-- [ ] Cada conversación muestra su estado (sin atender, con asistente, en
+- [x] Cada conversación muestra su estado (sin atender, con asistente, en
       atención, resuelto) y la lista se filtra por estado.
-- [ ] Cada conversación lleva etiquetas con el tema detectado y el producto
+- [x] Cada conversación lleva etiquetas con el tema detectado y el producto
       relacionado, y el asesor puede agregar más.
-- [ ] Las imágenes que manda el cliente se ven en el chat, con los datos
+- [x] Las imágenes que manda el cliente se ven en el chat, con los datos
       sensibles (CVV, códigos de seguridad) ocultos.
-- [ ] El chat avisa cuando el asistente deriva al asesor y con qué motivo.
-- [ ] El asesor tiene respuestas rápidas, puede adjuntar archivos y saltar al
+- [x] El chat avisa cuando el asistente deriva al asesor y con qué motivo.
+- [x] El asesor tiene respuestas rápidas, puede adjuntar archivos y saltar al
       último mensaje.
-- [ ] El encabezado muestra el cliente con su ID y el teléfono enmascarado.
+- [x] El encabezado muestra el cliente con su ID y el teléfono enmascarado.
+
+El estado va como punto y texto, el filtro de estado vive en un menú "Filtros"
+y las respuestas rápidas se abren con el botón del rayo. Shipped en PR #7.
 
 ---
 
