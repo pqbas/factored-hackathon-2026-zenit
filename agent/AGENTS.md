@@ -83,9 +83,8 @@ Ask the user: "I see there's an existing app with the same name. Would you like 
 
 | File | Purpose |
 |------|---------|
-| `agent_server/agent.py` | Agent logic, model, instructions, MCP servers |
-| `agent_server/start_server.py` | FastAPI server + MLflow setup |
-| `agent_server/evaluate_agent.py` | Agent evaluation with MLflow scorers |
+| `src/main.py` | Agent logic, model, instructions, FastAPI server + MLflow setup |
+| `legacy/agent_server/evaluate_agent.py` | Agent evaluation with MLflow scorers (reference only; `evals/` returns in Phase 8) |
 | `databricks.yml` | Bundle config & resource permissions |
 | `scripts/quickstart.py` | One-command setup script |
 | `scripts/discover_tools.py` | Discovers available workspace resources |

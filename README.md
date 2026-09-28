@@ -105,13 +105,14 @@ cd agent && uv run --group dev pytest tests -q
 - [ ] **Vista de supervisor** para ver las conversaciones de los usuarios con los agentes (y las alertas: fraude, churn, SLA). Diseño: [docs/agent_architecture.md §6](docs/agent_architecture.md).
 - [ ] **Crear y entrenar el modelo de ML de clasificación de fraude**. Propuesta: [docs/ml_fraud_model_proposal.md](docs/ml_fraud_model_proposal.md); código en `ml/`.
 - [ ] **Definir los casos de uso del agente de IA**, con el comportamiento esperado de cada uno. Posibles casos:
-  - [x] UC-01 Cargo no reconocido (implementado)
-  - [ ] UC-02 Cargo duplicado
-  - [ ] UC-03 "Me cobraron pero fue rechazado" (declinado o pendiente)
-  - [ ] UC-04 Reembolso o reverso no recibido
-  - [ ] UC-05 Suscripción no cancelada
-  - [ ] UC-06 Posible tarjeta comprometida (usa el modelo de fraude)
-  - [ ] UC-07 Seguimiento de un reclamo
+  - [ ] UC-01 Consultas generales sobre sus productos (saldo, límite y cupo, estado, vencimiento, tasa, mora, últimos movimientos)
+  - [x] UC-02 Cargo no reconocido (implementado)
+  - [ ] UC-03 Cargo duplicado
+  - [ ] UC-04 "Me cobraron pero fue rechazado" (declinado o pendiente)
+  - [ ] UC-05 Reembolso o reverso no recibido
+  - [ ] UC-06 Suscripción no cancelada
+  - [ ] UC-07 Posible tarjeta comprometida (usa el modelo de fraude)
+  - [ ] UC-08 Seguimiento de un reclamo
 - [ ] **Validar el pipeline de procesamiento de datos** con el dataset real de Factored (bronze → silver → gold, reporte de calidad `bank_silver._dq_report`). Guía: [data/README.md](data/README.md).
 - [ ] **Definir la arquitectura del agente**: núcleo compartido + un playbook por caso de uso, y revisión humana con reanudación. Propuesta: [docs/agent_architecture.md](docs/agent_architecture.md).
 

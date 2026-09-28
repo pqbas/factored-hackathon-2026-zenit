@@ -85,7 +85,7 @@ evals/cases/<id>/*.yaml  # fichas de comportamiento esperado (spec + test + eval
 ### `spec.yaml` (contrato)
 
 ```yaml
-id: UC-02
+id: UC-03
 name: Cargo duplicado
 intent: DISPUTE_DUPLICATE
 description: El cliente ve el mismo cargo dos veces y quiere que se revierta uno.
@@ -105,8 +105,8 @@ never:
 ### Ficha de comportamiento (una por escenario)
 
 ```yaml
-id: UC-02-003
-use_case: UC-02
+id: UC-03-003
+use_case: UC-03
 language: pt
 session: demo-mx-1
 fixture:                 # datos que el escenario necesita (se inyectan en tests)
@@ -132,21 +132,43 @@ Las fichas cumplen tres funciones: **especificación** (qué debe hacer el agent
 5. Agregar las plantillas en `messages.py`.
 6. Correr `pytest` y la evaluación. El caso se integra solo si no empeora las métricas de seguridad.
 
-## 5. Catálogo propuesto (dominio disputas)
+## 5. Catálogo propuesto
 
 | ID | Caso de uso | Datos que usa | Comportamiento esperado |
 |---|---|---|---|
-| UC-01 | **Cargo no reconocido** (implementado) | transactions | Buscar → confirmar → caso `Open`, o derivar si hay riesgo |
-| UC-02 | **Cargo duplicado** | transactions (mismo comercio y monto en ≤24h) | Detectar el par, confirmar cuál se disputa → caso |
-| UC-03 | **"Me cobraron pero fue rechazado"** | transaction_status = Declined/Pending | Explicar con datos que no hubo cobro o que está pendiente → no se crea caso |
-| UC-04 | **Reembolso o reverso no recibido** | status = Reversed, merchant | Mostrar el reverso si existe; si no, caso `Open` |
-| UC-05 | **Suscripción no cancelada** (Netflix, Spotify…) | cargos recurrentes del mismo comercio | Listar los recurrentes, disputar el último; informar que la cancelación se hace con el comercio |
-| UC-06 | **Posible tarjeta comprometida** (varios cargos desconocidos o en otro país) | transactions + `transaction_risk` | Derivación **obligatoria** a fraude con recomendación de bloqueo; el agente no bloquea |
-| UC-07 | **Seguimiento de reclamo** ("¿cómo va mi caso?") | dispute_cases, complaints | Mostrar estado y plazo del caso del cliente; nunca de otro cliente |
+| UC-01 | **Consultas generales** sobre los productos del cliente (tarjeta, ahorros, préstamos) | customer_products, customer_transactions, customer_360 | Responder solo con datos del propio cliente; solo lectura. Ver detalle abajo |
+| UC-02 | **Cargo no reconocido** (implementado) | transactions | Buscar → confirmar → caso `Open`, o derivar si hay riesgo |
+| UC-03 | **Cargo duplicado** | transactions (mismo comercio y monto en ≤24h) | Detectar el par, confirmar cuál se disputa → caso |
+| UC-04 | **"Me cobraron pero fue rechazado"** | transaction_status = Declined/Pending | Explicar con datos que no hubo cobro o que está pendiente → no se crea caso |
+| UC-05 | **Reembolso o reverso no recibido** | status = Reversed, merchant | Mostrar el reverso si existe; si no, caso `Open` |
+| UC-06 | **Suscripción no cancelada** (Netflix, Spotify…) | cargos recurrentes del mismo comercio | Listar los recurrentes, disputar el último; informar que la cancelación se hace con el comercio |
+| UC-07 | **Posible tarjeta comprometida** (varios cargos desconocidos o en otro país) | transactions + `transaction_risk` | Derivación **obligatoria** a fraude con recomendación de bloqueo; el agente no bloquea |
+| UC-08 | **Seguimiento de reclamo** ("¿cómo va mi caso?") | dispute_cases, complaints | Mostrar estado y plazo del caso del cliente; nunca de otro cliente |
+
+### UC-01 Consultas generales: preguntas que cubre
+
+| Pregunta del cliente | Tabla | Columnas |
+|---|---|---|
+| ¿Cuánto debo? / ¿Cuánto tengo? | `customer_products` | `current_balance`, `currency`, `current_balance_usd` |
+| ¿Cuál es mi límite? ¿Cuánto cupo me queda? | `customer_products` | `credit_limit`, `credit_utilization` (cupo = límite − saldo) |
+| ¿Mi tarjeta está activa? | `customer_products` | `product_status` |
+| ¿Cuándo vence? | `customer_products` | `expiration_date` |
+| ¿Qué tasa tengo? | `customer_products` | `interest_rate` |
+| ¿Estoy atrasado? | `customer_products` | `days_past_due`, `is_delinquent` |
+| ¿Cuál es mi tarjeta terminada en 1234? | `customer_products` | `product_number_last4`, `product_type` |
+| ¿Cuáles fueron mis últimos movimientos? | `customer_transactions` | fecha, comercio, monto, estado |
+| ¿Qué productos tengo? | `customer_360` | perfil y totales del cliente |
+
+- Todo se filtra por el `customer_id` de la sesión confiable.
+- **Fuera de alcance:**
+  - Tasas, comisiones o requisitos de productos del banco (no hay datos; necesitaría una base de conocimiento).
+  - Asesoría financiera (se deriva a un asesor).
+  - Operaciones como transferencias, bloqueos o cambios de límite.
+- **Límite de los datos:** no hay fecha de pago ni pago mínimo, así que el agente no puede responder "¿cuándo tengo que pagar?".
 
 **Transversales (núcleo, aplican a todos):** pedir asesor, cancelar, fuera de alcance, sesión ausente o expirada, intento de acceder a datos de otro cliente o de inyectar instrucciones, fallas de tools y ambigüedad de idioma.
 
-Prioridad sugerida: UC-01, UC-02, UC-03 y UC-07 primero (usan solo datos existentes). UC-06 después del modelo de fraude. UC-04 y UC-05 si alcanza el tiempo.
+Prioridad sugerida: UC-01, UC-02, UC-03, UC-04 y UC-08 primero (usan solo datos existentes). UC-07 después del modelo de fraude. UC-05 y UC-06 si alcanza el tiempo.
 
 ## 6. Consola de supervisión y alertas
 
@@ -171,7 +193,7 @@ flowchart LR
 
 | Tipo | Cuándo se dispara | Fuente | Qué ve el supervisor |
 |---|---|---|---|
-| **Fraude** | Disputa con `p_fraud ≥ umbral`, varios cargos desconocidos en poco tiempo, o cargo en otro país (UC-06) | `transaction_risk` + flujo de disputa | Transacciones, score y versión del modelo, recomendación (bloqueo) |
+| **Fraude** | Disputa con `p_fraud ≥ umbral`, varios cargos desconocidos en poco tiempo, o cargo en otro país (UC-07) | `transaction_risk` + flujo de disputa | Transacciones, score y versión del modelo, recomendación (bloqueo) |
 | **Riesgo de churn** | Cliente de valor (Premium/Plus) con sentimiento negativo, reclamos repetidos (`is_repeat_complainer`), varias escalaciones o pide cerrar la cuenta | `customer_360`, `interaction_history`, conversación | Historial de contactos, casos abiertos, segmento, motivo |
 | **SLA** | Caso escalado sin revisar después de X horas | `dispute_cases` | Tiempo en espera, cliente, monto |
 | **Seguridad** | Intento de ver datos de otro cliente, inyección de instrucciones, sesión inválida repetida | `audit` del agente | Mensajes, reglas que lo detectaron |
@@ -219,7 +241,7 @@ sequenceDiagram
 ```
 
 - La decisión del analista queda en el caso (`reviewed_by`, `review_result`, `reviewed_at`).
-- Mientras espera, el agente solo responde el estado del caso (UC-07). No acepta cambios.
+- Mientras espera, el agente solo responde el estado del caso (UC-08). No acepta cambios.
 
 ## 8. Decisiones pendientes
 
