@@ -21,52 +21,62 @@ export function ChatHeader({ chatId }: { chatId?: string }) {
   const { width: windowWidth } = useWindowSize();
 
   return (
-    <header className="sticky top-0 flex items-center gap-2 bg-background px-2 py-1.5 md:px-2">
-      <SidebarToggle />
+    <header className="sticky top-0 z-10 grid h-13 grid-cols-[1fr_auto_1fr] items-center bg-background px-3">
+      <div className="flex items-center gap-1">
+        <SidebarToggle />
+        {(!open || windowWidth < 768) && (
+          <Button
+            variant="ghost"
+            aria-label="Nueva conversación"
+            className="size-8 rounded-[7px] p-0 text-muted-foreground"
+            onClick={() => {
+              navigate('/');
+            }}
+          >
+            <PlusIcon />
+          </Button>
+        )}
+      </div>
 
-      {(!open || windowWidth < 768) && (
-        <Button
-          variant="outline"
-          className="order-2 ml-auto h-8 px-2 md:order-1 md:ml-0 md:h-fit md:px-2"
-          onClick={() => {
-            navigate('/');
-          }}
-        >
-          <PlusIcon />
-          <span className="md:sr-only">New Chat</span>
-        </Button>
-      )}
+      <div className="flex flex-col items-center leading-tight">
+        <span className="font-semibold text-[13px]">Asistente</span>
+        <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+          <span className="size-1.5 rounded-full bg-online" />
+          En línea
+        </span>
+      </div>
 
-      {!chatHistoryEnabled && (
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="ml-auto flex items-center gap-1.5 rounded-full bg-muted px-2 py-1 text-muted-foreground text-xs">
-                <CloudOffIcon className="h-3 w-3" />
-                <span className="hidden sm:inline">Ephemeral</span>
-              </div>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Chat history disabled - conversations are not saved</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      )}
-
-      {chatId && (
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="order-last ml-auto cursor-default text-muted-foreground">
-                <InfoIcon className="h-4 w-4" />
-              </div>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p className="font-mono text-xs">Chat ID: {chatId}</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      )}
+      <div className="flex items-center justify-end gap-3 text-muted-foreground">
+        {!chatHistoryEnabled && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex items-center gap-1.5 text-[11px]">
+                  <CloudOffIcon className="size-3.5" />
+                  <span className="hidden sm:inline">Sin guardar</span>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>El historial está desactivado: esta conversación no se guarda</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
+        {chatId && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="cursor-default">
+                  <InfoIcon className="size-4" />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="font-mono text-xs">ID: {chatId}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
+      </div>
     </header>
   );
 }

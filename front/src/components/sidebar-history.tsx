@@ -114,7 +114,7 @@ function ChatDateGroup({
   if (chats.length === 0) return null;
   return (
     <div>
-      <div className="px-2 py-1 text-sidebar-foreground/50 text-xs">
+      <div className="px-2 pt-1 pb-1 font-semibold text-[11px] text-muted-foreground">
         {label}
       </div>
       {chats.map((chat) => (
@@ -159,7 +159,7 @@ export function SidebarHistory({ user }: { user?: ClientUser | null }) {
     });
 
     toast.promise(deletePromise, {
-      loading: 'Deleting chat...',
+      loading: 'Eliminando conversación…',
       success: () => {
         mutate((chatHistories) => {
           if (chatHistories) {
@@ -170,9 +170,9 @@ export function SidebarHistory({ user }: { user?: ClientUser | null }) {
           }
         });
 
-        return 'Chat deleted successfully';
+        return 'Conversación eliminada';
       },
-      error: 'Failed to delete chat',
+      error: 'No se pudo eliminar la conversación',
     });
 
     setShowDeleteDialog(false);
@@ -252,37 +252,37 @@ export function SidebarHistory({ user }: { user?: ClientUser | null }) {
                     const groupedChats = groupChatsByDate(chatsFromHistory);
 
                     return (
-                      <div className="flex flex-col gap-6">
+                      <div className="flex flex-col gap-4">
                         <ChatDateGroup
-                          label="Today"
+                          label="Hoy"
                           chats={groupedChats.today}
                           activeId={id}
                           onDelete={onDeleteChat}
                           setOpenMobile={setOpenMobile}
                         />
                         <ChatDateGroup
-                          label="Yesterday"
+                          label="Ayer"
                           chats={groupedChats.yesterday}
                           activeId={id}
                           onDelete={onDeleteChat}
                           setOpenMobile={setOpenMobile}
                         />
                         <ChatDateGroup
-                          label="Last 7 days"
+                          label="Últimos 7 días"
                           chats={groupedChats.lastWeek}
                           activeId={id}
                           onDelete={onDeleteChat}
                           setOpenMobile={setOpenMobile}
                         />
                         <ChatDateGroup
-                          label="Last 30 days"
+                          label="Últimos 30 días"
                           chats={groupedChats.lastMonth}
                           activeId={id}
                           onDelete={onDeleteChat}
                           setOpenMobile={setOpenMobile}
                         />
                         <ChatDateGroup
-                          label="Older than last month"
+                          label="Anteriores"
                           chats={groupedChats.older}
                           activeId={id}
                           onDelete={onDeleteChat}
@@ -306,7 +306,7 @@ export function SidebarHistory({ user }: { user?: ClientUser | null }) {
                   <div className="animate-spin">
                     <LoaderIcon />
                   </div>
-                  <div>Loading Chats...</div>
+                  <div>Cargando…</div>
                 </div>
               )}
             </>
@@ -316,16 +316,16 @@ export function SidebarHistory({ user }: { user?: ClientUser | null }) {
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogTitle>¿Eliminar esta conversación?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete your
-              chat and remove it from our servers.
+              Esta acción no se puede deshacer. La conversación se borrará de
+              forma permanente.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete}>
-              Continue
+              Eliminar
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -41,6 +41,25 @@ Shipped en PR #<n>.
 
 ---
 
+## Phase 2: Identidad visual "Sereno estilo Mac" (In Progress)
+
+**Goal:** que la app deje de verse como una plantilla de chat y transmita la
+calma y amplitud de una app nativa de Mac.
+
+<!-- Referencia visual: artboards "D · Sereno estilo Mac" (claro y oscuro) del
+     lienzo https://claude.ai/artifact/SfN8i51oncvvSj5dskfiH9 -->
+
+- [ ] Toda la app usa la paleta sereno (oscura por defecto, con variante clara),
+      la tipografía del sistema y esquinas redondeadas suaves.
+- [ ] El riel y la barra lateral forman un solo panel, y el contenido flota como
+      una hoja con margen y sombra suave.
+- [ ] La pantalla de inicio del agente saluda al usuario por su nombre, ofrece
+      cuatro acciones y recuerda que el banco nunca pide contraseña, NIP ni CVV.
+- [ ] Los textos de Agente están en español.
+- [ ] La vista de Chats usa la misma paleta.
+
+---
+
 ## Phase 1b: Selector de cliente demo en el chat
 
 **Goal:** que el agente sepa con qué cliente demo habla el chat.
@@ -55,7 +74,7 @@ Shipped en PR #<n>.
 
 ---
 
-## Phase 2: Roles y navegación por rol
+## Phase 3: Roles y navegación por rol
 
 **Goal:** que cada usuario vea las pantallas de su rol (cliente, asesor o
 admin) y ninguna otra.
@@ -71,7 +90,7 @@ admin) y ninguna otra.
 
 ---
 
-## Phase 3: Vista admin con conversaciones reales
+## Phase 4: Vista admin con conversaciones reales
 
 **Goal:** que un admin revise las conversaciones de cualquier usuario sin poder
 modificarlas.
@@ -86,7 +105,7 @@ modificarlas.
 
 ---
 
-## Phase 4: Consola del asesor
+## Phase 5: Consola del asesor
 
 **Goal:** que un asesor tome una conversación derivada, responda al cliente y
 la cierre.

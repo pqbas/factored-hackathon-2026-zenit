@@ -35,7 +35,7 @@ export function ConversationView({
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center gap-3 border-b px-2 py-1.5">
+      <div className="flex items-center gap-3 px-3 py-2">
         <SidebarToggle />
         <div
           className={cn(
@@ -69,15 +69,24 @@ export function ConversationView({
                 >
                   <div
                     className={cn(
-                      'max-w-[80%] rounded-lg px-3 py-2 shadow-sm sm:max-w-[65%]',
-                      isAgent ? 'bg-wa-agent-bubble' : 'bg-wa-customer-bubble',
+                      'max-w-[80%] rounded-[18px] px-3.5 py-2 sm:max-w-[65%]',
+                      isAgent
+                        ? 'bg-wa-agent-bubble text-primary-foreground'
+                        : 'bg-wa-customer-bubble text-foreground',
                     )}
                   >
-                    <p className="whitespace-pre-wrap break-words text-foreground text-sm">
+                    <p className="whitespace-pre-wrap break-words text-sm">
                       {message.text}
                     </p>
                     <div className="mt-1 flex items-center justify-end gap-1">
-                      <span className="text-[11px] text-muted-foreground">
+                      <span
+                        className={cn(
+                          'text-[11px]',
+                          isAgent
+                            ? 'text-primary-foreground/75'
+                            : 'text-muted-foreground',
+                        )}
+                      >
                         {formatListTime(message.sentAt, now)}
                       </span>
                       {isAgent && (
@@ -93,7 +102,7 @@ export function ConversationView({
         <div ref={bottomRef} />
       </div>
 
-      <div className="flex items-center gap-2 border-t px-3 py-3">
+      <div className="flex items-center gap-2 px-4 pt-2 pb-4">
         <Input
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
@@ -103,8 +112,8 @@ export function ConversationView({
               handleSend();
             }
           }}
-          placeholder="Escribe un mensaje"
-          className="rounded-full bg-muted"
+          placeholder="Mensaje"
+          className="h-[46px] rounded-full border-input bg-background px-5"
         />
         <Button
           type="button"

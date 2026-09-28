@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import React, { memo, useState } from 'react';
-import { AnimatedAssistantIcon } from './animation-assistant-icon';
+import { BrandMark } from './brand-mark';
 import { Response } from './elements/response';
 import { MessageContent } from './elements/message';
 import {
@@ -126,7 +126,7 @@ const PurePreviewMessage = ({
         })}
       >
         {message.role === 'assistant' && (
-          <AnimatedAssistantIcon size={14} isLoading={isLoading} />
+          <BrandMark size={26} pulse={isLoading} className="mt-0.5" />
         )}
 
         <div
@@ -185,16 +185,11 @@ const PurePreviewMessage = ({
                     <MessageContent
                       data-testid="message-content"
                       className={cn({
-                        'w-fit break-words rounded-2xl px-3 py-2 text-right text-white':
+                        'w-fit break-words rounded-[18px] bg-primary px-3.5 py-2 text-left text-primary-foreground':
                           message.role === 'user',
                         'bg-transparent px-0 py-0 text-left':
                           message.role === 'assistant',
                       })}
-                      style={
-                        message.role === 'user'
-                          ? { backgroundColor: '#006cff' }
-                          : undefined
-                      }
                     >
                       <Response>
                         {sanitizeText(joinMessagePartSegments(parts))}
@@ -415,7 +410,7 @@ export const AwaitingResponseMessage = () => {
       data-role={role}
     >
       <div className="flex items-start justify-start gap-3">
-        <AnimatedAssistantIcon size={14} isLoading={false} muted={true} />
+        <BrandMark size={26} pulse className="mt-0.5" />
 
         <div className="flex w-full flex-col gap-2 md:gap-4">
           <div className="p-0 text-muted-foreground text-sm">

@@ -21,12 +21,11 @@ import type { MockConversation } from '@/mocks/conversations';
 // Deterministic avatar color per customer, so the same client always gets
 // the same color across renders.
 const AVATAR_COLORS = [
-  'bg-emerald-500',
-  'bg-sky-500',
-  'bg-violet-500',
-  'bg-amber-500',
-  'bg-rose-500',
-  'bg-cyan-600',
+  'bg-linear-to-b from-zinc-400 to-zinc-500',
+  'bg-linear-to-b from-slate-400 to-slate-500',
+  'bg-linear-to-b from-stone-400 to-stone-500',
+  'bg-linear-to-b from-emerald-600/80 to-emerald-700/80',
+  'bg-linear-to-b from-sky-600/80 to-sky-700/80',
 ];
 
 export function avatarColor(customerId: string): string {
@@ -55,11 +54,11 @@ export function ConversationList({
 
   return (
     // Same Sidebar as the Agente section (app-sidebar.tsx), shifted past the nav rail.
-    <Sidebar className="group-data-[side=left]:border-r-0 md:left-16">
+    <Sidebar variant="inset" className="md:left-16">
       <SidebarHeader>
         <SidebarMenu>
           <div className="flex flex-row items-center justify-between">
-            <span className="rounded-md px-2 font-semibold text-lg">Chats</span>
+            <span className="flex h-9 items-center pl-2 font-semibold text-[15px] tracking-tight">Chats</span>
           </div>
         </SidebarMenu>
         <div className="relative px-2">
@@ -69,7 +68,7 @@ export function ConversationList({
             value={query}
             onChange={(e) => onQueryChange(e.target.value)}
             placeholder="Buscar cliente"
-            className="h-8 w-full rounded-md border-0 bg-sidebar-accent pr-2 pl-7 text-sidebar-accent-foreground text-sm placeholder:text-sidebar-foreground/40 focus:outline-none focus:ring-1 focus:ring-ring"
+            className="h-7 w-full rounded-[7px] border-0 bg-secondary pr-2 pl-7 text-[13px] placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/40"
           />
         </div>
       </SidebarHeader>
@@ -119,7 +118,7 @@ export function ConversationList({
                           {conversation.unread > 0 && (
                             <span
                               data-testid={`unread-badge-${conversation.customerId}`}
-                              className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-emerald-500 px-1 font-medium text-[10px] text-white"
+                              className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-primary px-1 font-medium text-[10px] text-primary-foreground"
                             >
                               {conversation.unread}
                             </span>

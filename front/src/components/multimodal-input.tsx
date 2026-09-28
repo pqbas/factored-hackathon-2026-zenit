@@ -25,7 +25,7 @@ import {
 import equal from 'fast-deep-equal';
 import type { UseChatHelpers } from '@ai-sdk/react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowDown, ArrowUpIcon, StopCircleIcon } from 'lucide-react';
+import { ArrowDown, ArrowUpIcon, LockIcon, StopCircleIcon } from 'lucide-react';
 import { useScrollToBottom } from '@/hooks/use-scroll-to-bottom';
 import type { VisibilityType } from './visibility-selector';
 import type { Attachment, ChatMessage } from '@chat-template/core';
@@ -254,11 +254,11 @@ function PureMultimodalInput({
       />
 
       <PromptInput
-        className="rounded-xl border border-border bg-background p-3 shadow-xs transition-all duration-200 focus-within:border-border hover:border-muted-foreground/50"
+        className="flex flex-row flex-wrap items-end rounded-[23px] border border-input bg-background py-1.5 pr-1.5 pl-4 shadow-[0_2px_10px_rgba(0,0,0,0.05)] transition-colors duration-200 focus-within:border-primary/50 dark:shadow-[0_2px_10px_rgba(0,0,0,0.35)]"
         onSubmit={(event) => {
           event.preventDefault();
           if (status !== 'ready') {
-            toast.error('Please wait for the model to finish its response!');
+            toast.error('Espera a que el asistente termine de responder.');
           } else {
             submitForm();
           }
@@ -267,7 +267,7 @@ function PureMultimodalInput({
         {(attachments.length > 0 || uploadQueue.length > 0) && (
           <div
             data-testid="attachments-preview"
-            className="flex flex-row items-end gap-2 overflow-x-scroll"
+            className="flex basis-full flex-row items-end gap-2 overflow-x-scroll pt-1.5"
           >
             {attachments.map((attachment) => (
               <PreviewAttachment
@@ -297,22 +297,22 @@ function PureMultimodalInput({
             ))}
           </div>
         )}
-        <div className="flex flex-row items-start gap-1 sm:gap-2">
+        <div className="flex min-w-0 flex-1 flex-row items-start">
           <PromptInputTextarea
             data-testid="multimodal-input"
             ref={textareaRef}
-            placeholder="Send a message..."
+            placeholder="Mensaje"
             value={input}
             onChange={handleInput}
-            minHeight={44}
+            minHeight={34}
             maxHeight={200}
             disableAutoResize={true}
-            className="grow resize-none border-0! border-none! bg-transparent p-2 text-sm outline-none ring-0 [-ms-overflow-style:none] [scrollbar-width:none] placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 [&::-webkit-scrollbar]:hidden"
+            className="min-h-[34px] grow resize-none border-0! border-none! bg-transparent px-0 py-2 text-sm outline-none ring-0 [-ms-overflow-style:none] [scrollbar-width:none] placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 [&::-webkit-scrollbar]:hidden"
             rows={1}
             autoFocus
           />{' '}
         </div>
-        <PromptInputToolbar className="!border-top-0 border-t-0! p-0 shadow-none dark:border-0 dark:border-transparent!">
+        <PromptInputToolbar className="!border-top-0 border-t-0! gap-1 p-0 shadow-none dark:border-0 dark:border-transparent!">
           <PromptInputTools className="gap-0 sm:gap-0.5" />
 
           {status === 'submitted' || status === 'streaming' ? (
@@ -322,13 +322,17 @@ function PureMultimodalInput({
               data-testid="send-button"
               status={status}
               disabled={!input.trim() || uploadQueue.length > 0}
-              className="size-8 rounded-full bg-primary text-primary-foreground transition-colors duration-200 hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground"
+              className="size-[34px] rounded-full bg-primary text-primary-foreground transition-colors duration-200 hover:bg-primary/90 disabled:bg-secondary disabled:text-muted-foreground"
             >
               <ArrowUpIcon size={14} />
             </PromptInputSubmit>
           )}
         </PromptInputToolbar>
       </PromptInput>
+      <p className="-mt-2 flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground">
+        <LockIcon className="size-3" strokeWidth={2} />
+        Nunca te pediremos tu contraseña, tu NIP ni el CVV.
+      </p>
     </div>
   );
 }
@@ -356,7 +360,7 @@ function PureStopButton({
   return (
     <Button
       data-testid="stop-button"
-      className="size-7 rounded-full bg-foreground p-1 text-background transition-colors duration-200 hover:bg-foreground/90 disabled:bg-muted disabled:text-muted-foreground"
+      className="size-[34px] rounded-full bg-foreground p-1 text-background transition-colors duration-200 hover:bg-foreground/90 disabled:bg-muted disabled:text-muted-foreground"
       onClick={(event) => {
         event.preventDefault();
         stop();

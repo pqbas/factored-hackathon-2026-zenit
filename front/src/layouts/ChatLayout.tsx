@@ -36,7 +36,7 @@ export default function ChatLayout() {
   return (
     <SidebarProvider defaultOpen={!isCollapsed}>
       <AppSidebar user={session.user} preferredUsername={preferredUsername} />
-      <SidebarInset>
+      <SidebarInset className="h-dvh overflow-hidden md:h-[calc(100dvh-1rem)]">
         <Outlet />
       </SidebarInset>
     </SidebarProvider>
