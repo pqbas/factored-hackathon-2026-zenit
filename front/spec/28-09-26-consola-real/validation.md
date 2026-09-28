@@ -36,11 +36,18 @@ de asesores del back están en `main`.
 
 ## Manual Checks
 
-Pendientes hasta que las rutas del back estén en `main`. La pantalla se
-revisó con el back sirviendo `front/dist` y la API mockeada en el navegador.
-- [ ] Con el back real: dos asesores en dos navegadores; el segundo no puede
-      responder una conversación tomada por el primero.
-- [ ] El cliente escribe y el mensaje aparece en la consola en menos de 5 s.
+Hecho con el back de `main` (PR #22) en :3200, `chatbot_dev`, el agente real,
+`ADVISOR_EMAILS=asesor1,asesor2@example.com`, `ADMIN_EMAILS=pcubasm1@gmail.com`
+y el front de las ramas 7 + 1c juntas:
+
+- [x] asesor1 apaga a David y toma la conversación; asesor2 ve "La atiende
+      asesor1@example.com", tiene el campo deshabilitado y la API le responde
+      409 al tomar y al responder.
+- [x] El admin la toma con "Tomar de todos modos" y responde; asesor1 pasa a
+      ver "La atiende pcubasm1@gmail.com" y queda deshabilitado.
+- [x] El cliente ve las respuestas en menos de 5 s.
+- [x] Devolverla a David la deja "Con David"; retomarla y "Resolver" la deja
+      "Resuelto" y aparece en el filtro Cerradas.
 
 ## Definition of Done
 Todas las casillas marcadas y las rutas del back en `main`.
