@@ -60,6 +60,7 @@ Shipped en PR #<n>.
 **Goal:** the customer reaches an advisor without repeating their story.
 
 - [ ] A commercial or retention request, or a request for a human that meets the policy, is handed off
+- [ ] A customer who writes three words or more in a language other than Spanish or Portuguese is handed off
 - [ ] Every handoff is recorded with a case summary
 - [ ] The agent stops responding in a handed-off conversation
 
