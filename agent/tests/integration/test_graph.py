@@ -258,6 +258,17 @@ def test_portuguese_language_reaches_the_system_prompt():
     assert "português" in llm.received[0].content.lower()
 
 
+def test_greeting_introduces_the_assistant_as_david_the_virtual_assistant():
+    llm = RecordingLLM()
+    jev = FakeJev(_classification(intent="GREETING"))
+    graph = _build_graph(llm, jev)
+    _run(graph, "hola")
+
+    system_prompt = llm.received[0].content
+    assert "preséntate como David, el asistente virtual del banco" in system_prompt
+    assert "Eres un asistente virtual, no una persona" in system_prompt
+
+
 def test_greeting_system_prompt_has_the_greeting_instruction_and_the_three_options():
     llm = RecordingLLM()
     jev = FakeJev(_classification(intent="GREETING"))
