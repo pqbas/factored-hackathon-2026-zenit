@@ -12,7 +12,8 @@ const row = (id: string, senderType: string | null = null) => ({
   attachments: [],
   createdAt: '2026-09-28T10:00:00.000Z',
   senderType,
-  senderId: senderType === 'human_agent' ? 'babbage@example.com' : null,
+  // Customer routes never say which advisor answered.
+  senderId: null,
 });
 
 function fakeFetch(answer: (url: string) => Response) {

@@ -33,7 +33,8 @@ async function mockHandoffChat(page: Page) {
       attachments: [],
       createdAt: new Date(Date.UTC(2026, 8, 28, 10, 0, seq)).toISOString(),
       senderType,
-      senderId: senderType === 'human_agent' ? 'babbage@example.com' : null,
+      // Customer routes never say which advisor answered.
+      senderId: null,
     });
   };
   add('user', 'Quiero hablar con un asesor', 'customer');
@@ -53,6 +54,7 @@ async function mockHandoffChat(page: Page) {
         visibility: 'private',
         lastContext: null,
         handledBy: state.handledBy,
+        assignedTo: null,
       },
     }),
   );
