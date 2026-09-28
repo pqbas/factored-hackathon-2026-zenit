@@ -9,6 +9,7 @@ import {
   inArray,
   isNotNull,
   lt,
+  max,
   ne,
   sql,
   type SQL,
@@ -91,11 +92,13 @@ async function ensureDb() {
 export async function saveChat({
   id,
   userId,
+  userEmail,
   title,
   visibility,
 }: {
   id: string;
   userId: string;
+  userEmail?: string | null;
   title: string;
   visibility: VisibilityType;
 }) {
@@ -109,6 +112,7 @@ export async function saveChat({
       id,
       createdAt: new Date(),
       userId,
+      userEmail,
       title,
       visibility,
     });
@@ -142,8 +146,23 @@ export async function deleteChatById({ id }: { id: string }) {
 
 export type ChatStatusFilter = 'open' | 'done' | 'waiting' | 'received' | 'all';
 
-export async function getChatsByUserId({
-  id,
+// 'all' is only for admin routes. A user scope with an empty id throws instead
+// of silently dropping the filter and returning every user's chats.
+export type ChatScope = { userId: string } | 'all';
+
+export function chatScopeCondition(scope: ChatScope): SQL | undefined {
+  if (scope === 'all') return undefined;
+  if (!scope.userId) {
+    throw new ChatSDKError(
+      'bad_request:api',
+      'A user-scoped chat query needs a userId',
+    );
+  }
+  return eq(chat.userId, scope.userId);
+}
+
+export async function getChats({
+  scope,
   limit,
   startingAfter,
   endingBefore,
@@ -151,7 +170,7 @@ export async function getChatsByUserId({
   intent,
   customer,
 }: {
-  id: string;
+  scope: ChatScope;
   limit: number;
   startingAfter: string | null;
   endingBefore: string | null;
@@ -159,15 +178,17 @@ export async function getChatsByUserId({
   intent?: string;
   customer?: string;
 }) {
+  const scopeCondition = chatScopeCondition(scope);
+
   if (!isDatabaseAvailable()) {
-    console.log('[getChatsByUserId] Database not available, returning empty');
+    console.log('[getChats] Database not available, returning empty');
     return { chats: [], hasMore: false };
   }
 
   try {
     const extendedLimit = limit + 1;
 
-    const filterConditions: SQL<any>[] = [eq(chat.userId, id)];
+    const filterConditions: SQL<any>[] = scopeCondition ? [scopeCondition] : [];
 
     if (status === 'open') {
       filterConditions.push(isNotNull(chat.stage));
@@ -206,10 +227,7 @@ export async function getChatsByUserId({
     let filteredChats: Array<Chat> = [];
 
     if (startingAfter) {
-      console.log(
-        '[getChatsByUserId] Fetching chat for startingAfter:',
-        startingAfter,
-      );
+      console.log('[getChats] Fetching chat for startingAfter:', startingAfter);
       const database = await ensureDb();
       const [selectedChat] = await database
         .select()
@@ -226,10 +244,7 @@ export async function getChatsByUserId({
 
       filteredChats = await query(gt(chat.createdAt, selectedChat.createdAt));
     } else if (endingBefore) {
-      console.log(
-        '[getChatsByUserId] Fetching chat for endingBefore:',
-        endingBefore,
-      );
+      console.log('[getChats] Fetching chat for endingBefore:', endingBefore);
       const database = await ensureDb();
       const [selectedChat] = await database
         .select()
@@ -246,13 +261,13 @@ export async function getChatsByUserId({
 
       filteredChats = await query(lt(chat.createdAt, selectedChat.createdAt));
     } else {
-      console.log('[getChatsByUserId] Executing main query without pagination');
+      console.log('[getChats] Executing main query without pagination');
       filteredChats = await query();
     }
 
     const hasMore = filteredChats.length > limit;
     console.log(
-      '[getChatsByUserId] Query successful, found',
+      '[getChats] Query successful, found',
       filteredChats.length,
       'chats',
     );
@@ -262,15 +277,32 @@ export async function getChatsByUserId({
       hasMore,
     };
   } catch (error) {
-    console.error('[getChatsByUserId] Error details:', error);
+    console.error('[getChats] Error details:', error);
     console.error(
-      '[getChatsByUserId] Error stack:',
+      '[getChats] Error stack:',
       error instanceof Error ? error.stack : 'No stack available',
     );
-    throw new ChatSDKError(
-      'bad_request:database',
-      'Failed to get chats by user id',
-    );
+    throw new ChatSDKError('bad_request:database', 'Failed to get chats');
+  }
+}
+
+export async function getChatOwners() {
+  if (!isDatabaseAvailable()) {
+    console.log('[getChatOwners] Database not available, returning empty');
+    return [];
+  }
+
+  // One row per user: chats created before userEmail existed have it null,
+  // so max() keeps the email from any newer chat of the same user.
+  const userEmail = max(chat.userEmail);
+  try {
+    return await (await ensureDb())
+      .select({ userId: chat.userId, userEmail })
+      .from(chat)
+      .groupBy(chat.userId)
+      .orderBy(asc(userEmail));
+  } catch (_error) {
+    throw new ChatSDKError('bad_request:database', 'Failed to get chat owners');
   }
 }
 
