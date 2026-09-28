@@ -49,3 +49,9 @@ def test_demo_sessions_json_overrides_the_default_fixture(monkeypatch):
         monkeypatch.undo()
         importlib.reload(config)
         importlib.reload(session_repo)
+
+
+def test_demo_session_exposes_the_customers_country():
+    session = session_repo.resolve_session({"session_token": "demo-mx-1"})
+    assert session.country == "México"
+    assert session.as_dict()["country"] == "México"

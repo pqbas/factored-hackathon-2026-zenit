@@ -22,6 +22,10 @@ def reply_language(language: str | None) -> str:
     return language if language in ("es", "pt") else "es"
 
 
+def country_language(country: str | None) -> str:
+    return "pt" if country in ("Brasil", "Brazil") else "es"
+
+
 class Classification(BaseModel):
     guardrail: str
     guardrail_probability: float

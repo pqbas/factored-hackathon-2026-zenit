@@ -7,20 +7,21 @@ from src.graph.state import AgentState
 from src.llm.fallback import check_guardrail_rules, detect_language, fallback_classify
 from src.llm.jev import JevClient, JevUnavailable
 from src.prompts.messages import GUARDRAIL_REPLIES
-from src.schemas.classification import Classification, reply_language
+from src.schemas.classification import Classification, country_language, reply_language
 from src.schemas.routing import IntentRoute
 
 
-# "Cancelar", "ok" or "sí" read the same in es and pt, so replies this short keep the
-# language the conversation already has instead of trusting a per-message guess.
+# "Cancelar", "ok" or "Tchau" read the same in es and pt, so a short message with no
+# language marker keeps the conversation's language, or the customer's country language
+# on the first turn, instead of trusting a per-message guess. "Olá" or "Hola" still switch.
 _SHORT_MESSAGE_WORDS = 2
 
 
-def conversation_language(detected: str, text: str, previous: dict | None) -> str:
+def conversation_language(detected: str, text: str, previous: dict | None, default: str) -> str:
+    if len(text.split()) > _SHORT_MESSAGE_WORDS or detect_language(text) != "other":
+        return detected
     previous_language = (previous or {}).get("language")
-    if previous_language in ("es", "pt") and len(text.split()) <= _SHORT_MESSAGE_WORDS:
-        return previous_language
-    return detected
+    return previous_language if previous_language in ("es", "pt") else default
 
 
 def _last_human_message(messages: list) -> HumanMessage:
@@ -60,7 +61,12 @@ async def classify(
         except JevUnavailable:
             classification = fallback_classify(text, [route.intent for route in routes])
 
-    language = conversation_language(classification.language, text, state.get("classification"))
+    language = conversation_language(
+        classification.language,
+        text,
+        state.get("classification"),
+        country_language(state.get("session", {}).get("country")),
+    )
     classification = classification.model_copy(update={"language": language})
 
     _tag_trace(classification)
