@@ -102,5 +102,5 @@ tests siguen esa convención.
     `tests/routes/chat.test.ts` (entrada HTTP real; la UI vive en `../front`,
     así que aquí no hay test de navegador):
     - `GET /api/demo-customers` autenticado → 200 con la lista.
-    - `GET /api/demo-customers` sin headers de usuario → 401.
+    - Sin usuario → 401: no se testea porque con `PLAYWRIGHT=True` la auth siempre inyecta un usuario de prueba (`packages/auth/src/databricks-auth.ts`). Lo cubre `requireAuth`.
     - `POST /api/chat` con `sessionToken: ''` → 400.

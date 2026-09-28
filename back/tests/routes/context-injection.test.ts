@@ -296,7 +296,7 @@ test.describe.serial('Context Injection', () => {
       expect(chatRequest?.customInputs).toBeUndefined();
     });
 
-    test('POST /api/chat/title never sends custom_inputs, even with a sessionToken on the chat call', async ({
+    test('POST /api/chat/title sends no custom_inputs or context', async ({
       adaContext,
     }) => {
       const titleResponse = await adaContext.request.post('/api/chat/title', {

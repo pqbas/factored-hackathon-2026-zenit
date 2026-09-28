@@ -31,7 +31,7 @@ La fase está lista para mergear cuando se cumple todo lo que sigue.
 #### End-to-end
 
 - [ ] `GET /api/demo-customers` autenticado responde 200 con la lista
-- [ ] `GET /api/demo-customers` sin usuario responde 401
+- [ ] `GET /api/demo-customers` usa `requireAuth` (revisión de código: el harness no puede producir un 401)
 - [ ] `POST /api/chat` con `sessionToken` vacío responde 400
 
 ## Manual Checks

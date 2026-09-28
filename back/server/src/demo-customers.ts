@@ -21,12 +21,7 @@ const demoCustomersSchema = z.array(
   }),
 );
 
-/**
- * Returns the list of demo customers for the UI selector.
- *
- * Reads `DEMO_CUSTOMERS_JSON` when set, falling back to
- * `DEFAULT_DEMO_CUSTOMERS` when the variable is missing or invalid.
- */
+// Falls back to the defaults when DEMO_CUSTOMERS_JSON is missing or invalid.
 export function getDemoCustomers(): DemoCustomer[] {
   const raw = process.env.DEMO_CUSTOMERS_JSON;
   if (!raw) {
@@ -34,8 +29,7 @@ export function getDemoCustomers(): DemoCustomer[] {
   }
 
   try {
-    const parsed = demoCustomersSchema.parse(JSON.parse(raw));
-    return parsed;
+    return demoCustomersSchema.parse(JSON.parse(raw));
   } catch (error) {
     console.error('Invalid DEMO_CUSTOMERS_JSON, using defaults:', error);
     return DEFAULT_DEMO_CUSTOMERS;

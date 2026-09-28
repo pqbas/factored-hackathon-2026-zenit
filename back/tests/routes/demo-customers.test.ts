@@ -15,16 +15,4 @@ test.describe('/api/demo-customers', () => {
       expect(typeof customer.label).toBe('string');
     }
   });
-
-  test('GET /api/demo-customers without user headers responds 401', async ({
-    request,
-  }) => {
-    // getAuthSession() short-circuits with a default test user whenever
-    // PLAYWRIGHT=True, regardless of forwarded headers (see
-    // packages/auth/src/databricks-auth.ts), so a real 401 can't be produced
-    // through HTTP in this harness. tests/routes/history.test.ts documents
-    // the same limitation for /api/history; we assert the same way here.
-    const response = await request.get('/api/demo-customers');
-    expect([200, 401]).toContain(response.status());
-  });
 });

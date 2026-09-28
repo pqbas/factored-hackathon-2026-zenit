@@ -6,17 +6,8 @@ import {
   databricksFetch,
 } from '@chat-template/ai-sdk-providers';
 
-/**
- * databricksFetch strips the internal x-databricks-* headers and injects
- * their values into the request body. These tests exercise the
- * session_token injection in isolation with a stubbed global fetch.
- *
- * shouldInjectContext() reads DATABRICKS_SERVING_ENDPOINT live. When it's
- * set (to any value, even one with no cached endpoint details), it defers to
- * shouldInjectContextForEndpoint(), which reads API_PROXY live too. Both env
- * vars are therefore set per test rather than relying on the module's own
- * API_PROXY constant, which is captured once at import time.
- */
+// Both env vars are set per test: shouldInjectContext() reads them live, while
+// the module-level API_PROXY constant is captured once at import time.
 test.describe('databricksFetch - session token injection', () => {
   const originalApiProxy = process.env.API_PROXY;
   const originalServingEndpoint = process.env.DATABRICKS_SERVING_ENDPOINT;

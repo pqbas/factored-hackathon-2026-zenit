@@ -143,38 +143,29 @@ export const databricksFetch: typeof fetch = async (input, init) => {
   requestInit = { ...requestInit, headers };
 
   // Inject context into request body if appropriate
-  if (requestInit?.body && typeof requestInit.body === 'string' && shouldInjectContext()) {
+  const hasContext = Boolean(conversationId && userId);
+  if (
+    (hasContext || sessionToken) &&
+    requestInit?.body &&
+    typeof requestInit.body === 'string' &&
+    shouldInjectContext()
+  ) {
     try {
       const body = JSON.parse(requestInit.body);
-      let enhancedBody = body;
-
-      if (conversationId && userId) {
-        enhancedBody = {
-          ...enhancedBody,
-          context: {
-            ...enhancedBody.context,
-            conversation_id: conversationId,
-            user_id: userId,
-          },
+      if (hasContext) {
+        body.context = {
+          ...body.context,
+          conversation_id: conversationId,
+          user_id: userId,
         };
       }
-
-      // The session token injection doesn't depend on conversationId/userId:
-      // the title-generation call never sets any of these headers, so it
-      // never gets custom_inputs either.
       if (sessionToken) {
-        enhancedBody = {
-          ...enhancedBody,
-          custom_inputs: {
-            ...enhancedBody.custom_inputs,
-            session_token: sessionToken,
-          },
+        body.custom_inputs = {
+          ...body.custom_inputs,
+          session_token: sessionToken,
         };
       }
-
-      if (enhancedBody !== body) {
-        requestInit = { ...requestInit, body: JSON.stringify(enhancedBody) };
-      }
+      requestInit = { ...requestInit, body: JSON.stringify(body) };
     } catch {
       // If JSON parsing fails, pass through unchanged
     }
