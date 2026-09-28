@@ -36,8 +36,8 @@ logger = logging.getLogger(__name__)
 
 mlflow.langchain.autolog()
 
-# Only the respond node streams text deltas to the client; gate's fixed reply
-# is emitted as a full message via the "updates" branch below.
+# Only the respond node streams text deltas; every node's final message is
+# emitted as output_item.done via the "updates" branch below.
 _STREAMING_NODES = frozenset({"respond"})
 
 
@@ -61,8 +61,6 @@ async def _process_agent_astream_events(
         if event[0] == "updates":
             for node_name, node_data in event[1].items():
                 if not node_data:
-                    continue
-                if node_name in _STREAMING_NODES:
                     continue
                 if len(node_data.get("messages", [])) > 0:
                     for msg in node_data["messages"]:
