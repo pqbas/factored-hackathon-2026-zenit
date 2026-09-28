@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import yaml
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 
 class IntentRoute(BaseModel):
@@ -11,6 +11,14 @@ class IntentRoute(BaseModel):
     description: str
     examples: list[str]
     destination: str
+    option: dict[str, str] | None = None
+
+    @field_validator("option")
+    @classmethod
+    def _option_has_es_and_pt(cls, value: dict[str, str] | None) -> dict[str, str] | None:
+        if value is not None and not {"es", "pt"} <= value.keys():
+            raise ValueError("option must include both 'es' and 'pt'")
+        return value
 
 
 def load_routing(path: str | Path, allowed_destinations: set[str]) -> list[IntentRoute]:
@@ -31,3 +39,9 @@ def load_routing(path: str | Path, allowed_destinations: set[str]) -> list[Inten
             )
         routes.append(route)
     return routes
+
+
+def render_options(routes: list[IntentRoute], language: str) -> str:
+    lang = language if language in ("es", "pt") else "es"
+    options = [route.option[lang] for route in routes if route.option]
+    return "\n".join(f"{i}. {option}" for i, option in enumerate(options, start=1))

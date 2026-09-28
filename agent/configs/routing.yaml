@@ -9,6 +9,9 @@
     - "qual é o meu saldo?"
     - "quiero ver mis últimos movimientos"
   destination: respond
+  option:
+    es: "Consultar el saldo y el límite de tu tarjeta o cuenta"
+    pt: "Consultar o saldo e o limite do seu cartão ou conta"
 
 - intent: COMPLAINT
   description: El cliente reclama por un cobro, la app o la atención.
@@ -17,6 +20,9 @@
     - "me cobraron dos veces"
     - "não reconheço uma cobrança"
   destination: respond
+  option:
+    es: "Presentar un reclamo, por ejemplo un cargo que no reconoces"
+    pt: "Registrar uma reclamação, por exemplo uma cobrança que você não reconhece"
 
 - intent: CASE_STATUS
   description: El cliente pregunta por el estado de un reclamo o caso ya abierto.
@@ -25,6 +31,9 @@
     - "qual o status do meu caso?"
     - "quiero saber si ya resolvieron mi caso"
   destination: respond
+  option:
+    es: "Ver el estado de un reclamo"
+    pt: "Ver o status de uma reclamação"
 
 - intent: HUMAN_AGENT
   description: El cliente pide hablar con una persona, un asesor o un agente humano.
@@ -56,7 +65,7 @@
     - "cancelar"
     - "olvídalo"
     - "deixa pra lá"
-  destination: respond
+  destination: cancel
 
 - intent: GREETING
   description: El cliente solo saluda, sin pedir nada más.
