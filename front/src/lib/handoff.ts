@@ -3,10 +3,11 @@
 // and the advisor's messages arrive by polling GET /api/messages/:id?after=.
 
 import type { ChatMessage } from '@chat-template/core';
+import type { Chat } from '@chat-template/db';
 
 import { convertToUIMessages } from '@/lib/utils';
 
-export type HandledBy = 'ai_agent' | 'human_queue' | 'human_agent';
+export type HandledBy = Chat['handledBy'];
 
 export const HANDOFF_POLL_MS = 4000;
 

@@ -75,7 +75,7 @@ export function convertToUIMessages(messages: DBMessage[]): ChatMessage[] {
     // role 'assistant'); older rows don't have it.
     metadata: {
       createdAt: formatISO(message.createdAt),
-      senderType: (message as { senderType?: string | null }).senderType ?? undefined,
+      senderType: message.senderType ?? undefined,
     } as ChatMessage['metadata'],
   }));
 }
