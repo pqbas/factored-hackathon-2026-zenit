@@ -14,8 +14,11 @@ SITUATIONS: dict[str, str] = {
         "presenta las opciones a continuación."
     ),
     "unavailable": (
-        "El cliente pide algo que todavía no está disponible en este chat. Dile que esa "
-        "opción no está disponible todavía y presenta las opciones a continuación."
+        "El cliente pide algo que todavía no está disponible en este chat. Tu primera "
+        "oración debe decir que esa opción todavía no está disponible en este chat; no "
+        "digas que no tienes acceso. No digas que lo vas a conectar o transferir con un "
+        "asesor, no lo mandes a otro canal y no respondas lo que pidió. Luego presenta "
+        "las opciones a continuación."
     ),
 }
 
