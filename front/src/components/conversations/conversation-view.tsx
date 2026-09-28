@@ -1,4 +1,4 @@
-import { ArrowDown, Bot, Hourglass, UserRound } from 'lucide-react';
+import { ArrowDown, Bot, Hourglass, Lock, UserRound } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 import { AdvisorComposer } from '@/components/conversations/advisor-composer';
@@ -7,61 +7,90 @@ import {
   MessageBubble,
   SystemNotice,
 } from '@/components/conversations/message-bubble';
-import { conversationStatus, groupMessagesByDay } from '@/lib/conversations';
+import {
+  type AdvisorChat,
+  type Bubble,
+  canReply,
+  isHeldByOther,
+  statusOf,
+} from '@/lib/advisor';
+import { groupByDay } from '@/lib/conversations';
 import { cn } from '@/lib/utils';
-import type { MockConversation } from '@/mocks/conversations';
 
 // How far from the end the advisor has to scroll before the jump button shows.
 const SCROLL_THRESHOLD = 120;
 
-const BANNER = {
-  assistant: {
-    icon: Bot,
-    text: 'El asistente está respondiendo. Apágalo para escribir tú.',
-    className: 'text-tint-blue-foreground',
-  },
-  waiting: {
-    icon: Hourglass,
-    text: 'Esperando a un asesor · escribe para tomar la conversación.',
-    className: 'text-tint-amber-foreground',
-  },
-  advisor: {
-    icon: UserRound,
-    text: 'Estás atendiendo esta conversación. El asistente no responderá hasta que lo vuelvas a encender.',
-    className: 'text-primary',
-  },
-  resolved: {
-    icon: Bot,
-    text: 'Conversación resuelta. Si el cliente escribe, responde el asistente.',
-    className: 'text-tint-green-foreground',
-  },
-};
+function hint(chat: AdvisorChat, me: string | undefined) {
+  if (isHeldByOther(chat, me)) {
+    return {
+      icon: Lock,
+      text: `La atiende ${chat.assignedTo}. Solo quien la tomó puede responder.`,
+      className: 'text-muted-foreground',
+    };
+  }
+  switch (statusOf(chat)) {
+    case 'waiting':
+      return {
+        icon: Hourglass,
+        text: 'Esperando a un asesor · tómala para responder.',
+        className: 'text-tint-amber-foreground',
+      };
+    case 'advisor':
+      return {
+        icon: UserRound,
+        text: 'Estás atendiendo esta conversación. El asistente no responderá hasta que la devuelvas.',
+        className: 'text-primary',
+      };
+    case 'resolved':
+      return {
+        icon: Bot,
+        text: 'Conversación resuelta. Si el cliente escribe, responde el asistente.',
+        className: 'text-tint-green-foreground',
+      };
+    default:
+      return {
+        icon: Bot,
+        text: 'El asistente está respondiendo. Apágalo para tomar la conversación.',
+        className: 'text-tint-blue-foreground',
+      };
+  }
+}
+
+function placeholderFor(chat: AdvisorChat, me: string | undefined): string {
+  if (canReply(chat, me)) return 'Escribe al cliente…';
+  if (isHeldByOther(chat, me)) return 'La atiende otra persona';
+  if (statusOf(chat) === 'assistant') return 'El asistente está respondiendo…';
+  return 'Toma la conversación para responder';
+}
 
 export function ConversationView({
-  conversation,
-  onToggleAssistant,
+  chat,
+  bubbles,
+  me,
+  isAdmin,
+  busy,
+  onTake,
+  onRelease,
   onSend,
-  onAttach,
-  onResolve,
-  onAddTag,
 }: {
-  conversation: MockConversation;
-  onToggleAssistant: () => void;
-  onSend: (text: string) => void;
-  onAttach: (file: File) => void;
-  onResolve: () => void;
-  onAddTag: (tag: string) => void;
+  chat: AdvisorChat;
+  bubbles: Bubble[];
+  me: string | undefined;
+  isAdmin: boolean;
+  busy: boolean;
+  onTake: (force: boolean) => void;
+  onRelease: (outcome: 'returned_to_agent' | 'resolved') => void;
+  onSend: (text: string) => Promise<boolean>;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const [awayFromBottom, setAwayFromBottom] = useState(false);
   const now = new Date();
-  const status = conversationStatus(conversation);
-  const banner = BANNER[status];
+  const banner = hint(chat, me);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: 'end' });
-  }, [conversation.customerId, conversation.messages.length]);
+  }, [chat.id, bubbles.length]);
 
   function handleScroll() {
     const el = scrollRef.current;
@@ -71,15 +100,15 @@ export function ConversationView({
     );
   }
 
-  const groups = groupMessagesByDay(conversation.messages, now);
-
   return (
     <div className="flex h-full flex-col">
       <ConversationHeader
-        conversation={conversation}
-        onToggleAssistant={onToggleAssistant}
-        onResolve={onResolve}
-        onAddTag={onAddTag}
+        chat={chat}
+        me={me}
+        isAdmin={isAdmin}
+        busy={busy}
+        onTake={onTake}
+        onRelease={onRelease}
       />
 
       <div className="relative min-h-0 flex-1">
@@ -88,18 +117,18 @@ export function ConversationView({
           onScroll={handleScroll}
           className="h-full overflow-y-auto bg-wa-chat-bg px-4 py-4 sm:px-8"
         >
-          {groups.map((group) => (
-            <div key={`${group.label}-${group.messages[0].id}`}>
+          {groupByDay(bubbles, now).map((group) => (
+            <div key={`${group.label}-${group.items[0].id}`}>
               <div className="my-3 flex justify-center">
                 <span className="rounded-full bg-secondary px-3 py-1 text-muted-foreground text-xs">
                   {group.label}
                 </span>
               </div>
-              {group.messages.map((message) =>
-                message.from === 'system' ? (
-                  <SystemNotice key={message.id} message={message} now={now} />
+              {group.items.map((bubble) =>
+                bubble.from === 'system' ? (
+                  <SystemNotice key={bubble.id} bubble={bubble} now={now} />
                 ) : (
-                  <MessageBubble key={message.id} message={message} now={now} />
+                  <MessageBubble key={bubble.id} bubble={bubble} now={now} />
                 ),
               )}
             </div>
@@ -125,18 +154,15 @@ export function ConversationView({
         data-testid="status-banner"
         className="flex items-center justify-center gap-1.5 px-4 pt-2 text-[11px] text-muted-foreground"
       >
-        <banner.icon
-          className={cn('size-3 shrink-0', banner.className)}
-          strokeWidth={2.2}
-        />
+        <banner.icon className={cn('size-3 shrink-0', banner.className)} strokeWidth={2.2} />
         {banner.text}
       </div>
 
       <AdvisorComposer
-        key={conversation.customerId}
-        disabled={conversation.handledBy === 'ai_agent'}
+        key={chat.id}
+        disabled={!canReply(chat, me)}
+        placeholder={placeholderFor(chat, me)}
         onSend={onSend}
-        onAttach={onAttach}
       />
     </div>
   );
