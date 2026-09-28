@@ -41,9 +41,9 @@
 ## Group 3: Docs and roadmap
 
 7. `spec/roadmap.md`: new Phase 5 (this one), complaints to Phase 6, handoff
-   Phase 7 reduced to detection, summary and `custom_outputs`, advisor
-   assignment and the console API marked as back work, Phase 8 without
-   Lakebase.
+   as Phase 7 reduced to detection, summary and `custom_outputs`, advisor
+   assignment and the console API pointed to the back's roadmap, Phase 8
+   without Lakebase.
 8. `docs/07`, `08`, `11`, `13`: storage, handoff API and assignment move to the
    back; the agent has no database; `db/checkpointer.py` leaves the tree.
 

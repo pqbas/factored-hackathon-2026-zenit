@@ -5,6 +5,10 @@ asigna a un asesor según su perfil, y el asesor recibe junto con él un resumen
 de la conversación. Así se entera de que tiene un caso nuevo y sabe de qué se
 trata sin leer todo el chat.
 
+La asignación, la disponibilidad de los asesores y la consola son del back. El
+agente solo emite la señal de handoff con su `packet` (ver
+[Límites entre el agente y el back](../../docs/limites-agente-back.md)).
+
 ## 8.1 Perfil del asesor
 
 El perfil ya existe en `workspace.bank_silver.service_agents` (1,200 asesores),
@@ -22,7 +26,7 @@ y se lee de ahí sin duplicarlo:
 | `avg_csat`         |                                                                                                 | Desempate                             |
 
 Lo que `service_agents` no tiene es el estado en tiempo real. Eso va en una
-tabla de **Lakebase**, unida por `agent_id`:
+tabla de **la base del back**, unida por `agent_id`:
 
 ### 8.1.1 `advisor_availability`
 
@@ -46,14 +50,18 @@ tabla de **Lakebase**, unida por `agent_id`:
 | `retention`                                    | Retención       | —                  |
 | `customer_request`, `no_match`, `tool_failure` | Cualquiera      | —                  |
 
-La tabla es fija en el código, como `CONTROL` en [Dispatch](05-dispatch.md).
+La tabla es fija en el código del back, que la aplica al `reason` y al caso de
+uso que llegan en `custom_outputs.handoff`.
 
 ## 8.3 Reglas de asignación
+
+El back las aplica; el agente no participa.
 
 1. **Al crear el handoff**, en la misma transacción, se busca un asesor que:
    - esté `Active`, en turno y `online`;
    - sea `Digital` o `Hybrid`;
-   - hable el idioma del cliente;
+   - hable el idioma del cliente (el que el agente deduce del historial y manda
+     en el `packet`);
    - tenga la especialidad y la experiencia que pide la tabla;
    - tenga `open_handoffs < max_concurrent`.
 
@@ -85,17 +93,18 @@ La misma consulta sirve de latido para `last_seen_at`.
 
 ## 8.5 Resumen para el asesor
 
-El `packet` del handoff es lo primero que ve el asesor. Tiene dos partes:
+El `packet` del handoff es lo primero que ve el asesor. Lo arma el agente y
+llega al back en `custom_outputs.handoff`. Tiene dos partes:
 
-| Parte   | Contenido                                                                                                                                                | Cómo se genera                 |
-| ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ |
-| Hechos  | Motivo y condición que se cumplió, caso de uso, `case_id`, datos verificados (por ejemplo la transacción disputada), herramientas llamadas y sentimiento | Del estado del agente, sin LLM |
-| Resumen | Dos o tres líneas: qué quiere el cliente y qué quedó sin resolver                                                                                        | LLM, con la conversación       |
+| Parte   | Contenido                                                                                                                                                        | Cómo se genera                 |
+| ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ |
+| Hechos  | Motivo y condición que se cumplió, caso de uso, `case_id`, idioma, datos verificados (por ejemplo la transacción disputada), herramientas llamadas y sentimiento | Del estado del agente, sin LLM |
+| Resumen | Dos o tres líneas: qué quiere el cliente y qué quedó sin resolver                                                                                                | LLM, con la conversación       |
 
 - **Los hechos no pasan por el LLM.** Salen del estado del grafo, así que son
   exactos.
-- **El resumen no bloquea el handoff.** Se genera antes de la transacción con
-  un tiempo límite corto; si falla o se pasa, el handoff se guarda sin él.
+- **El resumen no bloquea el handoff.** El agente lo genera antes de responder,
+  con un tiempo límite corto; si falla o se pasa, deriva sin él.
 - **El resumen no reemplaza el historial.** La consola muestra la conversación
   completa debajo.
 - **Sin datos sensibles.** Números de tarjeta y similares se enmascaran antes de
@@ -103,7 +112,7 @@ El `packet` del handoff es lo primero que ve el asesor. Tiene dos partes:
 
 ## 8.6 API
 
-Se suman a las rutas de [Handoff](07-handoff.md#74-api):
+Son rutas del back y se suman a las de [Handoff](07-handoff.md#74-api):
 
 | Método y ruta                  | Quién la llama | Qué hace                                           |
 | ------------------------------ | -------------- | -------------------------------------------------- |
@@ -123,6 +132,6 @@ consola no le asigna casos.
 
 ## 8.8 Estado
 
-Pendiente. Hoy no hay asignación ni consola. Los emails de `service_agents` son
-ficticios, así que para la demo hay que agregar a los asesores del equipo o
-mapear sus emails a asesores existentes.
+Pendiente. Hoy no hay asignación ni consola; las dos son trabajo del back. Los
+emails de `service_agents` son ficticios, así que para la demo hay que agregar a
+los asesores del equipo o mapear sus emails a asesores existentes.

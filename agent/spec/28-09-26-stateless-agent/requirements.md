@@ -51,10 +51,10 @@ And it changes in these ways:
   Phase 6, together with the rest of `custom_outputs`. Until then the back
   resends blocked turns; the agent re-masks them and Jev only classifies the
   last message, so a resent injection isn't reclassified.
-- Complaints move from Phase 5 to Phase 6. The agent's Phases 6 and 7 shrink to
-  detecting the handoff, building its summary and emitting `custom_outputs`;
-  the handoff store, advisor assignment and the console API move to the back.
-  Phase 8 deploys without Lakebase.
+- Complaints move from Phase 5 to Phase 6. Handoff becomes Phase 7 and shrinks
+  to detecting the handoff, building its summary and emitting
+  `custom_outputs`; the handoff store, advisor assignment (the former Phase 7)
+  and the console API move to the back. Phase 8 deploys without Lakebase.
 - `docs/11` is the agent's tech stack (there is no `tech-stack.md`); it drops
   Lakebase from the agent.
 
