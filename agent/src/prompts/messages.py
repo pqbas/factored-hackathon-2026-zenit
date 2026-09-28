@@ -1,3 +1,8 @@
+CANCEL_REPLY: dict[str, str] = {
+    "es": "Listo, lo dejamos ahí. Si necesitas algo más, escríbeme.",
+    "pt": "Pronto, ficamos por aqui. Se precisar de mais alguma coisa, é só me escrever.",
+}
+
 SESSION_REJECTED: dict[str, str] = {
     "missing": (
         "Para ayudarte necesito que inicies sesión en la banca digital. Por "
