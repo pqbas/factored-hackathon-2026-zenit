@@ -1,13 +1,19 @@
 from __future__ import annotations
 
+import os
 import sys
 import time
 from pathlib import Path
 
-from databricks.sdk import WorkspaceClient
-from databricks.sdk.service.sql import StatementState
+from dotenv import load_dotenv
 
-from src.config import settings
+# Load env vars from .env before importing src.config, which reads them at import time.
+load_dotenv(dotenv_path=".env", override=True)
+
+from databricks.sdk import WorkspaceClient  # noqa: E402
+from databricks.sdk.service.sql import StatementState  # noqa: E402
+
+from src.config import settings  # noqa: E402
 
 
 def apply_sql_file(path: str | Path, client: WorkspaceClient | None = None) -> None:
@@ -39,8 +45,6 @@ def _run(client: WorkspaceClient, statement: str, timeout_s: float = 60.0) -> No
 
 
 def _warehouse_id() -> str:
-    import os
-
     warehouse_id = os.getenv("DATABRICKS_WAREHOUSE_ID")
     if not warehouse_id:
         raise RuntimeError("DATABRICKS_WAREHOUSE_ID is not set")

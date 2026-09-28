@@ -27,7 +27,7 @@ RETURN
 
 CREATE OR REPLACE FUNCTION ${catalog}.bank_uc_consultas.list_transactions(
   customer_id STRING COMMENT 'The session customer id whose movements to return.',
-  product_last4 STRING DEFAULT NULL COMMENT 'Last 4 digits of a single card or account to filter to; NULL returns movements of every active product.'
+  product_last4 STRING DEFAULT NULL COMMENT 'Last 4 digits of a single card or account to filter to, or NULL to return movements of every active product.'
 )
 RETURNS TABLE (
   transaction_date TIMESTAMP,
