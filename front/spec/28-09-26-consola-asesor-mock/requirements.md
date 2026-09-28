@@ -28,8 +28,8 @@ And it changes in these ways:
    texto queda deshabilitado.
 7. Cada conversación tiene un estado: Con asistente, Sin atender, En atención o
    Resuelto. Se ve como chip en la fila de la lista y en el encabezado.
-8. Arriba de la lista hay un control segmentado estilo macOS: Todos, Sin
-   atender (con el conteo) y Atendiendo.
+8. Junto al título de la lista, un menú "Filtros" deja elegir Todos, Sin
+   atender (con el conteo) o En atención.
 9. Apagar el asistente en una conversación Con asistente la pasa a En
    atención. En una Sin atender el asistente ya está apagado: el primer mensaje
    del asesor la pasa a En atención. El botón "Resolver" la pasa a Resuelto y

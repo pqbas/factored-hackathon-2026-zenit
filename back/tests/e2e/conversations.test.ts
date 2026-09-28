@@ -56,6 +56,7 @@ test.describe('Conversations mock view', () => {
   });
 
   test('the Sin atender filter leaves only waiting conversations', async ({ page }) => {
+    await page.getByTestId('status-filter-trigger').click();
     await page.getByTestId('status-filter-waiting').click();
     const rows = page.locator('[data-testid^="conversation-row-"]');
     await expect(rows).toHaveCount(2);

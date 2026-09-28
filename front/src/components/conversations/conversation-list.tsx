@@ -1,4 +1,11 @@
-import { Search } from 'lucide-react';
+import { Check, ChevronDown, ListFilter, Search } from 'lucide-react';
+
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 import {
   Sidebar,
@@ -25,7 +32,7 @@ import type { MockConversation, MockMessage } from '@/mocks/conversations';
 const FILTERS: { id: StatusFilter; label: string }[] = [
   { id: 'all', label: 'Todos' },
   { id: 'waiting', label: 'Sin atender' },
-  { id: 'advisor', label: 'Atendiendo' },
+  { id: 'advisor', label: 'En atención' },
 ];
 
 const PREVIEW_PREFIX: Partial<Record<MockMessage['from'], string>> = {
@@ -85,6 +92,44 @@ export function ConversationList({
         <SidebarMenu>
           <div className="flex flex-row items-center justify-between">
             <span className="flex h-9 items-center pl-2 font-semibold text-[15px] tracking-tight">Chats</span>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  data-testid="status-filter-trigger"
+                  className="flex h-7 items-center gap-1.5 rounded-[7px] px-2 text-muted-foreground text-xs hover:bg-secondary hover:text-foreground"
+                >
+                  <ListFilter className="size-3.5" />
+                  {statusFilter === 'all'
+                    ? 'Filtros'
+                    : FILTERS.find((f) => f.id === statusFilter)?.label}
+                  <ChevronDown className="size-3" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-44">
+                {FILTERS.map((filter) => (
+                  <DropdownMenuItem
+                    key={filter.id}
+                    data-testid={`status-filter-${filter.id}`}
+                    onSelect={() => onStatusFilterChange(filter.id)}
+                    className="flex items-center gap-2 text-[13px]"
+                  >
+                    <Check
+                      className={cn(
+                        'size-3.5',
+                        filter.id === statusFilter ? 'opacity-100' : 'opacity-0',
+                      )}
+                    />
+                    <span className="flex-1">{filter.label}</span>
+                    {filter.id === 'waiting' && (
+                      <span className="text-muted-foreground tabular-nums">
+                        {counts.waiting}
+                      </span>
+                    )}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </SidebarMenu>
         <div className="relative px-2">
@@ -96,34 +141,6 @@ export function ConversationList({
             placeholder="Buscar cliente"
             className="h-7 w-full rounded-[7px] border-0 bg-secondary pr-2 pl-7 text-[13px] placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/40"
           />
-        </div>
-        {/* macOS-style segmented control */}
-        <div className="mx-2 mt-1 flex rounded-[8px] bg-secondary p-0.5">
-          {FILTERS.map((filter) => {
-            const active = filter.id === statusFilter;
-            return (
-              <button
-                key={filter.id}
-                type="button"
-                aria-pressed={active}
-                data-testid={`status-filter-${filter.id}`}
-                onClick={() => onStatusFilterChange(filter.id)}
-                className={cn(
-                  'flex h-6 flex-1 items-center justify-center gap-1 whitespace-nowrap rounded-[6px] px-1 font-medium text-[11px] transition-colors',
-                  active
-                    ? 'bg-background text-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground',
-                )}
-              >
-                {filter.label}
-                {filter.id === 'waiting' && counts.waiting > 0 && (
-                  <span className="text-tint-amber-foreground tabular-nums">
-                    {counts.waiting}
-                  </span>
-                )}
-              </button>
-            );
-          })}
         </div>
       </SidebarHeader>
 
