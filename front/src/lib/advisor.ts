@@ -27,7 +27,14 @@ export type AdvisorChat = OverJson<
     | 'closedAt'
     | 'useCase'
   >
->;
+> & {
+  // Preview of the customer's last message (plain text, ≤140 chars).
+  lastMessage?: {
+    text: string;
+    senderType: SenderType | null;
+    createdAt: string;
+  } | null;
+};
 
 export interface AdvisorChatPage {
   chats: AdvisorChat[];
@@ -43,23 +50,6 @@ export type AdvisorMessage = OverJson<
   parts: { type: string; text?: string }[];
 };
 
-export type InboxFilter =
-  | 'all'
-  | 'open'
-  | 'waiting'
-  | 'mine'
-  | 'assistant'
-  | 'closed';
-
-export const INBOX_FILTERS: { id: InboxFilter; label: string }[] = [
-  { id: 'all', label: 'Todas' },
-  { id: 'open', label: 'Abiertas' },
-  { id: 'waiting', label: 'Sin atender' },
-  { id: 'mine', label: 'Mías' },
-  { id: 'assistant', label: `Con ${ASSISTANT_NAME}` },
-  { id: 'closed', label: 'Cerradas' },
-];
-
 export const POLL_MS = 4000;
 export const INBOX_PAGE_SIZE = 20;
 
@@ -72,26 +62,33 @@ export const QUICK_REPLIES = [
 
 const BASE = '/api/advisor/conversations';
 
-// The advisor works an open inbox (and their own chats); the admin supervises
-// everything, so starts on "Todas" and has no "Mías".
-export function inboxFiltersFor(role: 'advisor' | 'admin') {
-  return INBOX_FILTERS.filter((f) =>
-    role === 'admin' ? f.id !== 'mine' : f.id !== 'all',
-  );
-}
+// What the inbox shows: everything open, one use case, or a state.
+export type InboxView =
+  | { kind: 'inbox' }
+  | { kind: 'useCase'; useCase: string }
+  | { kind: 'waiting' }
+  | { kind: 'mine' }
+  | { kind: 'resolved' };
 
-export function inboxUrl(
-  filter: InboxFilter,
+export function viewUrl(
+  view: InboxView,
   { startingAfter, userId }: { startingAfter?: string; userId?: string | null } = {},
 ): string {
   const params = new URLSearchParams({ limit: String(INBOX_PAGE_SIZE) });
-  if (filter !== 'all') params.set('status', filter === 'closed' ? 'closed' : 'open');
-  if (filter === 'waiting') params.set('handledBy', 'human_queue');
-  if (filter === 'assistant') params.set('handledBy', 'ai_agent');
-  if (filter === 'mine') params.set('assignedTo', 'me');
+  params.set('status', view.kind === 'resolved' ? 'closed' : 'open');
+  if (view.kind === 'useCase') params.set('useCase', view.useCase);
+  if (view.kind === 'waiting') params.set('handledBy', 'human_queue');
+  if (view.kind === 'mine') params.set('assignedTo', 'me');
   if (userId) params.set('userId', userId);
   if (startingAfter) params.set('starting_after', startingAfter);
   return `${BASE}?${params.toString()}`;
+}
+
+export function sameView(a: InboxView, b: InboxView): boolean {
+  return (
+    a.kind === b.kind &&
+    (a.kind !== 'useCase' || a.useCase === (b as { useCase: string }).useCase)
+  );
 }
 
 export function messagesUrl(chatId: string, after?: string): string {
@@ -177,8 +174,88 @@ export function customerLabel(chat: AdvisorChat): string {
   return chat.userEmail || 'Cliente sin email';
 }
 
-export function useCaseLabel(chat: AdvisorChat): string {
-  return chat.useCase || 'Sin caso de uso';
+// The agent's intents (agent/configs/routing.yaml) that segment a
+// conversation, in the order the inbox lists them. Small talk and out-of-scope
+// turns aren't a use case: those chats go to "Otras".
+export const USE_CASES = [
+  { id: 'COMPLAINT', label: 'Reclamo' },
+  { id: 'GENERAL_INQUIRY', label: 'Consultas generales' },
+  { id: 'CASE_STATUS', label: 'Estado de un caso' },
+  { id: 'HUMAN_AGENT', label: 'Pidió un asesor' },
+  { id: 'COMMERCIAL', label: 'Comercial' },
+  { id: 'RETENTION', label: 'Retención' },
+  { id: 'CANCEL', label: 'Cancelación' },
+] as const;
+
+const NOT_A_USE_CASE = new Set(['GREETING', 'GOODBYE', 'OUT_OF_SCOPE']);
+export const OTHER_GROUP = 'OTHER';
+
+// The use case a chat is filed under: a known id, an unknown one as-is, or
+// OTHER_GROUP when there is none.
+export function useCaseOf(chat: AdvisorChat): string {
+  if (!chat.useCase || NOT_A_USE_CASE.has(chat.useCase)) return OTHER_GROUP;
+  return chat.useCase;
+}
+
+export function useCaseLabelOf(id: string): string {
+  if (id === OTHER_GROUP) return 'Otras';
+  return USE_CASES.find((u) => u.id === id)?.label ?? id;
+}
+
+export function useCaseTag(chat: AdvisorChat): string | null {
+  const id = useCaseOf(chat);
+  return id === OTHER_GROUP ? null : useCaseLabelOf(id);
+}
+
+// Inbox sections: known use cases in USE_CASES order, then unknown ones, then
+// "Otras". Chats keep their order (newest first) inside each section.
+export function groupByUseCase(
+  chats: AdvisorChat[],
+): { id: string; label: string; chats: AdvisorChat[] }[] {
+  const groups = new Map<string, AdvisorChat[]>();
+  for (const chat of chats) {
+    const id = useCaseOf(chat);
+    groups.set(id, [...(groups.get(id) ?? []), chat]);
+  }
+  const known: string[] = USE_CASES.map((u) => u.id);
+  const order = [
+    ...known,
+    ...[...groups.keys()].filter((id) => !known.includes(id) && id !== OTHER_GROUP),
+    OTHER_GROUP,
+  ];
+  return order
+    .filter((id) => groups.has(id))
+    .map((id) => ({ id, label: useCaseLabelOf(id), chats: groups.get(id) ?? [] }));
+}
+
+export type AttentionTone = 'waiting' | 'mine' | 'other' | 'resolved';
+
+// State worth showing: only when the chat needs attention or changes hands.
+// "With David" is the normal case and shows nothing.
+export function attentionOf(
+  chat: AdvisorChat,
+  me: string | undefined,
+  // The row is short ("Tú", the advisor's name before the @); the open chat's
+  // header spells it out.
+  { long = false }: { long?: boolean } = {},
+): { text: string; tone: AttentionTone } | null {
+  if (chat.closedAt) return { text: 'Resuelta', tone: 'resolved' };
+  if (chat.handledBy === 'human_queue') return { text: 'Sin atender', tone: 'waiting' };
+  if (chat.handledBy === 'human_agent') {
+    return isMine(chat, me)
+      ? { text: long ? 'La atiendes tú' : 'Tú', tone: 'mine' }
+      : {
+          text: `La atiende ${
+            chat.assignedTo
+              ? long
+                ? chat.assignedTo
+                : chat.assignedTo.split('@')[0]
+              : 'otro asesor'
+          }`,
+          tone: 'other',
+        };
+  }
+  return null;
 }
 
 export class AdvisorRequestError extends Error {
@@ -271,4 +348,15 @@ export async function fetchUsers(): Promise<ChatOwner[]> {
   const res = await fetch('/api/advisor/users', { credentials: 'include' });
   if (res.status === 204 || !res.ok) return [];
   return (await res.json()).users ?? [];
+}
+
+// The row's text: the last message the customer sent, falling back to the
+// chat title (their first message) when the back has none.
+export function rowText(chat: AdvisorChat): string {
+  return chat.lastMessage?.text?.trim() || chat.title;
+}
+
+// When the row last moved: the customer's last message, else the chat start.
+export function lastActivityAt(chat: AdvisorChat): string {
+  return chat.lastMessage?.createdAt ?? chat.createdAt;
 }

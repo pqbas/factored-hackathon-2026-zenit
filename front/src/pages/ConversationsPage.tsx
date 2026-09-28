@@ -1,11 +1,10 @@
-import { MessagesSquare } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import useSWR from 'swr';
 import useSWRInfinite from 'swr/infinite';
 
-import { ConversationList } from '@/components/conversations/conversation-list';
+import { InboxList } from '@/components/conversations/inbox-list';
+import { InboxViews } from '@/components/conversations/inbox-views';
 import { ConversationView } from '@/components/conversations/conversation-view';
-import { SidebarToggle } from '@/components/sidebar-toggle';
 import { toast } from '@/components/toast';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { useSession } from '@/contexts/SessionContext';
@@ -15,10 +14,10 @@ import {
   type AdvisorMessage,
   fetchInbox,
   fetchMessages,
-  type InboxFilter,
+  type InboxView,
   fetchUsers,
-  inboxFiltersFor,
-  inboxUrl,
+  useCaseLabelOf,
+  viewUrl,
   mergeMessages,
   POLL_MS,
   releaseConversation,
@@ -27,6 +26,7 @@ import {
   toBubble,
 } from '@/lib/advisor';
 import { matchesQuery } from '@/lib/conversations';
+import { cn } from '@/lib/utils';
 
 // Messages of the open conversation: full list on open, then only the new
 // ones every POLL_MS.
@@ -67,12 +67,18 @@ function useConversationMessages(chatId: string | null) {
   return { messages, append: (m: AdvisorMessage) => apply([m], false), refresh };
 }
 
+const VIEW_TITLE = { inbox: 'Bandeja', waiting: 'Sin atender', mine: 'Mías', resolved: 'Resueltas' };
+
+function viewTitle(view: InboxView): string {
+  return view.kind === 'useCase' ? useCaseLabelOf(view.useCase) : VIEW_TITLE[view.kind];
+}
+
 export default function ConversationsPage() {
   const { session, role } = useSession();
   const me = session?.user?.email;
   // The admin supervises (read-only, everything); the advisor attends.
   const readOnly = role === 'admin';
-  const [filter, setFilter] = useState<InboxFilter>(readOnly ? 'all' : 'open');
+  const [view, setView] = useState<InboxView>({ kind: 'inbox' });
   const [userId, setUserId] = useState<string | null>(null);
   const { data: users } = useSWR(readOnly ? '/api/advisor/users' : null, fetchUsers, {
     revalidateOnFocus: false,
@@ -86,7 +92,7 @@ export default function ConversationsPage() {
   const { data: pages, size, setSize, mutate } = useSWRInfinite<AdvisorChatPage>(
     (index, previous: AdvisorChatPage | null) => {
       if (previous && !previous.hasMore) return null;
-      return inboxUrl(filter, {
+      return viewUrl(view, {
         userId,
         startingAfter: index > 0 ? previous?.chats.at(-1)?.id : undefined,
       });
@@ -172,44 +178,55 @@ export default function ConversationsPage() {
 
   return (
     <SidebarProvider defaultOpen={!isCollapsed}>
-      <ConversationList
-        chats={chats}
-        selectedId={current?.id ?? null}
-        onSelect={(id) => setSelected(chats.find((chat) => chat.id === id) ?? null)}
-        query={query}
-        onQueryChange={setQuery}
-        filter={filter}
-        onFilterChange={setFilter}
-        hasMore={hasMore}
-        onLoadMore={() => setSize(size + 1)}
-        filters={inboxFiltersFor(readOnly ? 'admin' : 'advisor')}
-        users={readOnly ? (users ?? []) : undefined}
+      <InboxViews
+        view={view}
+        onViewChange={(next) => {
+          setView(next);
+          setSelected(null);
+        }}
+        isAdmin={readOnly}
+        users={users ?? []}
         userId={userId}
         onUserChange={setUserId}
       />
       <SidebarInset className="h-dvh min-h-0 overflow-hidden md:h-[calc(100dvh-1rem)]">
-        {current ? (
-          <ConversationView
-            chat={current}
-            bubbles={bubbles}
-            me={me}
-            readOnly={readOnly}
-            busy={busy}
-            onTake={handleTake}
-            onRelease={handleRelease}
-            onSend={handleSend}
-          />
-        ) : (
-          <div className="flex h-full flex-col">
-            <div className="px-2 py-1.5">
-              <SidebarToggle />
-            </div>
-            <div className="flex flex-1 flex-col items-center justify-center gap-2 text-muted-foreground">
-              <MessagesSquare className="h-10 w-10" />
-              <p>Elige una conversación</p>
-            </div>
+        <div className="flex h-full min-h-0">
+          <div
+            className={cn(
+              'h-full min-w-0',
+              current ? 'w-[520px] shrink-0 border-border border-r' : 'flex-1',
+            )}
+          >
+            <InboxList
+              title={viewTitle(view)}
+              chats={chats}
+              grouped={view.kind === 'inbox'}
+              me={me}
+              selectedId={current?.id ?? null}
+              onOpen={(id) => setSelected(chats.find((chat) => chat.id === id) ?? null)}
+              query={query}
+              onQueryChange={setQuery}
+              compact={!!current}
+              hasMore={hasMore}
+              onLoadMore={() => setSize(size + 1)}
+            />
           </div>
-        )}
+          {current && (
+            <div className="h-full min-w-0 flex-1">
+              <ConversationView
+                chat={current}
+                bubbles={bubbles}
+                me={me}
+                readOnly={readOnly}
+                busy={busy}
+                onTake={handleTake}
+                onRelease={handleRelease}
+                onSend={handleSend}
+                onClose={() => setSelected(null)}
+              />
+            </div>
+          )}
+        </div>
       </SidebarInset>
     </SidebarProvider>
   );

@@ -1,0 +1,223 @@
+import { Bot, Search } from 'lucide-react';
+
+import { UseCaseChip } from '@/components/conversations/use-case-style';
+import { ASSISTANT_NAME } from '@/lib/assistant';
+import { SidebarToggle } from '@/components/sidebar-toggle';
+import {
+  type AdvisorChat,
+  attentionOf,
+  customerLabel,
+  groupByUseCase,
+  lastActivityAt,
+  rowText,
+} from '@/lib/advisor';
+import { avatarColor, formatListTime, getInitials } from '@/lib/conversations';
+import { cn } from '@/lib/utils';
+
+function Row({
+  chat,
+  me,
+  selected,
+  compact,
+  onOpen,
+}: {
+  chat: AdvisorChat;
+  me: string | undefined;
+  selected: boolean;
+  compact: boolean;
+  onOpen: () => void;
+}) {
+  const full = attentionOf(chat, me);
+  // Narrow list (a chat is open): keep only states that ask for action.
+  const attention =
+    compact && full && (full.tone === 'mine' || full.tone === 'other') ? null : full;
+  // The inbox API has no unread count: the dot marks chats waiting for someone.
+  const waiting = !chat.closedAt && chat.handledBy === 'human_queue';
+  const withDavid = !chat.closedAt && chat.handledBy === 'ai_agent';
+
+  return (
+    <button
+      type="button"
+      data-testid={`conversation-row-${chat.id}`}
+      aria-selected={selected}
+      onClick={onOpen}
+      className={cn(
+        // Each row spans the list's grid so columns line up across rows and
+        // sections: the name column is as wide as the longest name (capped).
+        'col-span-full grid h-11 grid-cols-subgrid items-center rounded-[10px] text-left transition-colors',
+        selected ? 'bg-sidebar-accent' : 'hover:bg-secondary/60',
+      )}
+    >
+      {/* Edge columns give the row its inner margin (a subgrid row can't use
+          padding without eating its first and last columns). */}
+      <span />
+      <span
+        data-testid={waiting ? 'waiting-dot' : undefined}
+        className={cn('size-2 rounded-full', waiting ? 'bg-primary' : 'bg-transparent')}
+      />
+      <span
+        aria-hidden="true"
+        className={cn(
+          'flex size-7 items-center justify-center rounded-full font-medium text-[11px] text-white',
+          avatarColor(chat.userId),
+        )}
+      >
+        {getInitials(customerLabel(chat))}
+      </span>
+      <span
+        className="min-w-0 truncate font-semibold text-sm"
+      >
+        {customerLabel(chat)}
+      </span>
+      {/* Fixed-width column, centered between name and subject; empty unless
+          David has the chat. */}
+      <span className="flex items-center justify-center">
+        {withDavid && (
+          <span
+            data-testid="david-icon"
+            title={`Lo atiende ${ASSISTANT_NAME}`}
+            aria-label={`Lo atiende ${ASSISTANT_NAME}`}
+            className="flex text-muted-foreground"
+          >
+            <Bot className="size-4" strokeWidth={1.8} />
+          </span>
+        )}
+      </span>
+      {/* The customer's last message; the subject (chat title) stays as the
+          tooltip. */}
+      <span
+        data-testid="row-text"
+        title={chat.title}
+        className="min-w-0 truncate text-muted-foreground text-sm"
+      >
+        {rowText(chat)}
+      </span>
+      <span
+        data-testid={attention ? 'attention' : undefined}
+        className="whitespace-nowrap text-muted-foreground text-xs"
+      >
+        {attention?.text}
+      </span>
+      <span className="text-right text-muted-foreground text-xs">
+        {formatListTime(lastActivityAt(chat), new Date())}
+      </span>
+      <span />
+    </button>
+  );
+}
+
+// The inbox list: grouped by use case in "Bandeja", flat in any other view.
+export function InboxList({
+  title,
+  chats,
+  grouped,
+  me,
+  selectedId,
+  onOpen,
+  query,
+  onQueryChange,
+  compact,
+  hasMore,
+  onLoadMore,
+}: {
+  title: string;
+  chats: AdvisorChat[];
+  grouped: boolean;
+  me: string | undefined;
+  selectedId: string | null;
+  onOpen: (chatId: string) => void;
+  query: string;
+  onQueryChange: (query: string) => void;
+  compact: boolean;
+  hasMore: boolean;
+  onLoadMore: () => void;
+}) {
+  const groups = grouped
+    ? groupByUseCase(chats)
+    : [{ id: 'all', label: '', chats }];
+  const row = (chat: AdvisorChat) => (
+    <Row
+      key={chat.id}
+      chat={chat}
+      me={me}
+      selected={chat.id === selectedId}
+      compact={compact}
+      onOpen={() => onOpen(chat.id)}
+    />
+  );
+
+  return (
+    <div className="flex h-full min-w-0 flex-col">
+      <div className="flex items-center gap-3 px-6 pt-4 pb-3">
+        <SidebarToggle />
+        <h1 data-testid="inbox-title" className="font-semibold text-xl tracking-tight">
+          {title}
+        </h1>
+        <span className="text-muted-foreground text-sm">
+          {chats.length} {chats.length === 1 ? 'conversación' : 'conversaciones'}
+        </span>
+        <div className={cn('relative ml-auto', compact ? 'w-32' : 'w-60')}>
+          <Search className="absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => onQueryChange(e.target.value)}
+            placeholder="Buscar"
+            aria-label="Buscar cliente"
+            className="h-8 w-full rounded-lg bg-secondary pr-2 pl-8 text-[13px] placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/40"
+          />
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-3 pt-1.5 pb-6">
+        {chats.length === 0 && (
+          <p
+            data-testid="inbox-empty"
+            className="py-10 text-center text-muted-foreground text-sm"
+          >
+            No hay conversaciones en esta vista.
+          </p>
+        )}
+        {/* One grid for every row: margin | dot | avatar | name | David |
+            subject | state | time | margin. Sections are subgrids too, so all
+            rows align. */}
+        <div
+          className={cn(
+            'grid gap-x-3',
+            compact
+              ? 'grid-cols-[0_0.5rem_1.75rem_fit-content(8rem)_1.25rem_minmax(0,1fr)_auto_auto_0]'
+              : 'grid-cols-[0_0.5rem_1.75rem_fit-content(15rem)_1.25rem_minmax(0,1fr)_auto_auto_0]',
+          )}
+        >
+          {groups.map((group, index) => (
+            <section
+              key={group.id}
+              data-testid={grouped ? `inbox-section-${group.id}` : undefined}
+              className={cn(
+                'col-span-full grid grid-cols-subgrid gap-y-1',
+                grouped && index > 0 && 'mt-6',
+              )}
+            >
+              {grouped && (
+                <div className="col-span-full px-3 pb-1.5">
+                  <UseCaseChip id={group.id} />
+                </div>
+              )}
+              {group.chats.map(row)}
+            </section>
+          ))}
+        </div>
+        {hasMore && (
+          <button
+            type="button"
+            data-testid="inbox-load-more"
+            onClick={onLoadMore}
+            className="mx-3 mt-4 h-8 rounded-lg px-3 text-muted-foreground text-xs hover:bg-secondary hover:text-foreground"
+          >
+            Cargar más
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}

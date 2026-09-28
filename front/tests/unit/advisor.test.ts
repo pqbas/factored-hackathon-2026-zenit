@@ -3,13 +3,19 @@ import { describe, expect, it } from 'vitest';
 import {
   type AdvisorChat,
   type AdvisorMessage,
+  attentionOf,
   canReply,
-  inboxFiltersFor,
-  inboxUrl,
+  groupByUseCase,
+  lastActivityAt,
+  rowText,
+  sameView,
+  useCaseOf,
+  viewUrl,
   isHeldByOther,
   mergeMessages,
   statusOf,
   toBubble,
+  useCaseTag,
 } from '@/lib/advisor';
 
 const ME = 'babbage@example.com';
@@ -78,17 +84,53 @@ describe('canReply and isHeldByOther', () => {
   });
 });
 
-describe('inboxUrl', () => {
-  it('maps each filter to the contract params', () => {
+describe('viewUrl', () => {
+  it('maps each view to the contract params', () => {
     const params = (url: string) => Object.fromEntries(new URL(url, 'http://x').searchParams);
-    expect(params(inboxUrl('open'))).toEqual({ limit: '20', status: 'open' });
-    expect(params(inboxUrl('waiting'))).toMatchObject({ status: 'open', handledBy: 'human_queue' });
-    expect(params(inboxUrl('assistant'))).toMatchObject({ handledBy: 'ai_agent' });
-    expect(params(inboxUrl('mine'))).toMatchObject({ assignedTo: 'me' });
-    expect(params(inboxUrl('closed'))).toMatchObject({ status: 'closed' });
-    expect(params(inboxUrl('open', { startingAfter: 'c9' }))).toMatchObject({ starting_after: 'c9' });
-    expect(params(inboxUrl('all'))).toEqual({ limit: '20' });
-    expect(params(inboxUrl('all', { userId: 'u7' }))).toEqual({ limit: '20', userId: 'u7' });
+    expect(params(viewUrl({ kind: 'inbox' }))).toEqual({ limit: '20', status: 'open' });
+    expect(params(viewUrl({ kind: 'useCase', useCase: 'COMPLAINT' }))).toEqual({
+      limit: '20',
+      status: 'open',
+      useCase: 'COMPLAINT',
+    });
+    expect(params(viewUrl({ kind: 'waiting' }))).toMatchObject({ status: 'open', handledBy: 'human_queue' });
+    expect(params(viewUrl({ kind: 'mine' }))).toMatchObject({ assignedTo: 'me' });
+    expect(params(viewUrl({ kind: 'resolved' }))).toMatchObject({ status: 'closed' });
+    expect(params(viewUrl({ kind: 'inbox' }, { startingAfter: 'c9', userId: 'u7' }))).toMatchObject({
+      starting_after: 'c9',
+      userId: 'u7',
+    });
+  });
+
+  it('compares views, including the use case', () => {
+    expect(sameView({ kind: 'inbox' }, { kind: 'inbox' })).toBe(true);
+    expect(sameView({ kind: 'useCase', useCase: 'A' }, { kind: 'useCase', useCase: 'B' })).toBe(false);
+  });
+});
+
+describe('groupByUseCase', () => {
+  it('orders sections by use case, unknown ones next, and "Otras" last', () => {
+    const groups = groupByUseCase([
+      chat({ id: 'a', useCase: null }),
+      chat({ id: 'b', useCase: 'GENERAL_INQUIRY' }),
+      chat({ id: 'c', useCase: 'NEW_ONE' }),
+      chat({ id: 'd', useCase: 'COMPLAINT' }),
+      chat({ id: 'e', useCase: 'GREETING' }),
+      chat({ id: 'f', useCase: 'COMPLAINT' }),
+    ]);
+    expect(groups.map((g) => [g.id, g.chats.map((c) => c.id)])).toEqual([
+      ['COMPLAINT', ['d', 'f']],
+      ['GENERAL_INQUIRY', ['b']],
+      ['NEW_ONE', ['c']],
+      ['OTHER', ['a', 'e']],
+    ]);
+    expect(groups.at(-1)?.label).toBe('Otras');
+  });
+
+  it('files small talk and chats without a use case under OTHER', () => {
+    expect(useCaseOf(chat({ useCase: 'GOODBYE' }))).toBe('OTHER');
+    expect(useCaseOf(chat({ useCase: null }))).toBe('OTHER');
+    expect(useCaseOf(chat({ useCase: 'CANCEL' }))).toBe('CANCEL');
   });
 });
 
@@ -119,12 +161,49 @@ describe('toBubble', () => {
   });
 });
 
-describe('inboxFiltersFor', () => {
-  it('gives the admin "Todas" and the advisor "Mías"', () => {
-    const ids = (role: 'advisor' | 'admin') => inboxFiltersFor(role).map((f) => f.id);
-    expect(ids('admin')).toContain('all');
-    expect(ids('admin')).not.toContain('mine');
-    expect(ids('advisor')).toContain('mine');
-    expect(ids('advisor')).not.toContain('all');
+
+describe('useCaseTag', () => {
+  it('labels the use case, and shows nothing without one or for small talk', () => {
+    expect(useCaseTag(chat({ useCase: 'GENERAL_INQUIRY' }))).toBe('Consultas generales');
+    expect(useCaseTag(chat({ useCase: 'COMPLAINT' }))).toBe('Reclamo');
+    expect(useCaseTag(chat({ useCase: null }))).toBeNull();
+    expect(useCaseTag(chat({ useCase: 'GREETING' }))).toBeNull();
+    expect(useCaseTag(chat({ useCase: 'NEW_ONE' }))).toBe('NEW_ONE');
+  });
+});
+
+describe('attentionOf', () => {
+  it('says nothing while David handles the chat', () => {
+    expect(attentionOf(chat(), ME)).toBeNull();
+  });
+
+  it('flags waiting, held and resolved chats', () => {
+    expect(attentionOf(chat({ handledBy: 'human_queue' }), ME)?.text).toBe('Sin atender');
+    const mine = chat({ handledBy: 'human_agent', assignedTo: ME });
+    expect(attentionOf(mine, ME)?.text).toBe('Tú');
+    expect(attentionOf(mine, ME, { long: true })?.text).toBe('La atiendes tú');
+    const other = chat({ handledBy: 'human_agent', assignedTo: 'ada@example.com' });
+    expect(attentionOf(other, ME)?.text).toBe('La atiende ada');
+    expect(attentionOf(other, ME, { long: true })?.text).toBe('La atiende ada@example.com');
+    expect(attentionOf(chat({ closedAt: '2026-09-28T11:00:00.000Z' }), ME)?.text).toBe('Resuelta');
+  });
+});
+
+describe('rowText and lastActivityAt', () => {
+  const last = (text: string) => ({
+    text,
+    senderType: 'customer' as const,
+    createdAt: '2026-09-28T12:00:00.000Z',
+  });
+
+  it('shows the customer\'s last message, else the title', () => {
+    expect(rowText(chat({ lastMessage: last('Es urgente') }))).toBe('Es urgente');
+    expect(rowText(chat({ title: 'Transferencia', lastMessage: null }))).toBe('Transferencia');
+    expect(rowText(chat({ title: 'Transferencia', lastMessage: last('  ') }))).toBe('Transferencia');
+  });
+
+  it('dates the row by the last message, else the chat start', () => {
+    expect(lastActivityAt(chat({ lastMessage: last('x') }))).toBe('2026-09-28T12:00:00.000Z');
+    expect(lastActivityAt(chat({ lastMessage: null }))).toBe('2026-09-28T10:00:00.000Z');
   });
 });
