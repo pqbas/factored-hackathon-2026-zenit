@@ -344,6 +344,74 @@ export async function getLastCustomerMessages({
   }
 }
 
+export interface ConversationCounts {
+  total: number;
+  byUseCase: Record<string, number>;
+  withoutUseCase: number;
+  unattended: number;
+  mine: number;
+  resolved: number;
+}
+
+// Counts for the advisor console's view bar, with the same semantics as each
+// view: total/byUseCase = open chats (the inbox), unattended = human_queue,
+// mine = open and assigned to advisorEmail, resolved = closed. One aggregate
+// query (a row per use case), no chat rows.
+export async function getConversationCounts({
+  userId,
+  advisorEmail,
+}: {
+  userId?: string;
+  advisorEmail?: string;
+}): Promise<ConversationCounts> {
+  const counts: ConversationCounts = {
+    total: 0,
+    byUseCase: {},
+    withoutUseCase: 0,
+    unattended: 0,
+    mine: 0,
+    resolved: 0,
+  };
+  if (!isDatabaseAvailable()) return counts;
+
+  const countWhere = (condition: SQL) =>
+    sql<number>`count(*) filter (where ${condition})`.mapWith(Number);
+
+  try {
+    const rows = await (await ensureDb())
+      .select({
+        useCase: chat.useCase,
+        open: countWhere(isNull(chat.closedAt)),
+        unattended: countWhere(eq(chat.handledBy, 'human_queue')),
+        mine: advisorEmail
+          ? countWhere(
+              and(eq(chat.assignedTo, advisorEmail), isNull(chat.closedAt)) as SQL,
+            )
+          : sql<number>`0`.mapWith(Number),
+        resolved: countWhere(isNotNull(chat.closedAt)),
+      })
+      .from(chat)
+      .where(userId ? eq(chat.userId, userId) : undefined)
+      .groupBy(chat.useCase);
+
+    for (const row of rows) {
+      counts.total += row.open;
+      if (row.useCase) counts.byUseCase[row.useCase] = row.open;
+      else counts.withoutUseCase += row.open;
+      counts.unattended += row.unattended;
+      counts.mine += row.mine;
+      counts.resolved += row.resolved;
+    }
+    return counts;
+  } catch (error) {
+    console.error('[getConversationCounts] Error:', error);
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to count conversations',
+    );
+  }
+}
+
 export async function getChatById({ id }: { id: string }) {
   if (!isDatabaseAvailable()) {
     console.log('[getChatById] Database not available, returning null');
