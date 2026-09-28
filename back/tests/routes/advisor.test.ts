@@ -603,6 +603,81 @@ test.describe('/api/advisor (with database)', () => {
   });
 
   test.describe('bandeja filters', () => {
+    test("each inbox chat carries the customer's last message as lastMessage", async ({
+      babbageContext,
+    }) => {
+      const chatId = await createChat(babbageContext);
+      const inboxRow = async () => {
+        const { chats } = await (
+          await babbageContext.request.get(
+            `/api/advisor/conversations?userId=${babbageContext.name}-id&limit=100`,
+          )
+        ).json();
+        return chats.find((c: any) => c.id === chatId);
+      };
+
+      expect((await inboxRow()).lastMessage).toBeNull();
+
+      const longQuestion = `Hola   ${'a'.repeat(200)}`;
+      await (await postChatMessage(babbageContext, chatId, longQuestion)).text();
+
+      // The advisor takes the chat and replies: the row keeps showing what the
+      // customer said last, not the agent's, the advisor's or the notices.
+      await babbageContext.request.post(
+        `/api/advisor/conversations/${chatId}/take`,
+        { data: {} },
+      );
+      await babbageContext.request.post(
+        `/api/advisor/conversations/${chatId}/messages`,
+        { data: { text: 'Respuesta del asesor' } },
+      );
+
+      const { lastMessage } = await inboxRow();
+      expect(lastMessage.senderType).toBe('customer');
+      expect(lastMessage.text).toHaveLength(140);
+      expect(lastMessage.text.startsWith('Hola a')).toBe(true);
+      expect(lastMessage.text.endsWith('…')).toBe(true);
+      expect(typeof lastMessage.createdAt).toBe('string');
+
+      // Customer routes don't carry the preview.
+      const { chats } = await (
+        await babbageContext.request.get('/api/history?limit=100')
+      ).json();
+      const historyRow = chats.find((c: any) => c.id === chatId);
+      expect(historyRow).toBeDefined();
+      expect(historyRow).not.toHaveProperty('lastMessage');
+    });
+
+    test('a message from before senderType counts as the customer when its role is user', async ({
+      babbageContext,
+    }) => {
+      const chatId = await createChat(babbageContext);
+      await saveMessages({
+        messages: [
+          {
+            id: generateUUID(),
+            chatId,
+            role: 'user',
+            parts: [{ type: 'text', text: 'mensaje viejo del cliente' }],
+            attachments: [],
+            createdAt: new Date(),
+            blocked: false,
+            senderType: null,
+            senderId: null,
+          },
+        ],
+      });
+
+      const { chats } = await (
+        await babbageContext.request.get(
+          `/api/advisor/conversations?userId=${babbageContext.name}-id&limit=100`,
+        )
+      ).json();
+      const row = chats.find((c: any) => c.id === chatId);
+      expect(row.lastMessage.text).toBe('mensaje viejo del cliente');
+      expect(row.lastMessage.senderType).toBeNull();
+    });
+
     test('assignedTo=me, status and handledBy filter the inbox', async ({
       babbageContext,
     }) => {

@@ -16,6 +16,7 @@ import {
 import {
   getChats,
   getChatOwners,
+  getLastCustomerMessages,
   getChatById,
   getMessagesAfter,
   takeChat,
@@ -26,6 +27,7 @@ import {
 import { generateUUID } from '@chat-template/core';
 import { ChatSDKError } from '@chat-template/core/errors';
 import { normalizeEmail } from '../roles';
+import { toLastMessagePreview } from '../inbox';
 
 export const advisorRouter: RouterType = Router();
 
@@ -114,7 +116,18 @@ advisorRouter.get('/conversations', async (req: Request, res: Response) => {
       status,
     });
 
-    res.json(chats);
+    const lastMessages = await getLastCustomerMessages({
+      chatIds: chats.chats.map((c) => c.id),
+    });
+    const lastByChat = new Map(lastMessages.map((m) => [m.chatId, m]));
+
+    res.json({
+      ...chats,
+      chats: chats.chats.map((c) => {
+        const last = lastByChat.get(c.id);
+        return { ...c, lastMessage: last ? toLastMessagePreview(last) : null };
+      }),
+    });
   } catch (error) {
     console.error('[/api/advisor/conversations] Error in handler:', error);
     res.status(500).json({ error: 'Failed to fetch conversations' });
