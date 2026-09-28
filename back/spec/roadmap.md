@@ -15,7 +15,7 @@
 
 ---
 
-## Phase 1: Identidad del cliente y conversación continua (In Progress)
+## Phase 1: Identidad del cliente y conversación continua (Complete)
 
 **Goal:** que el agente sepa qué cliente escribe y recuerde la conversación
 entre turnos.
@@ -27,7 +27,11 @@ entre turnos.
       sesión" que da el agente.
 - [x] Un test comprueba que el token y el id de conversación llegan al agente.
 
-<!-- Faltan los checks manuales contra el agente real (validation.md). -->
+"Sin token → inicia sesión" depende del fix del agente
+(`fix/pqbas-agent-no-default-session`); el backend ya manda el request sin
+token.
+
+Shipped en PR #8.
 
 ---
 
