@@ -135,6 +135,7 @@ chatRouter.post('/', requireAuth, async (req: Request, res: Response) => {
         await saveChat({
           id,
           userId: session.user.id,
+          userEmail: session.user.email,
           title,
           visibility: selectedVisibilityType,
         });

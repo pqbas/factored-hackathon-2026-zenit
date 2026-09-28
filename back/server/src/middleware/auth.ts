@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction } from 'express';
 import { getAuthSession, type AuthSession } from '@chat-template/auth';
 import { checkChatAccess } from '@chat-template/core';
 import { ChatSDKError } from '@chat-template/core/errors';
+import { isAdminEmail } from '../admin';
 
 // Extend Express Request type to include session
 declare global {
@@ -41,6 +42,25 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
     const response = new ChatSDKError('unauthorized:chat').toResponse();
     return res.status(response.status).json(response.json);
   }
+  next();
+}
+
+/**
+ * Middleware to require admin access - returns 401 without a session, 403 if
+ * the session email is not in ADMIN_EMAILS.
+ */
+export function requireAdmin(req: Request, res: Response, next: NextFunction) {
+  const email = req.session?.user?.email;
+  if (!email) {
+    const response = new ChatSDKError('unauthorized:chat').toResponse();
+    return res.status(response.status).json(response.json);
+  }
+
+  if (!isAdminEmail(email, process.env.ADMIN_EMAILS)) {
+    const response = new ChatSDKError('forbidden:chat').toResponse();
+    return res.status(response.status).json(response.json);
+  }
+
   next();
 }
 
