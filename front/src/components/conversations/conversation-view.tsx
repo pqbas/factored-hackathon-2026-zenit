@@ -18,22 +18,22 @@ const BANNER = {
   assistant: {
     icon: Bot,
     text: 'El asistente está respondiendo. Apágalo para escribir tú.',
-    className: 'bg-tint-blue text-tint-blue-foreground',
+    className: 'text-tint-blue-foreground',
   },
   waiting: {
     icon: Hourglass,
     text: 'Esperando a un asesor · escribe para tomar la conversación.',
-    className: 'bg-tint-amber text-tint-amber-foreground',
+    className: 'text-tint-amber-foreground',
   },
   advisor: {
     icon: UserRound,
     text: 'Estás atendiendo esta conversación. El asistente no responderá hasta que lo vuelvas a encender.',
-    className: 'bg-sidebar-accent text-sidebar-accent-foreground',
+    className: 'text-primary',
   },
   resolved: {
     icon: Bot,
     text: 'Conversación resuelta. Si el cliente escribe, responde el asistente.',
-    className: 'bg-tint-green text-tint-green-foreground',
+    className: 'text-tint-green-foreground',
   },
 };
 
@@ -82,17 +82,6 @@ export function ConversationView({
         onAddTag={onAddTag}
       />
 
-      <div
-        data-testid="status-banner"
-        className={cn(
-          'flex items-center gap-2 px-4 py-2 text-xs',
-          banner.className,
-        )}
-      >
-        <banner.icon className="size-3.5 shrink-0" strokeWidth={2} />
-        {banner.text}
-      </div>
-
       <div className="relative min-h-0 flex-1">
         <div
           ref={scrollRef}
@@ -130,6 +119,17 @@ export function ConversationView({
             <ArrowDown className="size-4" strokeWidth={2.2} />
           </button>
         )}
+      </div>
+
+      <div
+        data-testid="status-banner"
+        className="flex items-center justify-center gap-1.5 px-4 pt-2 text-[11px] text-muted-foreground"
+      >
+        <banner.icon
+          className={cn('size-3 shrink-0', banner.className)}
+          strokeWidth={2.2}
+        />
+        {banner.text}
       </div>
 
       <AdvisorComposer

@@ -2,7 +2,7 @@ import { Bot } from 'lucide-react';
 import { useState } from 'react';
 
 import { avatarColor } from '@/components/conversations/conversation-list';
-import { StatusChip, TagChip } from '@/components/conversations/status-chip';
+import { StatusInline, TagChip } from '@/components/conversations/status-chip';
 import { SidebarToggle } from '@/components/sidebar-toggle';
 import { Button } from '@/components/ui/button';
 import {
@@ -48,8 +48,11 @@ export function ConversationHeader({
           {getInitials(conversation.name)}
         </div>
         <div className="flex min-w-0 flex-col">
-          <span className="truncate font-semibold text-[15px]">
-            {conversation.name}
+          <span className="flex min-w-0 items-center gap-2.5">
+            <span className="truncate font-semibold text-[15px]">
+              {conversation.name}
+            </span>
+            <StatusInline status={status} />
           </span>
           <span
             data-testid="customer-meta"
@@ -59,13 +62,14 @@ export function ConversationHeader({
             {conversation.channel}
           </span>
         </div>
+        <div className="ml-auto flex shrink-0 items-center gap-2">
         <button
           type="button"
           role="switch"
           aria-checked={assistantOn}
           data-testid="assistant-switch"
           onClick={onToggleAssistant}
-          className="ml-auto flex h-9 shrink-0 items-center gap-2 rounded-full bg-secondary pr-2 pl-3 font-medium text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="flex h-8 shrink-0 items-center gap-2 rounded-full bg-secondary pr-2 pl-3 font-medium text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <Bot
             className={cn(
@@ -85,10 +89,22 @@ export function ConversationHeader({
             <span className="size-4 rounded-full bg-white shadow-sm" />
           </span>
         </button>
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          data-testid="resolve-button"
+          disabled={status === 'resolved'}
+          onClick={onResolve}
+          className="h-8 rounded-full px-3 text-xs"
+        >
+          Resolver
+        </Button>
+        </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-1.5">
-        <TagChip label={conversation.topic} size="md" />
+      <div className="flex flex-wrap items-center gap-1.5 pl-[5.25rem]">
+        <TagChip label={conversation.topic} tone="neutral" size="md" />
         {conversation.product && (
           <TagChip label={conversation.product} tone="neutral" size="md" />
         )}
@@ -123,20 +139,6 @@ export function ConversationHeader({
             + Etiqueta
           </button>
         )}
-        <div className="ml-auto flex items-center gap-1.5">
-          <StatusChip status={status} size="md" />
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            data-testid="resolve-button"
-            disabled={status === 'resolved'}
-            onClick={onResolve}
-            className="h-7 rounded-lg px-3 text-xs"
-          >
-            Resolver
-          </Button>
-        </div>
       </div>
     </header>
   );

@@ -15,7 +15,7 @@ export function AdvisorComposer({
   onAttach: (file: File) => void;
 }) {
   const [draft, setDraft] = useState('');
-  const [showReplies, setShowReplies] = useState(true);
+  const [showReplies, setShowReplies] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   function handleSend() {

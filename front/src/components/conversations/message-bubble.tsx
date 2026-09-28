@@ -108,7 +108,7 @@ export function SystemNotice({
     <div className="my-3 flex justify-center">
       <span
         data-testid="system-notice"
-        className="flex items-center gap-1.5 rounded-full bg-tint-amber px-3 py-1 font-medium text-tint-amber-foreground text-xs"
+        className="flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1 text-muted-foreground text-xs"
       >
         <ArrowRight className="size-3" strokeWidth={2.2} />
         {message.text} · {formatListTime(message.sentAt, now)}

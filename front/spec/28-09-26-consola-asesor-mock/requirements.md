@@ -28,8 +28,8 @@ And it changes in these ways:
    texto queda deshabilitado.
 7. Cada conversación tiene un estado: Con asistente, Sin atender, En atención o
    Resuelto. Se ve como chip en la fila de la lista y en el encabezado.
-8. Arriba de la lista hay filtros: Todos, Sin atender (con el conteo) y En
-   atención.
+8. Arriba de la lista hay un control segmentado estilo macOS: Todos, Sin
+   atender (con el conteo) y Atendiendo.
 9. Apagar el asistente en una conversación Con asistente la pasa a En
    atención. En una Sin atender el asistente ya está apagado: el primer mensaje
    del asesor la pasa a En atención. El botón "Resolver" la pasa a Resuelto y
@@ -44,9 +44,9 @@ And it changes in these ways:
     transferencia · 10:42").
 13. Los mensajes del asistente y del asesor se distinguen: los dos van a la
     derecha en celeste, con el remitente arriba ("Asistente" o "Tú").
-14. Encima del campo de texto hay respuestas rápidas; tocar una la pone en el
-    campo. Hay un botón para adjuntar una imagen (se ve solo en pantalla) y otro
-    para respuestas rápidas.
+14. El botón de respuestas rápidas muestra u oculta una fila de atajos encima
+    del campo; tocar uno lo pone en el campo. Hay un botón para adjuntar una
+    imagen (se ve solo en pantalla).
 15. Si el asesor sube en el chat, aparece un botón flotante para bajar al último
     mensaje.
 
@@ -81,6 +81,10 @@ And it changes in these ways:
   se prueban sin montar componentes.
 - Chats sigue visible para todos los usuarios, porque los roles llegan en la
   Fase 5.
+- La pantalla se mantiene sobria: el estado va como punto de color y texto
+  (no como chips de color), el aviso de estado es una línea discreta sobre el
+  campo y las respuestas rápidas están ocultas hasta que se piden, porque la
+  primera versión con chips y franjas de color se veía recargada.
 - Todo el estilo es con utilidades de Tailwind v4 y los tokens de `index.css`:
   sin `style={{}}` ni clases CSS propias.
 

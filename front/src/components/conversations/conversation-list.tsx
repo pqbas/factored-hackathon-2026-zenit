@@ -11,7 +11,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from '@/components/ui/sidebar';
-import { StatusChip, TagChip } from '@/components/conversations/status-chip';
+import { StatusLine } from '@/components/conversations/status-chip';
 import {
   type ConversationStatus,
   conversationStatus,
@@ -25,7 +25,7 @@ import type { MockConversation, MockMessage } from '@/mocks/conversations';
 const FILTERS: { id: StatusFilter; label: string }[] = [
   { id: 'all', label: 'Todos' },
   { id: 'waiting', label: 'Sin atender' },
-  { id: 'advisor', label: 'En atención' },
+  { id: 'advisor', label: 'Atendiendo' },
 ];
 
 const PREVIEW_PREFIX: Partial<Record<MockMessage['from'], string>> = {
@@ -97,7 +97,8 @@ export function ConversationList({
             className="h-7 w-full rounded-[7px] border-0 bg-secondary pr-2 pl-7 text-[13px] placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/40"
           />
         </div>
-        <div className="flex gap-1.5 px-2 pt-1">
+        {/* macOS-style segmented control */}
+        <div className="mx-2 mt-1 flex rounded-[8px] bg-secondary p-0.5">
           {FILTERS.map((filter) => {
             const active = filter.id === statusFilter;
             return (
@@ -108,16 +109,18 @@ export function ConversationList({
                 data-testid={`status-filter-${filter.id}`}
                 onClick={() => onStatusFilterChange(filter.id)}
                 className={cn(
-                  'h-[26px] rounded-full px-2.5 font-medium text-xs transition-colors',
+                  'flex h-6 flex-1 items-center justify-center gap-1 whitespace-nowrap rounded-[6px] px-1 font-medium text-[11px] transition-colors',
                   active
-                    ? 'bg-primary text-primary-foreground'
-                    : filter.id === 'waiting'
-                      ? 'bg-tint-amber text-tint-amber-foreground'
-                      : 'bg-secondary text-muted-foreground hover:text-foreground',
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground',
                 )}
               >
                 {filter.label}
-                {filter.id === 'waiting' && ` · ${counts.waiting}`}
+                {filter.id === 'waiting' && counts.waiting > 0 && (
+                  <span className="text-tint-amber-foreground tabular-nums">
+                    {counts.waiting}
+                  </span>
+                )}
               </button>
             );
           })}
@@ -175,10 +178,10 @@ export function ConversationList({
                             </span>
                           )}
                         </div>
-                        <div className="flex gap-1">
-                          <StatusChip status={conversationStatus(conversation)} />
-                          <TagChip label={conversation.topic} />
-                        </div>
+                        <StatusLine
+                          status={conversationStatus(conversation)}
+                          topic={conversation.topic}
+                        />
                       </div>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

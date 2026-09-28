@@ -104,6 +104,7 @@ test.describe('Conversations mock view', () => {
 
   test('a quick reply fills the message field', async ({ page }) => {
     await page.getByTestId('conversation-row-demo-ar-1').click();
+    await page.getByRole('button', { name: 'Respuestas rápidas' }).click();
     await page.getByTestId('quick-reply-0').click();
     await expect(page.getByLabel('Mensaje al cliente')).toHaveValue(
       'Ya revisé tu comprobante.',
