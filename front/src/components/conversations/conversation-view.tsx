@@ -80,6 +80,7 @@ export function ConversationView({
   onTake,
   onRelease,
   onSend,
+  onClose,
 }: {
   chat: AdvisorChat;
   bubbles: Bubble[];
@@ -89,6 +90,7 @@ export function ConversationView({
   onTake: () => void;
   onRelease: (outcome: 'returned_to_agent' | 'resolved') => void;
   onSend: (text: string) => Promise<boolean>;
+  onClose: () => void;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -117,6 +119,7 @@ export function ConversationView({
         busy={busy}
         onTake={onTake}
         onRelease={onRelease}
+        onClose={onClose}
       />
 
       <div className="relative min-h-0 flex-1">

@@ -5,8 +5,10 @@ import {
   type AdvisorMessage,
   attentionOf,
   canReply,
-  inboxFiltersFor,
-  inboxUrl,
+  groupByUseCase,
+  sameView,
+  useCaseOf,
+  viewUrl,
   isHeldByOther,
   mergeMessages,
   statusOf,
@@ -80,17 +82,53 @@ describe('canReply and isHeldByOther', () => {
   });
 });
 
-describe('inboxUrl', () => {
-  it('maps each filter to the contract params', () => {
+describe('viewUrl', () => {
+  it('maps each view to the contract params', () => {
     const params = (url: string) => Object.fromEntries(new URL(url, 'http://x').searchParams);
-    expect(params(inboxUrl('open'))).toEqual({ limit: '20', status: 'open' });
-    expect(params(inboxUrl('waiting'))).toMatchObject({ status: 'open', handledBy: 'human_queue' });
-    expect(params(inboxUrl('assistant'))).toMatchObject({ handledBy: 'ai_agent' });
-    expect(params(inboxUrl('mine'))).toMatchObject({ assignedTo: 'me' });
-    expect(params(inboxUrl('closed'))).toMatchObject({ status: 'closed' });
-    expect(params(inboxUrl('open', { startingAfter: 'c9' }))).toMatchObject({ starting_after: 'c9' });
-    expect(params(inboxUrl('all'))).toEqual({ limit: '20' });
-    expect(params(inboxUrl('all', { userId: 'u7' }))).toEqual({ limit: '20', userId: 'u7' });
+    expect(params(viewUrl({ kind: 'inbox' }))).toEqual({ limit: '20', status: 'open' });
+    expect(params(viewUrl({ kind: 'useCase', useCase: 'COMPLAINT' }))).toEqual({
+      limit: '20',
+      status: 'open',
+      useCase: 'COMPLAINT',
+    });
+    expect(params(viewUrl({ kind: 'waiting' }))).toMatchObject({ status: 'open', handledBy: 'human_queue' });
+    expect(params(viewUrl({ kind: 'mine' }))).toMatchObject({ assignedTo: 'me' });
+    expect(params(viewUrl({ kind: 'resolved' }))).toMatchObject({ status: 'closed' });
+    expect(params(viewUrl({ kind: 'inbox' }, { startingAfter: 'c9', userId: 'u7' }))).toMatchObject({
+      starting_after: 'c9',
+      userId: 'u7',
+    });
+  });
+
+  it('compares views, including the use case', () => {
+    expect(sameView({ kind: 'inbox' }, { kind: 'inbox' })).toBe(true);
+    expect(sameView({ kind: 'useCase', useCase: 'A' }, { kind: 'useCase', useCase: 'B' })).toBe(false);
+  });
+});
+
+describe('groupByUseCase', () => {
+  it('orders sections by use case, unknown ones next, and "Otras" last', () => {
+    const groups = groupByUseCase([
+      chat({ id: 'a', useCase: null }),
+      chat({ id: 'b', useCase: 'GENERAL_INQUIRY' }),
+      chat({ id: 'c', useCase: 'NEW_ONE' }),
+      chat({ id: 'd', useCase: 'COMPLAINT' }),
+      chat({ id: 'e', useCase: 'GREETING' }),
+      chat({ id: 'f', useCase: 'COMPLAINT' }),
+    ]);
+    expect(groups.map((g) => [g.id, g.chats.map((c) => c.id)])).toEqual([
+      ['COMPLAINT', ['d', 'f']],
+      ['GENERAL_INQUIRY', ['b']],
+      ['NEW_ONE', ['c']],
+      ['OTHER', ['a', 'e']],
+    ]);
+    expect(groups.at(-1)?.label).toBe('Otras');
+  });
+
+  it('files small talk and chats without a use case under OTHER', () => {
+    expect(useCaseOf(chat({ useCase: 'GOODBYE' }))).toBe('OTHER');
+    expect(useCaseOf(chat({ useCase: null }))).toBe('OTHER');
+    expect(useCaseOf(chat({ useCase: 'CANCEL' }))).toBe('CANCEL');
   });
 });
 
@@ -121,15 +159,6 @@ describe('toBubble', () => {
   });
 });
 
-describe('inboxFiltersFor', () => {
-  it('gives the admin "Todas" and the advisor "Mías"', () => {
-    const ids = (role: 'advisor' | 'admin') => inboxFiltersFor(role).map((f) => f.id);
-    expect(ids('admin')).toContain('all');
-    expect(ids('admin')).not.toContain('mine');
-    expect(ids('advisor')).toContain('mine');
-    expect(ids('advisor')).not.toContain('all');
-  });
-});
 
 describe('useCaseTag', () => {
   it('labels the use case, and shows nothing without one or for small talk', () => {

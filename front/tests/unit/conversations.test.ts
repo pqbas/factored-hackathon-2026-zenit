@@ -19,6 +19,11 @@ describe('getInitials', () => {
     expect(getInitials('Ana')).toBe('AN');
   });
 
+  it('keeps the number of numbered accounts', () => {
+    expect(getInitials('asesor1@example.com')).toBe('A1');
+    expect(getInitials('asesor2')).toBe('A2');
+  });
+
   it('uses first and last word, and the local part of an email', () => {
     expect(getInitials('Santiago Martínez')).toBe('SM');
     expect(getInitials('santiago.martinez@banco.test')).toBe('SM');

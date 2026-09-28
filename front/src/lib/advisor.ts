@@ -27,7 +27,10 @@ export type AdvisorChat = OverJson<
     | 'closedAt'
     | 'useCase'
   >
->;
+> & {
+  // The customer's last message, once the back adds it to the inbox.
+  lastMessage?: string | null;
+};
 
 export interface AdvisorChatPage {
   chats: AdvisorChat[];

@@ -1,19 +1,18 @@
 import { ASSISTANT_KIND, ASSISTANT_NAME } from '@/lib/assistant';
-import { Bot } from 'lucide-react';
+import { Bot, X } from 'lucide-react';
 
-import { avatarColor } from '@/components/conversations/conversation-list';
-import { Attention, UseCaseTag } from '@/components/conversations/status-chip';
-import { SidebarToggle } from '@/components/sidebar-toggle';
+import { useCaseStyle } from '@/components/conversations/use-case-style';
 import { Button } from '@/components/ui/button';
 import {
   type AdvisorChat,
   customerLabel,
   isMine,
   statusOf,
+  useCaseOf,
   useCaseTag,
   attentionOf,
 } from '@/lib/advisor';
-import { getInitials } from '@/lib/conversations';
+import { avatarColor, getInitials } from '@/lib/conversations';
 import { cn } from '@/lib/utils';
 
 function AssistantSwitch({
@@ -62,6 +61,7 @@ export function ConversationHeader({
   busy,
   onTake,
   onRelease,
+  onClose,
 }: {
   chat: AdvisorChat;
   me: string | undefined;
@@ -70,6 +70,7 @@ export function ConversationHeader({
   busy: boolean;
   onTake: () => void;
   onRelease: (outcome: 'returned_to_agent' | 'resolved') => void;
+  onClose: () => void;
 }) {
   const status = statusOf(chat);
   const mine = isMine(chat, me);
@@ -78,8 +79,16 @@ export function ConversationHeader({
   const name = customerLabel(chat);
 
   return (
-    <header className="flex items-center gap-3 border-border border-b px-3 py-2.5 sm:px-4">
-      <SidebarToggle />
+    <header className="flex items-center gap-3 border-border border-b px-4 py-3">
+      <button
+        type="button"
+        aria-label="Cerrar conversación"
+        data-testid="close-conversation"
+        onClick={onClose}
+        className="flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground"
+      >
+        <X className="size-4" />
+      </button>
       <div
         className={cn(
           'flex size-10 shrink-0 items-center justify-center rounded-full font-medium text-sm text-white',
@@ -95,8 +104,22 @@ export function ConversationHeader({
             data-testid="customer-meta"
             className="flex min-w-0 items-center gap-2 text-muted-foreground text-xs"
           >
-            {attention && <Attention attention={attention} />}
-            {tag && <UseCaseTag label={tag} />}
+            {attention && (
+              <span data-testid="attention" className="whitespace-nowrap">
+                {attention.text}
+              </span>
+            )}
+            {tag && (
+              <span
+                data-testid="use-case-tag"
+                className={cn(
+                  'truncate rounded-md px-2 py-0.5 font-medium text-[11px]',
+                  useCaseStyle(useCaseOf(chat)).chip,
+                )}
+              >
+                {tag}
+              </span>
+            )}
           </span>
         )}
       </div>

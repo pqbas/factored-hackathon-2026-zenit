@@ -13,7 +13,6 @@ import {
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -141,7 +140,7 @@ export function InboxViews({
         </SidebarGroup>
 
         <SidebarGroup>
-          <SidebarGroupLabel className="text-[11px]">Casos de uso</SidebarGroupLabel>
+          <span className="px-2.5 pb-1.5 font-semibold text-[11px] text-muted-foreground">Casos de uso</span>
           <SidebarGroupContent>
             <SidebarMenu>
               {USE_CASES.map((u) =>
@@ -157,7 +156,7 @@ export function InboxViews({
         </SidebarGroup>
 
         <SidebarGroup>
-          <SidebarGroupLabel className="text-[11px]">Estado</SidebarGroupLabel>
+          <span className="px-2.5 pb-1.5 font-semibold text-[11px] text-muted-foreground">Estado</span>
           <SidebarGroupContent>
             <SidebarMenu>
               {item(

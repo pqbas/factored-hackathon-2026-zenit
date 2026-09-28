@@ -12,6 +12,9 @@ export function getInitials(name: string): string {
     .filter((word) => /[a-zA-Z]/.test(word));
   if (words.length === 0) return '';
   if (words.length === 1) {
+    // "asesor2" -> "A2", so numbered accounts don't all read "AS".
+    const numbered = words[0].match(/^([a-zA-Z]).*?(\d+)$/);
+    if (numbered) return `${numbered[1]}${numbered[2]}`.toUpperCase().slice(0, 3);
     return words[0].slice(0, 2).toUpperCase();
   }
   const first = words[0][0];
@@ -31,6 +34,23 @@ export function matchesQuery(query: string, ...fields: (string | null)[]): boole
   const needle = normalize(query.trim());
   if (!needle) return true;
   return fields.some((field) => field && normalize(field).includes(needle));
+}
+
+// Deterministic avatar color per customer, so the same client always gets
+// the same color across renders.
+const AVATAR_COLORS = [
+  'bg-linear-to-b from-zinc-400 to-zinc-500',
+  'bg-linear-to-b from-slate-400 to-slate-500',
+  'bg-linear-to-b from-stone-400 to-stone-500',
+  'bg-linear-to-b from-emerald-600/80 to-emerald-700/80',
+  'bg-linear-to-b from-sky-600/80 to-sky-700/80',
+];
+
+export function avatarColor(customerId: string): string {
+  const hash = customerId
+    .split('')
+    .reduce((sum, char) => sum + char.charCodeAt(0), 0);
+  return AVATAR_COLORS[hash % AVATAR_COLORS.length];
 }
 
 export type ConversationStatus = 'assistant' | 'waiting' | 'advisor' | 'resolved';

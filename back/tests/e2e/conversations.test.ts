@@ -100,6 +100,7 @@ async function mockAdvisorApi(page: Page, me: string, role: Role = 'advisor') {
         (c) =>
           (!q.get('status') || (q.get('status') === 'closed' ? !!c.closedAt : !c.closedAt)) &&
           (!q.get('userId') || c.userId === q.get('userId')) &&
+          (!q.get('useCase') || c.useCase === q.get('useCase')) &&
           (!q.get('handledBy') || c.handledBy === q.get('handledBy')) &&
           (q.get('assignedTo') !== 'me' || c.assignedTo === me),
       );
@@ -162,21 +163,35 @@ const headerStatus = (page: Page) => page.locator('header').getByTestId('attenti
 const input = (page: Page) => page.getByLabel('Mensaje al cliente');
 
 test.describe('Advisor console', () => {
-  test('lists the open inbox and filters by the contract params', async ({ page }) => {
+  test('the inbox groups by use case and each view asks for its params', async ({ page }) => {
     const requested = await openConsole(page);
+    await expect(page.getByTestId('inbox-title')).toHaveText('Bandeja');
     await expect(rows(page)).toHaveCount(4);
+    await expect(page.getByTestId('inbox-section-GENERAL_INQUIRY')).toBeVisible();
+    await expect(page.getByTestId('use-case-chip-GENERAL_INQUIRY')).toHaveText('Consultas generales');
+    await expect(page.getByTestId('inbox-section-OTHER').getByTestId('conversation-row-c-race')).toBeVisible();
 
-    await page.getByTestId('status-filter-trigger').click();
-    await page.getByTestId('status-filter-waiting').click();
+    await page.getByTestId('view-waiting').click();
     await expect(rows(page)).toHaveCount(2);
     expect(requested.some((u) => u.includes('handledBy=human_queue'))).toBe(true);
 
-    // Wait for the menu to finish closing before opening it again.
-    await expect(page.getByRole('menu')).toHaveCount(0);
-    await page.getByTestId('status-filter-trigger').click();
-    await page.getByTestId('status-filter-closed').click();
+    await page.getByTestId('view-resolved').click();
     await expect(rows(page)).toHaveCount(1);
     expect(requested.some((u) => u.includes('status=closed'))).toBe(true);
+
+    await page.getByTestId('view-use-case-GENERAL_INQUIRY').click();
+    await expect(page.getByTestId('inbox-title')).toHaveText('Consultas generales');
+    await expect(rows(page)).toHaveCount(3);
+    expect(requested.some((u) => u.includes('useCase=GENERAL_INQUIRY'))).toBe(true);
+  });
+
+  test('opening a chat shows it beside the list, and X closes it', async ({ page }) => {
+    await openConsole(page);
+    await page.getByTestId('conversation-row-c-assistant').click();
+    await expect(page.getByTestId('customer-meta')).toBeVisible();
+    await expect(rows(page)).toHaveCount(4);
+    await page.getByTestId('close-conversation').click();
+    await expect(page.getByTestId('customer-meta')).toHaveCount(0);
   });
 
   test('turning the assistant off takes the chat and lets the advisor reply', async ({ page }) => {
@@ -233,8 +248,9 @@ test.describe('Advisor console', () => {
   }) => {
     const requested = await openConsole(page, 'admin', 'root@example.com');
     await expect(page.getByTestId('nav-admin')).toHaveCount(0);
-    await expect(page.getByTestId('status-filter-trigger')).toContainText('Todas');
-    await expect(rows(page)).toHaveCount(5);
+    await expect(page.getByTestId('inbox-title')).toHaveText('Bandeja');
+    await expect(page.getByTestId('view-mine')).toHaveCount(0);
+    await expect(rows(page)).toHaveCount(4);
 
     await page.getByTestId('user-filter').click();
     await page.getByTestId('user-option-c-other-user').click();
@@ -273,17 +289,17 @@ test.describe('Advisor console', () => {
     expect(bullet).toBe('disc');
   });
 
-  test('rows show state only when it needs attention, and the use case tag', async ({
-    page,
-  }) => {
+  test('rows: robot for David, text state only when it needs attention', async ({ page }) => {
     await openConsole(page);
     const assistantRow = page.getByTestId('conversation-row-c-assistant');
+    await expect(assistantRow.getByTestId('david-icon')).toHaveAttribute('title', 'Lo atiende David');
     await expect(assistantRow.getByTestId('attention')).toHaveCount(0);
-    await expect(assistantRow).not.toContainText('Con David');
-    await expect(assistantRow.getByTestId('use-case-tag')).toHaveText('Consultas generales');
-    await expect(page.getByTestId('conversation-row-c-waiting').getByTestId('attention')).toHaveText('Sin atender');
+    const waitingRow = page.getByTestId('conversation-row-c-waiting');
+    await expect(waitingRow.getByTestId('attention')).toHaveText('Sin atender');
+    await expect(waitingRow.getByTestId('waiting-dot')).toBeVisible();
+    await expect(waitingRow.getByTestId('david-icon')).toHaveCount(0);
     await expect(page.getByTestId('conversation-row-c-other').getByTestId('attention')).toHaveText('La atiende ada');
-    await expect(page.getByTestId('conversation-row-c-race').getByTestId('use-case-tag')).toHaveCount(0);
+    await expect(page.locator('body')).not.toContainText('Con David');
     await expect(page.locator('body')).not.toContainText('Sin caso de uso');
   });
 
