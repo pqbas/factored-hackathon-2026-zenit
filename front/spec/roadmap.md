@@ -246,4 +246,4 @@ supervisa en solo lectura.
       las lee sin poder actuar.
 - [x] El asesor atiende como hoy, sin forzar conversaciones ajenas.
 
-La vista Admin de la Fase 6 quedó reemplazada por Chats. Shipped en PR #<n>.
+La vista Admin de la Fase 6 quedó reemplazada por Chats. Shipped en PR #28.
