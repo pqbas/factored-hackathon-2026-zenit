@@ -59,11 +59,15 @@ desde la pantalla de admin del front.
 <!-- Matriz de acceso por rol (decisión del usuario, 28-09-26). El front solo
      usa el rol para el menú; el back valida cada ruta:
      - customer: su chat con el asistente y su cuenta (Mis productos).
-     - advisor: su chat con el asistente y la consola del asesor. No ve Mis
-       productos ni la vista admin.
-     - admin: todo.
-     Rutas: /api/admin → requireAdmin; API de la consola → requireAdvisor
-     (advisor o admin); rutas de cuenta/productos → customer o admin. -->
+     - advisor: su chat con el asistente y la consola del asesor (lee, toma,
+       responde, devuelve y cierra). No ve Mis productos.
+     - admin: el asistente, Mis productos y Chats en solo lectura: supervisa
+       todas las conversaciones pero no atiende (decisión del usuario,
+       28-09-26, Fase 5b).
+     Rutas: lectura de la consola → advisor o admin; escritura de la consola
+     (take, messages, release) → solo advisor; lista de usuarios de la consola
+     → solo admin. /api/admin/* se eliminó en la Fase 5b (todo vive bajo
+     /api/advisor/*). Rutas de cuenta/productos → customer o admin. -->
 
 Shipped en PR #15.
 
@@ -147,6 +151,24 @@ del cliente relee `GET /api/chat/:id` cada 10 s para enterarse si un asesor
 toma una conversación en la que el cliente no está escribiendo; con una
 persona atendiendo consulta mensajes y estado cada 4 s. Es una lectura más por
 chat abierto cada 10 s.
+
+---
+
+## Phase 5b: El admin supervisa, no atiende
+
+**Goal:** que el admin vea todas las conversaciones desde la consola sin poder
+tomarlas ni responder, y que solo los asesores atiendan.
+
+<!-- Decisión del usuario, 28-09-26. Spec en
+     spec/28-09-26-admin-supervisa/. -->
+
+- [ ] La bandeja y los mensajes de la consola los leen asesores y admins; el
+      admin ve todas las conversaciones, incluidas las que atiende David y las
+      cerradas, y filtra por cliente.
+- [ ] Tomar, responder y devolver es solo para asesores; el admin recibe 403.
+- [ ] Ya no existe tomar una conversación ajena a la fuerza.
+- [ ] La vista admin separada desaparece: la lista de clientes para el filtro
+      sale de la consola, y las rutas /api/admin se eliminan.
 
 ---
 
