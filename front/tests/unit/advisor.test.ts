@@ -61,6 +61,14 @@ describe('canReply and isHeldByOther', () => {
     expect(canReply(held, undefined)).toBe(false);
   });
 
+  it('compares emails without case', () => {
+    const held = chat({ handledBy: 'human_agent', assignedTo: 'Babbage@Example.com' });
+    expect(canReply(held, ME)).toBe(true);
+    expect(isHeldByOther(held, ME)).toBe(false);
+    const advisor = message('m', { senderType: 'human_agent', senderId: 'BABBAGE@example.com' });
+    expect(toBubble(advisor, ME).label).toBe('Tú');
+  });
+
   it('flags chats held by someone else', () => {
     const held = chat({ handledBy: 'human_agent', assignedTo: 'ada@example.com' });
     expect(isHeldByOther(held, ME)).toBe(true);

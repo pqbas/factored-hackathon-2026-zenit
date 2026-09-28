@@ -80,13 +80,23 @@ export function statusOf(chat: AdvisorChat): ConversationStatus {
   return 'assistant';
 }
 
+// Emails are compared without case: ADMIN_EMAILS/ADVISOR_EMAILS ignore it and
+// the back stores whatever casing X-Forwarded-Email carried.
+export function sameEmail(a: string | null | undefined, b: string | null | undefined) {
+  return !!a && !!b && a.toLowerCase() === b.toLowerCase();
+}
+
+export function isMine(chat: AdvisorChat, me: string | undefined): boolean {
+  return !chat.closedAt && sameEmail(chat.assignedTo, me);
+}
+
 // Two people never answer the same chat: only whoever holds it can write.
 export function canReply(chat: AdvisorChat, me: string | undefined): boolean {
-  return !chat.closedAt && !!me && chat.assignedTo === me;
+  return isMine(chat, me);
 }
 
 export function isHeldByOther(chat: AdvisorChat, me: string | undefined) {
-  return !chat.closedAt && !!chat.assignedTo && chat.assignedTo !== me;
+  return !chat.closedAt && !!chat.assignedTo && !sameEmail(chat.assignedTo, me);
 }
 
 // Appends only messages not seen yet, keeping arrival order.
@@ -131,7 +141,7 @@ export function toBubble(message: AdvisorMessage, me: string | undefined): Bubbl
       return {
         ...base,
         from: 'advisor',
-        label: message.senderId === me ? 'Tú' : (message.senderId ?? 'Asesor'),
+        label: sameEmail(message.senderId, me) ? 'Tú' : (message.senderId ?? 'Asesor'),
       };
     default:
       return { ...base, from: 'assistant', label: 'Asistente' };

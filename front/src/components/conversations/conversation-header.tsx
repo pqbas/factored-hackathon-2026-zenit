@@ -8,6 +8,7 @@ import {
   type AdvisorChat,
   customerLabel,
   isHeldByOther,
+  isMine,
   statusOf,
   useCaseLabel,
 } from '@/lib/advisor';
@@ -67,7 +68,7 @@ export function ConversationHeader({
   onRelease: (outcome: 'returned_to_agent' | 'resolved') => void;
 }) {
   const status = statusOf(chat);
-  const mine = !chat.closedAt && !!me && chat.assignedTo === me;
+  const mine = isMine(chat, me);
   const heldByOther = isHeldByOther(chat, me);
   const name = customerLabel(chat);
 
