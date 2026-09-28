@@ -7,7 +7,7 @@ import {
   canReply,
   groupByUseCase,
   lastActivityAt,
-  lastMessagePreview,
+  rowText,
   sameView,
   useCaseOf,
   viewUrl,
@@ -189,17 +189,17 @@ describe('attentionOf', () => {
   });
 });
 
-describe('lastMessagePreview and lastActivityAt', () => {
+describe('rowText and lastActivityAt', () => {
   const last = (text: string) => ({
     text,
     senderType: 'customer' as const,
     createdAt: '2026-09-28T12:00:00.000Z',
   });
 
-  it('shows the customer\'s last message unless it repeats the subject', () => {
-    expect(lastMessagePreview(chat({ lastMessage: last('Es urgente') }))).toBe('Es urgente');
-    expect(lastMessagePreview(chat({ title: 'Hola', lastMessage: last('Hola') }))).toBeNull();
-    expect(lastMessagePreview(chat({ lastMessage: null }))).toBeNull();
+  it('shows the customer\'s last message, else the title', () => {
+    expect(rowText(chat({ lastMessage: last('Es urgente') }))).toBe('Es urgente');
+    expect(rowText(chat({ title: 'Transferencia', lastMessage: null }))).toBe('Transferencia');
+    expect(rowText(chat({ title: 'Transferencia', lastMessage: last('  ') }))).toBe('Transferencia');
   });
 
   it('dates the row by the last message, else the chat start', () => {

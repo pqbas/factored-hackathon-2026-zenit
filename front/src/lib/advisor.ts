@@ -350,12 +350,10 @@ export async function fetchUsers(): Promise<ChatOwner[]> {
   return (await res.json()).users ?? [];
 }
 
-// The row's gray preview: the customer's last message, unless it just repeats
-// the subject (the chat title is the customer's first message).
-export function lastMessagePreview(chat: AdvisorChat): string | null {
-  const text = chat.lastMessage?.text?.trim();
-  if (!text || text === chat.title.trim()) return null;
-  return text;
+// The row's text: the last message the customer sent, falling back to the
+// chat title (their first message) when the back has none.
+export function rowText(chat: AdvisorChat): string {
+  return chat.lastMessage?.text?.trim() || chat.title;
 }
 
 // When the row last moved: the customer's last message, else the chat start.

@@ -264,7 +264,8 @@ de uso.
       usuario.
 - [ ] La Bandeja agrupa por caso de uso, con "Otras" al final.
 - [ ] Filas de una línea: punto si está sin atender, avatar, nombre, robot si
-      la atiende David, asunto — último mensaje del cliente, estado y hora.
+      la atiende David, último mensaje del cliente (el asunto queda de
+      tooltip), estado y hora.
 - [ ] La conversación se abre al lado de la lista y se cierra con la X.
 
 Fuera de alcance / futuro: mensajes no leídos (la API no los trae; el punto

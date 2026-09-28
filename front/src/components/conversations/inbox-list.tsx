@@ -9,7 +9,7 @@ import {
   customerLabel,
   groupByUseCase,
   lastActivityAt,
-  lastMessagePreview,
+  rowText,
 } from '@/lib/advisor';
 import { avatarColor, formatListTime, getInitials } from '@/lib/conversations';
 import { cn } from '@/lib/utils';
@@ -34,7 +34,6 @@ function Row({
   // The inbox API has no unread count: the dot marks chats waiting for someone.
   const waiting = !chat.closedAt && chat.handledBy === 'human_queue';
   const withDavid = !chat.closedAt && chat.handledBy === 'ai_agent';
-  const preview = lastMessagePreview(chat);
 
   return (
     <button
@@ -84,16 +83,14 @@ function Row({
           </span>
         )}
       </span>
-      {/* Subject (the chat title, the customer's first message) and, when the
-          back sends it, the customer's last message in gray. */}
-      <span className="min-w-0 truncate text-sm">
-        <span className="text-foreground/90">{chat.title}</span>
-        {preview && (
-          <span data-testid="last-message" className="text-muted-foreground">
-            {' — '}
-            {preview}
-          </span>
-        )}
+      {/* The customer's last message; the subject (chat title) stays as the
+          tooltip. */}
+      <span
+        data-testid="row-text"
+        title={chat.title}
+        className="min-w-0 truncate text-muted-foreground text-sm"
+      >
+        {rowText(chat)}
       </span>
       <span
         data-testid={attention ? 'attention' : undefined}

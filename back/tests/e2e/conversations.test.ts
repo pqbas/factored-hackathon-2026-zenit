@@ -301,7 +301,9 @@ test.describe('Advisor console', () => {
     const waitingRow = page.getByTestId('conversation-row-c-waiting');
     await expect(waitingRow.getByTestId('attention')).toHaveText('Sin atender');
     await expect(waitingRow.getByTestId('waiting-dot')).toBeVisible();
-    await expect(waitingRow.getByTestId('last-message')).toHaveText('— Es urgente, por favor');
+    await expect(waitingRow.getByTestId('row-text')).toHaveText('Es urgente, por favor');
+    await expect(waitingRow.getByTestId('row-text')).toHaveAttribute('title', 'Consulta de daniela');
+    await expect(assistantRow.getByTestId('row-text')).toHaveText('Consulta de javier');
     await expect(waitingRow.getByTestId('david-icon')).toHaveCount(0);
     await expect(page.getByTestId('conversation-row-c-other').getByTestId('attention')).toHaveText('La atiende ada');
     await expect(page.locator('body')).not.toContainText('Con David');
