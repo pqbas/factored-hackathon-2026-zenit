@@ -22,6 +22,10 @@ interface CapturedRequest {
     [key: string]: unknown;
   };
   hasContext: boolean;
+  customInputs?: {
+    session_token?: string;
+    [key: string]: unknown;
+  };
 }
 
 test.describe.serial('Context Injection', () => {
@@ -231,6 +235,131 @@ test.describe.serial('Context Injection', () => {
       // Each request should have its own conversation_id
       expect(firstRequest?.context?.conversation_id).toBe(firstChatId);
       expect(secondRequest?.context?.conversation_id).toBe(secondChatId);
+    });
+  });
+
+  test.describe('session token injection', () => {
+    test('POST /api/chat with sessionToken sends custom_inputs.session_token and context.conversation_id', async ({
+      adaContext,
+    }) => {
+      const chatId = generateUUID();
+      const response = await adaContext.request.post('/api/chat', {
+        data: {
+          id: chatId,
+          message: TEST_PROMPTS.SKY.MESSAGE,
+          selectedChatModel: 'chat-model',
+          selectedVisibilityType: 'private',
+          sessionToken: 'demo-mx-1',
+        },
+      });
+      expect(response.status()).toBe(200);
+
+      const capturedResponse = await adaContext.request.get(
+        '/api/test/captured-requests',
+      );
+      const capturedRequests =
+        (await capturedResponse.json()) as CapturedRequest[];
+
+      const chatRequest = capturedRequests.find(
+        (req) => req.context?.conversation_id === chatId,
+      );
+
+      expect(chatRequest).toBeDefined();
+      expect(chatRequest?.context?.conversation_id).toBe(chatId);
+      expect(chatRequest?.customInputs?.session_token).toBe('demo-mx-1');
+    });
+
+    test('POST /api/chat without sessionToken sends no custom_inputs', async ({
+      adaContext,
+    }) => {
+      const chatId = generateUUID();
+      await adaContext.request.post('/api/chat', {
+        data: {
+          id: chatId,
+          message: TEST_PROMPTS.SKY.MESSAGE,
+          selectedChatModel: 'chat-model',
+          selectedVisibilityType: 'private',
+        },
+      });
+
+      const capturedResponse = await adaContext.request.get(
+        '/api/test/captured-requests',
+      );
+      const capturedRequests =
+        (await capturedResponse.json()) as CapturedRequest[];
+
+      const chatRequest = capturedRequests.find(
+        (req) => req.context?.conversation_id === chatId,
+      );
+
+      expect(chatRequest).toBeDefined();
+      expect(chatRequest?.customInputs).toBeUndefined();
+    });
+
+    test('POST /api/chat/title never sends custom_inputs, even with a sessionToken on the chat call', async ({
+      adaContext,
+    }) => {
+      const titleResponse = await adaContext.request.post('/api/chat/title', {
+        data: { message: TEST_PROMPTS.SKY.MESSAGE },
+      });
+      expect(titleResponse.status()).toBe(200);
+
+      const capturedResponse = await adaContext.request.get(
+        '/api/test/captured-requests',
+      );
+      const capturedRequests =
+        (await capturedResponse.json()) as CapturedRequest[];
+
+      const titleRequest = capturedRequests.find((req) =>
+        req.url.includes('/chat/completions'),
+      );
+
+      expect(titleRequest).toBeDefined();
+      expect(titleRequest?.customInputs).toBeUndefined();
+      expect(titleRequest?.hasContext).toBe(false);
+    });
+
+    test('two turns of the same chat send the same conversation_id and session_token', async ({
+      adaContext,
+    }) => {
+      const chatId = generateUUID();
+
+      await adaContext.request.post('/api/chat', {
+        data: {
+          id: chatId,
+          message: TEST_PROMPTS.SKY.MESSAGE,
+          selectedChatModel: 'chat-model',
+          selectedVisibilityType: 'private',
+          sessionToken: 'demo-mx-1',
+        },
+      });
+
+      await adaContext.request.post('/api/chat', {
+        data: {
+          id: chatId,
+          message: TEST_PROMPTS.GRASS.MESSAGE,
+          selectedChatModel: 'chat-model',
+          selectedVisibilityType: 'private',
+          sessionToken: 'demo-mx-1',
+          previousMessages: [TEST_PROMPTS.SKY.MESSAGE],
+        },
+      });
+
+      const capturedResponse = await adaContext.request.get(
+        '/api/test/captured-requests',
+      );
+      const capturedRequests =
+        (await capturedResponse.json()) as CapturedRequest[];
+
+      const chatRequests = capturedRequests.filter(
+        (req) => req.context?.conversation_id === chatId,
+      );
+
+      expect(chatRequests.length).toBe(2);
+      for (const req of chatRequests) {
+        expect(req.context?.conversation_id).toBe(chatId);
+        expect(req.customInputs?.session_token).toBe('demo-mx-1');
+      }
     });
   });
 });
