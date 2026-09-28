@@ -11,6 +11,18 @@ from src.schemas.classification import Classification, reply_language
 from src.schemas.routing import IntentRoute
 
 
+# "Cancelar", "ok" or "sí" read the same in es and pt, so replies this short keep the
+# language the conversation already has instead of trusting a per-message guess.
+_SHORT_MESSAGE_WORDS = 2
+
+
+def conversation_language(detected: str, text: str, previous: dict | None) -> str:
+    previous_language = (previous or {}).get("language")
+    if previous_language in ("es", "pt") and len(text.split()) <= _SHORT_MESSAGE_WORDS:
+        return previous_language
+    return detected
+
+
 def _last_human_message(messages: list) -> HumanMessage:
     for message in reversed(messages):
         if isinstance(message, HumanMessage):
@@ -47,6 +59,9 @@ async def classify(
             classification = await jev.classify(text, routes)
         except JevUnavailable:
             classification = fallback_classify(text, [route.intent for route in routes])
+
+    language = conversation_language(classification.language, text, state.get("classification"))
+    classification = classification.model_copy(update={"language": language})
 
     _tag_trace(classification)
 
