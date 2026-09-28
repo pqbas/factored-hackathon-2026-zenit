@@ -294,3 +294,46 @@ def test_general_inquiry_calls_the_tool_with_the_sessions_customer_id(client, mo
     body = response.json()
     assert _output_text(body) == FAKE_LLM_TEXT
     assert calls == [{"customer_id": "CLI-FLEUCGTWGAHL"}]  # demo-mx-1's customer_id
+
+
+def _greeting_jev():
+    return JevClient(api_key="test-key", url="https://api.typesafe.ai/v1/systemone", timeout=2.0,
+                     transport=httpx.MockTransport(lambda request: _jev_response_for("GREETING")))
+
+
+def _invoke_history(client, messages, session_token="demo-mx-1"):
+    return client.post(
+        "/invocations",
+        json={"input": messages, "custom_inputs": {"session_token": session_token}},
+    )
+
+
+def test_the_llm_receives_the_whole_history_sent_in_the_request(client, monkeypatch):
+    llm = RecordingChatModel(FAKE_LLM_TEXT)
+    monkeypatch.setattr(main, "get_chat_model", lambda: llm)
+    monkeypatch.setattr(main, "jev_client", _greeting_jev())
+    history = [
+        {"role": "user", "content": "Hola, quiero saber mi saldo"},
+        {"role": "assistant", "content": "Claro, ¿de qué producto?"},
+        {"role": "user", "content": "De mi tarjeta de crédito, por favor"},
+    ]
+
+    response = _invoke_history(client, history)
+
+    assert response.status_code == 200
+    assert [m.content for m in llm.received[1:]] == [m["content"] for m in history]
+
+
+def test_the_llm_receives_only_the_last_20_messages_of_a_long_history(client, monkeypatch):
+    llm = RecordingChatModel(FAKE_LLM_TEXT)
+    monkeypatch.setattr(main, "get_chat_model", lambda: llm)
+    monkeypatch.setattr(main, "jev_client", _greeting_jev())
+    history = [
+        {"role": "user" if i % 2 == 0 else "assistant", "content": f"mensaje número {i}"}
+        for i in range(30)
+    ]
+
+    response = _invoke_history(client, history)
+
+    assert response.status_code == 200
+    assert [m.content for m in llm.received[1:]] == [m["content"] for m in history[-20:]]

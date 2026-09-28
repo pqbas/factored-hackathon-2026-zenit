@@ -425,3 +425,33 @@ def test_tool_loop_stops_after_three_rounds_and_answers_with_text():
 
     assert len(get_products.calls) == 3
     assert result["messages"][-1].content == "No encontré productos"
+
+
+def test_a_card_number_in_an_earlier_message_reaches_the_llm_masked():
+    llm = RecordingLLM("ok")
+    jev = FakeJev(_classification(intent="GREETING"))
+    graph = _build_graph(llm, jev)
+
+    history = [
+        {"role": "user", "content": "Mi tarjeta es 4111 1111 1111 1111"},
+        {"role": "assistant", "content": "No compartas datos de tu tarjeta."},
+    ]
+    _run(graph, "hola de nuevo", history=history)
+
+    sent = " ".join(str(m.content) for m in llm.received)
+    assert "4111" not in sent
+    assert "Mi tarjeta es [NÚMERO OCULTO]" in sent
+
+
+def test_a_short_message_after_a_long_portuguese_one_gets_the_portuguese_language_line():
+    llm = RecordingLLM("ok")
+    jev = FakeJev(_classification(intent="GREETING", language="es"))
+    graph = _build_graph(llm, jev)
+
+    history = [
+        {"role": "user", "content": "Olá, gostaria de saber o saldo do meu cartão"},
+        {"role": "assistant", "content": "O seu saldo é..."},
+    ]
+    _run(graph, "Obrigado", history=history)
+
+    assert llm.received[0].content.endswith("Responda em português.")

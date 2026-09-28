@@ -62,8 +62,16 @@ def _find_card_number(text: str) -> str | None:
     for m in _CARD_CANDIDATE.finditer(text):
         digits = re.sub(r"[ -]", "", m.group(0))
         if 13 <= len(digits) <= 19 and _luhn_valid(digits):
-            return m.group(0)
+            # The pattern may swallow a trailing separator; keep it out of the masked span.
+            return m.group(0).rstrip(" -")
     return None
+
+
+def mask_sensitive(text: str) -> str:
+    """Replaces every card number and every CVV or password value in the text."""
+    while card := _find_card_number(text):
+        text = text.replace(card, "[NÚMERO OCULTO]")
+    return _CVV_OR_PASSWORD.sub("[DATO OCULTO]", text)
 
 
 def check_guardrail_rules(text: str) -> tuple[str, str] | None:
@@ -71,12 +79,8 @@ def check_guardrail_rules(text: str) -> tuple[str, str] | None:
     if _INJECTION.search(normalize(text)):
         return "PROMPT_INJECTION", text
 
-    card = _find_card_number(text)
-    if card:
-        return "SENSITIVE_DATA", text.replace(card, "[NÚMERO OCULTO]")
-
-    if m := _CVV_OR_PASSWORD.search(text):
-        masked = text[: m.start()] + "[DATO OCULTO]" + text[m.end() :]
+    masked = mask_sensitive(text)
+    if masked != text:
         return "SENSITIVE_DATA", masked
 
     return None
