@@ -38,7 +38,7 @@ test.describe('Navigation by role', () => {
       if (blocked) {
         await page.goto(blocked);
         await expect(page.getByTestId('no-access')).toBeVisible();
-        await page.getByRole('link', { name: 'Ir al asistente' }).click();
+        await page.getByRole('link', { name: 'Hablar con David' }).click();
         await expect(page).toHaveURL(/\/$/);
       } else {
         for (const path of ['/products', '/conversations']) {

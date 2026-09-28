@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import { ASSISTANT_TITLE } from '@/lib/assistant';
 import React, { memo, useState } from 'react';
 import { BrandMark } from './brand-mark';
 import { Response } from './elements/response';
@@ -126,7 +127,9 @@ const PurePreviewMessage = ({
         })}
       >
         {message.role === 'assistant' && (
-          <BrandMark size={26} pulse={isLoading} className="mt-0.5" />
+          <span title={ASSISTANT_TITLE} aria-label={ASSISTANT_TITLE} className="shrink-0">
+            <BrandMark size={26} pulse={isLoading} className="mt-0.5" />
+          </span>
         )}
 
         <div

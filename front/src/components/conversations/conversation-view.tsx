@@ -1,3 +1,4 @@
+import { ASSISTANT_NAME } from '@/lib/assistant';
 import { ArrowDown, Bot, Hourglass, Lock, UserRound } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
@@ -38,19 +39,19 @@ function hint(chat: AdvisorChat, me: string | undefined) {
     case 'advisor':
       return {
         icon: UserRound,
-        text: 'Estás atendiendo esta conversación. El asistente no responderá hasta que la devuelvas.',
+        text: `Estás atendiendo esta conversación. ${ASSISTANT_NAME} no responderá hasta que la devuelvas.`,
         className: 'text-primary',
       };
     case 'resolved':
       return {
         icon: Bot,
-        text: 'Conversación resuelta. Si el cliente escribe, responde el asistente.',
+        text: `Conversación resuelta. Si el cliente escribe, responde ${ASSISTANT_NAME}.`,
         className: 'text-tint-green-foreground',
       };
     default:
       return {
         icon: Bot,
-        text: 'El asistente está respondiendo. Apágalo para tomar la conversación.',
+        text: `${ASSISTANT_NAME} está respondiendo. Apágalo para tomar la conversación.`,
         className: 'text-tint-blue-foreground',
       };
   }
@@ -59,7 +60,7 @@ function hint(chat: AdvisorChat, me: string | undefined) {
 function placeholderFor(chat: AdvisorChat, me: string | undefined): string {
   if (canReply(chat, me)) return 'Escribe al cliente…';
   if (isHeldByOther(chat, me)) return 'La atiende otra persona';
-  if (statusOf(chat) === 'assistant') return 'El asistente está respondiendo…';
+  if (statusOf(chat) === 'assistant') return `${ASSISTANT_NAME} está respondiendo…`;
   return 'Toma la conversación para responder';
 }
 

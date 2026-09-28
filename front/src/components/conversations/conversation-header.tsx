@@ -1,3 +1,4 @@
+import { ASSISTANT_KIND, ASSISTANT_NAME } from '@/lib/assistant';
 import { Bot } from 'lucide-react';
 
 import { avatarColor } from '@/components/conversations/conversation-list';
@@ -38,7 +39,9 @@ function AssistantSwitch({
         className={cn('size-4', on ? 'text-primary' : 'text-muted-foreground')}
         strokeWidth={1.8}
       />
-      <span className="hidden sm:inline">Asistente</span>
+      <span className="hidden sm:inline" title={ASSISTANT_KIND}>
+        {ASSISTANT_NAME} (asistente)
+      </span>
       <span className="w-6 text-left">{on ? 'ON' : 'OFF'}</span>
       <span
         className={cn(

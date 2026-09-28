@@ -187,7 +187,7 @@ test.describe('Advisor console', () => {
     await expect(headerStatus(page)).toHaveText('En atención');
 
     await page.getByTestId('assistant-switch').click();
-    await expect(headerStatus(page)).toHaveText('Con asistente');
+    await expect(headerStatus(page)).toHaveText('Con David');
     await expect(input(page)).toBeDisabled();
     await expect(page.getByTestId('system-notice').last()).toContainText('Volviste con el asistente.');
 

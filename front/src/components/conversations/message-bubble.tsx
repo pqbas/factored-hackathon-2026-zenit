@@ -1,3 +1,4 @@
+import { ASSISTANT_KIND } from '@/lib/assistant';
 import { ArrowRight, CheckCheck } from 'lucide-react';
 
 import type { Bubble } from '@/lib/advisor';
@@ -24,6 +25,7 @@ export function MessageBubble({ bubble, now }: { bubble: Bubble; now: Date }) {
         {bubble.label && (
           <span
             data-testid={bubble.from === 'advisor' ? 'bubble-advisor' : undefined}
+            title={bubble.from === 'assistant' ? ASSISTANT_KIND : undefined}
             className="font-semibold text-[11px] text-primary-foreground/80"
           >
             {bubble.label}

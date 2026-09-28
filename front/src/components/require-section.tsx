@@ -1,4 +1,5 @@
 import { Lock } from 'lucide-react';
+import { ASSISTANT_NAME } from '@/lib/assistant';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 
@@ -38,7 +39,7 @@ export function NoAccess() {
         to="/"
         className="rounded-full bg-primary px-4 py-2 font-medium text-primary-foreground text-sm hover:bg-primary/90"
       >
-        Ir al asistente
+        Hablar con {ASSISTANT_NAME}
       </Link>
     </div>
   );

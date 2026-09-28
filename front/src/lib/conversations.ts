@@ -1,3 +1,4 @@
+import { ASSISTANT_NAME } from '@/lib/assistant';
 // Pure display helpers for the advisor console: no side effects, no fetch.
 
 import { format, isSameDay, subDays } from 'date-fns';
@@ -35,7 +36,7 @@ export function matchesQuery(query: string, ...fields: (string | null)[]): boole
 export type ConversationStatus = 'assistant' | 'waiting' | 'advisor' | 'resolved';
 
 export const STATUS_LABEL: Record<ConversationStatus, string> = {
-  assistant: 'Con asistente',
+  assistant: `Con ${ASSISTANT_NAME}`,
   waiting: 'Sin atender',
   advisor: 'En atención',
   resolved: 'Resuelto',

@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { ASSISTANT_KIND, ASSISTANT_NAME } from '@/lib/assistant';
 import { useWindowSize } from 'usehooks-ts';
 
 import { SidebarToggle } from '@/components/sidebar-toggle';
@@ -53,10 +54,12 @@ export function ChatHeader({
       </div>
 
       <div className="flex flex-col items-center leading-tight">
-        <span className="font-semibold text-[13px]">Asistente</span>
+        <span data-testid="chat-peer" className="font-semibold text-[13px]">
+          {ASSISTANT_NAME}
+        </span>
         <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
           <span className="size-1.5 rounded-full bg-online" />
-          En línea
+          {ASSISTANT_KIND} · En línea
         </span>
       </div>
 

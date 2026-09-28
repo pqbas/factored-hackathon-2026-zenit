@@ -1,3 +1,4 @@
+import { ASSISTANT_NAME } from '@/lib/assistant';
 // The advisor console on the back's advisor API (/api/advisor/conversations).
 // Types follow back/spec/28-09-26-consola-asesor/requirements.md §1; swap them
 // for the ones in @chat-template/db once the back ships them.
@@ -43,7 +44,7 @@ export const INBOX_FILTERS: { id: InboxFilter; label: string }[] = [
   { id: 'open', label: 'Abiertas' },
   { id: 'waiting', label: 'Sin atender' },
   { id: 'mine', label: 'Mías' },
-  { id: 'assistant', label: 'Con asistente' },
+  { id: 'assistant', label: `Con ${ASSISTANT_NAME}` },
   { id: 'closed', label: 'Cerradas' },
 ];
 
@@ -144,7 +145,7 @@ export function toBubble(message: AdvisorMessage, me: string | undefined): Bubbl
         label: sameEmail(message.senderId, me) ? 'Tú' : (message.senderId ?? 'Asesor'),
       };
     default:
-      return { ...base, from: 'assistant', label: 'Asistente' };
+      return { ...base, from: 'assistant', label: ASSISTANT_NAME };
   }
 }
 

@@ -102,11 +102,11 @@ describe('mergeMessages', () => {
 });
 
 describe('toBubble', () => {
-  it('labels advisor messages as mine or by email, and the agent as Asistente', () => {
+  it('labels advisor messages as mine or by email, and the agent as David', () => {
     const advisor = message('m', { senderType: 'human_agent', senderId: ME });
     expect(toBubble(advisor, ME)).toMatchObject({ from: 'advisor', label: 'Tú' });
     expect(toBubble(advisor, 'ada@example.com')).toMatchObject({ label: ME });
-    expect(toBubble(message('n'), ME)).toMatchObject({ from: 'assistant', label: 'Asistente' });
+    expect(toBubble(message('n'), ME)).toMatchObject({ from: 'assistant', label: 'David' });
   });
 
   it('reads old messages without senderType by role', () => {
