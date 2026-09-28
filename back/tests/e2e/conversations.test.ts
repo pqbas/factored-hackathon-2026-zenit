@@ -32,7 +32,7 @@ type Message = {
 // An in-memory advisor API that follows the back's contract
 // (back/spec/28-09-26-consola-asesor/requirements.md §1), served in the
 // browser with page.route.
-async function mockAdvisorApi(page: Page, me: string) {
+async function mockAdvisorApi(page: Page, me: string, role: Role = 'advisor') {
   let seq = 0;
   const now = () => new Date(Date.UTC(2026, 8, 28, 10, 0, seq++)).toISOString();
   const chat = (id: string, email: string, extra: Partial<Chat>): Chat => ({
@@ -79,6 +79,13 @@ async function mockAdvisorApi(page: Page, me: string) {
   say('c-assistant', 'ai_agent', 'Tus tarjetas activas:\n\n- Terminada en **1070**\n- Terminada en 6262');
 
   const requested: string[] = [];
+  await page.route('**/api/advisor/users', (route) =>
+    role === 'admin'
+      ? route.fulfill({
+          json: { users: chats.map((c) => ({ userId: c.userId, userEmail: c.userEmail })) },
+        })
+      : route.fulfill({ status: 403, json: { code: 'forbidden:chat' } }),
+  );
   await page.route('**/api/advisor/conversations**', async (route) => {
     const request = route.request();
     const url = new URL(request.url());
@@ -91,13 +98,18 @@ async function mockAdvisorApi(page: Page, me: string) {
       const q = url.searchParams;
       const list = chats.filter(
         (c) =>
-          (q.get('status') === 'closed' ? !!c.closedAt : !c.closedAt) &&
+          (!q.get('status') || (q.get('status') === 'closed' ? !!c.closedAt : !c.closedAt)) &&
+          (!q.get('userId') || c.userId === q.get('userId')) &&
           (!q.get('handledBy') || c.handledBy === q.get('handledBy')) &&
           (q.get('assignedTo') !== 'me' || c.assignedTo === me),
       );
       return route.fulfill({ json: { chats: list, hasMore: false } });
     }
     if (!target) return route.fulfill({ status: 404, json: { code: 'not_found:chat' } });
+    // The admin only reads: every write is 403 for them.
+    if (request.method() === 'POST' && role === 'admin') {
+      return route.fulfill({ status: 403, json: { code: 'forbidden:chat' } });
+    }
 
     if (action === 'messages' && request.method() === 'GET') {
       const all = messages.filter((m) => m.chatId === id);
@@ -108,14 +120,14 @@ async function mockAdvisorApi(page: Page, me: string) {
     }
     if (action === 'take') {
       const heldByOther = target.assignedTo && target.assignedTo !== me;
-      if (id === 'c-race' || (heldByOther && !body.force)) {
+      if (id === 'c-race' || heldByOther) {
         return route.fulfill({
           status: 409,
           json: { code: 'conflict:chat', assignedTo: id === 'c-race' ? OTHER : target.assignedTo },
         });
       }
       Object.assign(target, { handledBy: 'human_agent', assignedTo: me, assignedAt: now(), closedAt: null });
-      say(id, 'system', heldByOther ? 'Otro asesor continúa la conversación.' : 'Te atiende un asesor.');
+      say(id, 'system', 'Te atiende un asesor.');
       return route.fulfill({ json: { chat: target } });
     }
     if (action === 'messages') {
@@ -139,7 +151,7 @@ async function mockAdvisorApi(page: Page, me: string) {
 
 async function openConsole(page: Page, role: Role = 'advisor', email = ME) {
   await mockSessionRole(page, role, email);
-  const requested = await mockAdvisorApi(page, email);
+  const requested = await mockAdvisorApi(page, email, role);
   await page.goto('/conversations');
   return requested;
 }
@@ -215,13 +227,34 @@ test.describe('Advisor console', () => {
     await expect(page.getByTestId('force-take-button')).toHaveCount(0);
   });
 
-  test('an admin can take it over with force and then reply', async ({ page }) => {
-    await openConsole(page, 'admin', 'root@example.com');
+  test('the admin supervises: sees everything, filters by user, reads only', async ({
+    page,
+  }) => {
+    const requested = await openConsole(page, 'admin', 'root@example.com');
+    await expect(page.getByTestId('nav-admin')).toHaveCount(0);
+    await expect(page.getByTestId('status-filter-trigger')).toContainText('Todas');
+    await expect(rows(page)).toHaveCount(5);
+
+    await page.getByTestId('user-filter').click();
+    await page.getByTestId('user-option-c-other-user').click();
+    await expect(rows(page)).toHaveCount(1);
+    expect(requested.some((u) => u.includes('userId=c-other-user'))).toBe(true);
+
     await page.getByTestId('conversation-row-c-other').click();
-    await page.getByTestId('force-take-button').click();
-    await expect(page.getByTestId('customer-meta')).toContainText('La atiendes tú');
-    await expect(page.getByTestId('system-notice').last()).toContainText('Otro asesor continúa');
-    await expect(input(page)).toBeEnabled();
+    await expect(page.getByTestId('read-only-badge')).toBeVisible();
+    await expect(page.getByTestId('status-banner')).toHaveText('Supervisión: solo lectura.');
+    await expect(page.getByTestId('customer-meta')).toContainText(`La atiende ${OTHER}`);
+    for (const id of ['assistant-switch', 'take-button', 'resolve-button', 'force-take-button']) {
+      await expect(page.getByTestId(id)).toHaveCount(0);
+    }
+    await expect(input(page)).toHaveCount(0);
+  });
+
+  test('/admin now leads to Chats', async ({ page }) => {
+    await mockSessionRole(page, 'admin', 'root@example.com');
+    await mockAdvisorApi(page, 'root@example.com', 'admin');
+    await page.goto('/admin');
+    await expect(page).toHaveURL(/\/conversations$/);
   });
 
   test('renders David\'s markdown: bullets and bold', async ({ page }) => {

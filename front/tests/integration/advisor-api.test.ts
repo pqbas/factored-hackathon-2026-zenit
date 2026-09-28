@@ -32,14 +32,12 @@ const json = (body: unknown, status = 200) =>
 afterEach(() => vi.unstubAllGlobals());
 
 describe('advisor API helpers', () => {
-  it('take returns who holds the chat on 409 and sends force only when asked', async () => {
+  it('take returns who holds the chat on 409 and never sends force', async () => {
     const calls = fakeFetch(() =>
       json({ code: 'conflict:chat', assignedTo: 'ada@example.com' }, 409),
     );
     expect(await takeConversation('c1')).toEqual({ ok: false, assignedTo: 'ada@example.com' });
-    await takeConversation('c1', true);
     expect(calls[0]).toMatchObject({ url: '/api/advisor/conversations/c1/take', method: 'POST', body: {} });
-    expect(calls[1].body).toEqual({ force: true });
   });
 
   it('reply and release use the contract routes and bodies', async () => {
