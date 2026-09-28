@@ -15,6 +15,7 @@ import { shouldInjectContextForEndpoint } from './request-context';
 // Header keys for passing context through streamText headers
 export const CONTEXT_HEADER_CONVERSATION_ID = 'x-databricks-conversation-id';
 export const CONTEXT_HEADER_USER_ID = 'x-databricks-user-id';
+export const CONTEXT_HEADER_SESSION_TOKEN = 'x-databricks-session-token';
 
 // Use centralized authentication - only on server side
 async function getProviderToken(): Promise<string> {
@@ -134,28 +135,48 @@ export const databricksFetch: typeof fetch = async (input, init) => {
   const headers = new Headers(requestInit?.headers);
   const conversationId = headers.get(CONTEXT_HEADER_CONVERSATION_ID);
   const userId = headers.get(CONTEXT_HEADER_USER_ID);
+  const sessionToken = headers.get(CONTEXT_HEADER_SESSION_TOKEN);
   // Remove context headers so they don't get sent to the API
   headers.delete(CONTEXT_HEADER_CONVERSATION_ID);
   headers.delete(CONTEXT_HEADER_USER_ID);
+  headers.delete(CONTEXT_HEADER_SESSION_TOKEN);
   requestInit = { ...requestInit, headers };
 
   // Inject context into request body if appropriate
-  if (conversationId && userId && requestInit?.body && typeof requestInit.body === 'string') {
-    if (shouldInjectContext()) {
-      try {
-        const body = JSON.parse(requestInit.body);
-        const enhancedBody = {
-          ...body,
+  if (requestInit?.body && typeof requestInit.body === 'string' && shouldInjectContext()) {
+    try {
+      const body = JSON.parse(requestInit.body);
+      let enhancedBody = body;
+
+      if (conversationId && userId) {
+        enhancedBody = {
+          ...enhancedBody,
           context: {
-            ...body.context,
+            ...enhancedBody.context,
             conversation_id: conversationId,
             user_id: userId,
           },
         };
-        requestInit = { ...requestInit, body: JSON.stringify(enhancedBody) };
-      } catch {
-        // If JSON parsing fails, pass through unchanged
       }
+
+      // The session token injection doesn't depend on conversationId/userId:
+      // the title-generation call never sets any of these headers, so it
+      // never gets custom_inputs either.
+      if (sessionToken) {
+        enhancedBody = {
+          ...enhancedBody,
+          custom_inputs: {
+            ...enhancedBody.custom_inputs,
+            session_token: sessionToken,
+          },
+        };
+      }
+
+      if (enhancedBody !== body) {
+        requestInit = { ...requestInit, body: JSON.stringify(enhancedBody) };
+      }
+    } catch {
+      // If JSON parsing fails, pass through unchanged
     }
   }
 
