@@ -142,6 +142,12 @@ agente.
 
 Shipped en PR #22.
 
+Nota de contrato (front, Fase 1c): mientras `handledBy = ai_agent`, el chat
+del cliente relee `GET /api/chat/:id` cada 10 s para enterarse si un asesor
+toma una conversación en la que el cliente no está escribiendo; con una
+persona atendiendo consulta mensajes y estado cada 4 s. Es una lectura más por
+chat abierto cada 10 s.
+
 ---
 
 ## Phase 6: Handoff automático del agente

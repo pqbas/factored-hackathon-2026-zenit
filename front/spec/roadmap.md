@@ -132,26 +132,24 @@ PR #9.
 
 ---
 
-## Phase 1c: El chat del cliente durante un handoff
+## Phase 1c: El chat del cliente durante un handoff (Complete)
 
 **Goal:** que el cliente vea cuándo lo atiende un asesor y reciba sus mensajes
 en el mismo chat.
 
-<!-- Depende del agente: cuando mande custom_outputs, el back expone por chat
-     handled_by (ai_agent | human_queue | human_agent) y use_case, y quita
-     stage/intent/customerName (hoy llegan vacíos: no filtrar por ellos). La
-     ruta GET de polling depende de las Fases 6 y 7 del agente, sin contrato
-     todavía; el back la pasa cuando el agente la publique.
-     A AJUSTAR (PR #12, docs/limites-agente-back.md): el back es el único que
-     guarda conversaciones y el agente no tiene memoria; el polling va contra
-     la API del back cuando la publique. -->
+<!-- Consume la Fase 3 (estado en POST /api/chat) y la Fase 5 del back
+     (GET /api/messages/:id?after=, handledBy en /api/chat/:id). -->
 
-- [ ] El chat muestra el mensaje de sistema "Derivado a un asesor…".
-- [ ] Mientras `handled_by` no sea `ai_agent`, el chat no espera respuesta del
+- [x] El chat muestra los avisos de sistema del corte ("Te atiende un
+      asesor.", "Volviste con David.", …).
+- [x] Mientras `handledBy` no sea `ai_agent`, el chat no espera respuesta del
       agente y avisa que responde un asesor.
-- [ ] Los mensajes nuevos del asesor aparecen solos (polling al GET del back).
-- [ ] Cuando el asesor devuelve la conversación, el chat vuelve al agente.
+- [x] Los mensajes nuevos del asesor aparecen solos (polling al GET del back).
+- [x] Cuando el asesor devuelve la conversación, el chat vuelve al agente.
 
+Además, con David atendiendo el chat relee su estado cada 10 s, para notar que
+un asesor lo tomó aunque el cliente no escriba (nota de contrato en el roadmap
+del back, Fase 5). Shipped en PR #<n>.
 ---
 
 ## Phase 5: Roles y navegación por rol (Complete)
