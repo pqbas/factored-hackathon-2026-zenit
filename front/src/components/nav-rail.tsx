@@ -18,12 +18,14 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { useSession } from '@/contexts/SessionContext';
+import { canAccess, type Section } from '@/lib/roles';
 import { cn } from '@/lib/utils';
 
 interface NavItem {
   id: string;
   label: string;
   to: string;
+  section: Section;
   icon: LucideIcon;
   isActive: (pathname: string) => boolean;
 }
@@ -33,6 +35,7 @@ const NAV_ITEMS: NavItem[] = [
     id: 'products',
     label: 'Mis productos',
     to: '/products',
+    section: 'products',
     icon: Wallet,
     isActive: (pathname) => pathname.startsWith('/products'),
   },
@@ -40,6 +43,7 @@ const NAV_ITEMS: NavItem[] = [
     id: 'agent',
     label: 'Agente',
     to: '/',
+    section: 'agent',
     icon: MessageCircle,
     isActive: (pathname) => pathname === '/' || pathname.startsWith('/chat'),
   },
@@ -47,6 +51,7 @@ const NAV_ITEMS: NavItem[] = [
     id: 'chats',
     label: 'Chats',
     to: '/conversations',
+    section: 'chats',
     icon: MessagesSquare,
     isActive: (pathname) => pathname.startsWith('/conversations'),
   },
@@ -54,7 +59,7 @@ const NAV_ITEMS: NavItem[] = [
 
 export function NavRail() {
   const { pathname } = useLocation();
-  const { session } = useSession();
+  const { session, role, loading } = useSession();
   const { resolvedTheme, setTheme } = useTheme();
   const isDark = resolvedTheme !== 'light';
   const themeLabel = isDark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro';
@@ -70,7 +75,9 @@ export function NavRail() {
     >
       <BrandMark className="mb-4" />
       <TooltipProvider delayDuration={0}>
-        {NAV_ITEMS.map((item) => {
+        {NAV_ITEMS.filter(
+          (item) => !loading && canAccess(role, item.section),
+        ).map((item) => {
           const active = item.isActive(pathname);
           const Icon = item.icon;
           return (
