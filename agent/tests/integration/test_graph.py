@@ -252,7 +252,7 @@ def test_portuguese_greeting_has_options_in_portuguese():
         intent_confidence=0.9, sentiment="neutral", source="jev",
     ))
     graph = _build_graph(llm, jev)
-    _run(graph, "olá")
+    _run(graph, "Olá, boa tarde")
 
     system_prompt = llm.received[0].content
     for route in ROUTES:

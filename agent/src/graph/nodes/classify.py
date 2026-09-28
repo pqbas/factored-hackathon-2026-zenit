@@ -11,14 +11,14 @@ from src.schemas.classification import Classification, country_language, reply_l
 from src.schemas.routing import IntentRoute
 
 
-# "Cancelar", "ok" or "Tchau" read the same in es and pt, so a short message with no
-# language marker keeps the conversation's language, or the customer's country language
-# on the first turn, instead of trusting a per-message guess. "Olá" or "Hola" still switch.
-_SHORT_MESSAGE_WORDS = 2
+# es and pt are too close to tell apart from one or two words: Jev labels "Cancelar" as pt
+# and "Ver saldo" as es. Below three words the reply keeps the conversation's language, or
+# the customer's country language on the first turn.
+_MIN_WORDS_TO_SWITCH = 3
 
 
 def conversation_language(detected: str, text: str, previous: dict | None, default: str) -> str:
-    if len(text.split()) > _SHORT_MESSAGE_WORDS or detect_language(text) != "other":
+    if len(text.split()) >= _MIN_WORDS_TO_SWITCH:
         return detected
     previous_language = (previous or {}).get("language")
     return previous_language if previous_language in ("es", "pt") else default

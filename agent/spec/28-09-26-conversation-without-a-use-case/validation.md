@@ -41,7 +41,9 @@ Every check below runs with `uv run start-server`, the real Jev, the real LLM
 and `session_token=demo-mx-1`.
 
 - [ ] "Hola" → greeting that lists the three options
-- [ ] "Olá" → greeting in Portuguese with the options in Portuguese
+- [ ] "Olá, boa tarde" → greeting in Portuguese with the options in Portuguese
+  (a message under three words keeps the country's language, so a lone "Olá"
+  from a customer in México gets Spanish)
 - [ ] "¿Cuál es mi saldo?" → says the option isn't available yet, with no
   amount, and offers the options
 - [ ] "Quiero hablar con un asesor" → says it isn't available yet, and

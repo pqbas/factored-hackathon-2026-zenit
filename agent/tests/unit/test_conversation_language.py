@@ -74,6 +74,14 @@ def test_cancelar_as_first_message_of_a_mexican_customer_is_spanish():
     assert update["classification"]["language"] == "es"
 
 
-def test_a_short_message_with_a_clear_language_marker_follows_the_detected_language():
+def test_a_one_word_greeting_keeps_the_country_language():
     update = _classify("Olá", FakeJev("pt", "GREETING"), None, country="México")
-    assert update["classification"]["language"] == "pt"
+    assert update["classification"]["language"] == "es"
+
+
+def test_a_two_word_message_does_not_switch_the_conversation_language():
+    assert conversation_language("es", "Ver saldo", {"language": "pt"}, "es") == "pt"
+
+
+def test_a_three_word_message_switches_the_language():
+    assert conversation_language("pt", "Olá, boa tarde", {"language": "es"}, "es") == "pt"
