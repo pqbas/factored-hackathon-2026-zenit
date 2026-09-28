@@ -10,7 +10,6 @@ import {
   isNull,
   lt,
   max,
-  ne,
   or,
   sql,
   type SQL,
@@ -312,9 +311,10 @@ export async function getChatOwners() {
   }
 }
 
-// Latest non-system message of each chat, in one query for a whole page of
-// chats (DISTINCT ON), for the advisor inbox preview.
-export async function getLastVisibleMessages({
+// Latest customer message of each chat, in one query for a whole page of
+// chats (DISTINCT ON), for the advisor inbox preview. Messages from before
+// senderType existed count as the customer's when their role is 'user'.
+export async function getLastCustomerMessages({
   chatIds,
 }: {
   chatIds: string[];
@@ -325,13 +325,21 @@ export async function getLastVisibleMessages({
     return await (await ensureDb())
       .selectDistinctOn([message.chatId])
       .from(message)
-      .where(and(inArray(message.chatId, chatIds), ne(message.role, 'system')))
+      .where(
+        and(
+          inArray(message.chatId, chatIds),
+          or(
+            eq(message.senderType, 'customer'),
+            and(isNull(message.senderType), eq(message.role, 'user')),
+          ),
+        ),
+      )
       .orderBy(message.chatId, desc(message.createdAt), desc(message.id));
   } catch (error) {
-    console.error('[getLastVisibleMessages] Error:', error);
+    console.error('[getLastCustomerMessages] Error:', error);
     throw new ChatSDKError(
       'bad_request:database',
-      'Failed to get last messages',
+      'Failed to get last customer messages',
     );
   }
 }

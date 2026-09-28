@@ -16,7 +16,7 @@ import {
 import {
   getChats,
   getChatOwners,
-  getLastVisibleMessages,
+  getLastCustomerMessages,
   getChatById,
   getMessagesAfter,
   takeChat,
@@ -116,7 +116,7 @@ advisorRouter.get('/conversations', async (req: Request, res: Response) => {
       status,
     });
 
-    const lastMessages = await getLastVisibleMessages({
+    const lastMessages = await getLastCustomerMessages({
       chatIds: chats.chats.map((c) => c.id),
     });
     const lastByChat = new Map(lastMessages.map((m) => [m.chatId, m]));
