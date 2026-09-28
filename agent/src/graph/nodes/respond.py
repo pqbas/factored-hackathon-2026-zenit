@@ -11,7 +11,7 @@ SYSTEM_PROMPT = (Path(__file__).resolve().parents[2] / "prompts" / "system.md").
 
 _LANGUAGE_LINE = {
     "es": "\n\nResponde en español.",
-    "pt": "\n\nResponda em português.",
+    "pt": "\n\nEl cliente escribe en portugués: toda tu respuesta va en portugués. Responda em português.",
 }
 
 # Bounds the tool-calling loop below so a misbehaving LLM can't call tools forever.
