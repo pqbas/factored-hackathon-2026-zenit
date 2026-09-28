@@ -8,7 +8,6 @@ import {
   convertToModelMessages,
   createUIMessageStream,
   streamText,
-  generateText,
   type LanguageModelUsage,
   pipeUIMessageStreamToResponse,
 } from 'ai';
@@ -62,6 +61,7 @@ import {
   getAndClearWorkflowMetadata,
 } from '@chat-template/core';
 import { ChatSDKError } from '@chat-template/core/errors';
+import { generateTitleFromUserMessage } from '../title';
 
 export const chatRouter: RouterType = Router();
 
@@ -489,23 +489,3 @@ chatRouter.patch(
     }
   },
 );
-
-// Helper function to generate title from user message
-async function generateTitleFromUserMessage({
-  message,
-}: {
-  message: ChatMessage;
-}) {
-  const model = await myProvider.languageModel('title-model');
-  const { text: title } = await generateText({
-    model,
-    system: `\n
-    - you will generate a short title based on the first message a user begins a conversation with
-    - ensure it is not more than 80 characters long
-    - the title should be a summary of the user's message
-    - do not use quotes or colons. do not include other expository content ("I'll help...")`,
-    prompt: JSON.stringify(message),
-  });
-
-  return title;
-}

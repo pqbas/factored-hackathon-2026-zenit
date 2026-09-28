@@ -24,6 +24,14 @@ import { ChatTransport } from '../lib/ChatTransport';
 import type { ClientSession } from '@chat-template/auth';
 import { softNavigateToChatId } from '@/lib/navigation';
 import { useAppConfig } from '@/contexts/AppConfigContext';
+import { useDemoCustomers } from '@/hooks/use-demo-customers';
+import {
+  getChatCustomerToken,
+  getLastCustomerToken,
+  pickDefaultToken,
+  setChatCustomerToken,
+  setLastCustomerToken,
+} from '@/lib/demo-customer-storage';
 
 export function Chat({
   id,
@@ -54,6 +62,23 @@ export function Chat({
   const [_usage, setUsage] = useState<LanguageModelUsage | undefined>(
     initialLastContext,
   );
+
+  // Demo customer this chat talks as. It is fixed once the first message
+  // goes out, because the agent keys its memory on the chat id.
+  const { customers } = useDemoCustomers();
+  const [customerToken, setCustomerToken] = useState<string | null>(() =>
+    getChatCustomerToken(id),
+  );
+  const [isCustomerLocked, setIsCustomerLocked] = useState(
+    () => getChatCustomerToken(id) !== null,
+  );
+  const customerTokenRef = useRef(customerToken);
+  customerTokenRef.current = customerToken;
+  useEffect(() => {
+    if (customerToken === null && customers.length > 0) {
+      setCustomerToken(pickDefaultToken(customers, getLastCustomerToken()));
+    }
+  }, [customers, customerToken]);
 
   const [streamCursor, setStreamCursor] = useState(0);
   const streamCursorRef = useRef(streamCursor);
@@ -131,6 +156,13 @@ export function Chat({
         // and hasn't been saved to the database yet.
         const needsPreviousMessages = !chatHistoryEnabled || !isUserMessage;
 
+        const sessionToken = customerTokenRef.current;
+        if (sessionToken && isUserMessage && getChatCustomerToken(id) === null) {
+          setChatCustomerToken(id, sessionToken);
+          setLastCustomerToken(sessionToken);
+          setIsCustomerLocked(true);
+        }
+
         return {
           body: {
             id,
@@ -140,6 +172,8 @@ export function Chat({
             selectedChatModel: initialChatModel,
             selectedVisibilityType: visibilityType,
             nextMessageId: generateUUID(),
+            // Never an empty string: the back rejects it.
+            ...(sessionToken ? { sessionToken } : {}),
             // Send previous messages when:
             // 1. Database is disabled (ephemeral mode) - always need client-side messages
             // 2. Continuation request (tool results) - tool result only exists client-side
@@ -278,7 +312,13 @@ export function Chat({
   return (
     <>
       <div className="overscroll-behavior-contain flex h-full min-w-0 touch-pan-y flex-col bg-background">
-        <ChatHeader chatId={id} />
+        <ChatHeader
+          chatId={id}
+          customers={customers}
+          customerToken={customerToken}
+          onCustomerChange={setCustomerToken}
+          isCustomerLocked={isCustomerLocked}
+        />
 
         <Messages
           chatId={id}

@@ -33,17 +33,19 @@ Shipped en PR #2 (merge `47a7a62`).
 - [x] An out-of-scope question gets an explanation and the options
 - [x] The customer can cancel or say goodbye at any time
 
-Shipped en PR #<n>.
+Shipped en PR #4.
 
 ---
 
-## Phase 4: UC-01 General inquiries
+## Phase 4: UC-01 General inquiries (Complete)
 
 **Goal:** the customer checks their balances and limits without human help.
 
-- [ ] The customer checks their credit card balance and limit
-- [ ] The customer checks their savings account balance
-- [ ] No message can make the agent show another customer's data
+- [x] The customer checks their credit card balance and limit
+- [x] The customer checks their savings account balance
+- [x] No message can make the agent show another customer's data
+
+Shipped en PR #14.
 
 ---
 
@@ -64,7 +66,9 @@ Shipped en PR #<n>.
 - [ ] A commercial or retention request, or a request for a human that meets the policy, is handed off
 - [ ] A customer who writes three words or more in a language other than Spanish or Portuguese is handed off
 - [ ] Every handoff is recorded with a case summary
-- [ ] The agent stops responding in a handed-off conversation
+- [ ] The agent stops responding in a handed-off conversation: the stream ends with no text and with `custom_outputs.handled_by`
+- [ ] Every turn, streaming or not, returns `custom_outputs` with `thread_id`, `handled_by`, `use_case`, `intent`, `language` and `handoff_id`, for the `back/` chat
+- [ ] `GET /conversations/{id}/messages` returns the advisor's messages, only for the session's `customer_id`
 
 ---
 
@@ -75,6 +79,7 @@ Shipped en PR #<n>.
 - [ ] Every handoff is assigned to an available advisor by specialty and language
 - [ ] The advisor sees their assigned cases with the summary and the conversation
 - [ ] Two simultaneous handoffs never take the same advisor
+- [ ] The advisor console routes (`GET /handoffs`, `GET /handoffs/{id}`, `POST /handoffs/{id}/claim`, `/messages`, `/close`) run in the agent App, with the response contract shared with `back/` before implementing
 
 ---
 
@@ -85,3 +90,4 @@ Shipped en PR #<n>.
 - [ ] Every turn is traced and can be reviewed
 - [ ] Behavior cards run as an evaluation and report the README metrics
 - [ ] The agent is deployed on Databricks and the `back/` chat uses it
+- [ ] Decide how `back/` calls the agent (App URL plus `/invocations` or a serving endpoint) and how the backend App authenticates against the agent App

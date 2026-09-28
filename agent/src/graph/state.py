@@ -8,3 +8,4 @@ class AgentState(TypedDict):
     session: dict
     thread_id: str
     classification: dict | None
+    use_case: str | None

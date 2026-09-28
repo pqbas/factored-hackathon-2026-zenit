@@ -58,5 +58,10 @@ en `routing.yaml`. El grafo principal no cambia.
 
 ## 3.5 Estado
 
-Pendiente. Hoy el único caso implementado (cargo no reconocido) es código dentro
-del grafo, en `agent_server/dispute/`.
+Parcial. UC-01 corre sobre el schema `bank_uc_consultas` (`get_products` y
+`list_transactions`, SQL en `uc/bank_uc_consultas.sql`), expuesto por el MCP
+administrado. `src/tools/mcp_client.py` carga sus herramientas una vez por
+proceso y `respond` las llama envueltas con `bind_customer`.
+
+Pendiente: los permisos (`EXECUTE` solo para el agente) y el despliegue, en la
+Phase 8; el resto de casos de uso, en sus fases.

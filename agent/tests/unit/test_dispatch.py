@@ -6,7 +6,10 @@ from src.graph.edges import dispatch
 from src.schemas.routing import IntentRoute
 
 ROUTES = [
-    IntentRoute(intent="GENERAL_INQUIRY", description="d", examples=["e"], destination="respond"),
+    IntentRoute(
+        intent="GENERAL_INQUIRY", description="d", examples=["e"], destination="load_context",
+        schemas=["bank_uc_consultas"], instructions="usa get_products",
+    ),
     IntentRoute(intent="COMPLAINT", description="d", examples=["e"], destination="respond"),
     IntentRoute(intent="CANCEL", description="d", examples=["e"], destination="cancel"),
 ]
@@ -41,7 +44,9 @@ def test_dispatch_returns_respond_for_an_unknown_intent():
 
 def test_dispatch_does_not_block_below_the_threshold():
     state = {
-        "classification": _classification(guardrail="PROMPT_INJECTION", guardrail_probability=0.4),
+        "classification": _classification(
+            intent="COMPLAINT", guardrail="PROMPT_INJECTION", guardrail_probability=0.4
+        ),
     }
     assert dispatch(state, ROUTES, THRESHOLD, INTENT_THRESHOLD) == "respond"
 
@@ -59,3 +64,13 @@ def test_dispatch_sends_low_confidence_to_respond_instead_of_the_intents_route()
 def test_dispatch_sends_cancel_intent_to_cancel():
     state = {"classification": _classification(intent="CANCEL")}
     assert dispatch(state, ROUTES, THRESHOLD, INTENT_THRESHOLD) == "cancel"
+
+
+def test_dispatch_sends_general_inquiry_to_load_context_with_high_confidence():
+    state = {"classification": _classification(intent="GENERAL_INQUIRY", intent_confidence=0.9)}
+    assert dispatch(state, ROUTES, THRESHOLD, INTENT_THRESHOLD) == "load_context"
+
+
+def test_dispatch_sends_general_inquiry_to_respond_with_low_confidence():
+    state = {"classification": _classification(intent="GENERAL_INQUIRY", intent_confidence=0.2)}
+    assert dispatch(state, ROUTES, THRESHOLD, INTENT_THRESHOLD) == "respond"

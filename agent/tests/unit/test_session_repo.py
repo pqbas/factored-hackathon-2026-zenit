@@ -18,6 +18,21 @@ def test_missing_token_is_rejected_with_reason_missing():
     assert session.reason == "missing"
 
 
+def test_missing_token_is_rejected_even_with_demo_session_token_set(monkeypatch):
+    # A leftover DEMO_SESSION_TOKEN in the environment must not act as a default identity.
+    monkeypatch.setenv("DEMO_SESSION_TOKEN", "demo-mx-1")
+    importlib.reload(config)
+    importlib.reload(session_repo)
+    try:
+        session = session_repo.resolve_session(None)
+        assert session.authenticated is False
+        assert session.reason == "missing"
+    finally:
+        monkeypatch.undo()
+        importlib.reload(config)
+        importlib.reload(session_repo)
+
+
 def test_unknown_token_is_rejected_with_reason_invalid():
     session = session_repo.resolve_session({"session_token": "not-a-real-token"})
     assert session.authenticated is False

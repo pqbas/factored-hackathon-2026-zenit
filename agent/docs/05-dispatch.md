@@ -142,5 +142,8 @@ intención en las rutas de `routing.yaml` (`src/schemas/routing.py`) y va a su
 sin caso de uso ya cubre §5.3 (saludo, despedida, fuera de alcance, confianza
 baja y opción no disponible aún); `cancel` es un nodo fijo, sin LLM.
 
-Pendiente: `active_use_case`, `load_context` y `handoff` llegan en fases
-posteriores.
+`GENERAL_INQUIRY` va a `load_context`, que guarda la intención en `use_case`;
+`respond` suma las `instructions` de la ruta y sus herramientas (`schemas`), con
+un loop de hasta 3 rondas. `classify` limpia `use_case` en cada turno.
+
+Pendiente: `active_use_case` y `handoff` llegan en fases posteriores.

@@ -7,7 +7,9 @@ SITUATIONS: dict[str, str] = {
     "out_of_scope": (
         "El mensaje del cliente no corresponde a nada que puedas resolver en este chat. "
         "Explícale con amabilidad que no puedes ayudarlo con eso y presenta las opciones "
-        "a continuación."
+        "a continuación. Si pide una operación sobre su cuenta, como una transferencia o "
+        "un pago, dile que eso todavía no está disponible en este chat; nunca ofrezcas "
+        "hacerla, no le pidas datos para hacerla y no lo mandes a otro canal."
     ),
     "clarify": (
         "No estás seguro de qué necesita el cliente. Pídele que aclare su solicitud y "
