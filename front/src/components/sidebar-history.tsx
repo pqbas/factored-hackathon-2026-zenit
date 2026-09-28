@@ -30,7 +30,7 @@ import type { Chat } from '@chat-template/db';
 import { fetcher } from '@/lib/utils';
 import { ChatItem } from './sidebar-history-item';
 import useSWRInfinite from 'swr/infinite';
-import { LoaderIcon, SearchIcon, XIcon } from 'lucide-react';
+import { LoaderIcon } from 'lucide-react';
 
 type GroupedChats = {
   today: Chat[];
@@ -46,35 +46,6 @@ export interface ChatHistory {
 }
 
 const PAGE_SIZE = 20;
-
-type StatusFilter = 'open' | 'waiting' | 'received' | 'all';
-
-const INTENT_OPTIONS = [
-  { value: '', label: 'All intents' },
-  { value: 'ADD_BENEFICIARY', label: 'Add Beneficiary' },
-  { value: 'REQUEST_CREDIT_LIMIT_INCREASE', label: 'Credit Limit Increase' },
-];
-
-interface FilterState {
-  status: StatusFilter;
-  intent: string;
-  customer: string;
-}
-
-const DEFAULT_FILTERS: FilterState = {
-  status: 'all',
-  intent: '',
-  customer: '',
-};
-
-function buildFilterQuery(filters: FilterState): string {
-  const params = new URLSearchParams();
-  if (filters.status !== 'all') params.set('status', filters.status);
-  if (filters.intent) params.set('intent', filters.intent);
-  if (filters.customer) params.set('customer', filters.customer);
-  const qs = params.toString();
-  return qs ? `&${qs}` : '';
-}
 
 const groupChatsByDate = (chats: Chat[]): GroupedChats => {
   const now = new Date();
@@ -112,20 +83,19 @@ const groupChatsByDate = (chats: Chat[]): GroupedChats => {
 export function getChatHistoryPaginationKey(
   pageIndex: number,
   previousPageData: ChatHistory,
-  filterQuery = '',
 ) {
   if (previousPageData && previousPageData.hasMore === false) {
     return null;
   }
 
   if (pageIndex === 0)
-    return `/api/history?limit=${PAGE_SIZE}${filterQuery}`;
+    return `/api/history?limit=${PAGE_SIZE}`;
 
   const firstChatFromPage = previousPageData.chats.at(-1);
 
   if (!firstChatFromPage) return null;
 
-  return `/api/history?ending_before=${firstChatFromPage.id}&limit=${PAGE_SIZE}${filterQuery}`;
+  return `/api/history?ending_before=${firstChatFromPage.id}&limit=${PAGE_SIZE}`;
 }
 
 function ChatDateGroup({
@@ -160,89 +130,10 @@ function ChatDateGroup({
   );
 }
 
-function FilterBar({
-  filters,
-  onChange,
-}: {
-  filters: FilterState;
-  onChange: (filters: FilterState) => void;
-}) {
-  const hasActiveFilters =
-    filters.status !== 'all' || filters.intent !== '' || filters.customer !== '';
-
-  return (
-    <div className="flex flex-col gap-1.5 px-2 pb-2">
-      <div className="flex items-center gap-1">
-        {(['open', 'waiting', 'received'] as const).map((value) => (
-          <button
-            key={value}
-            type="button"
-            onClick={() =>
-              onChange({
-                ...filters,
-                status: filters.status === value ? 'all' : value,
-              })
-            }
-            className={`rounded-md px-2 py-0.5 text-xs font-medium transition-colors ${
-              filters.status === value
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-sidebar-accent text-sidebar-accent-foreground hover:bg-sidebar-accent/80'
-            }`}
-          >
-            {{ open: 'Open', waiting: 'Waiting', received: 'Received' }[value]}
-          </button>
-        ))}
-        <select
-          value={filters.intent}
-          onChange={(e) => onChange({ ...filters, intent: e.target.value })}
-          className="h-6 flex-1 rounded-md border-0 bg-sidebar-accent px-1.5 text-xs text-sidebar-accent-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-        >
-          {INTENT_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
-        {hasActiveFilters && (
-          <button
-            type="button"
-            onClick={() => onChange(DEFAULT_FILTERS)}
-            className="flex h-5 w-5 items-center justify-center rounded-md text-sidebar-foreground/50 hover:bg-sidebar-accent hover:text-sidebar-foreground"
-          >
-            <XIcon size={12} />
-          </button>
-        )}
-      </div>
-      <div className="relative">
-        <SearchIcon
-          size={12}
-          className="absolute left-2 top-1/2 -translate-y-1/2 text-sidebar-foreground/40"
-        />
-        <input
-          type="text"
-          value={filters.customer}
-          onChange={(e) => onChange({ ...filters, customer: e.target.value })}
-          placeholder="Search customer..."
-          className="h-6 w-full rounded-md border-0 bg-sidebar-accent pl-6 pr-2 text-xs text-sidebar-accent-foreground placeholder:text-sidebar-foreground/40 focus:outline-none focus:ring-1 focus:ring-ring"
-        />
-      </div>
-    </div>
-  );
-}
-
 export function SidebarHistory({ user }: { user?: ClientUser | null }) {
   const { setOpenMobile } = useSidebar();
   const { id } = useParams();
   const { chatHistoryEnabled } = useConfig();
-  const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
-
-  const filterQuery = buildFilterQuery(filters);
-
-  const paginationKeyFn = useCallback(
-    (pageIndex: number, previousPageData: ChatHistory) =>
-      getChatHistoryPaginationKey(pageIndex, previousPageData, filterQuery),
-    [filterQuery],
-  );
 
   const {
     data: paginatedChatHistories,
@@ -250,7 +141,7 @@ export function SidebarHistory({ user }: { user?: ClientUser | null }) {
     isValidating,
     isLoading,
     mutate,
-  } = useSWRInfinite<ChatHistory>(paginationKeyFn, fetcher, {
+  } = useSWRInfinite<ChatHistory>(getChatHistoryPaginationKey, fetcher, {
     fallbackData: [],
   });
 
@@ -349,16 +240,10 @@ export function SidebarHistory({ user }: { user?: ClientUser | null }) {
     <>
       <SidebarGroup>
         <SidebarGroupContent>
-          <FilterBar filters={filters} onChange={setFilters} />
-
           {hasEmptyChatHistory ? (
             <div className="flex w-full flex-row items-center justify-center gap-2 px-2 py-4 text-sm text-zinc-500">
               {chatHistoryEnabled
-                ? filters.status !== 'all' ||
-                    filters.intent ||
-                    filters.customer
-                  ? 'No chats match your filters.'
-                  : 'Your conversations will appear here once you start chatting!'
+                ? 'Your conversations will appear here once you start chatting!'
                 : 'Chat history is disabled - conversations are not saved'}
             </div>
           ) : (
