@@ -38,4 +38,4 @@ Por eso el agente solo puede mostrar datos del dueño de la sesión.
 ## 1.1 Estado
 
 Pendiente. Hay que configurar el login real y la tabla Customer Sessions. Hoy
-los tokens están fijos en `agent_server/dispute/session.py`.
+los tokens están fijos en `src/db/session_repo.py`.

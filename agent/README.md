@@ -123,7 +123,7 @@ seguridad.
 ## Pendientes
 
 - [ ] Configurar el login real y la tabla Customer Sessions (hoy los tokens
-      están fijos en `agent_server/dispute/session.py`).
+      están fijos en `src/db/session_repo.py`).
 - [ ] Confirmar el catálogo y la prioridad de casos de uso.
 - [ ] Escribir `spec.yaml` y fichas para UC-01, UC-03, UC-04 y UC-08.
 - [ ] Pasar de un solo grafo a playbooks por caso de uso.
