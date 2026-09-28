@@ -4,6 +4,7 @@ import {
   type AdvisorChat,
   type AdvisorMessage,
   canReply,
+  inboxFiltersFor,
   inboxUrl,
   isHeldByOther,
   mergeMessages,
@@ -85,7 +86,9 @@ describe('inboxUrl', () => {
     expect(params(inboxUrl('assistant'))).toMatchObject({ handledBy: 'ai_agent' });
     expect(params(inboxUrl('mine'))).toMatchObject({ assignedTo: 'me' });
     expect(params(inboxUrl('closed'))).toMatchObject({ status: 'closed' });
-    expect(params(inboxUrl('open', 'c9'))).toMatchObject({ starting_after: 'c9' });
+    expect(params(inboxUrl('open', { startingAfter: 'c9' }))).toMatchObject({ starting_after: 'c9' });
+    expect(params(inboxUrl('all'))).toEqual({ limit: '20' });
+    expect(params(inboxUrl('all', { userId: 'u7' }))).toEqual({ limit: '20', userId: 'u7' });
   });
 });
 
@@ -113,5 +116,15 @@ describe('toBubble', () => {
     expect(toBubble(message('u', { role: 'user', senderType: null }), ME).from).toBe('customer');
     expect(toBubble(message('s', { role: 'system', senderType: null }), ME).from).toBe('system');
     expect(toBubble(message('x', { senderType: null }), ME).from).toBe('assistant');
+  });
+});
+
+describe('inboxFiltersFor', () => {
+  it('gives the admin "Todas" and the advisor "Mías"', () => {
+    const ids = (role: 'advisor' | 'admin') => inboxFiltersFor(role).map((f) => f.id);
+    expect(ids('admin')).toContain('all');
+    expect(ids('admin')).not.toContain('mine');
+    expect(ids('advisor')).toContain('mine');
+    expect(ids('advisor')).not.toContain('all');
   });
 });

@@ -1,5 +1,6 @@
 import { MessagesSquare } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import useSWR from 'swr';
 import useSWRInfinite from 'swr/infinite';
 
 import { ConversationList } from '@/components/conversations/conversation-list';
@@ -15,6 +16,8 @@ import {
   fetchInbox,
   fetchMessages,
   type InboxFilter,
+  fetchUsers,
+  inboxFiltersFor,
   inboxUrl,
   mergeMessages,
   POLL_MS,
@@ -67,7 +70,13 @@ function useConversationMessages(chatId: string | null) {
 export default function ConversationsPage() {
   const { session, role } = useSession();
   const me = session?.user?.email;
-  const [filter, setFilter] = useState<InboxFilter>('open');
+  // The admin supervises (read-only, everything); the advisor attends.
+  const readOnly = role === 'admin';
+  const [filter, setFilter] = useState<InboxFilter>(readOnly ? 'all' : 'open');
+  const [userId, setUserId] = useState<string | null>(null);
+  const { data: users } = useSWR(readOnly ? '/api/advisor/users' : null, fetchUsers, {
+    revalidateOnFocus: false,
+  });
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState<AdvisorChat | null>(null);
   const [busy, setBusy] = useState(false);
@@ -77,7 +86,10 @@ export default function ConversationsPage() {
   const { data: pages, size, setSize, mutate } = useSWRInfinite<AdvisorChatPage>(
     (index, previous: AdvisorChatPage | null) => {
       if (previous && !previous.hasMore) return null;
-      return inboxUrl(filter, index > 0 ? previous?.chats.at(-1)?.id : undefined);
+      return inboxUrl(filter, {
+        userId,
+        startingAfter: index > 0 ? previous?.chats.at(-1)?.id : undefined,
+      });
     },
     fetchInbox,
     { refreshInterval: POLL_MS, revalidateOnFocus: false },
@@ -112,10 +124,10 @@ export default function ConversationsPage() {
     }
   }
 
-  function handleTake(force: boolean) {
+  function handleTake() {
     if (!current) return;
     act(async () => {
-      const result = await takeConversation(current.id, force);
+      const result = await takeConversation(current.id);
       if (result.ok) {
         setSelected(result.chat);
         refresh();
@@ -170,6 +182,10 @@ export default function ConversationsPage() {
         onFilterChange={setFilter}
         hasMore={hasMore}
         onLoadMore={() => setSize(size + 1)}
+        filters={inboxFiltersFor(readOnly ? 'admin' : 'advisor')}
+        users={readOnly ? (users ?? []) : undefined}
+        userId={userId}
+        onUserChange={setUserId}
       />
       <SidebarInset className="h-dvh min-h-0 overflow-hidden md:h-[calc(100dvh-1rem)]">
         {current ? (
@@ -177,7 +193,7 @@ export default function ConversationsPage() {
             chat={current}
             bubbles={bubbles}
             me={me}
-            isAdmin={role === 'admin'}
+            readOnly={readOnly}
             busy={busy}
             onTake={handleTake}
             onRelease={handleRelease}

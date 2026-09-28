@@ -43,9 +43,16 @@ export type AdvisorMessage = OverJson<
   parts: { type: string; text?: string }[];
 };
 
-export type InboxFilter = 'open' | 'waiting' | 'mine' | 'assistant' | 'closed';
+export type InboxFilter =
+  | 'all'
+  | 'open'
+  | 'waiting'
+  | 'mine'
+  | 'assistant'
+  | 'closed';
 
 export const INBOX_FILTERS: { id: InboxFilter; label: string }[] = [
+  { id: 'all', label: 'Todas' },
   { id: 'open', label: 'Abiertas' },
   { id: 'waiting', label: 'Sin atender' },
   { id: 'mine', label: 'Mías' },
@@ -65,12 +72,24 @@ export const QUICK_REPLIES = [
 
 const BASE = '/api/advisor/conversations';
 
-export function inboxUrl(filter: InboxFilter, startingAfter?: string): string {
+// The advisor works an open inbox (and their own chats); the admin supervises
+// everything, so starts on "Todas" and has no "Mías".
+export function inboxFiltersFor(role: 'advisor' | 'admin') {
+  return INBOX_FILTERS.filter((f) =>
+    role === 'admin' ? f.id !== 'mine' : f.id !== 'all',
+  );
+}
+
+export function inboxUrl(
+  filter: InboxFilter,
+  { startingAfter, userId }: { startingAfter?: string; userId?: string | null } = {},
+): string {
   const params = new URLSearchParams({ limit: String(INBOX_PAGE_SIZE) });
-  params.set('status', filter === 'closed' ? 'closed' : 'open');
+  if (filter !== 'all') params.set('status', filter === 'closed' ? 'closed' : 'open');
   if (filter === 'waiting') params.set('handledBy', 'human_queue');
   if (filter === 'assistant') params.set('handledBy', 'ai_agent');
   if (filter === 'mine') params.set('assignedTo', 'me');
+  if (userId) params.set('userId', userId);
   if (startingAfter) params.set('starting_after', startingAfter);
   return `${BASE}?${params.toString()}`;
 }
@@ -181,11 +200,8 @@ export type TakeResult =
   | { ok: true; chat: AdvisorChat }
   | { ok: false; assignedTo: string | null };
 
-export async function takeConversation(
-  chatId: string,
-  force = false,
-): Promise<TakeResult> {
-  const res = await post(`${BASE}/${chatId}/take`, force ? { force: true } : {});
+export async function takeConversation(chatId: string): Promise<TakeResult> {
+  const res = await post(`${BASE}/${chatId}/take`);
   if (res.status === 409) {
     const body = await res.json().catch(() => ({}));
     return { ok: false, assignedTo: body.assignedTo ?? null };
@@ -243,4 +259,16 @@ export async function fetchInbox(url: string): Promise<AdvisorChatPage> {
   if (res.status === 204) return { chats: [], hasMore: false };
   if (!res.ok) throw new AdvisorRequestError(res.status);
   return res.json();
+}
+
+export interface ChatOwner {
+  userId: string;
+  userEmail: string | null;
+}
+
+// Owners of conversations, for the admin's user filter (admin only).
+export async function fetchUsers(): Promise<ChatOwner[]> {
+  const res = await fetch('/api/advisor/users', { credentials: 'include' });
+  if (res.status === 204 || !res.ok) return [];
+  return (await res.json()).users ?? [];
 }

@@ -1,4 +1,4 @@
-import { Check, ChevronDown, ListFilter, Search } from 'lucide-react';
+import { Check, ChevronDown, ListFilter, Search, Users } from 'lucide-react';
 
 import { StatusLine } from '@/components/conversations/status-chip';
 import {
@@ -20,8 +20,8 @@ import {
 } from '@/components/ui/sidebar';
 import {
   type AdvisorChat,
+  type ChatOwner,
   customerLabel,
-  INBOX_FILTERS,
   type InboxFilter,
   statusOf,
   useCaseLabel,
@@ -56,6 +56,10 @@ export function ConversationList({
   onFilterChange,
   hasMore,
   onLoadMore,
+  filters,
+  users,
+  userId = null,
+  onUserChange,
 }: {
   chats: AdvisorChat[];
   selectedId: string | null;
@@ -66,7 +70,13 @@ export function ConversationList({
   onFilterChange: (filter: InboxFilter) => void;
   hasMore: boolean;
   onLoadMore: () => void;
+  filters: { id: InboxFilter; label: string }[];
+  // Admin only: filter the inbox by conversation owner.
+  users?: ChatOwner[];
+  userId?: string | null;
+  onUserChange?: (userId: string | null) => void;
 }) {
+  const selectedUser = users?.find((u) => u.userId === userId);
   const { setOpenMobile } = useSidebar();
   const now = new Date();
 
@@ -86,12 +96,12 @@ export function ConversationList({
                 className="flex h-7 items-center gap-1.5 rounded-[7px] px-2 text-muted-foreground text-xs hover:bg-secondary hover:text-foreground"
               >
                 <ListFilter className="size-3.5" />
-                {INBOX_FILTERS.find((f) => f.id === filter)?.label}
+                {filters.find((f) => f.id === filter)?.label}
                 <ChevronDown className="size-3" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-44">
-              {INBOX_FILTERS.map((option) => (
+              {filters.map((option) => (
                 <DropdownMenuItem
                   key={option.id}
                   data-testid={`status-filter-${option.id}`}
@@ -120,6 +130,47 @@ export function ConversationList({
             className="h-7 w-full rounded-[7px] border-0 bg-secondary pr-2 pl-7 text-[13px] placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/40"
           />
         </div>
+        {users && onUserChange && (
+          <div className="px-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  data-testid="user-filter"
+                  className="flex h-7 w-full items-center gap-1.5 rounded-[7px] bg-secondary px-2 text-[13px] text-foreground"
+                >
+                  <Users className="size-3.5 shrink-0 text-muted-foreground" />
+                  <span className="flex-1 truncate text-left">
+                    {selectedUser
+                      ? (selectedUser.userEmail ?? 'Sin email')
+                      : 'Todos los usuarios'}
+                  </span>
+                  <ChevronDown className="size-3 shrink-0 text-muted-foreground" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-60">
+                {[{ userId: null, userEmail: 'Todos los usuarios' }, ...users].map(
+                  (user) => (
+                    <DropdownMenuItem
+                      key={user.userId ?? 'all'}
+                      data-testid={`user-option-${user.userId ?? 'all'}`}
+                      onSelect={() => onUserChange(user.userId)}
+                      className="flex items-center gap-2 text-[13px]"
+                    >
+                      <Check
+                        className={cn(
+                          'size-3.5 shrink-0',
+                          user.userId === userId ? 'opacity-100' : 'opacity-0',
+                        )}
+                      />
+                      <span className="truncate">{user.userEmail ?? 'Sin email'}</span>
+                    </DropdownMenuItem>
+                  ),
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )}
       </SidebarHeader>
 
       <SidebarContent>

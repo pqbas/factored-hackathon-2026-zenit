@@ -181,7 +181,7 @@ Probado con el rol real del back (PR #15). Shipped en PR #16.
 
 ---
 
-## Phase 6: Vista admin con conversaciones reales (Complete)
+## Phase 6: Vista admin con conversaciones reales (Complete, reemplazada por la Fase 8)
 
 **Goal:** que un admin revise las conversaciones de cualquier usuario sin poder
 modificarlas.
@@ -230,3 +230,20 @@ Con David, Cerradas); la API no trae prioridad ni resumen del caso, así que
 esas dos quedan pendientes. Solo quien tiene tomada la conversación escribe;
 el admin puede forzar. Fuera del primer corte: etiquetas, imágenes, adjuntos y
 no leídos. Shipped en PR #23.
+
+---
+
+## Phase 8: El admin supervisa desde Chats (Complete)
+
+**Goal:** una sola pantalla de conversaciones: el asesor atiende y el admin
+supervisa en solo lectura.
+
+<!-- Contrato: Fase 5b del back (back/spec/28-09-26-admin-supervisa/).
+     Reemplaza la vista Admin de la Fase 6; /api/admin/* desaparece. -->
+
+- [x] No hay sección Admin; `/admin` lleva a Chats.
+- [x] El admin ve todas las conversaciones, filtra por estado y por usuario y
+      las lee sin poder actuar.
+- [x] El asesor atiende como hoy, sin forzar conversaciones ajenas.
+
+La vista Admin de la Fase 6 quedó reemplazada por Chats. Shipped en PR #28.
