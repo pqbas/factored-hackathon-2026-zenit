@@ -21,18 +21,23 @@
   Hoy solo existe un tipo de usuario: la sesión no trae rol.
 -->
 
-## Phase 1: Vista de conversaciones estilo WhatsApp, con datos mock (In Progress)
+## Phase 1: Vista de conversaciones estilo WhatsApp, con datos mock (Complete)
 
 **Goal:** ver cómo va a quedar la pantalla de conversaciones antes de
 conectarla a datos reales.
 
-- [ ] Desde el chat se llega a una pantalla aparte con la lista de clientes a
+- [x] Desde el chat se llega a una pantalla aparte con la lista de clientes a
       la izquierda y la conversación a la derecha, como WhatsApp Web.
-- [ ] La lista se puede buscar por nombre y muestra el último mensaje, la hora
+- [x] La lista se puede buscar por nombre y muestra el último mensaje, la hora
       y los no leídos.
-- [ ] La conversación muestra los mensajes del cliente y del agente con hora y
+- [x] La conversación muestra los mensajes del cliente y del agente con hora y
       separadores por día, y deja escribir mensajes que solo quedan en pantalla.
 - [ ] La pantalla se usa bien en móvil y en modo oscuro.
+
+Modo oscuro revisado; móvil sin revisar. También entraron: riel de secciones
+(Agente / Chats), barra lateral unificada, historial de ejemplo del cliente en
+Agente y la quita de los filtros viejos del historial.
+Shipped en PR #<n>.
 
 ---
 
