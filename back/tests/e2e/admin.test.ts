@@ -28,7 +28,12 @@ const MESSAGES = [
     id: 'm1',
     chatId: 'c1',
     role: 'user',
-    parts: [{ type: 'text', text: '¿Cuál es mi saldo?' }],
+    parts: [
+      {
+        type: 'text',
+        text: '¿Cuál es mi saldo? ![](https://tracker.test/px.png) [aquí](https://phishing.test/login)',
+      },
+    ],
     attachments: [],
     createdAt: '2026-09-28T10:00:00.000Z',
   },
@@ -113,6 +118,11 @@ test.describe('Admin view', () => {
     await page.getByTestId('admin-chat-row-c1').click();
     await expect(page.getByTestId('admin-message')).toHaveCount(2);
     await expect(page.getByTestId('admin-message').last()).toContainText('$100');
+    // The customer's text is literal: no image loads, no link.
+    const customer = page.locator('[data-testid="admin-message"][data-role="user"]');
+    await expect(customer).toContainText('![](https://tracker.test/px.png)');
+    await expect(customer.locator('img')).toHaveCount(0);
+    await expect(customer.locator('a')).toHaveCount(0);
     await expect(page.getByRole('textbox')).toHaveCount(0);
   });
 

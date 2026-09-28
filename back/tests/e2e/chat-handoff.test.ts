@@ -117,9 +117,11 @@ test.describe('Customer chat during a handoff', () => {
     await page.waitForTimeout(500);
     await expect(agentMessages).toHaveCount(1);
 
-    server.advisorTakes('Hola, soy Babbage. ¿En qué te ayudo?');
+    server.advisorTakes('Hola, soy **Babbage**. ¿En qué te ayudo? [aquí](https://phishing.test)');
     await expect(page.getByTestId('advisor-label')).toBeVisible({ timeout: 10_000 });
-    await expect(agentMessages.last()).toContainText('soy Babbage');
+    // An advisor's text is literal for the customer too: no bold, no link.
+    await expect(agentMessages.last()).toContainText('soy **Babbage**');
+    await expect(agentMessages.last().locator('a')).toHaveCount(0);
     await expect(page.getByTestId('handoff-system-message').last()).toHaveText('Te atiende un asesor.');
     await expect(page.getByTestId('handoff-notice')).toHaveText('Te atiende un asesor.');
     await expect(page.getByTestId('chat-peer')).toHaveText('Asesor');

@@ -211,9 +211,17 @@ const PurePreviewMessage = ({
                           message.role === 'assistant',
                       })}
                     >
-                      <Response>
-                        {sanitizeText(joinMessagePartSegments(parts))}
-                      </Response>
+                      {/* Advisor replies are a person's text: shown
+                          literally, never as markdown (no images/links). */}
+                      {isAdvisor ? (
+                        <p className="whitespace-pre-wrap break-words">
+                          {joinMessagePartSegments(parts)}
+                        </p>
+                      ) : (
+                        <Response>
+                          {sanitizeText(joinMessagePartSegments(parts))}
+                        </Response>
+                      )}
                     </MessageContent>
                   </div>
                 );

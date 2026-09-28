@@ -2,7 +2,9 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Eye, Wrench } from 'lucide-react';
 
+import { Response } from '@/components/elements/response';
 import { messageSummary, ownerLabel } from '@/lib/admin';
+import { senderOf } from '@/lib/handoff';
 import { cn } from '@/lib/utils';
 import type { ChatMessage } from '@chat-template/core';
 import type { Chat } from '@chat-template/db';
@@ -49,7 +51,14 @@ export function AdminChatView({
                       : 'bg-secondary text-foreground',
                   )}
                 >
-                  {text && <p className="whitespace-pre-wrap break-words">{text}</p>}
+                  {/* Markdown only for David; customer and advisor text stays
+                      literal (no images or links from untrusted input). */}
+                  {text &&
+                    (senderOf(message) === 'agent' ? (
+                      <Response className="flex flex-col gap-2 break-words">{text}</Response>
+                    ) : (
+                      <p className="whitespace-pre-wrap break-words">{text}</p>
+                    ))}
                   {usedTools && (
                     <span
                       className={cn(

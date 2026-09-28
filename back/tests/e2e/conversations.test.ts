@@ -75,6 +75,8 @@ async function mockAdvisorApi(page: Page, me: string) {
   };
   for (const c of chats) say(c.id, 'customer', `Hola, soy ${c.userEmail}`);
   say('c-waiting', 'system', 'Te atiende un asesor.');
+  say('c-waiting', 'customer', 'Mira ![](https://tracker.test/px.png) y [aquí](https://phishing.test/login)');
+  say('c-assistant', 'ai_agent', 'Tus tarjetas activas:\n\n- Terminada en **1070**\n- Terminada en 6262');
 
   const requested: string[] = [];
   await page.route('**/api/advisor/conversations**', async (route) => {
@@ -220,6 +222,37 @@ test.describe('Advisor console', () => {
     await expect(page.getByTestId('customer-meta')).toContainText('La atiendes tú');
     await expect(page.getByTestId('system-notice').last()).toContainText('Otro asesor continúa');
     await expect(input(page)).toBeEnabled();
+  });
+
+  test('renders David\'s markdown: bullets and bold', async ({ page }) => {
+    await openConsole(page);
+    await page.getByTestId('conversation-row-c-assistant').click();
+    const reply = page.getByTestId('bubble-agent').last();
+    await expect(reply.locator('li')).toHaveCount(2);
+    const bold = reply.getByText('1070', { exact: true });
+    await expect(bold).toBeVisible();
+    expect(Number(await bold.evaluate((el) => getComputedStyle(el).fontWeight))).toBeGreaterThanOrEqual(600);
+    await expect(reply).not.toContainText('**');
+    const bullet = await reply
+      .locator('ul')
+      .evaluate((el) => getComputedStyle(el).listStyleType);
+    expect(bullet).toBe('disc');
+  });
+
+  test('customer text is shown literally: no images or links', async ({ page }) => {
+    const external: string[] = [];
+    await page.route('https://tracker.test/**', (route) => {
+      external.push(route.request().url());
+      return route.abort();
+    });
+    await openConsole(page);
+    await page.getByTestId('conversation-row-c-waiting').click();
+    const bubble = page.getByTestId('bubble-customer').last();
+    await expect(bubble).toContainText('![](https://tracker.test/px.png)');
+    await expect(bubble).toContainText('[aquí](https://phishing.test/login)');
+    await expect(bubble.locator('img')).toHaveCount(0);
+    await expect(bubble.locator('a')).toHaveCount(0);
+    expect(external).toEqual([]);
   });
 
   test('a quick reply fills the message field', async ({ page }) => {

@@ -1,6 +1,7 @@
 import { ASSISTANT_KIND } from '@/lib/assistant';
 import { ArrowRight, CheckCheck } from 'lucide-react';
 
+import { Response } from '@/components/elements/response';
 import type { Bubble } from '@/lib/advisor';
 import { formatListTime } from '@/lib/conversations';
 import { cn } from '@/lib/utils';
@@ -31,7 +32,16 @@ export function MessageBubble({ bubble, now }: { bubble: Bubble; now: Date }) {
             {bubble.label}
           </span>
         )}
-        <p className="whitespace-pre-wrap break-words text-sm">{bubble.text}</p>
+        {/* Only David's replies are markdown. Customer and advisor text stays
+            literal: a customer's ![](url) or [x](url) must not load an image or
+            become a link in an internal tool. */}
+        {bubble.from === 'assistant' ? (
+          <Response className="flex flex-col gap-2 break-words text-sm">
+            {bubble.text}
+          </Response>
+        ) : (
+          <p className="whitespace-pre-wrap break-words text-sm">{bubble.text}</p>
+        )}
         <div className="mt-1 flex items-center justify-end gap-1">
           <span
             className={cn(
