@@ -32,7 +32,11 @@ test.describe('/api/admin (with database)', () => {
       TEST_PROMPTS.GRASS.MESSAGE,
     );
 
-    const response = await adaContext.request.get('/api/admin/chats');
+    // Other workers create chats in parallel on the same database; with the
+    // default limit of 10 they can push these two off the first page.
+    const response = await adaContext.request.get(
+      '/api/admin/chats?limit=100',
+    );
     expect(response.status()).toBe(200);
 
     const { chats, hasMore } = await response.json();

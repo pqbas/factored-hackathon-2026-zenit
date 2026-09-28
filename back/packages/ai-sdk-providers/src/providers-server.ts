@@ -74,33 +74,74 @@ const LOG_SSE_EVENTS = process.env.LOG_SSE_EVENTS === 'true';
 
 const API_PROXY = process.env.API_PROXY;
 
-export interface WorkflowMetadata {
-  workflow_stage?: string;
-  workflow_intent?: string;
-  workflow_customer_name?: string;
+// Signals the agent attaches to each turn as custom_outputs (contract in
+// back/spec/28-09-26-estado-conversacion/requirements.md §1). undefined means
+// "not sent or invalid, keep what is stored"; null is a real value.
+export interface AgentHandoff {
+  reason: string;
+  summary: string | null;
+  facts: Record<string, unknown> | null;
 }
 
-const METADATA_TTL_MS = 60_000;
-const workflowMetadataStore = new Map<
+export interface AgentOutputs {
+  useCase?: string | null;
+  intent?: string | null;
+  language?: string | null;
+  blocked?: boolean;
+  handoff?: AgentHandoff | null;
+}
+
+const stringOrNull = (value: unknown) =>
+  typeof value === 'string' || value === null ? value : undefined;
+
+const isObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+export function parseAgentOutputs(raw: unknown): AgentOutputs {
+  if (!isObject(raw)) return {};
+
+  let handoff: AgentHandoff | null | undefined;
+  if (raw.handoff === null) {
+    handoff = null;
+  } else if (isObject(raw.handoff) && typeof raw.handoff.reason === 'string') {
+    handoff = {
+      reason: raw.handoff.reason,
+      summary:
+        typeof raw.handoff.summary === 'string' ? raw.handoff.summary : null,
+      facts: isObject(raw.handoff.facts) ? raw.handoff.facts : null,
+    };
+  }
+
+  return {
+    useCase: stringOrNull(raw.use_case),
+    intent: stringOrNull(raw.intent),
+    language: stringOrNull(raw.language),
+    blocked: typeof raw.blocked === 'boolean' ? raw.blocked : undefined,
+    handoff,
+  };
+}
+
+const AGENT_OUTPUTS_TTL_MS = 60_000;
+const agentOutputsStore = new Map<
   string,
-  { metadata: WorkflowMetadata; timestamp: number }
+  { outputs: AgentOutputs; timestamp: number }
 >();
 
-export function getAndClearWorkflowMetadata(
+export function getAndClearAgentOutputs(
   conversationId: string,
-): WorkflowMetadata | null {
-  const entry = workflowMetadataStore.get(conversationId);
-  workflowMetadataStore.delete(conversationId);
+): AgentOutputs | null {
+  const entry = agentOutputsStore.get(conversationId);
+  agentOutputsStore.delete(conversationId);
 
   // Evict stale entries opportunistically
   const now = Date.now();
-  for (const [key, val] of workflowMetadataStore) {
-    if (now - val.timestamp > METADATA_TTL_MS) {
-      workflowMetadataStore.delete(key);
+  for (const [key, val] of agentOutputsStore) {
+    if (now - val.timestamp > AGENT_OUTPUTS_TTL_MS) {
+      agentOutputsStore.delete(key);
     }
   }
 
-  return entry?.metadata ?? null;
+  return entry?.outputs ?? null;
 }
 
 // Cache for endpoint details to check task type
@@ -234,8 +275,8 @@ export const databricksFetch: typeof fetch = async (input, init) => {
                   );
                 }
                 if (conversationId && parsed.custom_outputs) {
-                  workflowMetadataStore.set(conversationId, {
-                    metadata: parsed.custom_outputs as WorkflowMetadata,
+                  agentOutputsStore.set(conversationId, {
+                    outputs: parseAgentOutputs(parsed.custom_outputs),
                     timestamp: Date.now(),
                   });
                 }

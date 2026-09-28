@@ -5,11 +5,7 @@ import {
   type Router as RouterType,
 } from 'express';
 import { authMiddleware, requireAuth } from '../middleware/auth';
-import {
-  getChats,
-  isDatabaseAvailable,
-  type ChatStatusFilter,
-} from '@chat-template/db';
+import { getChats, isDatabaseAvailable } from '@chat-template/db';
 import { ChatSDKError } from '@chat-template/core/errors';
 
 export const historyRouter: RouterType = Router();
@@ -42,9 +38,9 @@ historyRouter.get('/', requireAuth, async (req: Request, res: Response) => {
   const limit = Number.parseInt((req.query.limit as string) || '10');
   const startingAfter = req.query.starting_after as string | undefined;
   const endingBefore = req.query.ending_before as string | undefined;
-  const status = req.query.status as ChatStatusFilter | undefined;
+  const handledBy = req.query.handledBy as string | undefined;
   const intent = req.query.intent as string | undefined;
-  const customer = req.query.customer as string | undefined;
+  const useCase = req.query.useCase as string | undefined;
 
   if (startingAfter && endingBefore) {
     const error = new ChatSDKError(
@@ -61,9 +57,9 @@ historyRouter.get('/', requireAuth, async (req: Request, res: Response) => {
       limit,
       startingAfter: startingAfter ?? null,
       endingBefore: endingBefore ?? null,
-      status,
+      handledBy,
       intent,
-      customer,
+      useCase,
     });
 
     res.json(chats);

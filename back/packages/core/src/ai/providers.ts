@@ -9,7 +9,8 @@ export {
   CONTEXT_HEADER_CONVERSATION_ID,
   CONTEXT_HEADER_USER_ID,
   CONTEXT_HEADER_SESSION_TOKEN,
-  getAndClearWorkflowMetadata,
+  getAndClearAgentOutputs,
+  type AgentOutputs,
 } from '@chat-template/ai-sdk-providers';
 
 // For server-side usage, get the authenticated provider

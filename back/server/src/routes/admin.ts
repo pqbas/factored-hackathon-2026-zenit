@@ -16,7 +16,6 @@ import {
   getChatById,
   getMessagesByChatId,
   isDatabaseAvailable,
-  type ChatStatusFilter,
 } from '@chat-template/db';
 import { ChatSDKError } from '@chat-template/core/errors';
 
@@ -39,9 +38,9 @@ adminRouter.get(
     const limit = Number.parseInt((req.query.limit as string) || '10');
     const startingAfter = req.query.starting_after as string | undefined;
     const endingBefore = req.query.ending_before as string | undefined;
-    const status = req.query.status as ChatStatusFilter | undefined;
+    const handledBy = req.query.handledBy as string | undefined;
     const intent = req.query.intent as string | undefined;
-    const customer = req.query.customer as string | undefined;
+    const useCase = req.query.useCase as string | undefined;
     const userId = req.query.userId as string | undefined;
 
     if (startingAfter && endingBefore) {
@@ -59,9 +58,9 @@ adminRouter.get(
         limit,
         startingAfter: startingAfter ?? null,
         endingBefore: endingBefore ?? null,
-        status,
+        handledBy,
         intent,
-        customer,
+        useCase,
       });
 
       res.json(chats);

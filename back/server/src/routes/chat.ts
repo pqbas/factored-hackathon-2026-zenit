@@ -42,7 +42,8 @@ import {
   saveMessages,
   updateChatLastContextById,
   updateChatVisiblityById,
-  updateChatWorkflowState,
+  updateChatAgentState,
+  markMessagesBlocked,
   isDatabaseAvailable,
 } from '@chat-template/db';
 import {
@@ -58,7 +59,7 @@ import {
   CONTEXT_HEADER_CONVERSATION_ID,
   CONTEXT_HEADER_USER_ID,
   CONTEXT_HEADER_SESSION_TOKEN,
-  getAndClearWorkflowMetadata,
+  getAndClearAgentOutputs,
 } from '@chat-template/core';
 import { ChatSDKError } from '@chat-template/core/errors';
 import { generateTitleFromUserMessage } from '../title';
@@ -173,6 +174,7 @@ chatRouter.post('/', requireAuth, async (req: Request, res: Response) => {
             parts: message.parts,
             attachments: [],
             createdAt: new Date(),
+            blocked: false,
           },
         ],
       });
@@ -197,6 +199,7 @@ chatRouter.post('/', requireAuth, async (req: Request, res: Response) => {
               createdAt: m.metadata?.createdAt
                 ? new Date(m.metadata.createdAt)
                 : new Date(),
+              blocked: false,
             })),
           });
 
@@ -224,16 +227,42 @@ chatRouter.post('/', requireAuth, async (req: Request, res: Response) => {
       }
     }
 
+    // A human (queue or agent) owns this conversation: the client message is
+    // saved above, but the agent never sees it. Respond with just the
+    // conversation state so useChat doesn't treat the stream as an error.
+    if (dbAvailable && chat && chat.handledBy !== 'ai_agent') {
+      streamCache.clearActiveStream(id);
+      const conversationStateStream = createUIMessageStream({
+        execute: async ({ writer }) => {
+          writer.write({ type: 'start' });
+          writer.write({
+            type: 'data-conversation-state',
+            data: { handledBy: chat.handledBy },
+          });
+          writer.write({ type: 'finish' });
+        },
+      });
+      pipeUIMessageStreamToResponse({
+        stream: conversationStateStream,
+        response: res,
+      });
+      return;
+    }
+
     // Clear any previous active stream for this chat
     streamCache.clearActiveStream(id);
 
     let finalUsage: LanguageModelUsage | undefined;
     const streamId = generateUUID();
 
+    // Blocked turns are kept for the chat history but never resent to the
+    // agent (it rejected them once already).
+    const modelMessages = uiMessages.filter((m) => m.metadata?.blocked !== true);
+
     const model = await myProvider.languageModel(selectedChatModel);
     const result = streamText({
       model,
-      messages: await convertToModelMessages(uiMessages),
+      messages: await convertToModelMessages(modelMessages),
       headers: {
         [CONTEXT_HEADER_CONVERSATION_ID]: id,
         [CONTEXT_HEADER_USER_ID]: session.user.email ?? session.user.id,
@@ -276,6 +305,9 @@ chatRouter.post('/', requireAuth, async (req: Request, res: Response) => {
           'Finished message stream! Saving message...',
           JSON.stringify(responseMessage, null, 2),
         );
+        const agentOutputs = getAndClearAgentOutputs(id);
+        const blocked = agentOutputs?.blocked === true;
+
         await saveMessages({
           messages: [
             {
@@ -285,6 +317,7 @@ chatRouter.post('/', requireAuth, async (req: Request, res: Response) => {
               createdAt: new Date(),
               attachments: [],
               chatId: id,
+              blocked,
             },
           ],
         });
@@ -300,17 +333,21 @@ chatRouter.post('/', requireAuth, async (req: Request, res: Response) => {
           }
         }
 
-        const workflowMeta = getAndClearWorkflowMetadata(id);
-        if (workflowMeta) {
+        if (agentOutputs && dbAvailable) {
           try {
-            await updateChatWorkflowState({
+            // A blocked turn stays visible but is never sent to the agent again.
+            if (blocked && message) {
+              await markMessagesBlocked({ ids: [message.id] });
+            }
+            await updateChatAgentState({
               chatId: id,
-              stage: workflowMeta.workflow_stage,
-              intent: workflowMeta.workflow_intent,
-              customerName: workflowMeta.workflow_customer_name,
+              useCase: agentOutputs.useCase,
+              intent: agentOutputs.intent,
+              language: agentOutputs.language,
+              handledBy: agentOutputs.handoff ? 'human_queue' : undefined,
             });
           } catch (err) {
-            console.warn('Unable to persist workflow state for chat', id, err);
+            console.warn('Unable to persist agent state for chat', id, err);
           }
         }
 

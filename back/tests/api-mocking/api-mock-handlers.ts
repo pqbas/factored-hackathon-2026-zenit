@@ -53,6 +53,9 @@ export interface CapturedRequest {
     session_token?: string;
     [key: string]: unknown;
   };
+  // Responses API request body, kept so tests can check which turns were
+  // actually sent to the agent (e.g. that blocked messages are excluded).
+  input?: unknown;
 }
 
 let capturedRequests: CapturedRequest[] = [];
@@ -86,12 +89,14 @@ function captureRequestContext(url: string, body: unknown): void {
   const customInputs = (
     body as { custom_inputs?: CapturedRequest['customInputs'] }
   )?.custom_inputs;
+  const input = (body as { input?: unknown }).input;
   capturedRequests.push({
     url,
     timestamp: Date.now(),
     context,
     hasContext: context !== undefined && context !== null,
     customInputs,
+    input,
   });
 }
 
@@ -180,6 +185,54 @@ function containsMcpApprovalResponse(body: unknown): {
 // Mock Handlers
 // ============================================================================
 
+export const AGENT_OUTPUTS = {
+  state: {
+    thread_id: 'mock',
+    use_case: 'GENERAL_INQUIRY',
+    intent: 'GENERAL_INQUIRY',
+    language: 'es',
+    blocked: false,
+    handoff: null,
+  },
+  blocked: {
+    thread_id: 'mock',
+    use_case: null,
+    intent: null,
+    language: 'es',
+    blocked: true,
+    handoff: null,
+  },
+  handoff: {
+    thread_id: 'mock',
+    use_case: null,
+    intent: 'HUMAN_REQUEST',
+    language: 'es',
+    blocked: false,
+    handoff: {
+      reason: 'customer_request',
+      summary: 'El cliente pide hablar con un asesor.',
+      facts: {
+        condition: 'insists',
+        use_case: null,
+        intent: 'HUMAN_REQUEST',
+        language: 'es',
+        sentiment: 'neutral',
+        case_id: null,
+        tools_called: [],
+        verified_data: null,
+      },
+    },
+  },
+} as const;
+
+function agentOutputsFor(body: unknown) {
+  const text = JSON.stringify((body as { input?: unknown[] })?.input?.at(-1));
+  const key = (
+    Object.keys(AGENT_OUTPUTS) as (keyof typeof AGENT_OUTPUTS)[]
+  ).find((k) => text?.includes(`[agent-outputs:${k}]`));
+  return key ? AGENT_OUTPUTS[key] : undefined;
+}
+
 export const handlers = [
   // Mock chat completions (FMAPI - llm/v1/chat)
   // Use RegExp for better URL matching - matches any URL ending with /chat/completions,
@@ -228,6 +281,15 @@ export const handlers = [
           mockMcpApprovalRequestStream({ requestId: MCP_REQUEST_ID }),
         );
       }
+    }
+
+    // Prompts containing an AGENT_OUTPUTS key make the mock attach the
+    // matching custom_outputs, as the real agent does on each turn.
+    const agentOutputs = agentOutputsFor(body);
+    if (isStreaming && agentOutputs) {
+      return createMockStreamResponse(
+        mockResponsesApiTextStream('Mock agent reply', agentOutputs),
+      );
     }
 
     // Default response for non-MCP requests
