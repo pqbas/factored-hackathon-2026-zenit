@@ -491,3 +491,20 @@ def test_the_first_round_of_a_use_case_requires_a_tool_call():
     _run(graph, "E limite?")
 
     assert llm.calls == ["required", None]
+
+
+def test_a_reply_that_copies_the_advisor_prefix_is_stripped_and_the_prompt_has_the_rule():
+    llm = RecordingLLM("[Asesor] Tu caso sigue en revisión.")
+    jev = FakeJev(_classification(intent="CASE_STATUS"))
+    graph = _build_graph(llm, jev)
+
+    history = [
+        {"role": "user", "content": "Quiero hablar con un asesor"},
+        {"role": "assistant", "content": "[Asesor] Hola, soy Ana. Tu reembolso se verá en 5 días hábiles."},
+    ]
+    result = _run(graph, "¿y cuándo se verá?", history=history)
+
+    assert result["messages"][-1].content == "Tu caso sigue en revisión."
+    system_prompt = llm.received[0].content
+    assert "empiezan con [Asesor]: los escribió un asesor" in system_prompt
+    assert "nunca\nempieces tu respuesta con [Asesor]" in system_prompt

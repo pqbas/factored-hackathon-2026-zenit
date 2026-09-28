@@ -31,6 +31,7 @@ from src.db.session_repo import resolve_session  # noqa: E402
 from src.graph.build import GRAPH_NODES, build_graph  # noqa: E402
 from src.llm.chat import get_chat_model  # noqa: E402
 from src.llm.jev import JevClient  # noqa: E402
+from src.prompts.advisor import AdvisorPrefixStreamFilter  # noqa: E402
 from src.schemas.routing import load_routing  # noqa: E402
 from src.tools.mcp_client import tools_for  # noqa: E402
 
@@ -72,8 +73,12 @@ async def _process_agent_astream_events(
     async_stream: AsyncIterator[Any],
 ) -> AsyncGenerator[ResponsesAgentStreamEvent, None]:
     """Convert LangGraph stream events into ResponsesAgentStreamEvent objects."""
+    prefix_filter = AdvisorPrefixStreamFilter()
     async for event in async_stream:
         if event[0] == "updates":
+            # A reply shorter than the prefix is still held back: release it before its item.
+            for item_id, text in prefix_filter.flush().items():
+                yield ResponsesAgentStreamEvent(**create_text_delta(delta=text, item_id=item_id))
             for node_name, node_data in event[1].items():
                 if not node_data:
                     continue
@@ -90,9 +95,10 @@ async def _process_agent_astream_events(
                 if metadata.get("langgraph_node") not in _STREAMING_NODES:
                     continue
                 if isinstance(chunk, AIMessageChunk) and (content := chunk.content):
-                    yield ResponsesAgentStreamEvent(
-                        **create_text_delta(delta=content, item_id=chunk.id)
-                    )
+                    if delta := prefix_filter.feed(chunk.id, content):
+                        yield ResponsesAgentStreamEvent(
+                            **create_text_delta(delta=delta, item_id=chunk.id)
+                        )
             except Exception:
                 logger.exception("Error processing agent stream event")
 

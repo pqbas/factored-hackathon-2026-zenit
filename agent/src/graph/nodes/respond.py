@@ -3,6 +3,7 @@ from pathlib import Path
 from langchain_core.messages import SystemMessage, ToolMessage
 
 from src.graph.state import AgentState
+from src.prompts.advisor import strip_advisor_prefix
 from src.prompts.situations import SITUATIONS, situation_for
 from src.schemas.routing import IntentRoute, render_options
 from src.tools.bind_customer import bind_customer
@@ -38,7 +39,14 @@ async def respond(
 
     messages = [SystemMessage(content=system_prompt), *state["messages"]]
     reply = await llm.ainvoke(messages)
-    return {"messages": [reply]}
+    return {"messages": [_without_advisor_prefix(reply)]}
+
+
+def _without_advisor_prefix(reply):
+    # The LLM may imitate the advisor turns in the history; the customer never sees the prefix.
+    if isinstance(reply.content, str):
+        return reply.model_copy(update={"content": strip_advisor_prefix(reply.content)})
+    return reply
 
 
 async def _respond_with_tools(
@@ -80,4 +88,4 @@ async def _respond_with_tools(
 
     # Only the final AIMessage is kept in the conversation history; the tool calls and
     # results above stay in `messages` locally and are captured by the MLflow trace.
-    return {"messages": [reply]}
+    return {"messages": [_without_advisor_prefix(reply)]}
