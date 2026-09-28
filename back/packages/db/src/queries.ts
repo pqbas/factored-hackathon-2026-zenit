@@ -311,6 +311,39 @@ export async function getChatOwners() {
   }
 }
 
+// Latest customer message of each chat, in one query for a whole page of
+// chats (DISTINCT ON), for the advisor inbox preview. Messages from before
+// senderType existed count as the customer's when their role is 'user'.
+export async function getLastCustomerMessages({
+  chatIds,
+}: {
+  chatIds: string[];
+}): Promise<DBMessage[]> {
+  if (!isDatabaseAvailable() || chatIds.length === 0) return [];
+
+  try {
+    return await (await ensureDb())
+      .selectDistinctOn([message.chatId])
+      .from(message)
+      .where(
+        and(
+          inArray(message.chatId, chatIds),
+          or(
+            eq(message.senderType, 'customer'),
+            and(isNull(message.senderType), eq(message.role, 'user')),
+          ),
+        ),
+      )
+      .orderBy(message.chatId, desc(message.createdAt), desc(message.id));
+  } catch (error) {
+    console.error('[getLastCustomerMessages] Error:', error);
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to get last customer messages',
+    );
+  }
+}
+
 export async function getChatById({ id }: { id: string }) {
   if (!isDatabaseAvailable()) {
     console.log('[getChatById] Database not available, returning null');
