@@ -477,9 +477,9 @@ export async function updateChatAgentState({
   handledBy,
 }: {
   chatId: string;
-  useCase?: string;
-  intent?: string;
-  language?: string;
+  useCase?: string | null;
+  intent?: string | null;
+  language?: string | null;
   handledBy?: Chat['handledBy'];
 }) {
   if (!isDatabaseAvailable()) {
@@ -489,9 +489,9 @@ export async function updateChatAgentState({
 
   try {
     const updates: Partial<{
-      useCase: string;
-      intent: string;
-      language: string;
+      useCase: string | null;
+      intent: string | null;
+      language: string | null;
       handledBy: Chat['handledBy'];
     }> = {};
     if (useCase !== undefined) updates.useCase = useCase;

@@ -129,7 +129,10 @@ export function mockFmapiResponseObject(content: string) {
  * Generate a default mock Responses API stream for a text response.
  * This is used when no special handling (like MCP approval) is needed.
  */
-export function mockResponsesApiTextStream(text: string): string[] {
+export function mockResponsesApiTextStream(
+  text: string,
+  customOutputs?: Record<string, unknown>,
+): string[] {
   const responseId = generateUUID();
   const textItemId = generateUUID();
 
@@ -212,6 +215,8 @@ export function mockResponsesApiTextStream(text: string): string[] {
       output_index: 0,
       sequence_number: 5,
       type: 'response.output_item.done',
+      // The agent attaches custom_outputs to the turn's last output_item.done.
+      ...(customOutputs ? { custom_outputs: customOutputs } : {}),
     }),
     // Response completed
     mockSSE({

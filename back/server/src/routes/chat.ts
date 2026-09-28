@@ -42,6 +42,8 @@ import {
   saveMessages,
   updateChatLastContextById,
   updateChatVisiblityById,
+  updateChatAgentState,
+  markMessagesBlocked,
   isDatabaseAvailable,
 } from '@chat-template/db';
 import {
@@ -57,6 +59,7 @@ import {
   CONTEXT_HEADER_CONVERSATION_ID,
   CONTEXT_HEADER_USER_ID,
   CONTEXT_HEADER_SESSION_TOKEN,
+  getAndClearAgentOutputs,
 } from '@chat-template/core';
 import { ChatSDKError } from '@chat-template/core/errors';
 import { generateTitleFromUserMessage } from '../title';
@@ -302,6 +305,9 @@ chatRouter.post('/', requireAuth, async (req: Request, res: Response) => {
           'Finished message stream! Saving message...',
           JSON.stringify(responseMessage, null, 2),
         );
+        const agentOutputs = getAndClearAgentOutputs(id);
+        const blocked = agentOutputs?.blocked === true;
+
         await saveMessages({
           messages: [
             {
@@ -311,7 +317,7 @@ chatRouter.post('/', requireAuth, async (req: Request, res: Response) => {
               createdAt: new Date(),
               attachments: [],
               chatId: id,
-              blocked: false,
+              blocked,
             },
           ],
         });
@@ -327,8 +333,23 @@ chatRouter.post('/', requireAuth, async (req: Request, res: Response) => {
           }
         }
 
-        // Group 3 will re-add agent-state persistence (useCase/intent/language,
-        // blocked, handoff) from the agent's custom_outputs.
+        if (agentOutputs && dbAvailable) {
+          try {
+            // A blocked turn stays visible but is never sent to the agent again.
+            if (blocked && message) {
+              await markMessagesBlocked({ ids: [message.id] });
+            }
+            await updateChatAgentState({
+              chatId: id,
+              useCase: agentOutputs.useCase,
+              intent: agentOutputs.intent,
+              language: agentOutputs.language,
+              handledBy: agentOutputs.handoff ? 'human_queue' : undefined,
+            });
+          } catch (err) {
+            console.warn('Unable to persist agent state for chat', id, err);
+          }
+        }
 
         streamCache.clearActiveStream(id);
       },

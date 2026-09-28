@@ -8,24 +8,38 @@ agente no guarda estado y lo señala en `custom_outputs`. El registro del
 handoff (caso, resumen, asesor) llega en la Fase 5; acá solo cambia quién
 atiende.
 
-## 1. Contrato con el agente (propuesta, a confirmar en su Fase 7)
+## 1. Contrato con el agente (confirmado por el agente, 28-09-26)
 
-En cada turno, el agente adjunta `custom_outputs` al **último evento
-`response.output_item.done`** del stream, y en modo no streaming, a la
-respuesta. Hoy el back ya lee `custom_outputs` de cualquier evento SSE y se
-queda con el último (`providers-server.ts`), así que la posición exacta no
-rompe nada, pero el último `output_item.done` es la convención.
+En cada turno, el agente pone `custom_outputs` como campo de primer nivel del
+**último evento `response.output_item.done`** del stream, y en
+`ResponsesAgentResponse.custom_outputs` cuando no hay streaming. Un turno que el
+gate rechaza (sesión inválida) también lo trae, con `use_case`, `intent` y
+`language` en `null`.
 
-```json
+```ts
 {
-  "thread_id": "<id del chat>",
-  "use_case": "GENERAL_INQUIRY" | null,
-  "intent": "GENERAL_INQUIRY" | "GREETING" | ... | null,
-  "language": "es" | "pt" | ... | null,
-  "blocked": false,
-  "handoff": null | { "reason": "customer_request", "summary": "..." }
+  thread_id: string,
+  use_case: string | null,        // solo si la ruta tiene caso (hoy GENERAL_INQUIRY)
+  intent: string | null,
+  language: 'es' | 'pt' | 'other' | null,
+  blocked: boolean,
+  handoff: null | {
+    reason: 'customer_request' | 'commercial' | 'retention' | 'guardrail_risk'
+      | 'policy_escalation' | 'no_match' | 'tool_failure' | 'unsupported_language',
+    summary: string | null,       // null si el resumen del LLM falló
+    facts: {
+      condition: 'insists' | 'agent_failed' | 'no_use_case' | 'frustration' | null,
+      use_case: string | null, intent: string | null,
+      language: 'es' | 'pt' | 'other', sentiment: string, case_id: string | null,
+      tools_called: string[], verified_data: object | null,
+    },
+  },
 }
 ```
+
+Un `reason` desconocido se guarda como texto, no se rechaza. `facts` no trae
+datos sensibles. `blocked`, `use_case`, `intent` y `language` llegan en un PR
+chico del agente antes de su Fase 7; `handoff` llega con su Fase 7.
 
 | Campo      | Qué hace el back                                                                                                  |
 | ---------- | ----------------------------------------------------------------------------------------------------------------- |

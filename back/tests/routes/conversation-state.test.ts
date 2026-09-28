@@ -5,6 +5,7 @@ import {
   updateChatAgentState,
   markMessagesBlocked,
   getMessagesByChatId,
+  getChatById,
 } from '@chat-template/db';
 import { skipInEphemeralMode } from '../helpers';
 
@@ -91,7 +92,11 @@ test.describe('Conversation state (with database)', () => {
     const chatId = generateUUID();
     const blockedText = `blocked question ${generateUUID()}`;
 
-    const firstResponse = await postChatMessage(adaContext, chatId, blockedText);
+    const firstResponse = await postChatMessage(
+      adaContext,
+      chatId,
+      blockedText,
+    );
     expect(firstResponse.status()).toBe(200);
 
     const firstTurnMessages = await getMessagesByChatId({ id: chatId });
@@ -191,5 +196,79 @@ test.describe('Conversation state (with database)', () => {
       { data: { chatId: generateUUID() } },
     );
     expect(response.status()).toBe(404);
+  });
+
+  test("a turn stores the agent's use_case, intent and language", async ({
+    adaContext,
+  }) => {
+    const chatId = generateUUID();
+    const response = await postChatMessage(
+      adaContext,
+      chatId,
+      '[agent-outputs:state] ¿Cuál es mi saldo?',
+    );
+    expect(response.status()).toBe(200);
+    await response.text();
+
+    await expect
+      .poll(async () => (await getChatById({ id: chatId }))?.useCase)
+      .toBe('GENERAL_INQUIRY');
+    const chat = await getChatById({ id: chatId });
+    expect(chat?.intent).toBe('GENERAL_INQUIRY');
+    expect(chat?.language).toBe('es');
+    expect(chat?.handledBy).toBe('ai_agent');
+  });
+
+  test('a blocked turn marks both messages and is not resent to the agent', async ({
+    adaContext,
+  }) => {
+    const chatId = generateUUID();
+    const first = await postChatMessage(
+      adaContext,
+      chatId,
+      '[agent-outputs:blocked] mensaje rechazado',
+    );
+    await first.text();
+
+    await expect
+      .poll(
+        async () =>
+          (await getMessagesByChatId({ id: chatId })).filter((m) => m.blocked)
+            .length,
+      )
+      .toBe(2);
+
+    const second = await postChatMessage(adaContext, chatId, 'otra pregunta');
+    await second.text();
+
+    const captured = (await (
+      await adaContext.request.get('/api/test/captured-requests')
+    ).json()) as Array<{
+      context?: { conversation_id?: string };
+      input?: unknown;
+    }>;
+    const chatRequests = captured.filter(
+      (req) => req.context?.conversation_id === chatId,
+    );
+    expect(chatRequests).toHaveLength(2);
+    expect(JSON.stringify(chatRequests[1].input)).not.toContain(
+      'mensaje rechazado',
+    );
+  });
+
+  test('a turn with a handoff moves the chat to the human queue', async ({
+    adaContext,
+  }) => {
+    const chatId = generateUUID();
+    const response = await postChatMessage(
+      adaContext,
+      chatId,
+      '[agent-outputs:handoff] quiero hablar con un asesor',
+    );
+    await response.text();
+
+    await expect
+      .poll(async () => (await getChatById({ id: chatId }))?.handledBy)
+      .toBe('human_queue');
   });
 });
