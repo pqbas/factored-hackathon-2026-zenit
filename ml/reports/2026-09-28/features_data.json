@@ -1,0 +1,331 @@
+{
+  "metadata": {
+    "source_table": "workspace.bank_silver.transactions",
+    "delta_version": 1,
+    "warehouse_id": "07ca55766c9c5097",
+    "profile_name": "personal",
+    "started_at": "2026-09-28T22:29:20.146436+00:00",
+    "tool": "ml/validate_features.py",
+    "phase": "1"
+  },
+  "results": [
+    {
+      "label": "usd_amount_coverage_by_currency",
+      "data": {
+        "statement_id": "01f1bb8c-0cb9-1ec2-a214-ab2ef76e1da9",
+        "external_links": [
+          {
+            "link_id": "chunk_0",
+            "data_array": [
+              [
+                "USD",
+                "2437979",
+                "0",
+                "2437979"
+              ],
+              [
+                "COP",
+                "1194444",
+                "0",
+                "59436"
+              ],
+              [
+                "ARS",
+                "792585",
+                "0",
+                "40041"
+              ]
+            ]
+          }
+        ],
+        "schema": {
+          "column_count": 4,
+          "columns": [
+            {
+              "name": "currency",
+              "position": 0,
+              "type_name": "STRING",
+              "type_text": "STRING"
+            },
+            {
+              "name": "n",
+              "position": 1,
+              "type_name": "LONG",
+              "type_text": "BIGINT"
+            },
+            {
+              "name": "null_amount",
+              "position": 2,
+              "type_name": "LONG",
+              "type_text": "BIGINT"
+            },
+            {
+              "name": "null_amount_usd",
+              "position": 3,
+              "type_name": "LONG",
+              "type_text": "BIGINT"
+            }
+          ]
+        },
+        "total_row_count": 3,
+        "truncated": false,
+        "state": "SUCCEEDED",
+        "execution_ms": 8669.302939000772
+      }
+    },
+    {
+      "label": "non_usd_missing_conversion",
+      "data": {
+        "statement_id": "01f1bb8c-1206-1341-b7d3-eaa42c441e63",
+        "external_links": [
+          {
+            "link_id": "chunk_0",
+            "data_array": [
+              [
+                "1987029",
+                "99477"
+              ]
+            ]
+          }
+        ],
+        "schema": {
+          "column_count": 2,
+          "columns": [
+            {
+              "name": "n_non_usd",
+              "position": 0,
+              "type_name": "LONG",
+              "type_text": "BIGINT"
+            },
+            {
+              "name": "n_missing_conversion",
+              "position": 1,
+              "type_name": "LONG",
+              "type_text": "BIGINT"
+            }
+          ]
+        },
+        "total_row_count": 1,
+        "truncated": false,
+        "state": "SUCCEEDED",
+        "execution_ms": 2415.9568949980894
+      }
+    },
+    {
+      "label": "normalized_amount_missing",
+      "data": {
+        "statement_id": "01f1bb8c-1355-1a2f-b1ea-5adcd88b7f33",
+        "external_links": [
+          {
+            "link_id": "chunk_0",
+            "data_array": [
+              [
+                "4425008",
+                "99477"
+              ]
+            ]
+          }
+        ],
+        "schema": {
+          "column_count": 2,
+          "columns": [
+            {
+              "name": "n",
+              "position": 0,
+              "type_name": "LONG",
+              "type_text": "BIGINT"
+            },
+            {
+              "name": "n_missing_norm",
+              "position": 1,
+              "type_name": "LONG",
+              "type_text": "BIGINT"
+            }
+          ]
+        },
+        "total_row_count": 1,
+        "truncated": false,
+        "state": "SUCCEEDED",
+        "execution_ms": 1865.787704999093
+      }
+    },
+    {
+      "label": "usd_rows_amount_usd_null",
+      "data": {
+        "statement_id": "01f1bb8c-1492-1431-a233-8447e0e7aef7",
+        "external_links": [
+          {
+            "link_id": "chunk_0",
+            "data_array": [
+              [
+                "2437979",
+                "0",
+                "0"
+              ]
+            ]
+          }
+        ],
+        "schema": {
+          "column_count": 3,
+          "columns": [
+            {
+              "name": "n_usd",
+              "position": 0,
+              "type_name": "LONG",
+              "type_text": "BIGINT"
+            },
+            {
+              "name": "null_amount",
+              "position": 1,
+              "type_name": "LONG",
+              "type_text": "BIGINT"
+            },
+            {
+              "name": "non_null_amount_usd",
+              "position": 2,
+              "type_name": "LONG",
+              "type_text": "BIGINT"
+            }
+          ]
+        },
+        "total_row_count": 1,
+        "truncated": false,
+        "state": "SUCCEEDED",
+        "execution_ms": 2204.778589999478
+      }
+    },
+    {
+      "label": "conversion_ratio_stats",
+      "data": {
+        "statement_id": "01f1bb8c-15d1-1f07-8254-cfff9ba447e4",
+        "external_links": [
+          {
+            "link_id": "chunk_0",
+            "data_array": [
+              [
+                "COP",
+                "1135008",
+                "0.000249762044445959",
+                "0.0002500000103579408094",
+                "0.000250246133522763",
+                "0",
+                "0"
+              ],
+              [
+                "ARS",
+                "752544",
+                "0.002854386562251731",
+                "0.0028571428445223740183",
+                "0.002859925925086930",
+                "0",
+                "0"
+              ]
+            ]
+          }
+        ],
+        "schema": {
+          "column_count": 7,
+          "columns": [
+            {
+              "name": "currency",
+              "position": 0,
+              "type_name": "STRING",
+              "type_text": "STRING"
+            },
+            {
+              "name": "n",
+              "position": 1,
+              "type_name": "LONG",
+              "type_text": "BIGINT"
+            },
+            {
+              "name": "min_ratio",
+              "position": 2,
+              "type_name": "DECIMAL",
+              "type_precision": 33,
+              "type_scale": 18,
+              "type_text": "DECIMAL(33,18)"
+            },
+            {
+              "name": "avg_ratio",
+              "position": 3,
+              "type_name": "DECIMAL",
+              "type_precision": 37,
+              "type_scale": 22,
+              "type_text": "DECIMAL(37,22)"
+            },
+            {
+              "name": "max_ratio",
+              "position": 4,
+              "type_name": "DECIMAL",
+              "type_precision": 33,
+              "type_scale": 18,
+              "type_text": "DECIMAL(33,18)"
+            },
+            {
+              "name": "non_positive_ratio",
+              "position": 5,
+              "type_name": "LONG",
+              "type_text": "BIGINT"
+            },
+            {
+              "name": "zero_amount",
+              "position": 6,
+              "type_name": "LONG",
+              "type_text": "BIGINT"
+            }
+          ]
+        },
+        "total_row_count": 2,
+        "truncated": false,
+        "state": "SUCCEEDED",
+        "execution_ms": 2047.7488519973122
+      }
+    },
+    {
+      "label": "sign_consistency",
+      "data": {
+        "statement_id": "01f1bb8c-170d-1b2f-8bc0-25c53fce2891",
+        "external_links": [
+          {
+            "link_id": "chunk_0",
+            "data_array": [
+              [
+                "0",
+                "0",
+                "0"
+              ]
+            ]
+          }
+        ],
+        "schema": {
+          "column_count": 3,
+          "columns": [
+            {
+              "name": "negative_amount",
+              "position": 0,
+              "type_name": "LONG",
+              "type_text": "BIGINT"
+            },
+            {
+              "name": "negative_amount_usd",
+              "position": 1,
+              "type_name": "LONG",
+              "type_text": "BIGINT"
+            },
+            {
+              "name": "zero_amount",
+              "position": 2,
+              "type_name": "LONG",
+              "type_text": "BIGINT"
+            }
+          ]
+        },
+        "total_row_count": 1,
+        "truncated": false,
+        "state": "SUCCEEDED",
+        "execution_ms": 1840.9457210000255
+      }
+    }
+  ]
+}
