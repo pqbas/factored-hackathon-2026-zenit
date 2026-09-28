@@ -6,7 +6,7 @@ import {
 } from 'express';
 import { authMiddleware, requireAuth } from '../middleware/auth';
 import {
-  getChatsByUserId,
+  getChats,
   isDatabaseAvailable,
   type ChatStatusFilter,
 } from '@chat-template/db';
@@ -56,8 +56,8 @@ historyRouter.get('/', requireAuth, async (req: Request, res: Response) => {
   }
 
   try {
-    const chats = await getChatsByUserId({
-      id: session.user.id,
+    const chats = await getChats({
+      scope: { userId: session.user.id },
       limit,
       startingAfter: startingAfter ?? null,
       endingBefore: endingBefore ?? null,

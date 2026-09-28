@@ -31,6 +31,7 @@ export const chat = createTable('Chat', {
   createdAt: timestamp('createdAt').notNull(),
   title: text('title').notNull(),
   userId: text('userId').notNull(),
+  userEmail: varchar('userEmail', { length: 256 }),
   visibility: varchar('visibility', { enum: ['public', 'private'] })
     .notNull()
     .default('private'),

@@ -35,7 +35,7 @@ Shipped en PR #8.
 
 ---
 
-## Phase 2: Conversaciones de todos los usuarios para admin
+## Phase 2: Conversaciones de todos los usuarios para admin (Complete)
 
 **Goal:** que un operador pueda revisar las conversaciones de cualquier usuario
 desde la pantalla de admin del front.
@@ -44,14 +44,28 @@ desde la pantalla de admin del front.
      la tabla User y el chat solo guarda userId, así que el email del dueño
      hay que empezar a guardarlo; los chats viejos quedan sin email. -->
 
-- [ ] Un admin lista las conversaciones de todos los usuarios, con los mismos
+- [x] Un admin lista las conversaciones de todos los usuarios, con los mismos
       filtros y la misma paginación que su propio historial, y puede filtrar
       por usuario.
-- [ ] Cada conversación de la lista muestra el email de su dueño.
-- [ ] Un admin obtiene la lista de usuarios con conversaciones, para el filtro.
-- [ ] Un admin abre los mensajes de una conversación ajena.
-- [ ] Un usuario que no es admin recibe 403 en esas rutas.
-- [ ] Quién es admin se configura con una lista de emails, sin tocar código.
+- [x] Cada conversación de la lista muestra el email de su dueño.
+- [x] Un admin obtiene la lista de usuarios con conversaciones, para el filtro.
+- [x] Un admin abre los mensajes de una conversación ajena.
+- [x] Un usuario que no es admin recibe 403 en esas rutas.
+- [x] Quién es admin se configura con una lista de emails, sin tocar código.
+- [x] La sesión informa el rol del usuario (admin, asesor o cliente) para que
+      el front decida qué mostrar; admin y asesor se configuran con listas de
+      emails, y si un email está en las dos gana admin.
+
+<!-- Matriz de acceso por rol (decisión del usuario, 28-09-26). El front solo
+     usa el rol para el menú; el back valida cada ruta:
+     - customer: su chat con el asistente y su cuenta (Mis productos).
+     - advisor: su chat con el asistente y la consola del asesor. No ve Mis
+       productos ni la vista admin.
+     - admin: todo.
+     Rutas: /api/admin → requireAdmin; API de la consola → requireAdvisor
+     (advisor o admin); rutas de cuenta/productos → customer o admin. -->
+
+Shipped en PR #15.
 
 ---
 
@@ -126,7 +140,8 @@ en el back y pase a un humano, sin que el cliente repita su historia.
 casos derivados.
 
 <!-- Antes dependía de las rutas /handoffs del agente; ahora la API es del
-     back y el contrato lo define el back para el front. -->
+     back y el contrato lo define el back para el front. Decidido:
+     requireAdvisor acepta advisor o admin. -->
 
 - [ ] El asesor ve la bandeja de casos pendientes, ordenada por prioridad.
 - [ ] El asesor abre un caso con su resumen y el historial del chat.

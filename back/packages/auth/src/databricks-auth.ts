@@ -31,6 +31,7 @@ export interface ClientSession {
     email: string;
     name?: string;
     preferredUsername?: string;
+    role: 'admin' | 'advisor' | 'customer';
   } | null;
 }
 
