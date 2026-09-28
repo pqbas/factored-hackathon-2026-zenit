@@ -35,7 +35,7 @@ e2e cubre la unión entre las piezas.
       fila.
 - [ ] Abrir un cliente con no leídos quita el contador.
 - [ ] Enviar un mensaje agrega una burbuja de agente con ese texto.
-- [ ] El acceso "Conversaciones" de la barra lateral lleva a `/conversations`.
+- [ ] El riel cambia entre Agente y Chats y marca la sección activa.
 
 ## Manual Checks
 
@@ -51,8 +51,9 @@ Con `npm run dev` en `front/`:
 - [ ] Cambiar a modo oscuro → burbujas, fondo y lista se leen bien.
 - [ ] Achicar la ventana a menos de 768 px → se ve solo la lista; al elegir un
       cliente se ve solo la conversación, y la flecha vuelve a la lista.
-- [ ] Desde `/` (con el back corriendo), el acceso "Conversaciones" de la
-      barra lateral abre la vista, y el botón de la vista vuelve al chat.
+- [ ] Con el back corriendo, el riel de la izquierda pasa de Agente (historial
+      + chat) a Chats (lista + conversación) y de vuelta, y la barra lateral
+      del chat no queda tapada por el riel.
 
 ## Definition of Done
 

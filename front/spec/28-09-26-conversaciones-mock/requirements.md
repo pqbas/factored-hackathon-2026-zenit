@@ -17,9 +17,11 @@ Después de esta fase, la app debe seguir haciendo lo que hace hoy:
 
 Y cambia en estas cosas:
 
-2. Desde la barra lateral del chat hay un acceso a "Conversaciones" que lleva
-   a `/conversations`, y desde `/conversations` hay un acceso de vuelta al
-   chat.
+2. La app se organiza en tres columnas. La primera es un riel angosto de
+   íconos, siempre visible, que cambia de sección: "Agente" (`/`) y "Chats"
+   (`/conversations`), con la sección activa resaltada. La segunda y la
+   tercera columna las pone cada sección: en Agente, el historial y el chat
+   con el agente; en Chats, la lista de clientes y la conversación.
 3. `/conversations` muestra dos paneles, como WhatsApp Web: la lista de
    clientes a la izquierda y la conversación a la derecha.
 4. Cada fila de la lista es un cliente demo: avatar con iniciales, nombre, el
@@ -49,6 +51,12 @@ Y cambia en estas cosas:
 - La vista nueva vive en su propia ruta y no reemplaza al chat, porque son dos
   interfaces con usos distintos: una para hablar con el agente y otra para
   revisar conversaciones.
+- El cambio de sección va en un riel de íconos (`src/components/nav-rail.tsx`,
+  montado en `src/layouts/AppShell.tsx`) y no en botones dentro de cada
+  pantalla, porque así cada sección define su propia segunda y tercera columna
+  y sumar una sección nueva es agregar una entrada al riel. La barra lateral
+  del chat se corre `md:left-16` para quedar a la derecha del riel, porque el
+  componente `Sidebar` es `position: fixed`.
 - Los datos mock viven en un archivo del front (`src/mocks/conversations.ts`)
   y no en un endpoint, porque esta fase solo sirve para validar la UI. Cuando
   exista el endpoint de conversaciones, se reemplaza la fuente de datos y los

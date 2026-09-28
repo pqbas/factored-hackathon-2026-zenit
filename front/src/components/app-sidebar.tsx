@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/sidebar';
 import { Link } from 'react-router-dom';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
-import { MessagesSquare, PlusIcon } from 'lucide-react';
+import { PlusIcon } from 'lucide-react';
 import type { ClientSession } from '@chat-template/auth';
 
 export function AppSidebar({
@@ -27,7 +27,7 @@ export function AppSidebar({
   const { setOpenMobile } = useSidebar();
 
   return (
-    <Sidebar className="group-data-[side=left]:border-r-0">
+    <Sidebar className="group-data-[side=left]:border-r-0 md:left-16">
       <SidebarHeader>
         <SidebarMenu>
           <div className="flex flex-row items-center justify-between">
@@ -43,25 +43,6 @@ export function AppSidebar({
               </span>
             </Link>
             <div className="flex items-center gap-1">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    type="button"
-                    className="h-8 p-1 md:h-fit md:p-2"
-                    onClick={() => {
-                      setOpenMobile(false);
-                      navigate('/conversations');
-                    }}
-                  >
-                    <MessagesSquare />
-                    <span className="sr-only">Conversaciones</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent align="end" className="hidden md:block">
-                  Conversaciones
-                </TooltipContent>
-              </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button

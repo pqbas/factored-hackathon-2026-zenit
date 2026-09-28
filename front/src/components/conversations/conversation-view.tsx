@@ -1,6 +1,7 @@
 import { ArrowLeft, CheckCheck, SendHorizontal } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
+import { avatarColor } from '@/components/conversations/conversation-list';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { formatListTime, getInitials, groupMessagesByDay } from '@/lib/conversations';
@@ -45,7 +46,12 @@ export function ConversationView({
             <ArrowLeft className="h-5 w-5" />
           </button>
         )}
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary font-medium text-primary-foreground text-sm">
+        <div
+          className={cn(
+            'flex h-10 w-10 shrink-0 items-center justify-center rounded-full font-medium text-sm text-white',
+            avatarColor(conversation.customerId),
+          )}
+        >
           {getInitials(conversation.name)}
         </div>
         <span className="font-medium">{conversation.name}</span>

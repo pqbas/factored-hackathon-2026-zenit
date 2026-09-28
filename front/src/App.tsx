@@ -5,6 +5,7 @@ import { AppConfigProvider } from '@/contexts/AppConfigContext';
 import { DataStreamProvider } from '@/components/data-stream-provider';
 import { Toaster } from 'sonner';
 import RootLayout from '@/layouts/RootLayout';
+import AppShell from '@/layouts/AppShell';
 import ChatLayout from '@/layouts/ChatLayout';
 import NewChatPage from '@/pages/NewChatPage';
 import ChatPage from '@/pages/ChatPage';
@@ -24,11 +25,16 @@ function App() {
             <Toaster position="top-center" />
             <Routes>
               <Route path="/" element={<RootLayout />}>
-                <Route element={<ChatLayout />}>
-                  <Route index element={<NewChatPage />} />
-                  <Route path="chat/:id" element={<ChatPage />} />
+                <Route element={<AppShell />}>
+                  <Route element={<ChatLayout />}>
+                    <Route index element={<NewChatPage />} />
+                    <Route path="chat/:id" element={<ChatPage />} />
+                  </Route>
+                  <Route
+                    path="conversations"
+                    element={<ConversationsPage />}
+                  />
                 </Route>
-                <Route path="conversations" element={<ConversationsPage />} />
               </Route>
             </Routes>
           </DataStreamProvider>

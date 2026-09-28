@@ -53,19 +53,27 @@ test.describe('Conversations mock view', () => {
   });
 });
 
-test.describe('Chat sidebar navigation', () => {
-  test('the "Conversaciones" link from the chat sidebar leads to /conversations', async ({
+test.describe('Nav rail', () => {
+  test('switches between the agent and the chats sections', async ({
     adaContext,
   }) => {
     const { page } = adaContext;
     const chatPage = new ChatPage(page);
     await chatPage.createNewChat();
-    await chatPage.openSideBar();
+    await expect(page.getByTestId('nav-agent')).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
 
-    await page.getByRole('button', { name: 'Conversaciones' }).click();
+    await page.getByTestId('nav-chats').click();
     await expect(page).toHaveURL(/\/conversations$/);
+    await expect(page.getByTestId('nav-chats')).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
 
-    await page.getByTestId('back-to-chat').click();
+    await page.getByTestId('nav-agent').click();
     await expect(page).toHaveURL(/\/$/);
+    await expect(chatPage.multimodalInput).toBeVisible();
   });
 });
