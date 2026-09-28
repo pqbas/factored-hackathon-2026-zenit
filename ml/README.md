@@ -41,3 +41,7 @@ Phase 1 feature contract: [features.py](features.py), validation [reports/2026-0
 - V1 predictors: `amount`, `currency`, `log_abs_amount`, `amount_sign`, `amount_usd_norm`, `transaction_type`, `channel`, `transaction_country`, `merchant_category`, `hour`, `weekday`, `is_weekend`.
 - **Normalized USD amount is viable**: only 2.25% missing (non-USD rows without a conversion), vs 57.3% for raw `amount_usd` (all USD rows lack a conversion because they are already USD). Conversion ratios are internally consistent per currency.
 - No fitted preprocessing (imputers/encoders/scalers) in this phase; those are train-only and belong to Phase 2.
+
+## Exploratory notebook
+
+[Fraud EDA notebook](notebooks/01_fraud_eda.ipynb) organizes Phases 0/1 into questions, Spark aggregate queries, charts, and interpretation cells. See [execution instructions](notebooks/README.md). It is prepared locally and has not been imported or executed remotely.
