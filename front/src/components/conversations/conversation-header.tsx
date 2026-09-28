@@ -92,7 +92,8 @@ export function ConversationHeader({
           className="truncate text-muted-foreground text-xs"
         >
           {useCaseLabel(chat)}
-          {chat.assignedTo && !chat.closedAt && ` · La atiende ${mine ? 'tú' : chat.assignedTo}`}
+          {mine && ' · La atiendes tú'}
+          {heldByOther && ` · La atiende ${chat.assignedTo}`}
         </span>
       </div>
       <div className="ml-auto flex shrink-0 items-center gap-2">
