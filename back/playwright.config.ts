@@ -141,10 +141,10 @@ export default defineConfig({
         { length: 64 },
         (_, i) => `ada-${i}@example.com`,
       ).join(','),
-      ADVISOR_EMAILS: Array.from(
-        { length: 64 },
-        (_, i) => `babbage-${i}@example.com`,
-      ).join(','),
+      ADVISOR_EMAILS: [
+        ...Array.from({ length: 64 }, (_, i) => `babbage-${i}@example.com`),
+        'asesor2@example.com',
+      ].join(','),
       ...(TEST_MODE === 'ephemeral'
         ? {
             POSTGRES_URL: '',
