@@ -1,4 +1,5 @@
 import type { UIMessage } from 'ai';
+import { ASSISTANT_NAME } from '@/lib/assistant';
 import {
   useRef,
   useEffect,
@@ -248,7 +249,7 @@ function PureMultimodalInput({
         onSubmit={(event) => {
           event.preventDefault();
           if (status !== 'ready') {
-            toast.error('Espera a que el asistente termine de responder.');
+            toast.error(`Espera a que ${ASSISTANT_NAME} termine de responder.`);
           } else {
             submitForm();
           }

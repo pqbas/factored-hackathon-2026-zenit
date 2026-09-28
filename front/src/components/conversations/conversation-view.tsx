@@ -1,4 +1,5 @@
 import { ArrowDown, Bot, Hourglass, UserRound } from 'lucide-react';
+import { ASSISTANT_NAME } from '@/lib/assistant';
 import { useEffect, useRef, useState } from 'react';
 
 import { AdvisorComposer } from '@/components/conversations/advisor-composer';
@@ -17,7 +18,7 @@ const SCROLL_THRESHOLD = 120;
 const BANNER = {
   assistant: {
     icon: Bot,
-    text: 'El asistente está respondiendo. Apágalo para escribir tú.',
+    text: `${ASSISTANT_NAME} está respondiendo. Apágalo para escribir tú.`,
     className: 'text-tint-blue-foreground',
   },
   waiting: {
@@ -27,12 +28,12 @@ const BANNER = {
   },
   advisor: {
     icon: UserRound,
-    text: 'Estás atendiendo esta conversación. El asistente no responderá hasta que lo vuelvas a encender.',
+    text: `Estás atendiendo esta conversación. ${ASSISTANT_NAME} no responderá hasta que lo vuelvas a encender.`,
     className: 'text-primary',
   },
   resolved: {
     icon: Bot,
-    text: 'Conversación resuelta. Si el cliente escribe, responde el asistente.',
+    text: `Conversación resuelta. Si el cliente escribe, responde ${ASSISTANT_NAME}.`,
     className: 'text-tint-green-foreground',
   },
 };

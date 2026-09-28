@@ -1,11 +1,12 @@
 import { ArrowRight, CheckCheck, LockIcon } from 'lucide-react';
+import { ASSISTANT_NAME } from '@/lib/assistant';
 
 import { formatListTime } from '@/lib/conversations';
 import { cn } from '@/lib/utils';
 import type { MockMessage } from '@/mocks/conversations';
 
 const SENDER_LABEL: Partial<Record<MockMessage['from'], string>> = {
-  assistant: 'Asistente',
+  assistant: ASSISTANT_NAME,
   advisor: 'Tú',
 };
 
