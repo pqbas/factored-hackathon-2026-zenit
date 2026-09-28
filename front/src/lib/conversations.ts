@@ -1,6 +1,7 @@
 // Pure helpers for the /conversations mock view: no side effects, no fetch.
 
 import { format, isSameDay, subDays } from 'date-fns';
+import { ASSISTANT_NAME } from '@/lib/assistant';
 import { es } from 'date-fns/locale';
 import type {
   MockAttachment,
@@ -102,7 +103,7 @@ export function maskPhone(phone: string): string {
 export type ConversationStatus = 'assistant' | 'waiting' | 'advisor' | 'resolved';
 
 export const STATUS_LABEL: Record<ConversationStatus, string> = {
-  assistant: 'Con asistente',
+  assistant: `Con ${ASSISTANT_NAME}`,
   waiting: 'Sin atender',
   advisor: 'En atención',
   resolved: 'Resuelto',
@@ -214,7 +215,7 @@ function updateConversation(
           ...conversation.messages,
           newMessage(
             'system',
-            'Conversación resuelta · vuelve al asistente',
+            `Conversación resuelta · vuelve con ${ASSISTANT_NAME}`,
             action.sentAt,
           ),
         ],
