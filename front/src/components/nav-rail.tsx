@@ -1,4 +1,11 @@
-import { MessageCircle, MessagesSquare, type LucideIcon } from 'lucide-react';
+import {
+  MessageCircle,
+  MessagesSquare,
+  Moon,
+  Sun,
+  type LucideIcon,
+} from 'lucide-react';
+import { useTheme } from 'next-themes';
 import { Link, useLocation } from 'react-router-dom';
 
 import { BrandMark } from '@/components/brand-mark';
@@ -40,6 +47,9 @@ const NAV_ITEMS: NavItem[] = [
 export function NavRail() {
   const { pathname } = useLocation();
   const { session } = useSession();
+  const { resolvedTheme, setTheme } = useTheme();
+  const isDark = resolvedTheme !== 'light';
+  const themeLabel = isDark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro';
   const userName =
     session?.user?.name ||
     session?.user?.preferredUsername ||
@@ -75,8 +85,26 @@ export function NavRail() {
             </Tooltip>
           );
         })}
+        <div className="flex-1" />
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              data-testid="theme-toggle"
+              aria-label={themeLabel}
+              onClick={() => setTheme(isDark ? 'light' : 'dark')}
+              className="mb-2 flex size-11 items-center justify-center rounded-[10px] text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+            >
+              {isDark ? (
+                <Sun className="size-5" strokeWidth={1.7} />
+              ) : (
+                <Moon className="size-5" strokeWidth={1.7} />
+              )}
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="right">{themeLabel}</TooltipContent>
+        </Tooltip>
       </TooltipProvider>
-      <div className="flex-1" />
       {userName && <UserAvatar name={userName} />}
     </nav>
   );
