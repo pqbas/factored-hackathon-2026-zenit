@@ -11,6 +11,7 @@ import NewChatPage from '@/pages/NewChatPage';
 import ChatPage from '@/pages/ChatPage';
 import ConversationsPage from '@/pages/ConversationsPage';
 import ProductsPage from '@/pages/ProductsPage';
+import { RequireSection } from '@/components/require-section';
 
 function App() {
   return (
@@ -33,9 +34,20 @@ function App() {
                   </Route>
                   <Route
                     path="conversations"
-                    element={<ConversationsPage />}
+                    element={
+                      <RequireSection section="chats">
+                        <ConversationsPage />
+                      </RequireSection>
+                    }
                   />
-                  <Route path="products" element={<ProductsPage />} />
+                  <Route
+                    path="products"
+                    element={
+                      <RequireSection section="products">
+                        <ProductsPage />
+                      </RequireSection>
+                    }
+                  />
                 </Route>
               </Route>
             </Routes>

@@ -6,9 +6,12 @@ import React, {
   useCallback,
 } from 'react';
 import type { ClientSession } from '@chat-template/auth';
+import { type Role, roleOf } from '@/lib/roles';
 
 interface SessionContextType {
   session: ClientSession | null;
+  // From `session.user.role`; `customer` when missing or unknown.
+  role: Role;
   loading: boolean;
   error: Error | null;
   refetch: () => Promise<void>;
@@ -49,7 +52,13 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <SessionContext.Provider
-      value={{ session, loading, error, refetch: fetchSession }}
+      value={{
+        session,
+        role: roleOf(session),
+        loading,
+        error,
+        refetch: fetchSession,
+      }}
     >
       {children}
     </SessionContext.Provider>
