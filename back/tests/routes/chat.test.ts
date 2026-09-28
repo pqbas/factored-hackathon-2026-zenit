@@ -41,6 +41,25 @@ test.describe
       expect(message).toEqual(getMessageByErrorCode('bad_request:api'));
     });
 
+    test('Ada cannot invoke chat generation with an empty sessionToken', async ({
+      adaContext,
+    }) => {
+      const response = await adaContext.request.post('/api/chat', {
+        data: {
+          id: generateUUID(),
+          message: TEST_PROMPTS.SKY.MESSAGE,
+          selectedChatModel: 'chat-model',
+          selectedVisibilityType: 'private',
+          sessionToken: '',
+        },
+      });
+      expect(response.status()).toBe(400);
+
+      const { code, message } = await response.json();
+      expect(code).toEqual('bad_request:api');
+      expect(message).toEqual(getMessageByErrorCode('bad_request:api'));
+    });
+
     test('Ada can invoke chat generation', async ({ adaContext }) => {
       const chatId = generateUUID();
 

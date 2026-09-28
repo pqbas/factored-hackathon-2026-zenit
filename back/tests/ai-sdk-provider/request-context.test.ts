@@ -5,15 +5,17 @@ test.describe("Request Context Utils", () => {
   test.describe("shouldInjectContextForEndpoint", () => {
     const originalEnv = process.env.API_PROXY;
 
+    // Reflect.deleteProperty instead of `delete`: Biome's noDelete autofix
+    // rewrites `delete` to `= undefined`, which Node stores as "undefined".
     test.beforeEach(() => {
-      delete process.env.API_PROXY;
+      Reflect.deleteProperty(process.env, "API_PROXY");
     });
 
     test.afterEach(() => {
       if (originalEnv !== undefined) {
         process.env.API_PROXY = originalEnv;
       } else {
-        delete process.env.API_PROXY;
+        Reflect.deleteProperty(process.env, "API_PROXY");
       }
     });
 

@@ -184,10 +184,10 @@ npm test                 # Run all Playwright tests (sets PLAYWRIGHT=True)
                          # Note: It can be helpful to start "export PLAYWRIGHT=True npm run dev" in parallel
                          # for shorter test loops if iterating over tests multiple times
 npx playwright test --ui # Run tests in UI mode
-npx playwright test --headed --project=e2e  # Run E2E tests with browser visible
 ```
 
-**Test projects:** `unit`, `e2e`, `routes`
+**Test projects:** `unit`, `routes`, plus `e2e` (the front's browser tests in `tests/e2e/`) only when `FRONT_URL` points at a running front, e.g. `FRONT_URL=http://localhost:3000 npx playwright test --project=e2e`
+**Test port:** 3100, so tests never reuse the Vite (3000) or Express (3001) dev servers
 **Test timeout:** 240 seconds (very generous for AI operations)
 
 ### Deployment (Databricks Asset Bundle)
@@ -413,29 +413,10 @@ Automatically provided by the platform:
 
 ```
 tests/
-├── e2e/              # Browser automation tests (Playwright)
-├── routes/           # API endpoint tests
+├── routes/           # API endpoint tests (real server, MSW-mocked endpoint)
 ├── ai-sdk-provider/  # Unit tests for AI provider logic
 ├── api-mocking/      # MSW mock server setup
-├── pages/            # Page object models
 └── fixtures.ts       # Test fixtures (multi-user scenarios)
-```
-
-### Writing E2E Tests
-
-Use page object pattern from `tests/pages/ChatPage.ts`:
-
-```typescript
-import { test } from "./fixtures";
-import { ChatPage } from "./pages/ChatPage";
-
-test("should send a message", async ({ page, adaContext }) => {
-  const chatPage = new ChatPage(page);
-  await chatPage.createNewChat();
-  await chatPage.sendUserMessage("Hello");
-  const response = await chatPage.getRecentAssistantMessage();
-  expect(response).toBeTruthy();
-});
 ```
 
 ### API Mocking

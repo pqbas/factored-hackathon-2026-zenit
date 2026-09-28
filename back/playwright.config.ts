@@ -29,6 +29,10 @@ if (TEST_MODE === 'with-db') {
   config({ path: ['.env'] });
 }
 
+// A local .env pointing at a real agent (API_PROXY) would send the test
+// server's requests past the MSW mocks, which only match /serving-endpoints.
+Reflect.deleteProperty(process.env, 'API_PROXY');
+
 console.log(`[Playwright] Running in "${TEST_MODE}" mode)`);
 
 // For with-db mode, verify database is available
@@ -44,14 +48,17 @@ if (TEST_MODE === 'with-db') {
     console.error('\nPlease either:');
     console.error('  1. Add database configuration to .env, or');
     console.error('  2. Run ephemeral tests instead: npm run test:ephemeral\n');
-    process.exit(0);
+    // Fail instead of passing with zero tests, so `npm test` can't look green
+    // when the with-db suite never ran.
+    process.exit(1);
   }
 
   console.log('✓ Database configuration found, tests will use database');
 }
 
-// Use default port 3000
-const PORT = process.env.PORT || 3000;
+// Not 3000/3001: those are the Vite and Express dev servers, and
+// reuseExistingServer would run the tests against whichever one is up.
+const PORT = process.env.PORT || 3100;
 const baseURL = `http://localhost:${PORT}`;
 
 /**
@@ -91,20 +98,25 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
     },
     {
-      name: 'oauth',
-      testMatch: /oauth\/.*.test.ts/,
-      use: { ...devices['Desktop Chrome'] },
-    },
-    {
-      name: 'e2e',
-      testMatch: /e2e\/.*.test.ts/,
-      use: { ...devices['Desktop Chrome'] },
-    },
-    {
       name: 'routes',
       testMatch: /routes\/.*.test.ts/,
       use: { ...devices['Desktop Chrome'] },
     },
+    // Browser tests of the front's UI (../front), which this server doesn't
+    // serve in dev. They only run when FRONT_URL points at a running front,
+    // so `npm test` stays a backend-only run.
+    ...(process.env.FRONT_URL
+      ? [
+          {
+            name: 'e2e',
+            testMatch: /e2e\/.*.test.ts/,
+            use: {
+              ...devices['Desktop Chrome'],
+              baseURL: process.env.FRONT_URL,
+            },
+          },
+        ]
+      : []),
   ],
 
   // Start dev server before running tests
@@ -115,6 +127,7 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
     // Mock the environment variables for the server process
     env: {
+      PORT: String(PORT),
       PLAYWRIGHT: 'True',
       DATABRICKS_SERVING_ENDPOINT: 'mock-value',
       DATABRICKS_CLIENT_ID: 'mock-value',
