@@ -111,17 +111,43 @@ y las respuestas rápidas se abren con el botón del rayo. Shipped en PR #7.
 
 ---
 
-## Phase 1b: Selector de cliente demo en el chat
+## Phase 1b: Selector de cliente demo en el chat (Complete)
 
 **Goal:** que el agente sepa con qué cliente demo habla el chat.
 
-<!-- Depende de la Fase 1 del back: GET /api/demo-customers y sessionToken en
-     el body de POST /api/chat. -->
+<!-- Contrato del back (rama feat/identidad-cliente-conversacion):
+     GET /api/demo-customers → { customers: [{ token, label }] }, 5 clientes
+     (demo-expired y demo-closed prueban errores). POST /api/chat acepta
+     sessionToken (string de 1 a 256, opcional): va en CADA mensaje porque el
+     back no lo guarda, y un string vacío da 400. -->
 
-- [ ] El usuario elige un cliente demo antes de empezar a chatear.
-- [ ] Cada mensaje del chat va con el token de ese cliente.
-- [ ] Si el token es inválido o venció, el chat muestra la respuesta de
-      "inicia sesión" que da el agente.
+- [x] El usuario elige un cliente demo antes de empezar a chatear.
+- [x] Cada mensaje del chat va con el token de ese cliente; sin cliente
+      elegido no se manda el campo (nunca un string vacío).
+- [x] Si el token es inválido, venció o no viene, el chat muestra la respuesta
+      de "inicia sesión" que da el agente, sin lógica propia en el front.
+
+Los checks manuales contra el agente real quedan para el usuario. Shipped en
+PR #9.
+
+---
+
+## Phase 1c: El chat del cliente durante un handoff
+
+**Goal:** que el cliente vea cuándo lo atiende un asesor y reciba sus mensajes
+en el mismo chat.
+
+<!-- Depende del agente: cuando mande custom_outputs, el back expone por chat
+     handled_by (ai_agent | human_queue | human_agent) y use_case, y quita
+     stage/intent/customerName (hoy llegan vacíos: no filtrar por ellos). La
+     ruta GET de polling depende de las Fases 6 y 7 del agente, sin contrato
+     todavía; el back la pasa cuando el agente la publique. -->
+
+- [ ] El chat muestra el mensaje de sistema "Derivado a un asesor…".
+- [ ] Mientras `handled_by` no sea `ai_agent`, el chat no espera respuesta del
+      agente y avisa que responde un asesor.
+- [ ] Los mensajes nuevos del asesor aparecen solos (polling al GET del back).
+- [ ] Cuando el asesor devuelve la conversación, el chat vuelve al agente.
 
 ---
 
@@ -146,13 +172,23 @@ admin) y ninguna otra.
 **Goal:** que un admin revise las conversaciones de cualquier usuario sin poder
 modificarlas.
 
-<!-- Depende de GET /api/admin/chats (mismos params que /api/history más
-     userId) y GET /api/admin/chats/:id/messages, detrás de requireAdmin. -->
+<!-- Contrato del back (Fase 2 del back, rama
+     feat/pqbas-back-phase2-admin-conversaciones, sin mergear):
+     GET /api/admin/chats?limit=&starting_after=&ending_before=&status=&intent=&customer=&userId=
+       → { chats, hasMore }; cada chat trae userId y userEmail (null en chats
+       anteriores a la migración); orden createdAt desc.
+     GET /api/admin/users → { users: [{ userId, userEmail }] }, por email.
+     GET /api/admin/chats/:id/messages → como GET /api/messages/:id.
+     Errores: 401 sin sesión, 403 forbidden:chat si no es admin (ADMIN_EMAILS),
+     404 not_found:chat, 204 sin base de datos. -->
 
 - [ ] La vista de conversaciones muestra las de todos los usuarios, de la más
       reciente a la más antigua, con el email de cada usuario.
 - [ ] El admin filtra la lista por usuario.
+- [ ] Un chat sin email del dueño (anterior a la fase del back) se muestra como
+      "Sin email" y sigue abriéndose.
 - [ ] El admin abre una conversación y la lee completa en modo solo lectura.
+- [ ] Un usuario que no es admin ve "sin acceso" cuando el back responde 403.
 
 ---
 
@@ -161,9 +197,12 @@ modificarlas.
 **Goal:** que un asesor tome una conversación derivada, responda al cliente y
 la cierre.
 
-<!-- Depende de las rutas /handoffs del agente (agent/docs/07-handoff.md §7.4)
-     y de la Fase 4 del back. Esa fase deja abierto si la consola vive en back
-     o en front: este roadmap asume que vive en front. -->
+<!-- La UI vive en el front (decisión del usuario: el back solo hace back).
+     El back hace de proxy a las rutas /handoffs del agente
+     (agent/docs/07-handoff.md §7.4), con la identidad del asesor sacada de
+     X-Forwarded-Email; las rutas del proxy dependen de las Fases 6 y 7 del
+     agente, sin contrato todavía. Reusa la pantalla de la Fase 4: se cambia la fuente de
+     los datos mock por el proxy. -->
 
 - [ ] El asesor ve la bandeja de casos pendientes, ordenada por prioridad.
 - [ ] El asesor abre un caso con su resumen y el historial del chat.
