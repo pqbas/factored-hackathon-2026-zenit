@@ -17,6 +17,9 @@ dependencies = [
     "langchain-mcp-adapters>=0.1.11",
     "python-dotenv",
     "psycopg",
+    "httpx",
+    "pydantic",
+    "pyyaml",
 ]
 
 [build-system]

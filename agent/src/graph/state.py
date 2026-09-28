@@ -7,3 +7,4 @@ class AgentState(TypedDict):
     messages: Annotated[list, add_messages]
     session: dict
     thread_id: str
+    classification: dict | None

@@ -12,14 +12,16 @@ Shipped en PR #1.
 
 ---
 
-## Phase 2: Message classification
+## Phase 2: Message classification (Complete)
 
 **Goal:** every message goes through Jev before reaching any LLM.
 
-- [ ] A message that violates a policy gets a refusal and never reaches the LLM
-- [ ] Every message is tagged with its language, intent and sentiment
-- [ ] If Jev does not answer in time, the customer still gets a response
-- [ ] The destination of each intent changes by editing `routing.yaml`, not code
+- [x] A message that violates a policy gets a refusal and never reaches the LLM
+- [x] Every message is tagged with its language, intent and sentiment
+- [x] If Jev does not answer in time, the customer still gets a response
+- [x] The destination of each intent changes by editing `routing.yaml`, not code
+
+Shipped en PR #<n>.
 
 ---
 
