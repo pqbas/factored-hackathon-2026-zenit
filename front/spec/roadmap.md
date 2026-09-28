@@ -231,4 +231,4 @@ La bandeja ordena por fecha y filtra por estado (Abiertas, Sin atender, Mías,
 Con David, Cerradas); la API no trae prioridad ni resumen del caso, así que
 esas dos quedan pendientes. Solo quien tiene tomada la conversación escribe;
 el admin puede forzar. Fuera del primer corte: etiquetas, imágenes, adjuntos y
-no leídos. Shipped en PR #<n>.
+no leídos. Shipped en PR #23.
