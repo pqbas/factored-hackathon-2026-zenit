@@ -128,7 +128,7 @@ y las respuestas rápidas se abren con el botón del rayo. Shipped en PR #7.
       de "inicia sesión" que da el agente, sin lógica propia en el front.
 
 Los checks manuales contra el agente real quedan para el usuario. Shipped en
-PR #<n>.
+PR #9.
 
 ---
 
