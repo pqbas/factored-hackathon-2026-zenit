@@ -2,6 +2,10 @@
 /* set base path to root directory to include utility classes from app, components, pages, etc. */
 @import "tailwindcss";
 
+/* Streamdown (markdown in chat replies) ships its own utility classes, e.g.
+   list-disc for bullets; Tailwind only generates them if it scans its build. */
+@source "../node_modules/streamdown/dist";
+
 /* include plugins */
 @plugin "tailwindcss-animate";
 @plugin "@tailwindcss/typography";

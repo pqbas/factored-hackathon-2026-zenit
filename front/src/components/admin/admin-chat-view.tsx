@@ -2,6 +2,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Eye, Wrench } from 'lucide-react';
 
+import { Response } from '@/components/elements/response';
 import { messageSummary, ownerLabel } from '@/lib/admin';
 import { cn } from '@/lib/utils';
 import type { ChatMessage } from '@chat-template/core';
@@ -49,7 +50,9 @@ export function AdminChatView({
                       : 'bg-secondary text-foreground',
                   )}
                 >
-                  {text && <p className="whitespace-pre-wrap break-words">{text}</p>}
+                  {text && (
+                    <Response className="flex flex-col gap-2 break-words">{text}</Response>
+                  )}
                   {usedTools && (
                     <span
                       className={cn(
