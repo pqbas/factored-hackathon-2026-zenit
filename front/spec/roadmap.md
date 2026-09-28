@@ -250,7 +250,7 @@ La vista Admin de la Fase 6 quedó reemplazada por Chats. Shipped en PR #28.
 
 ---
 
-## Phase 9: Consola estilo Notion Mail
+## Phase 9: Consola estilo Notion Mail (Complete)
 
 **Goal:** que el asesor vea de un vistazo qué pide atención, agrupado por caso
 de uso.
@@ -259,14 +259,17 @@ de uso.
      https://claude.ai/artifact/SfN8i51oncvvSj5dskfiH9. Sin cambios de API
      salvo lastMessage (PR #29 del back). -->
 
-- [ ] Vistas a la izquierda: Bandeja, una por caso de uso (icono y color) y
+- [x] Vistas a la izquierda: Bandeja, una por caso de uso (icono y color) y
       los estados Sin atender, Mías y Resueltas; el admin suma el filtro de
       usuario.
-- [ ] La Bandeja agrupa por caso de uso, con "Otras" al final.
-- [ ] Filas de una línea: punto si está sin atender, avatar, nombre, robot si
+- [x] La Bandeja agrupa por caso de uso, con "Otras" al final.
+- [x] Filas de una línea: punto si está sin atender, avatar, nombre, robot si
       la atiende David, último mensaje del cliente (el asunto queda de
       tooltip), estado y hora.
-- [ ] La conversación se abre al lado de la lista y se cierra con la X.
+- [x] La conversación se abre al lado de la lista y se cierra con la X.
 
 Fuera de alcance / futuro: mensajes no leídos (la API no los trae; el punto
 marca "Sin atender").
+
+Incluye la consola "con menos ruido" (estado solo cuando pide atención).
+Shipped en PR #<n>.
