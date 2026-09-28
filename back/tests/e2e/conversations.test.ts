@@ -1,4 +1,5 @@
 import { expect, test } from '../fixtures';
+import { ChatPage } from '../pages/chat';
 
 // /conversations is mock-only: no back/agent calls, no Databricks session, so
 // most of these run against the plain `page` fixture instead of adaContext.
@@ -57,7 +58,9 @@ test.describe('Chat sidebar navigation', () => {
     adaContext,
   }) => {
     const { page } = adaContext;
-    await page.goto('/');
+    const chatPage = new ChatPage(page);
+    await chatPage.createNewChat();
+    await chatPage.openSideBar();
 
     await page.getByRole('button', { name: 'Conversaciones' }).click();
     await expect(page).toHaveURL(/\/conversations$/);
