@@ -27,11 +27,15 @@
 
 ## Manual Checks
 
-Pendiente hasta que la Fase 5 del back esté en `main`. El flujo se revisó con
-el back sirviendo `front/dist` y el chat mockeado en el navegador.
-- [ ] Con back, base y agente reales: el cliente pide un asesor, un asesor
-      toma la conversación en la consola, responde, y el cliente lo ve en
-      menos de 5 s; al devolverla, el agente vuelve a responder.
+Hecho con el back de `main` (PR #22) en :3200, `chatbot_dev`, el agente real y
+el front de las ramas 7 + 1c juntas:
+
+- [x] El cliente habla con David; asesor1 toma la conversación y el cliente lo
+      nota sin escribir (aviso "Te atiende un asesor.", encabezado "Asesor").
+- [x] Las respuestas del asesor y del admin llegan como "Asesor", sin email
+      (`senderId` null en `/api/messages`).
+- [x] Al devolverla a David, desaparece el aviso, llega "Volviste con David." y
+      el siguiente turno lo responde el agente.
 
 ## Definition of Done
 Todas las casillas marcadas y la Fase 5 del back en `main`.
