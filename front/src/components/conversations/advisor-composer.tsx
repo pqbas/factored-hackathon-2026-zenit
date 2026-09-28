@@ -1,4 +1,5 @@
 import { Plus, SendHorizontal, Zap } from 'lucide-react';
+import { ASSISTANT_NAME } from '@/lib/assistant';
 import { useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -87,7 +88,7 @@ export function AdvisorComposer({
             disabled={disabled}
             aria-label="Mensaje al cliente"
             placeholder={
-              disabled ? 'El asistente está respondiendo…' : 'Escribe al cliente…'
+              disabled ? `${ASSISTANT_NAME} está respondiendo…` : 'Escribe al cliente…'
             }
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => {

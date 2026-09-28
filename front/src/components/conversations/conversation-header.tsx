@@ -1,4 +1,5 @@
 import { Bot } from 'lucide-react';
+import { ASSISTANT_KIND, ASSISTANT_NAME } from '@/lib/assistant';
 import { useState } from 'react';
 
 import { avatarColor } from '@/components/conversations/conversation-list';
@@ -78,7 +79,9 @@ export function ConversationHeader({
             )}
             strokeWidth={1.8}
           />
-          <span className="hidden sm:inline">Asistente</span>
+          <span className="hidden sm:inline" title={ASSISTANT_KIND}>
+            {ASSISTANT_NAME} (asistente)
+          </span>
           <span className="w-6 text-left">{assistantOn ? 'ON' : 'OFF'}</span>
           <span
             className={cn(
