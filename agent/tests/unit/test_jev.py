@@ -51,7 +51,8 @@ def _sample_response_body():
                 "type": "score",
                 "score": 2.1,
                 "confidence": 0.8,
-                "probabilities": {"neutral": 0.6, "positive": 0.4},
+                "probabilities": {"0": 0.05, "1": 0.1, "2": 0.6, "3": 0.25},
+                "legend": {"0": "very_negative", "1": "negative", "2": "neutral", "3": "positive"},
             },
         },
         "usage": {"tokens": 42},
@@ -96,7 +97,7 @@ def test_sample_response_parses_to_classification():
     assert result.language == "es"
     assert result.intent == "GENERAL_INQUIRY"
     assert result.intent_confidence == 0.87
-    assert result.sentiment in {"neutral", "positive"}  # highest probability wins
+    assert result.sentiment == "neutral"  # probability 0.6, the highest
 
 
 def test_unknown_guardrail_category_maps_to_ok():
@@ -121,5 +122,23 @@ def test_timeout_raises_jev_unavailable():
 
 def test_529_raises_jev_unavailable():
     client = _client_with_handler(lambda r: httpx.Response(529, json={"error": "overloaded"}))
+    with pytest.raises(JevUnavailable):
+        asyncio.run(client.classify("hola", ROUTES))
+
+
+def test_reuses_a_single_http_client_across_calls():
+    client = _client_with_handler(lambda r: httpx.Response(200, json=_sample_response_body()))
+    http_client = client._client
+    asyncio.run(client.classify("hola", ROUTES))
+    asyncio.run(client.classify("otro mensaje", ROUTES))
+    assert client._client is http_client
+
+
+def test_missing_probability_for_the_chosen_guardrail_raises_jev_unavailable():
+    body = _sample_response_body()
+    body["answers"]["guardrail"] = {
+        "type": "choice", "choice": "OK", "confidence": 0.95, "probabilities": {},
+    }
+    client = _client_with_handler(lambda r: httpx.Response(200, json=body))
     with pytest.raises(JevUnavailable):
         asyncio.run(client.classify("hola", ROUTES))

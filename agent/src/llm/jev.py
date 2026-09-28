@@ -25,8 +25,10 @@ class JevClient:
     ):
         self._api_key = api_key
         self._url = url
-        self._timeout = timeout
-        self._transport = transport  # only set by tests, to inject httpx.MockTransport
+        # One client for the lifetime of JevClient: a new httpx.AsyncClient per
+        # call would pay a fresh TCP+TLS handshake against a 2 s timeout.
+        # transport is only set by tests, to inject httpx.MockTransport.
+        self._client = httpx.AsyncClient(transport=transport, timeout=timeout)
 
     async def classify(self, text: str, routes: list[IntentRoute]) -> Classification:
         body = {
@@ -68,13 +70,8 @@ class JevClient:
         }
 
         try:
-            async with httpx.AsyncClient(transport=self._transport, timeout=self._timeout) as client:
-                response = await client.post(self._url, json=body, headers=headers)
-                response.raise_for_status()
-        except httpx.TimeoutException as exc:
-            raise JevUnavailable("Jev request timed out") from exc
-        except httpx.HTTPStatusError as exc:
-            raise JevUnavailable(f"Jev returned status {exc.response.status_code}") from exc
+            response = await self._client.post(self._url, json=body, headers=headers)
+            response.raise_for_status()
         except httpx.HTTPError as exc:
             raise JevUnavailable("Jev request failed") from exc
 
@@ -92,9 +89,7 @@ class JevClient:
         sentiment_answer = answers["sentiment"]
 
         raw_guardrail = guardrail_answer["choice"]
-        guardrail_probability = guardrail_answer.get("probabilities", {}).get(
-            raw_guardrail, guardrail_answer.get("confidence", 0.0)
-        )
+        guardrail_probability = guardrail_answer["probabilities"][raw_guardrail]
         if raw_guardrail in GUARDRAIL_CATEGORIES:
             guardrail = raw_guardrail
         else:
@@ -113,24 +108,9 @@ class JevClient:
 
     @staticmethod
     def _sentiment_label(answer: dict[str, Any]) -> str:
-        probabilities = answer.get("probabilities")
-        if probabilities:
-            best_key = max(probabilities, key=probabilities.get)
-            legend = answer.get("legend") or {}
-            if best_key in legend:
-                return legend[best_key]
-            if best_key in SENTIMENT_LEVELS:
-                return best_key
-            try:
-                index = int(best_key)
-            except (TypeError, ValueError):
-                index = None
-            if index is not None and 0 <= index < len(SENTIMENT_LEVELS):
-                return SENTIMENT_LEVELS[index]
-
-        score = answer.get("score")
-        if score is not None:
-            index = max(0, min(len(SENTIMENT_LEVELS) - 1, round(score)))
-            return SENTIMENT_LEVELS[index]
-
-        return "neutral"
+        # docs.typesafe.ai/api.md: a score answer's "probabilities" and "legend"
+        # share the same level keys, so the legend resolves the winning level.
+        probabilities = answer["probabilities"]
+        legend = answer["legend"]
+        best_key = max(probabilities, key=probabilities.get)
+        return legend[best_key]

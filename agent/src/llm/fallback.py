@@ -42,7 +42,7 @@ _INJECTION = re.compile(
 
 _CARD_CANDIDATE = re.compile(r"(?:\d[ -]?){13,19}")
 _CVV_OR_PASSWORD = re.compile(
-    r"\b(cvv|contrase[ñn]a|senha)\b\s*(?:es|é|:|=)?\s*(\S+)", re.IGNORECASE
+    r"\b(cvv|contrase[ñn]a|senha)\b\s*(?:es|é|:|=)\s*(\S*\d\S*)", re.IGNORECASE
 )
 
 

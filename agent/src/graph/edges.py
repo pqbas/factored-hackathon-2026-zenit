@@ -1,7 +1,7 @@
-from langchain_core.messages import AIMessage
 from langgraph.graph import END
 
 from src.graph.state import AgentState
+from src.schemas.classification import Classification
 from src.schemas.routing import IntentRoute
 
 
@@ -11,13 +11,12 @@ def after_gate(state: AgentState) -> str:
     return END
 
 
-def dispatch(state: AgentState, routes: list[IntentRoute]) -> str:
-    # classify already answered (a blocked/refused turn) when it appended an AIMessage.
-    if isinstance(state["messages"][-1], AIMessage):
+def dispatch(state: AgentState, routes: list[IntentRoute], threshold: float) -> str:
+    classification = Classification.model_validate(state["classification"])
+    if classification.blocked(threshold):
         return END
 
-    intent = (state.get("classification") or {}).get("intent")
     for route in routes:
-        if route.intent == intent:
+        if route.intent == classification.intent:
             return route.destination
     return "respond"

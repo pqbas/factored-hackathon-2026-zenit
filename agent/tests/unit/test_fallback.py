@@ -33,6 +33,11 @@ def test_cvv_or_password_is_sensitive_data_and_masked():
     assert "Secreta123" not in masked
 
 
+def test_mentioning_a_password_without_a_value_matches_no_rule():
+    assert check_guardrail_rules("olvidé mi contraseña, ¿cómo la cambio?") is None
+    assert check_guardrail_rules("mi contraseña no funciona") is None
+
+
 def test_fallback_classify_maps_advisor_request_to_human_agent():
     result = fallback_classify("quiero hablar con un asesor", INTENTS)
     assert result.intent == "HUMAN_AGENT"
