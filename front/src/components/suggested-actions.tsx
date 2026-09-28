@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils';
 interface SuggestedActionsProps {
   chatId: string;
   sendMessage: UseChatHelpers<ChatMessage>['sendMessage'];
-  selectedVisibilityType: VisibilityType;
+  selectedVisibilityType?: VisibilityType;
 }
 
 interface SuggestedAction {

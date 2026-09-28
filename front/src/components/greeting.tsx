@@ -1,5 +1,8 @@
+import type { UseChatHelpers } from '@ai-sdk/react';
+import type { ChatMessage } from '@chat-template/core';
 import { motion } from 'framer-motion';
 
+import { SuggestedActions } from '@/components/suggested-actions';
 import { useSession } from '@/contexts/SessionContext';
 
 function greetingForHour(hour: number): string {
@@ -15,7 +18,13 @@ function firstName(value: string | undefined): string | null {
   return name ? name.charAt(0).toUpperCase() + name.slice(1) : null;
 }
 
-export const Greeting = () => {
+export const Greeting = ({
+  chatId,
+  sendMessage,
+}: {
+  chatId: string;
+  sendMessage: UseChatHelpers<ChatMessage>['sendMessage'];
+}) => {
   const { session } = useSession();
   const name = firstName(
     session?.user?.name ||
@@ -27,7 +36,7 @@ export const Greeting = () => {
   return (
     <div
       key="overview"
-      className="mx-auto flex w-full max-w-3xl flex-col items-center gap-2 px-6 pt-[18vh] text-center"
+      className="mx-auto flex min-h-[calc(100dvh-13rem)] w-full max-w-3xl flex-col items-center justify-center gap-2 px-6 text-center"
     >
       <motion.h1
         initial={{ opacity: 0, y: 8 }}
@@ -47,6 +56,9 @@ export const Greeting = () => {
       >
         ¿En qué te puedo ayudar hoy?
       </motion.p>
+      <div className="mt-8 w-full">
+        <SuggestedActions chatId={chatId} sendMessage={sendMessage} />
+      </div>
     </div>
   );
 };
