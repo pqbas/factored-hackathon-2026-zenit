@@ -37,13 +37,15 @@ No aplica: el front no tiene setup de tests de componentes.
 
 ## Manual Checks
 
-Pendientes: necesitan el back con base de datos, que no hay en local. La
-vista se revisó con el back de `main` sirviendo `front/dist`, un admin real
-(`ADMIN_EMAILS`) y la API admin mockeada en el navegador.
+Revisados con el back de `main` sirviendo `front/dist`, la base local
+`chatbot_dev` (contenedor `back-test-pg`; se le aplicó la migración
+`0002`, que agrega `userEmail` y le faltaba) y `ADMIN_EMAILS=admin@example.com`.
 
-- [ ] Con base de datos y un email en `ADMIN_EMAILS`: `/admin` lista los chats
-      reales de varios usuarios y abre uno privado de otro usuario.
-- [ ] Con el mismo usuario fuera de `ADMIN_EMAILS`: no hay "Admin" en el riel.
+- [x] Con base de datos y un email en `ADMIN_EMAILS`: `/admin` lista los chats
+      reales de varios usuarios y abre uno privado de otro usuario (babbage),
+      que `curie` no puede leer por `/api/chat/:id` (403).
+- [x] Con el mismo usuario fuera de `ADMIN_EMAILS`: no hay "Admin" en el riel y
+      `/api/admin/chats` responde 403.
 
 ## Definition of Done
 

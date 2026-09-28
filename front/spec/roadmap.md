@@ -183,7 +183,7 @@ Probado con el rol real del back (PR #15). Shipped en PR #16.
 
 ---
 
-## Phase 6: Vista admin con conversaciones reales
+## Phase 6: Vista admin con conversaciones reales (Complete)
 
 **Goal:** que un admin revise las conversaciones de cualquier usuario sin poder
 modificarlas.
@@ -201,13 +201,16 @@ modificarlas.
      Errores: 401 sin sesión, 403 forbidden:chat si no es admin (ADMIN_EMAILS),
      404 not_found:chat, 204 sin base de datos. -->
 
-- [ ] La vista de conversaciones muestra las de todos los usuarios, de la más
+- [x] La vista de conversaciones muestra las de todos los usuarios, de la más
       reciente a la más antigua, con el email de cada usuario.
-- [ ] El admin filtra la lista por usuario.
-- [ ] Un chat sin email del dueño (anterior a la fase del back) se muestra como
+- [x] El admin filtra la lista por usuario.
+- [x] Un chat sin email del dueño (anterior a la fase del back) se muestra como
       "Sin email" y sigue abriéndose.
-- [ ] El admin abre una conversación y la lee completa en modo solo lectura.
-- [ ] Un usuario que no es admin ve "sin acceso" cuando el back responde 403.
+- [x] El admin abre una conversación y la lee completa en modo solo lectura.
+- [x] Un usuario que no es admin ve "sin acceso" cuando el back responde 403.
+
+También quitó del historial las insignias viejas (stage/intent/customerName).
+Shipped en PR #<n>.
 
 ---
 
