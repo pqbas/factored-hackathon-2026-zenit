@@ -22,7 +22,7 @@ import {
 } from '@chat-template/db';
 import { generateUUID } from '@chat-template/core';
 import { ChatSDKError } from '@chat-template/core/errors';
-import { getRole } from '../roles';
+import { getRole, normalizeEmail } from '../roles';
 
 export const advisorRouter: RouterType = Router();
 
@@ -91,7 +91,9 @@ advisorRouter.get('/conversations', async (req: Request, res: Response) => {
   const status = req.query.status as 'open' | 'closed' | undefined;
   const assignedToParam = req.query.assignedTo as string | undefined;
   const assignedTo =
-    assignedToParam === 'me' ? req.session?.user.email : assignedToParam;
+    normalizeEmail(
+      assignedToParam === 'me' ? req.session?.user.email : assignedToParam,
+    );
 
   if (startingAfter && endingBefore) {
     const error = new ChatSDKError(
@@ -177,7 +179,7 @@ advisorRouter.post(
     const id = getIdFromRequest(req);
     if (!id) return;
 
-    const email = req.session?.user.email;
+    const email = normalizeEmail(req.session?.user.email);
     if (!email) {
       const response = new ChatSDKError('unauthorized:chat').toResponse();
       return res.status(response.status).json(response.json);
@@ -251,7 +253,7 @@ advisorRouter.post(
     const id = getIdFromRequest(req);
     if (!id) return;
 
-    const email = req.session?.user.email;
+    const email = normalizeEmail(req.session?.user.email);
     if (!email) {
       const response = new ChatSDKError('unauthorized:chat').toResponse();
       return res.status(response.status).json(response.json);
@@ -318,7 +320,7 @@ advisorRouter.post(
     const id = getIdFromRequest(req);
     if (!id) return;
 
-    const email = req.session?.user.email;
+    const email = normalizeEmail(req.session?.user.email);
     if (!email) {
       const response = new ChatSDKError('unauthorized:chat').toResponse();
       return res.status(response.status).json(response.json);

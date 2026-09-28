@@ -163,6 +163,45 @@ test.describe('/api/advisor (with database)', () => {
       expect(body.assignedTo).toBe(`${babbageContext.name}@example.com`);
     });
 
+    test('the same advisor with a differently capitalized email keeps the chat', async ({
+      babbageContext,
+    }) => {
+      const chatId = await createChat(babbageContext);
+      const shouting = {
+        'X-Forwarded-Email': `${babbageContext.name}@example.com`.toUpperCase(),
+      };
+
+      const take = await babbageContext.request.post(
+        `/api/advisor/conversations/${chatId}/take`,
+        { data: {}, headers: shouting },
+      );
+      expect(take.status()).toBe(200);
+      const { chat } = await take.json();
+      expect(chat.assignedTo).toBe(`${babbageContext.name}@example.com`);
+
+      // Lowercase and uppercase requests are the same owner: no 409.
+      const retake = await babbageContext.request.post(
+        `/api/advisor/conversations/${chatId}/take`,
+        { data: {} },
+      );
+      expect(retake.status()).toBe(200);
+
+      const reply = await babbageContext.request.post(
+        `/api/advisor/conversations/${chatId}/messages`,
+        { data: { text: 'Hola' }, headers: shouting },
+      );
+      expect(reply.status()).toBe(201);
+      expect((await reply.json()).message.senderId).toBe(
+        `${babbageContext.name}@example.com`,
+      );
+
+      const release = await babbageContext.request.post(
+        `/api/advisor/conversations/${chatId}/release`,
+        { data: { outcome: 'returned_to_agent' }, headers: shouting },
+      );
+      expect(release.status()).toBe(200);
+    });
+
     test('two simultaneous takes of a free chat: exactly one wins', async ({
       babbageContext,
       adaContext,
