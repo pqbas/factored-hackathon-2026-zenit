@@ -41,8 +41,11 @@ test.describe('Conversations mock view', () => {
     const agentBubbles = page.getByTestId('bubble-agent');
     const countBefore = await agentBubbles.count();
 
-    await page.getByPlaceholder('Mensaje', { exact: true }).fill('Hola, este es un mensaje de prueba');
-    await page.getByPlaceholder('Mensaje', { exact: true }).press('Enter');
+    // Javier is with the assistant: the advisor turns it off to write.
+    await page.getByTestId('assistant-switch').click();
+    const input = page.getByPlaceholder('Escribe al cliente…');
+    await input.fill('Hola, este es un mensaje de prueba');
+    await input.press('Enter');
 
     await expect(agentBubbles).toHaveCount(countBefore + 1);
     await expect(agentBubbles.last()).toContainText('Hola, este es un mensaje de prueba');
@@ -50,6 +53,73 @@ test.describe('Conversations mock view', () => {
 
   test('shows an empty state with no client selected', async ({ page }) => {
     await expect(page.getByText('Elige una conversación')).toBeVisible();
+  });
+
+  test('the Sin atender filter leaves only waiting conversations', async ({ page }) => {
+    await page.getByTestId('status-filter-trigger').click();
+    await page.getByTestId('status-filter-waiting').click();
+    const rows = page.locator('[data-testid^="conversation-row-"]');
+    await expect(rows).toHaveCount(2);
+    for (const row of await rows.all()) {
+      await expect(row.getByTestId('status-chip')).toHaveText('Sin atender');
+    }
+  });
+
+  test('the assistant switch hands the chat to the advisor and back', async ({ page }) => {
+    await page.getByTestId('conversation-row-demo-co-1').click();
+    const header = page.locator('header');
+    const input = page.getByLabel('Mensaje al cliente');
+    const assistantSwitch = page.getByTestId('assistant-switch');
+
+    await expect(assistantSwitch).toHaveAttribute('aria-checked', 'true');
+    await expect(input).toBeDisabled();
+
+    await assistantSwitch.click();
+    await expect(assistantSwitch).toHaveAttribute('aria-checked', 'false');
+    await expect(header.getByTestId('status-chip')).toHaveText('En atención');
+    await expect(input).toBeEnabled();
+  });
+
+  test('Resolver marks the chat resolved and gives it back to the assistant', async ({ page }) => {
+    await page.getByTestId('conversation-row-demo-mx-1').click();
+    const header = page.locator('header');
+    await expect(header.getByTestId('status-chip')).toHaveText('Sin atender');
+
+    await page.getByTestId('resolve-button').click();
+
+    await expect(header.getByTestId('status-chip')).toHaveText('Resuelto');
+    await expect(page.getByLabel('Mensaje al cliente')).toBeDisabled();
+    await expect(page.getByTestId('resolve-button')).toBeDisabled();
+  });
+
+  test('Daniela shows the handoff notice and the hidden-data note', async ({ page }) => {
+    await page.getByTestId('conversation-row-demo-ar-1').click();
+    await expect(page.getByTestId('system-notice')).toContainText(
+      'derivó a un asesor',
+    );
+    await expect(page.getByTestId('redaction-note')).toHaveText(
+      'Ocultamos un código de seguridad',
+    );
+    await expect(page.getByTestId('customer-meta')).toContainText('+54 9 11 •••• 4821');
+  });
+
+  test('a quick reply fills the message field', async ({ page }) => {
+    await page.getByTestId('conversation-row-demo-ar-1').click();
+    await page.getByRole('button', { name: 'Respuestas rápidas' }).click();
+    await page.getByTestId('quick-reply-0').click();
+    await expect(page.getByLabel('Mensaje al cliente')).toHaveValue(
+      'Ya revisé tu comprobante.',
+    );
+  });
+
+  test('+ Etiqueta adds a tag to the header', async ({ page }) => {
+    await page.getByTestId('conversation-row-demo-ar-1').click();
+    await page.getByTestId('add-tag-button').click();
+    await page.getByTestId('tag-input').fill('Urgente');
+    await page.getByTestId('tag-input').press('Enter');
+    await expect(page.locator('header').getByTestId('tag-chip')).toContainText([
+      'Urgente',
+    ]);
   });
 });
 

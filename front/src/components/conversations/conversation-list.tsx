@@ -1,4 +1,11 @@
-import { Search } from 'lucide-react';
+import { Check, ChevronDown, ListFilter, Search } from 'lucide-react';
+
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 import {
   Sidebar,
@@ -11,9 +18,33 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from '@/components/ui/sidebar';
-import { formatListTime, getInitials } from '@/lib/conversations';
+import { StatusLine } from '@/components/conversations/status-chip';
+import {
+  type ConversationStatus,
+  conversationStatus,
+  formatListTime,
+  getInitials,
+  type StatusFilter,
+} from '@/lib/conversations';
 import { cn } from '@/lib/utils';
-import type { MockConversation } from '@/mocks/conversations';
+import type { MockConversation, MockMessage } from '@/mocks/conversations';
+
+const FILTERS: { id: StatusFilter; label: string }[] = [
+  { id: 'all', label: 'Todos' },
+  { id: 'waiting', label: 'Sin atender' },
+  { id: 'advisor', label: 'En atención' },
+];
+
+const PREVIEW_PREFIX: Partial<Record<MockMessage['from'], string>> = {
+  assistant: 'Asistente: ',
+  advisor: 'Tú: ',
+};
+
+function preview(message: MockMessage | undefined): string {
+  if (!message) return '';
+  const body = message.text || (message.attachment ? 'Imagen' : '');
+  return `${PREVIEW_PREFIX[message.from] ?? ''}${body}`;
+}
 
 // Deterministic avatar color per customer, so the same client always gets
 // the same color across renders.
@@ -38,12 +69,18 @@ export function ConversationList({
   onSelect,
   query,
   onQueryChange,
+  statusFilter,
+  onStatusFilterChange,
+  counts,
 }: {
   conversations: MockConversation[];
   selectedId: string | null;
   onSelect: (customerId: string) => void;
   query: string;
   onQueryChange: (query: string) => void;
+  statusFilter: StatusFilter;
+  onStatusFilterChange: (filter: StatusFilter) => void;
+  counts: Record<ConversationStatus, number>;
 }) {
   const { setOpenMobile } = useSidebar();
   const now = new Date();
@@ -55,6 +92,44 @@ export function ConversationList({
         <SidebarMenu>
           <div className="flex flex-row items-center justify-between">
             <span className="flex h-9 items-center pl-2 font-semibold text-[15px] tracking-tight">Chats</span>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  data-testid="status-filter-trigger"
+                  className="flex h-7 items-center gap-1.5 rounded-[7px] px-2 text-muted-foreground text-xs hover:bg-secondary hover:text-foreground"
+                >
+                  <ListFilter className="size-3.5" />
+                  {statusFilter === 'all'
+                    ? 'Filtros'
+                    : FILTERS.find((f) => f.id === statusFilter)?.label}
+                  <ChevronDown className="size-3" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-44">
+                {FILTERS.map((filter) => (
+                  <DropdownMenuItem
+                    key={filter.id}
+                    data-testid={`status-filter-${filter.id}`}
+                    onSelect={() => onStatusFilterChange(filter.id)}
+                    className="flex items-center gap-2 text-[13px]"
+                  >
+                    <Check
+                      className={cn(
+                        'size-3.5',
+                        filter.id === statusFilter ? 'opacity-100' : 'opacity-0',
+                      )}
+                    />
+                    <span className="flex-1">{filter.label}</span>
+                    {filter.id === 'waiting' && (
+                      <span className="text-muted-foreground tabular-nums">
+                        {counts.waiting}
+                      </span>
+                    )}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </SidebarMenu>
         <div className="relative px-2">
@@ -109,7 +184,7 @@ export function ConversationList({
                         </div>
                         <div className="flex items-center justify-between gap-2">
                           <span className="truncate font-normal text-sidebar-foreground/60 text-xs">
-                            {lastMessage?.text}
+                            {preview(lastMessage)}
                           </span>
                           {conversation.unread > 0 && (
                             <span
@@ -120,6 +195,10 @@ export function ConversationList({
                             </span>
                           )}
                         </div>
+                        <StatusLine
+                          status={conversationStatus(conversation)}
+                          topic={conversation.topic}
+                        />
                       </div>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
