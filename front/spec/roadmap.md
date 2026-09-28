@@ -149,7 +149,7 @@ en el mismo chat.
 
 Además, con David atendiendo el chat relee su estado cada 10 s, para notar que
 un asesor lo tomó aunque el cliente no escriba (nota de contrato en el roadmap
-del back, Fase 5). Shipped en PR #<n>.
+del back, Fase 5). Shipped en PR #24.
 ---
 
 ## Phase 5: Roles y navegación por rol (Complete)
