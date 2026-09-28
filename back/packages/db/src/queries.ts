@@ -146,8 +146,23 @@ export async function deleteChatById({ id }: { id: string }) {
 
 export type ChatStatusFilter = 'open' | 'done' | 'waiting' | 'received' | 'all';
 
+// 'all' is only for admin routes. A user scope with an empty id throws instead
+// of silently dropping the filter and returning every user's chats.
+export type ChatScope = { userId: string } | 'all';
+
+export function chatScopeCondition(scope: ChatScope): SQL | undefined {
+  if (scope === 'all') return undefined;
+  if (!scope.userId) {
+    throw new ChatSDKError(
+      'bad_request:api',
+      'A user-scoped chat query needs a userId',
+    );
+  }
+  return eq(chat.userId, scope.userId);
+}
+
 export async function getChats({
-  userId,
+  scope,
   limit,
   startingAfter,
   endingBefore,
@@ -155,7 +170,7 @@ export async function getChats({
   intent,
   customer,
 }: {
-  userId?: string;
+  scope: ChatScope;
   limit: number;
   startingAfter: string | null;
   endingBefore: string | null;
@@ -163,6 +178,8 @@ export async function getChats({
   intent?: string;
   customer?: string;
 }) {
+  const scopeCondition = chatScopeCondition(scope);
+
   if (!isDatabaseAvailable()) {
     console.log('[getChats] Database not available, returning empty');
     return { chats: [], hasMore: false };
@@ -171,11 +188,7 @@ export async function getChats({
   try {
     const extendedLimit = limit + 1;
 
-    const filterConditions: SQL<any>[] = [];
-
-    if (userId) {
-      filterConditions.push(eq(chat.userId, userId));
-    }
+    const filterConditions: SQL<any>[] = scopeCondition ? [scopeCondition] : [];
 
     if (status === 'open') {
       filterConditions.push(isNotNull(chat.stage));

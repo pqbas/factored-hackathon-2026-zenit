@@ -55,7 +55,7 @@ adminRouter.get(
 
     try {
       const chats = await getChats({
-        userId,
+        scope: userId ? { userId } : 'all',
         limit,
         startingAfter: startingAfter ?? null,
         endingBefore: endingBefore ?? null,

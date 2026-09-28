@@ -57,7 +57,7 @@ historyRouter.get('/', requireAuth, async (req: Request, res: Response) => {
 
   try {
     const chats = await getChats({
-      userId: session.user.id,
+      scope: { userId: session.user.id },
       limit,
       startingAfter: startingAfter ?? null,
       endingBefore: endingBefore ?? null,
