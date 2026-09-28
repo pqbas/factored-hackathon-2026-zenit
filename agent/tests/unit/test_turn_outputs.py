@@ -1,0 +1,38 @@
+from __future__ import annotations
+
+from src.schemas.turn_outputs import turn_custom_outputs
+
+THRESHOLD = 0.7
+
+
+def _classification(**overrides) -> dict:
+    base = {
+        "guardrail": "OK", "guardrail_probability": 0.0, "language": "es",
+        "intent": "GENERAL_INQUIRY", "intent_confidence": 0.9, "sentiment": "neutral", "source": "jev",
+    }
+    return {**base, **overrides}
+
+
+def test_a_gate_rejection_has_no_classification_fields():
+    assert turn_custom_outputs("t1", None, None, THRESHOLD) == {
+        "thread_id": "t1", "use_case": None, "intent": None, "language": None,
+        "blocked": False, "handoff": None,
+    }
+
+
+def test_a_use_case_turn_reports_the_use_case_intent_and_language():
+    outputs = turn_custom_outputs("t1", _classification(language="pt"), "GENERAL_INQUIRY", THRESHOLD)
+    assert outputs == {
+        "thread_id": "t1", "use_case": "GENERAL_INQUIRY", "intent": "GENERAL_INQUIRY",
+        "language": "pt", "blocked": False, "handoff": None,
+    }
+
+
+def test_a_blocked_turn_is_marked_blocked():
+    classification = _classification(guardrail="SENSITIVE_DATA", guardrail_probability=1.0, intent="OUT_OF_SCOPE")
+    assert turn_custom_outputs("t1", classification, None, THRESHOLD)["blocked"] is True
+
+
+def test_a_guardrail_below_the_threshold_is_not_blocked():
+    classification = _classification(guardrail="PROMPT_INJECTION", guardrail_probability=0.4)
+    assert turn_custom_outputs("t1", classification, None, THRESHOLD)["blocked"] is False

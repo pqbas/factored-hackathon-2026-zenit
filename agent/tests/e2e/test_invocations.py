@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib
+import json
 import os
 
 import httpx
@@ -354,3 +355,73 @@ def test_advisor_turns_in_the_history_never_prefix_the_reply(client, monkeypatch
     assert response.status_code == 200
     assert _output_text(response.json()) == "Hola de nuevo, ¿en qué te ayudo?"
     assert llm.received[2].content.startswith("[Asesor]")
+
+
+def _stream_events(client, text, session_token="demo-mx-1"):
+    response = client.post(
+        "/invocations",
+        json={
+            "input": [{"role": "user", "content": text}],
+            "custom_inputs": {"session_token": session_token},
+            "stream": True,
+        },
+    )
+    assert response.status_code == 200
+    return [
+        json.loads(line[len("data:"):])
+        for line in response.text.splitlines()
+        if line.startswith("data:") and line[len("data:"):].strip() not in ("", "[DONE]")
+    ]
+
+
+def test_a_greeting_returns_its_intent_and_language_in_custom_outputs(client, monkeypatch):
+    monkeypatch.setattr(main, "jev_client", _greeting_jev())
+
+    body = _invoke(client, "hola", thread_id="e2e-signals-greeting").json()
+
+    assert body["custom_outputs"] == {
+        "thread_id": "e2e-signals-greeting", "use_case": None, "intent": "GREETING",
+        "language": "es", "blocked": False, "handoff": None,
+    }
+
+
+def test_a_balance_question_reports_the_use_case(client, monkeypatch):
+    monkeypatch.setattr(
+        main, "get_chat_model",
+        lambda: ScriptedToolChatModel([AIMessage(content=FAKE_LLM_TEXT)]),
+    )
+
+    body = _invoke(client, "¿cuál es el saldo de mi tarjeta?", thread_id="e2e-signals-inquiry").json()
+
+    assert body["custom_outputs"]["use_case"] == "GENERAL_INQUIRY"
+    assert body["custom_outputs"]["intent"] == "GENERAL_INQUIRY"
+    assert body["custom_outputs"]["blocked"] is False
+
+
+def test_a_cvv_turn_is_marked_blocked_without_the_cvv(client):
+    body = _invoke(client, "mi cvv es 123", thread_id="e2e-signals-cvv").json()
+
+    assert body["custom_outputs"]["blocked"] is True
+    assert "123" not in json.dumps(body["custom_outputs"])
+
+
+def test_a_request_without_session_has_null_labels(client):
+    response = client.post(
+        "/invocations",
+        json={"input": [{"role": "user", "content": "hola"}], "custom_inputs": {"thread_id": "e2e-signals-nosession"}},
+    )
+
+    assert response.json()["custom_outputs"] == {
+        "thread_id": "e2e-signals-nosession", "use_case": None, "intent": None, "language": None,
+        "blocked": False, "handoff": None,
+    }
+
+
+def test_the_stream_carries_custom_outputs_on_its_last_output_item_done(client, monkeypatch):
+    monkeypatch.setattr(main, "jev_client", _greeting_jev())
+
+    events = _stream_events(client, "hola")
+
+    done = [event for event in events if event.get("type") == "response.output_item.done"]
+    assert done[-1]["custom_outputs"]["intent"] == "GREETING"
+    assert all(not event.get("custom_outputs") for event in done[:-1])

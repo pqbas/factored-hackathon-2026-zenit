@@ -220,6 +220,36 @@ test.describe('Conversation state (with database)', () => {
     expect(chat?.handledBy).toBe('ai_agent');
   });
 
+  test('a turn without a use case keeps the last one; intent follows the turn', async ({
+    adaContext,
+  }) => {
+    const chatId = generateUUID();
+    await (
+      await postChatMessage(
+        adaContext,
+        chatId,
+        '[agent-outputs:state] ¿Cuál es mi saldo?',
+      )
+    ).text();
+    await expect
+      .poll(async () => (await getChatById({ id: chatId }))?.useCase)
+      .toBe('GENERAL_INQUIRY');
+
+    await (
+      await postChatMessage(
+        adaContext,
+        chatId,
+        '[agent-outputs:greeting] gracias',
+      )
+    ).text();
+    await expect
+      .poll(async () => (await getChatById({ id: chatId }))?.intent)
+      .toBe('GREETING');
+    expect((await getChatById({ id: chatId }))?.useCase).toBe(
+      'GENERAL_INQUIRY',
+    );
+  });
+
   test('a blocked turn marks both messages and is not resent to the agent', async ({
     adaContext,
   }) => {

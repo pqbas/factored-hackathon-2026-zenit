@@ -375,7 +375,9 @@ chatRouter.post('/', requireAuth, async (req: Request, res: Response) => {
             }
             await updateChatAgentState({
               chatId: id,
-              useCase: agentOutputs.useCase,
+              // useCase segments the conversation: a turn without a case (a
+              // "gracias" after a balance question) keeps the last one.
+              useCase: agentOutputs.useCase ?? undefined,
               intent: agentOutputs.intent,
               language: agentOutputs.language,
               handledBy: agentOutputs.handoff ? 'human_queue' : undefined,

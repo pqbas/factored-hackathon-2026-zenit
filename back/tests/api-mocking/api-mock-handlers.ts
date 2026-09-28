@@ -186,6 +186,14 @@ function containsMcpApprovalResponse(body: unknown): {
 // ============================================================================
 
 export const AGENT_OUTPUTS = {
+  greeting: {
+    thread_id: 'mock',
+    use_case: null,
+    intent: 'GREETING',
+    language: 'es',
+    blocked: false,
+    handoff: null,
+  },
   state: {
     thread_id: 'mock',
     use_case: 'GENERAL_INQUIRY',
