@@ -5,32 +5,32 @@ confirmó el contrato de `custom_outputs` (requirements §1).
 
 ## Automated Tests
 
-- [ ] `npm run test:ephemeral` termina en 0, sin fallos
-- [ ] `npm run test:with-db` termina en 0 contra Postgres local
-- [ ] `npm run lint`, `npx tsc --noEmit` y `npm run build:server` sin errores
-- [ ] `npm run db:check` sin inconsistencias; `npm run db:migrate` sobre una
+- [x] `npm run test:ephemeral` termina en 0, sin fallos
+- [x] `npm run test:with-db` termina en 0 contra Postgres local
+- [x] `npm run lint`, `npx tsc --noEmit` y `npm run build:server` sin errores
+- [x] `npm run db:check` sin inconsistencias; `npm run db:migrate` sobre una
       base con datos de la Fase 2 no falla
 
 ### Specific test coverage required
 
 #### Unit
 
-- [ ] `parseAgentOutputs` lee la forma completa del contrato
-- [ ] `parseAgentOutputs` ignora campos ausentes o con otro tipo
+- [x] `parseAgentOutputs` lee la forma completa del contrato
+- [x] `parseAgentOutputs` ignora campos ausentes o con otro tipo
 
 #### Integration
 
-- [ ] Un turno normal guarda `useCase`, `intent` y `language`
-- [ ] Un turno bloqueado marca los dos mensajes y no se reenvía al agente
-- [ ] Un turno con `handoff` deja el chat en `human_queue`
-- [ ] Un chat en `human_queue` no llama al agente, responde
+- [x] Un turno normal guarda `useCase`, `intent` y `language`
+- [x] Un turno bloqueado marca los dos mensajes y no se reenvía al agente
+- [x] Un turno con `handoff` deja el chat en `human_queue`
+- [x] Un chat en `human_queue` no llama al agente, responde
       `data-conversation-state` y no guarda mensaje del asistente
-- [ ] `/api/history` filtra por `handledBy` y por `useCase`
+- [x] `/api/history` filtra por `handledBy` y por `useCase`
 
 #### End-to-end
 
-- [ ] `status` y `customer` se ignoran en `/api/history`
-- [ ] `POST /api/internal/background-check-received` responde 404
+- [x] `status` y `customer` se ignoran en `/api/history`
+- [x] `POST /api/internal/background-check-received` responde 404
 
 ## Manual Checks
 
@@ -43,6 +43,10 @@ Con Postgres local y el agente real (`API_PROXY`):
       respuesta
 - [ ] Un mensaje que el agente bloquea (guardrail) queda con `blocked = true`,
       y el siguiente request al agente no lo lleva en `input`
+
+Pendientes: el agente todavía no emite `custom_outputs` (llegan en su PR
+chico y en su Fase 7). Mientras tanto, esto lo cubren los tests de rutas con el
+mock del agente.
 
 ## Definition of Done
 

@@ -170,17 +170,18 @@ test.describe('Conversation state (with database)', () => {
     ).toBe(true);
   });
 
+  // Not curie: history.test.ts expects curie to have no chats at all.
   test('/api/history ignores status and customer params', async ({
-    curieContext,
+    babbageContext,
   }) => {
     const chatId = generateUUID();
     await postChatMessage(
-      curieContext,
+      babbageContext,
       chatId,
       `ignored filters ${generateUUID()}`,
     );
 
-    const response = await curieContext.request.get(
+    const response = await babbageContext.request.get(
       '/api/history?status=open&customer=whoever',
     );
     expect(response.status()).toBe(200);
