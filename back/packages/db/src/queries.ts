@@ -6,8 +6,11 @@ import {
   gt,
   gte,
   inArray,
+  isNotNull,
+  isNull,
   lt,
   max,
+  or,
   sql,
   type SQL,
 } from 'drizzle-orm';
@@ -164,6 +167,8 @@ export async function getChats({
   handledBy,
   intent,
   useCase,
+  assignedTo,
+  status,
 }: {
   scope: ChatScope;
   limit: number;
@@ -172,6 +177,8 @@ export async function getChats({
   handledBy?: string;
   intent?: string;
   useCase?: string;
+  assignedTo?: string;
+  status?: 'open' | 'closed';
 }) {
   const scopeCondition = chatScopeCondition(scope);
 
@@ -195,6 +202,16 @@ export async function getChats({
 
     if (useCase) {
       filterConditions.push(eq(chat.useCase, useCase));
+    }
+
+    if (assignedTo) {
+      filterConditions.push(eq(chat.assignedTo, assignedTo));
+    }
+
+    if (status === 'open') {
+      filterConditions.push(isNull(chat.closedAt));
+    } else if (status === 'closed') {
+      filterConditions.push(isNotNull(chat.closedAt));
     }
 
     const query = async (whereCondition?: SQL<any>) => {
@@ -315,10 +332,137 @@ export async function getChatById({ id }: { id: string }) {
   }
 }
 
+export type TakeChatResult =
+  | { outcome: 'not_found' }
+  | { outcome: 'conflict'; assignedTo: string | null }
+  | {
+      outcome: 'taken';
+      chat: Chat;
+      alreadyMine: boolean;
+      // The advisor email this chat was force-reassigned away from, or null
+      // when it was free (not a reassignment).
+      reassignedFrom: string | null;
+    };
+
+// Single atomic UPDATE, race-safe: the WHERE clause is evaluated against the
+// row's pre-update state (captured in the `prev` CTE) in the same statement,
+// so two concurrent takes on a free chat can't both succeed. `alreadyMine`
+// tells the caller whether this was a genuine takeover (write the system
+// message) or an idempotent re-take of a chat already assigned to them.
+export async function takeChat({
+  chatId,
+  advisorEmail,
+  force,
+}: {
+  chatId: string;
+  advisorEmail: string;
+  force: boolean;
+}): Promise<TakeChatResult> {
+  if (!isDatabaseAvailable()) {
+    console.log('[takeChat] Database not available, skipping update');
+    return { outcome: 'not_found' };
+  }
+
+  try {
+    const db = await ensureDb();
+    // Only "prev" (the pre-update row) is read from this raw result: the
+    // driver doesn't apply drizzle's column type mapping to sql`` results, so
+    // the updated row itself is re-read below via getChatById for a
+    // properly-typed Chat (Dates, not timestamp strings).
+    const rows = (await db.execute(sql`
+      with "prev" as (
+        select "handledBy", "assignedTo" from ${chat} where "id" = ${chatId}
+      )
+      update ${chat} as c
+      set "handledBy" = 'human_agent',
+          "assignedTo" = ${advisorEmail},
+          "assignedAt" = now(),
+          "closedAt" = null
+      from "prev"
+      where c."id" = ${chatId}
+        -- Checked on the target row, not on "prev": when two takes race,
+        -- Postgres re-checks the locked row's current values, so the second
+        -- one sees the first owner and matches nothing (409).
+        and (c."handledBy" <> 'human_agent' or c."assignedTo" = ${advisorEmail} or ${force})
+      returning "prev"."handledBy" as "prevHandledBy", "prev"."assignedTo" as "prevAssignedTo"
+    `)) as unknown as Array<{
+      prevHandledBy: Chat['handledBy'] | null;
+      prevAssignedTo: string | null;
+    }>;
+
+    if (rows.length === 0) {
+      const existing = await getChatById({ id: chatId });
+      if (!existing) return { outcome: 'not_found' };
+      return { outcome: 'conflict', assignedTo: existing.assignedTo };
+    }
+
+    const { prevHandledBy, prevAssignedTo } = rows[0];
+    const alreadyMine =
+      prevHandledBy === 'human_agent' && prevAssignedTo === advisorEmail;
+    const reassignedFrom =
+      !alreadyMine && prevHandledBy === 'human_agent' ? prevAssignedTo : null;
+    const updatedChat = await getChatById({ id: chatId });
+    if (!updatedChat) return { outcome: 'not_found' };
+
+    return { outcome: 'taken', chat: updatedChat, alreadyMine, reassignedFrom };
+  } catch (error) {
+    console.error('[takeChat] Error taking chat:', error);
+    throw new ChatSDKError('bad_request:database', 'Failed to take chat');
+  }
+}
+
+export async function releaseChat({
+  chatId,
+  outcome,
+}: {
+  chatId: string;
+  outcome: 'returned_to_agent' | 'resolved';
+}) {
+  if (!isDatabaseAvailable()) {
+    console.log('[releaseChat] Database not available, skipping update');
+    return;
+  }
+
+  try {
+    const [updated] = await (await ensureDb())
+      .update(chat)
+      .set({
+        handledBy: 'ai_agent',
+        assignedTo: null,
+        assignedAt: null,
+        closedAt: outcome === 'resolved' ? new Date() : null,
+      })
+      .where(eq(chat.id, chatId))
+      .returning();
+    return updated;
+  } catch (_error) {
+    throw new ChatSDKError('bad_request:database', 'Failed to release chat');
+  }
+}
+
+export async function reopenChat({ chatId }: { chatId: string }) {
+  if (!isDatabaseAvailable()) {
+    console.log('[reopenChat] Database not available, skipping update');
+    return;
+  }
+
+  try {
+    return await (await ensureDb())
+      .update(chat)
+      .set({ closedAt: null })
+      .where(eq(chat.id, chatId));
+  } catch (_error) {
+    throw new ChatSDKError('bad_request:database', 'Failed to reopen chat');
+  }
+}
+
 export async function saveMessages({
   messages,
 }: {
-  messages: Array<DBMessage>;
+  messages: Array<
+    Omit<DBMessage, 'senderType' | 'senderId'> &
+      Partial<Pick<DBMessage, 'senderType' | 'senderId'>>
+  >;
 }) {
   if (!isDatabaseAvailable()) {
     console.log('[saveMessages] Database not available, skipping persistence');
@@ -331,7 +475,13 @@ export async function saveMessages({
     // Using sql`excluded.X` to reference the values that would have been inserted
     return await (await ensureDb())
       .insert(message)
-      .values(messages)
+      .values(
+        messages.map((m) => ({
+          senderType: m.senderType ?? null,
+          senderId: m.senderId ?? null,
+          ...m,
+        })),
+      )
       .onConflictDoUpdate({
         target: message.id,
         set: {
@@ -360,6 +510,65 @@ export async function getMessagesByChatId({ id }: { id: string }) {
     throw new ChatSDKError(
       'bad_request:database',
       'Failed to get messages by chat id',
+    );
+  }
+}
+
+// Returns null when `afterId` doesn't exist or belongs to another chat, so
+// the route can respond 400. Ordered by (createdAt, id) so polling never
+// loses or repeats a message that shares a createdAt with `afterId`.
+export async function getMessagesAfter({
+  chatId,
+  afterId,
+}: {
+  chatId: string;
+  afterId?: string | null;
+}): Promise<DBMessage[] | null> {
+  if (!isDatabaseAvailable()) {
+    console.log('[getMessagesAfter] Database not available, returning empty');
+    return [];
+  }
+
+  try {
+    const db = await ensureDb();
+
+    if (!afterId) {
+      return await db
+        .select()
+        .from(message)
+        .where(eq(message.chatId, chatId))
+        .orderBy(asc(message.createdAt), asc(message.id));
+    }
+
+    const [afterMessage] = await db
+      .select()
+      .from(message)
+      .where(eq(message.id, afterId));
+
+    if (!afterMessage || afterMessage.chatId !== chatId) {
+      return null;
+    }
+
+    return await db
+      .select()
+      .from(message)
+      .where(
+        and(
+          eq(message.chatId, chatId),
+          or(
+            gt(message.createdAt, afterMessage.createdAt),
+            and(
+              eq(message.createdAt, afterMessage.createdAt),
+              gt(message.id, afterMessage.id),
+            ),
+          ),
+        ),
+      )
+      .orderBy(asc(message.createdAt), asc(message.id));
+  } catch (_error) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to get messages after id',
     );
   }
 }

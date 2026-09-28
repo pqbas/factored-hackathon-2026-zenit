@@ -1,19 +1,26 @@
 export type Role = 'admin' | 'advisor' | 'customer';
 
+// Emails are stored and compared in one form, so the same person with a
+// different capitalization in X-Forwarded-Email is still the same person.
+export function normalizeEmail(email: string | undefined | null) {
+  return email ? email.trim().toLowerCase() : undefined;
+}
+
 // Checks whether an email is in a comma-separated, case-insensitive list such
 // as ADMIN_EMAILS. An unset or empty list matches nobody.
 export function isEmailInList(
   email: string | undefined | null,
   raw: string | undefined,
 ): boolean {
-  if (!email) return false;
+  const normalized = normalizeEmail(email);
+  if (!normalized) return false;
 
   const emails = (raw || '')
     .split(',')
-    .map((e) => e.trim().toLowerCase())
+    .map((e) => normalizeEmail(e))
     .filter(Boolean);
 
-  return emails.includes(email.trim().toLowerCase());
+  return emails.includes(normalized);
 }
 
 // One role per user, with precedence admin > advisor > customer.

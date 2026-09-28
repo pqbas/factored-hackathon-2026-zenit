@@ -18,6 +18,7 @@ export function convertToUIMessages(messages: DBMessage[]): ChatMessage[] {
     metadata: {
       createdAt: formatISO(message.createdAt),
       blocked: message.blocked,
+      senderType: message.senderType,
     },
   }));
 }

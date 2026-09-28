@@ -3,6 +3,7 @@ type ErrorType =
   | 'unauthorized'
   | 'forbidden'
   | 'not_found'
+  | 'conflict'
   | 'rate_limit'
   | 'offline'
   | 'empty';
@@ -106,6 +107,8 @@ export function getMessageByErrorCode(errorCode: ErrorCode): string {
       return 'The requested chat was not found. Please check the chat ID and try again.';
     case 'forbidden:chat':
       return 'This chat belongs to another user. Please check the chat ID and try again.';
+    case 'conflict:chat':
+      return 'This chat is being handled by someone else.';
     case 'unauthorized:chat':
       return 'You need to sign in to view this chat. Please sign in and try again.';
     case 'offline:chat':
@@ -126,6 +129,8 @@ function getStatusCodeByType(type: ErrorType) {
       return 403;
     case 'not_found':
       return 404;
+    case 'conflict':
+      return 409;
     case 'rate_limit':
       return 429;
     case 'offline':
