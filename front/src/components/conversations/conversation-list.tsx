@@ -11,9 +11,33 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from '@/components/ui/sidebar';
-import { formatListTime, getInitials } from '@/lib/conversations';
+import { StatusChip, TagChip } from '@/components/conversations/status-chip';
+import {
+  type ConversationStatus,
+  conversationStatus,
+  formatListTime,
+  getInitials,
+  type StatusFilter,
+} from '@/lib/conversations';
 import { cn } from '@/lib/utils';
-import type { MockConversation } from '@/mocks/conversations';
+import type { MockConversation, MockMessage } from '@/mocks/conversations';
+
+const FILTERS: { id: StatusFilter; label: string }[] = [
+  { id: 'all', label: 'Todos' },
+  { id: 'waiting', label: 'Sin atender' },
+  { id: 'advisor', label: 'En atención' },
+];
+
+const PREVIEW_PREFIX: Partial<Record<MockMessage['from'], string>> = {
+  assistant: 'Asistente: ',
+  advisor: 'Tú: ',
+};
+
+function preview(message: MockMessage | undefined): string {
+  if (!message) return '';
+  const body = message.text || (message.attachment ? 'Imagen' : '');
+  return `${PREVIEW_PREFIX[message.from] ?? ''}${body}`;
+}
 
 // Deterministic avatar color per customer, so the same client always gets
 // the same color across renders.
@@ -38,12 +62,18 @@ export function ConversationList({
   onSelect,
   query,
   onQueryChange,
+  statusFilter,
+  onStatusFilterChange,
+  counts,
 }: {
   conversations: MockConversation[];
   selectedId: string | null;
   onSelect: (customerId: string) => void;
   query: string;
   onQueryChange: (query: string) => void;
+  statusFilter: StatusFilter;
+  onStatusFilterChange: (filter: StatusFilter) => void;
+  counts: Record<ConversationStatus, number>;
 }) {
   const { setOpenMobile } = useSidebar();
   const now = new Date();
@@ -66,6 +96,31 @@ export function ConversationList({
             placeholder="Buscar cliente"
             className="h-7 w-full rounded-[7px] border-0 bg-secondary pr-2 pl-7 text-[13px] placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/40"
           />
+        </div>
+        <div className="flex gap-1.5 px-2 pt-1">
+          {FILTERS.map((filter) => {
+            const active = filter.id === statusFilter;
+            return (
+              <button
+                key={filter.id}
+                type="button"
+                aria-pressed={active}
+                data-testid={`status-filter-${filter.id}`}
+                onClick={() => onStatusFilterChange(filter.id)}
+                className={cn(
+                  'h-[26px] rounded-full px-2.5 font-medium text-xs transition-colors',
+                  active
+                    ? 'bg-primary text-primary-foreground'
+                    : filter.id === 'waiting'
+                      ? 'bg-tint-amber text-tint-amber-foreground'
+                      : 'bg-secondary text-muted-foreground hover:text-foreground',
+                )}
+              >
+                {filter.label}
+                {filter.id === 'waiting' && ` · ${counts.waiting}`}
+              </button>
+            );
+          })}
         </div>
       </SidebarHeader>
 
@@ -109,7 +164,7 @@ export function ConversationList({
                         </div>
                         <div className="flex items-center justify-between gap-2">
                           <span className="truncate font-normal text-sidebar-foreground/60 text-xs">
-                            {lastMessage?.text}
+                            {preview(lastMessage)}
                           </span>
                           {conversation.unread > 0 && (
                             <span
@@ -119,6 +174,10 @@ export function ConversationList({
                               {conversation.unread}
                             </span>
                           )}
+                        </div>
+                        <div className="flex gap-1">
+                          <StatusChip status={conversationStatus(conversation)} />
+                          <TagChip label={conversation.topic} />
                         </div>
                       </div>
                     </SidebarMenuButton>

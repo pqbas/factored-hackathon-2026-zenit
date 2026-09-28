@@ -1,130 +1,143 @@
-import { CheckCheck, SendHorizontal } from 'lucide-react';
+import { ArrowDown, Bot, Hourglass, UserRound } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
-import { avatarColor } from '@/components/conversations/conversation-list';
-import { SidebarToggle } from '@/components/sidebar-toggle';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { formatListTime, getInitials, groupMessagesByDay } from '@/lib/conversations';
+import { AdvisorComposer } from '@/components/conversations/advisor-composer';
+import { ConversationHeader } from '@/components/conversations/conversation-header';
+import {
+  MessageBubble,
+  SystemNotice,
+} from '@/components/conversations/message-bubble';
+import { conversationStatus, groupMessagesByDay } from '@/lib/conversations';
 import { cn } from '@/lib/utils';
 import type { MockConversation } from '@/mocks/conversations';
 
+// How far from the end the advisor has to scroll before the jump button shows.
+const SCROLL_THRESHOLD = 120;
+
+const BANNER = {
+  assistant: {
+    icon: Bot,
+    text: 'El asistente está respondiendo. Apágalo para escribir tú.',
+    className: 'bg-tint-blue text-tint-blue-foreground',
+  },
+  waiting: {
+    icon: Hourglass,
+    text: 'Esperando a un asesor · escribe para tomar la conversación.',
+    className: 'bg-tint-amber text-tint-amber-foreground',
+  },
+  advisor: {
+    icon: UserRound,
+    text: 'Estás atendiendo esta conversación. El asistente no responderá hasta que lo vuelvas a encender.',
+    className: 'bg-sidebar-accent text-sidebar-accent-foreground',
+  },
+  resolved: {
+    icon: Bot,
+    text: 'Conversación resuelta. Si el cliente escribe, responde el asistente.',
+    className: 'bg-tint-green text-tint-green-foreground',
+  },
+};
+
 export function ConversationView({
   conversation,
+  onToggleAssistant,
   onSend,
+  onAttach,
+  onResolve,
+  onAddTag,
 }: {
   conversation: MockConversation;
+  onToggleAssistant: () => void;
   onSend: (text: string) => void;
+  onAttach: (file: File) => void;
+  onResolve: () => void;
+  onAddTag: (tag: string) => void;
 }) {
-  const [draft, setDraft] = useState('');
+  const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const [awayFromBottom, setAwayFromBottom] = useState(false);
   const now = new Date();
+  const status = conversationStatus(conversation);
+  const banner = BANNER[status];
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: 'end' });
   }, [conversation.customerId, conversation.messages.length]);
 
-  const groups = groupMessagesByDay(conversation.messages, now);
-
-  function handleSend() {
-    const text = draft.trim();
-    if (!text) return;
-    onSend(text);
-    setDraft('');
+  function handleScroll() {
+    const el = scrollRef.current;
+    if (!el) return;
+    setAwayFromBottom(
+      el.scrollHeight - el.scrollTop - el.clientHeight > SCROLL_THRESHOLD,
+    );
   }
+
+  const groups = groupMessagesByDay(conversation.messages, now);
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center gap-3 px-3 py-2">
-        <SidebarToggle />
+      <ConversationHeader
+        conversation={conversation}
+        onToggleAssistant={onToggleAssistant}
+        onResolve={onResolve}
+        onAddTag={onAddTag}
+      />
+
+      <div
+        data-testid="status-banner"
+        className={cn(
+          'flex items-center gap-2 px-4 py-2 text-xs',
+          banner.className,
+        )}
+      >
+        <banner.icon className="size-3.5 shrink-0" strokeWidth={2} />
+        {banner.text}
+      </div>
+
+      <div className="relative min-h-0 flex-1">
         <div
-          className={cn(
-            'flex h-10 w-10 shrink-0 items-center justify-center rounded-full font-medium text-sm text-white',
-            avatarColor(conversation.customerId),
-          )}
+          ref={scrollRef}
+          onScroll={handleScroll}
+          className="h-full overflow-y-auto bg-wa-chat-bg px-4 py-4 sm:px-8"
         >
-          {getInitials(conversation.name)}
-        </div>
-        <span className="font-medium">{conversation.name}</span>
-      </div>
-
-      <div className="flex-1 overflow-y-auto bg-wa-chat-bg px-4 py-4 sm:px-8">
-        {groups.map((group) => (
-          <div key={`${group.label}-${group.messages[0].id}`}>
-            <div className="my-3 flex justify-center">
-              <span className="rounded-full bg-background px-3 py-1 text-muted-foreground text-xs shadow-sm">
-                {group.label}
-              </span>
+          {groups.map((group) => (
+            <div key={`${group.label}-${group.messages[0].id}`}>
+              <div className="my-3 flex justify-center">
+                <span className="rounded-full bg-secondary px-3 py-1 text-muted-foreground text-xs">
+                  {group.label}
+                </span>
+              </div>
+              {group.messages.map((message) =>
+                message.from === 'system' ? (
+                  <SystemNotice key={message.id} message={message} now={now} />
+                ) : (
+                  <MessageBubble key={message.id} message={message} now={now} />
+                ),
+              )}
             </div>
-            {group.messages.map((message) => {
-              const isAgent = message.from === 'agent';
-              return (
-                <div
-                  key={message.id}
-                  data-testid={isAgent ? 'bubble-agent' : 'bubble-customer'}
-                  className={cn(
-                    'mb-2 flex',
-                    isAgent ? 'justify-end' : 'justify-start',
-                  )}
-                >
-                  <div
-                    className={cn(
-                      'max-w-[80%] rounded-[18px] px-3.5 py-2 sm:max-w-[65%]',
-                      isAgent
-                        ? 'bg-wa-agent-bubble text-primary-foreground'
-                        : 'bg-wa-customer-bubble text-foreground',
-                    )}
-                  >
-                    <p className="whitespace-pre-wrap break-words text-sm">
-                      {message.text}
-                    </p>
-                    <div className="mt-1 flex items-center justify-end gap-1">
-                      <span
-                        className={cn(
-                          'text-[11px]',
-                          isAgent
-                            ? 'text-primary-foreground/75'
-                            : 'text-muted-foreground',
-                        )}
-                      >
-                        {formatListTime(message.sentAt, now)}
-                      </span>
-                      {isAgent && (
-                        <CheckCheck className="h-3.5 w-3.5 text-wa-check" />
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        ))}
-        <div ref={bottomRef} />
+          ))}
+          <div ref={bottomRef} />
+        </div>
+        {awayFromBottom && (
+          <button
+            type="button"
+            aria-label="Ir al último mensaje"
+            data-testid="scroll-to-bottom"
+            onClick={() =>
+              bottomRef.current?.scrollIntoView({ block: 'end', behavior: 'smooth' })
+            }
+            className="absolute right-6 bottom-3 flex size-10 items-center justify-center rounded-full bg-secondary text-foreground shadow-lg"
+          >
+            <ArrowDown className="size-4" strokeWidth={2.2} />
+          </button>
+        )}
       </div>
 
-      <div className="flex items-center gap-2 px-4 pt-2 pb-4">
-        <Input
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              handleSend();
-            }
-          }}
-          placeholder="Mensaje"
-          className="h-[46px] rounded-full border-input bg-background px-5"
-        />
-        <Button
-          type="button"
-          size="icon"
-          onClick={handleSend}
-          disabled={!draft.trim()}
-          className="shrink-0 rounded-full"
-        >
-          <SendHorizontal className="h-4 w-4" />
-        </Button>
-      </div>
+      <AdvisorComposer
+        key={conversation.customerId}
+        disabled={conversation.handledBy === 'ai_agent'}
+        onSend={onSend}
+        onAttach={onAttach}
+      />
     </div>
   );
 }

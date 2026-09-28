@@ -1,54 +1,46 @@
 import { MessagesSquare } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useMemo, useReducer, useState } from 'react';
 
 import { ConversationList } from '@/components/conversations/conversation-list';
 import { ConversationView } from '@/components/conversations/conversation-view';
 import { SidebarToggle } from '@/components/sidebar-toggle';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
-import { filterConversations, sortByLastMessage } from '@/lib/conversations';
-import { MOCK_CONVERSATIONS, type MockMessage } from '@/mocks/conversations';
+import {
+  conversationReducer,
+  countByStatus,
+  filterByStatus,
+  filterConversations,
+  type StatusFilter,
+  sortByLastMessage,
+} from '@/lib/conversations';
+import { MOCK_CONVERSATIONS } from '@/mocks/conversations';
 
 export default function ConversationsPage() {
-  // Local copy so sends/reads don't mutate the module-level mock data;
-  // reloading the page restores the original mocks.
-  const [conversations, setConversations] = useState(() =>
+  // Local copy so the advisor's actions don't mutate the module-level mock
+  // data; reloading the page restores the original mocks.
+  const [conversations, dispatch] = useReducer(conversationReducer, undefined, () =>
     structuredClone(MOCK_CONVERSATIONS),
   );
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   // Same persisted open/closed state as the Agente section's sidebar.
   const isCollapsed = localStorage.getItem('sidebar:state') === 'false';
 
   const visibleConversations = useMemo(
-    () => sortByLastMessage(filterConversations(conversations, query)),
-    [conversations, query],
+    () =>
+      sortByLastMessage(
+        filterByStatus(filterConversations(conversations, query), statusFilter),
+      ),
+    [conversations, query, statusFilter],
   );
+  const counts = useMemo(() => countByStatus(conversations), [conversations]);
 
-  const selectedConversation =
-    conversations.find((c) => c.customerId === selectedId) ?? null;
+  const selected = conversations.find((c) => c.customerId === selectedId) ?? null;
 
   function handleSelect(customerId: string) {
     setSelectedId(customerId);
-    setConversations((prev) =>
-      prev.map((c) => (c.customerId === customerId ? { ...c, unread: 0 } : c)),
-    );
-  }
-
-  function handleSend(text: string) {
-    if (!selectedId) return;
-    const message: MockMessage = {
-      id: `mock-msg-${crypto.randomUUID()}`,
-      from: 'agent',
-      text,
-      sentAt: new Date().toISOString(),
-    };
-    setConversations((prev) =>
-      prev.map((c) =>
-        c.customerId === selectedId
-          ? { ...c, messages: [...c.messages, message] }
-          : c,
-      ),
-    );
+    dispatch({ type: 'select', customerId });
   }
 
   return (
@@ -59,12 +51,48 @@ export default function ConversationsPage() {
         onSelect={handleSelect}
         query={query}
         onQueryChange={setQuery}
+        statusFilter={statusFilter}
+        onStatusFilterChange={setStatusFilter}
+        counts={counts}
       />
       <SidebarInset className="h-dvh min-h-0 overflow-hidden md:h-[calc(100dvh-1rem)]">
-        {selectedConversation ? (
+        {selected ? (
           <ConversationView
-            conversation={selectedConversation}
-            onSend={handleSend}
+            conversation={selected}
+            onToggleAssistant={() =>
+              dispatch({ type: 'toggleAssistant', customerId: selected.customerId })
+            }
+            onSend={(text) =>
+              dispatch({
+                type: 'send',
+                customerId: selected.customerId,
+                text,
+                sentAt: new Date().toISOString(),
+              })
+            }
+            onAttach={(file) =>
+              dispatch({
+                type: 'attach',
+                customerId: selected.customerId,
+                // Shown only in this tab; nothing is uploaded.
+                attachment: {
+                  url: URL.createObjectURL(file),
+                  alt: file.name,
+                  redactions: [],
+                },
+                sentAt: new Date().toISOString(),
+              })
+            }
+            onResolve={() =>
+              dispatch({
+                type: 'resolve',
+                customerId: selected.customerId,
+                sentAt: new Date().toISOString(),
+              })
+            }
+            onAddTag={(tag) =>
+              dispatch({ type: 'addTag', customerId: selected.customerId, tag })
+            }
           />
         ) : (
           <div className="flex h-full flex-col">
