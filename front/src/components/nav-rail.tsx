@@ -3,7 +3,6 @@ import {
   MessageCircle,
   MessagesSquare,
   Moon,
-  ShieldCheck,
   Sun,
   Wallet,
   type LucideIcon,
@@ -56,14 +55,6 @@ const NAV_ITEMS: NavItem[] = [
     section: 'chats',
     icon: MessagesSquare,
     isActive: (pathname) => pathname.startsWith('/conversations'),
-  },
-  {
-    id: 'admin',
-    label: 'Admin',
-    to: '/admin',
-    section: 'admin',
-    icon: ShieldCheck,
-    isActive: (pathname) => pathname.startsWith('/admin'),
   },
 ];
 

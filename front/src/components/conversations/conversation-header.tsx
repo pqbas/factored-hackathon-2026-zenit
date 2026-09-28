@@ -58,16 +58,17 @@ function AssistantSwitch({
 export function ConversationHeader({
   chat,
   me,
-  isAdmin,
+  readOnly,
   busy,
   onTake,
   onRelease,
 }: {
   chat: AdvisorChat;
   me: string | undefined;
-  isAdmin: boolean;
+  // The admin supervises: sees the chat, can't act on it.
+  readOnly: boolean;
   busy: boolean;
-  onTake: (force: boolean) => void;
+  onTake: () => void;
   onRelease: (outcome: 'returned_to_agent' | 'resolved') => void;
 }) {
   const status = statusOf(chat);
@@ -100,56 +101,52 @@ export function ConversationHeader({
           {heldByOther && ` · La atiende ${chat.assignedTo}`}
         </span>
       </div>
-      <div className="ml-auto flex shrink-0 items-center gap-2">
-        {status === 'assistant' || status === 'resolved' ? (
-          <AssistantSwitch on disabled={busy} onToggle={() => onTake(false)} />
-        ) : null}
-        {status === 'waiting' && (
-          <Button
-            type="button"
-            size="sm"
-            data-testid="take-button"
-            disabled={busy}
-            onClick={() => onTake(false)}
-            className="h-8 rounded-full px-4 text-xs"
-          >
-            Tomar
-          </Button>
-        )}
-        {mine && (
-          <>
-            <AssistantSwitch
-              on={false}
-              disabled={busy}
-              onToggle={() => onRelease('returned_to_agent')}
-            />
+      {readOnly ? (
+        <span
+          data-testid="read-only-badge"
+          className="ml-auto shrink-0 rounded-full bg-secondary px-3 py-1 text-muted-foreground text-xs"
+        >
+          Solo lectura
+        </span>
+      ) : (
+        <div className="ml-auto flex shrink-0 items-center gap-2">
+          {(status === 'assistant' || status === 'resolved') && (
+            <AssistantSwitch on disabled={busy} onToggle={onTake} />
+          )}
+          {status === 'waiting' && (
             <Button
               type="button"
-              variant="secondary"
               size="sm"
-              data-testid="resolve-button"
+              data-testid="take-button"
               disabled={busy}
-              onClick={() => onRelease('resolved')}
-              className="h-8 rounded-full px-3 text-xs"
+              onClick={onTake}
+              className="h-8 rounded-full px-4 text-xs"
             >
-              Resolver
+              Tomar
             </Button>
-          </>
-        )}
-        {heldByOther && isAdmin && (
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            data-testid="force-take-button"
-            disabled={busy}
-            onClick={() => onTake(true)}
-            className="h-8 rounded-full px-3 text-xs"
-          >
-            Tomar de todos modos
-          </Button>
-        )}
-      </div>
+          )}
+          {mine && (
+            <>
+              <AssistantSwitch
+                on={false}
+                disabled={busy}
+                onToggle={() => onRelease('returned_to_agent')}
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                data-testid="resolve-button"
+                disabled={busy}
+                onClick={() => onRelease('resolved')}
+                className="h-8 rounded-full px-3 text-xs"
+              >
+                Resolver
+              </Button>
+            </>
+          )}
+        </div>
+      )}
     </header>
   );
 }

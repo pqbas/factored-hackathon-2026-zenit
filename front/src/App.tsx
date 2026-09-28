@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom';
+import { Navigate, Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from '@/components/theme-provider';
 import { SessionProvider } from '@/contexts/SessionContext';
 import { AppConfigProvider } from '@/contexts/AppConfigContext';
@@ -11,7 +11,6 @@ import NewChatPage from '@/pages/NewChatPage';
 import ChatPage from '@/pages/ChatPage';
 import ConversationsPage from '@/pages/ConversationsPage';
 import ProductsPage from '@/pages/ProductsPage';
-import AdminPage from '@/pages/AdminPage';
 import { RequireSection } from '@/components/require-section';
 
 function App() {
@@ -41,13 +40,10 @@ function App() {
                       </RequireSection>
                     }
                   />
+                  {/* The admin view became Chats (the admin supervises there). */}
                   <Route
                     path="admin"
-                    element={
-                      <RequireSection section="admin">
-                        <AdminPage />
-                      </RequireSection>
-                    }
+                    element={<Navigate to="/conversations" replace />}
                   />
                   <Route
                     path="products"
