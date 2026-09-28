@@ -1,3 +1,5 @@
+import { senderOf } from '@/lib/handoff';
+import { getTextFromMessage } from '@/lib/utils';
 import { PreviewMessage, AwaitingResponseMessage } from './message';
 import { Greeting } from './greeting';
 import { memo, useEffect } from 'react';
@@ -70,7 +72,17 @@ function PureMessages({
             <Greeting chatId={chatId} sendMessage={sendMessage} />
           )}
 
-          {messages.map((message, index) => (
+          {messages.map((message, index) =>
+            senderOf(message) === 'system' ? (
+              <div key={message.id} className="flex justify-center">
+                <span
+                  data-testid="handoff-system-message"
+                  className="rounded-full bg-secondary px-3 py-1 text-muted-foreground text-xs"
+                >
+                  {getTextFromMessage(message)}
+                </span>
+              </div>
+            ) : (
             <PreviewMessage
               key={message.id}
               chatId={chatId}
@@ -88,7 +100,8 @@ function PureMessages({
                 hasSentMessage && index === messages.length - 1
               }
             />
-          ))}
+            ),
+          )}
 
           {status === 'submitted' &&
             messages.length > 0 &&

@@ -71,9 +71,12 @@ export function convertToUIMessages(messages: DBMessage[]): ChatMessage[] {
     id: message.id,
     role: message.role as 'user' | 'assistant' | 'system',
     parts: message.parts as UIMessagePart<CustomUIDataTypes, ChatTools>[],
+    // senderType tells advisor messages apart from the agent's (both are
+    // role 'assistant'); older rows don't have it.
     metadata: {
       createdAt: formatISO(message.createdAt),
-    },
+      senderType: (message as { senderType?: string | null }).senderType ?? undefined,
+    } as ChatMessage['metadata'],
   }));
 }
 
