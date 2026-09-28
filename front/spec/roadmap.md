@@ -64,7 +64,7 @@ Shipped en PR #<n>.
 
 ---
 
-## Phase 3: Mis productos, con datos mock (In Progress)
+## Phase 3: Mis productos, con datos mock (Complete)
 
 **Goal:** que el cliente vea de un vistazo todo lo que tiene en el banco, como
 en la app de cualquier banco.
@@ -72,12 +72,16 @@ en la app de cualquier banco.
 <!-- Los datos mock siguen el esquema de las tablas `products` y `transactions`
      del dataset LATAM Bank (data/pipeline/tables.py). -->
 
-- [ ] Desde el riel se llega a "Mis productos", con los productos agrupados en
+- [x] Desde el riel se llega a "Mis productos", con los productos agrupados en
       cuentas, tarjetas, créditos e inversiones y el saldo de cada uno.
-- [ ] Un resumen muestra el dinero disponible, lo que se debe, lo invertido y
+- [x] Un resumen muestra el dinero disponible, lo que se debe, lo invertido y
       los últimos movimientos.
-- [ ] Al elegir un producto se ven su saldo, sus datos (número, tasa, fechas,
+- [x] Al elegir un producto se ven su saldo, sus datos (número, tasa, fechas,
       estado) y sus movimientos; en tarjetas de crédito, cuánto del límite se usa.
+
+Los datos son de la clienta CUS00000322 del dummy del dataset. La categoría del
+gasto (`transaction_category`) no se muestra todavía. Fase hecha sin carpeta de
+spec. Shipped en PR #<n>.
 
 ---
 
