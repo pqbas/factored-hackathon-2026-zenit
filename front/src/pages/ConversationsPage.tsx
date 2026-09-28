@@ -186,6 +186,7 @@ export default function ConversationsPage() {
         users={readOnly ? (users ?? []) : undefined}
         userId={userId}
         onUserChange={setUserId}
+        me={me}
       />
       <SidebarInset className="h-dvh min-h-0 overflow-hidden md:h-[calc(100dvh-1rem)]">
         {current ? (

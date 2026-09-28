@@ -45,13 +45,13 @@ async function mockAdvisorApi(page: Page, me: string, role: Role = 'advisor') {
     assignedTo: null,
     assignedAt: null,
     closedAt: null,
-    useCase: 'UC-01',
+    useCase: 'GENERAL_INQUIRY',
     ...extra,
   });
   const chats: Chat[] = [
     chat('c-assistant', 'javier@banco.test', {}),
     chat('c-waiting', 'daniela@banco.test', { handledBy: 'human_queue' }),
-    chat('c-race', 'santiago@banco.test', { handledBy: 'human_queue' }),
+    chat('c-race', 'santiago@banco.test', { handledBy: 'human_queue', useCase: null }),
     chat('c-other', 'lucia@banco.test', {
       handledBy: 'human_agent',
       assignedTo: OTHER,
@@ -157,7 +157,8 @@ async function openConsole(page: Page, role: Role = 'advisor', email = ME) {
 }
 
 const rows = (page: Page) => page.locator('[data-testid^="conversation-row-"]');
-const headerStatus = (page: Page) => page.locator('header').getByTestId('status-chip');
+// The header shows state only when the chat needs attention or changed hands.
+const headerStatus = (page: Page) => page.locator('header').getByTestId('attention');
 const input = (page: Page) => page.getByLabel('Mensaje al cliente');
 
 test.describe('Advisor console', () => {
@@ -184,7 +185,7 @@ test.describe('Advisor console', () => {
     await expect(input(page)).toBeDisabled();
 
     await page.getByTestId('assistant-switch').click();
-    await expect(headerStatus(page)).toHaveText('En atención');
+    await expect(headerStatus(page)).toHaveText('La atiendes tú');
     await expect(page.getByTestId('system-notice').last()).toContainText('Te atiende un asesor.');
     await expect(input(page)).toBeEnabled();
 
@@ -198,16 +199,16 @@ test.describe('Advisor console', () => {
     await openConsole(page);
     await page.getByTestId('conversation-row-c-waiting').click();
     await page.getByTestId('take-button').click();
-    await expect(headerStatus(page)).toHaveText('En atención');
+    await expect(headerStatus(page)).toHaveText('La atiendes tú');
 
     await page.getByTestId('assistant-switch').click();
-    await expect(headerStatus(page)).toHaveText('Con David');
+    await expect(headerStatus(page)).toHaveCount(0);
     await expect(input(page)).toBeDisabled();
     await expect(page.getByTestId('system-notice').last()).toContainText('Volviste con el asistente.');
 
     await page.getByTestId('assistant-switch').click();
     await page.getByTestId('resolve-button').click();
-    await expect(headerStatus(page)).toHaveText('Resuelto');
+    await expect(headerStatus(page)).toHaveText('Resuelta');
     await expect(page.getByTestId('system-notice').last()).toContainText('La conversación se cerró.');
   });
 
@@ -270,6 +271,20 @@ test.describe('Advisor console', () => {
       .locator('ul')
       .evaluate((el) => getComputedStyle(el).listStyleType);
     expect(bullet).toBe('disc');
+  });
+
+  test('rows show state only when it needs attention, and the use case tag', async ({
+    page,
+  }) => {
+    await openConsole(page);
+    const assistantRow = page.getByTestId('conversation-row-c-assistant');
+    await expect(assistantRow.getByTestId('attention')).toHaveCount(0);
+    await expect(assistantRow).not.toContainText('Con David');
+    await expect(assistantRow.getByTestId('use-case-tag')).toHaveText('Consultas generales');
+    await expect(page.getByTestId('conversation-row-c-waiting').getByTestId('attention')).toHaveText('Sin atender');
+    await expect(page.getByTestId('conversation-row-c-other').getByTestId('attention')).toHaveText('La atiende ada');
+    await expect(page.getByTestId('conversation-row-c-race').getByTestId('use-case-tag')).toHaveCount(0);
+    await expect(page.locator('body')).not.toContainText('Sin caso de uso');
   });
 
   test('customer text is shown literally: no images or links', async ({ page }) => {

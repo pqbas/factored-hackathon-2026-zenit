@@ -2,16 +2,16 @@ import { ASSISTANT_KIND, ASSISTANT_NAME } from '@/lib/assistant';
 import { Bot } from 'lucide-react';
 
 import { avatarColor } from '@/components/conversations/conversation-list';
-import { StatusInline } from '@/components/conversations/status-chip';
+import { Attention, UseCaseTag } from '@/components/conversations/status-chip';
 import { SidebarToggle } from '@/components/sidebar-toggle';
 import { Button } from '@/components/ui/button';
 import {
   type AdvisorChat,
   customerLabel,
-  isHeldByOther,
   isMine,
   statusOf,
-  useCaseLabel,
+  useCaseTag,
+  attentionOf,
 } from '@/lib/advisor';
 import { getInitials } from '@/lib/conversations';
 import { cn } from '@/lib/utils';
@@ -73,7 +73,8 @@ export function ConversationHeader({
 }) {
   const status = statusOf(chat);
   const mine = isMine(chat, me);
-  const heldByOther = isHeldByOther(chat, me);
+  const attention = attentionOf(chat, me, { long: true });
+  const tag = useCaseTag(chat);
   const name = customerLabel(chat);
 
   return (
@@ -87,19 +88,17 @@ export function ConversationHeader({
       >
         {getInitials(name)}
       </div>
-      <div className="flex min-w-0 flex-col">
-        <span className="flex min-w-0 items-center gap-2.5">
-          <span className="truncate font-semibold text-[15px]">{name}</span>
-          <StatusInline status={status} />
-        </span>
-        <span
-          data-testid="customer-meta"
-          className="truncate text-muted-foreground text-xs"
-        >
-          {useCaseLabel(chat)}
-          {mine && ' · La atiendes tú'}
-          {heldByOther && ` · La atiende ${chat.assignedTo}`}
-        </span>
+      <div className="flex min-w-0 flex-col gap-0.5">
+        <span className="truncate font-semibold text-[15px]">{name}</span>
+        {(attention || tag) && (
+          <span
+            data-testid="customer-meta"
+            className="flex min-w-0 items-center gap-2 text-muted-foreground text-xs"
+          >
+            {attention && <Attention attention={attention} />}
+            {tag && <UseCaseTag label={tag} />}
+          </span>
+        )}
       </div>
       {readOnly ? (
         <span

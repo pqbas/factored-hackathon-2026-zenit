@@ -1,6 +1,6 @@
 import { Check, ChevronDown, ListFilter, Search, Users } from 'lucide-react';
 
-import { StatusLine } from '@/components/conversations/status-chip';
+import { Attention, UseCaseTag } from '@/components/conversations/status-chip';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,8 +23,8 @@ import {
   type ChatOwner,
   customerLabel,
   type InboxFilter,
-  statusOf,
-  useCaseLabel,
+  attentionOf,
+  useCaseTag,
 } from '@/lib/advisor';
 import { formatListTime, getInitials } from '@/lib/conversations';
 import { cn } from '@/lib/utils';
@@ -60,6 +60,7 @@ export function ConversationList({
   users,
   userId = null,
   onUserChange,
+  me,
 }: {
   chats: AdvisorChat[];
   selectedId: string | null;
@@ -75,6 +76,7 @@ export function ConversationList({
   users?: ChatOwner[];
   userId?: string | null;
   onUserChange?: (userId: string | null) => void;
+  me: string | undefined;
 }) {
   const selectedUser = users?.find((u) => u.userId === userId);
   const { setOpenMobile } = useSidebar();
@@ -188,6 +190,8 @@ export function ConversationList({
               {chats.map((chat) => {
                 const isSelected = chat.id === selectedId;
                 const name = customerLabel(chat);
+                const attention = attentionOf(chat, me);
+                const tag = useCaseTag(chat);
                 return (
                   <SidebarMenuItem key={chat.id}>
                     <SidebarMenuButton
@@ -219,7 +223,12 @@ export function ConversationList({
                         <span className="truncate font-normal text-sidebar-foreground/60 text-xs">
                           {chat.title}
                         </span>
-                        <StatusLine status={statusOf(chat)} topic={useCaseLabel(chat)} />
+                        {(attention || tag) && (
+                          <span className="flex min-w-0 items-center gap-2">
+                            {attention && <Attention attention={attention} />}
+                            {tag && <UseCaseTag label={tag} />}
+                          </span>
+                        )}
                       </div>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

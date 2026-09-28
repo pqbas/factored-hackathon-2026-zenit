@@ -177,8 +177,55 @@ export function customerLabel(chat: AdvisorChat): string {
   return chat.userEmail || 'Cliente sin email';
 }
 
-export function useCaseLabel(chat: AdvisorChat): string {
-  return chat.useCase || 'Sin caso de uso';
+// The agent's intents (agent/configs/routing.yaml) that segment a conversation.
+// Small talk and out-of-scope turns aren't a use case, so they get no tag.
+const USE_CASE_LABEL: Record<string, string | null> = {
+  GENERAL_INQUIRY: 'Consultas generales',
+  COMPLAINT: 'Reclamo',
+  CASE_STATUS: 'Estado de un caso',
+  HUMAN_AGENT: 'Pidió un asesor',
+  COMMERCIAL: 'Comercial',
+  RETENTION: 'Retención',
+  CANCEL: 'Cancelación',
+  GREETING: null,
+  GOODBYE: null,
+  OUT_OF_SCOPE: null,
+};
+
+export function useCaseTag(chat: AdvisorChat): string | null {
+  if (!chat.useCase) return null;
+  const label = USE_CASE_LABEL[chat.useCase];
+  return label === undefined ? chat.useCase : label;
+}
+
+export type AttentionTone = 'waiting' | 'mine' | 'other' | 'resolved';
+
+// State worth showing: only when the chat needs attention or changes hands.
+// "With David" is the normal case and shows nothing.
+export function attentionOf(
+  chat: AdvisorChat,
+  me: string | undefined,
+  // The row is short ("Tú", the advisor's name before the @); the open chat's
+  // header spells it out.
+  { long = false }: { long?: boolean } = {},
+): { text: string; tone: AttentionTone } | null {
+  if (chat.closedAt) return { text: 'Resuelta', tone: 'resolved' };
+  if (chat.handledBy === 'human_queue') return { text: 'Sin atender', tone: 'waiting' };
+  if (chat.handledBy === 'human_agent') {
+    return isMine(chat, me)
+      ? { text: long ? 'La atiendes tú' : 'Tú', tone: 'mine' }
+      : {
+          text: `La atiende ${
+            chat.assignedTo
+              ? long
+                ? chat.assignedTo
+                : chat.assignedTo.split('@')[0]
+              : 'otro asesor'
+          }`,
+          tone: 'other',
+        };
+  }
+  return null;
 }
 
 export class AdvisorRequestError extends Error {

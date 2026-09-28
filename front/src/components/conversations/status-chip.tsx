@@ -1,38 +1,37 @@
-import { type ConversationStatus, STATUS_LABEL } from '@/lib/conversations';
+import type { AttentionTone } from '@/lib/advisor';
 import { cn } from '@/lib/utils';
 
-const STATUS_DOT: Record<ConversationStatus, string> = {
+const ATTENTION_DOT: Record<AttentionTone, string> = {
   waiting: 'bg-tint-amber-foreground',
-  assistant: 'bg-tint-blue-foreground',
-  advisor: 'bg-primary',
+  mine: 'bg-primary',
+  other: 'bg-tint-blue-foreground',
   resolved: 'bg-tint-green-foreground',
 };
 
-// Quiet one-liner for list rows: a colored dot, the status and the topic.
-export function StatusLine({
-  status,
-  topic,
+// Only shown when a chat needs attention or changed hands.
+export function Attention({
+  attention,
 }: {
-  status: ConversationStatus;
-  topic: string;
+  attention: { text: string; tone: AttentionTone };
 }) {
   return (
-    <span className="flex min-w-0 items-center gap-1.5 font-normal text-[11px] text-sidebar-foreground/55">
-      <span className={cn('size-1.5 shrink-0 rounded-full', STATUS_DOT[status])} />
-      <span data-testid="status-chip" className="shrink-0">
-        {STATUS_LABEL[status]}
+    <span className="flex shrink-0 items-center gap-1.5 font-normal text-[11px] text-sidebar-foreground/70">
+      <span className={cn('size-1.5 shrink-0 rounded-full', ATTENTION_DOT[attention.tone])} />
+      <span data-testid="attention" className="whitespace-nowrap">
+        {attention.text}
       </span>
-      <span className="truncate">· {topic}</span>
     </span>
   );
 }
 
-// Inline status for the conversation header, next to the customer's name.
-export function StatusInline({ status }: { status: ConversationStatus }) {
+// The use case the conversation is segmented by (e.g. "Consultas generales").
+export function UseCaseTag({ label }: { label: string }) {
   return (
-    <span className="flex shrink-0 items-center gap-1.5 font-normal text-muted-foreground text-xs">
-      <span className={cn('size-1.5 rounded-full', STATUS_DOT[status])} />
-      <span data-testid="status-chip">{STATUS_LABEL[status]}</span>
+    <span
+      data-testid="use-case-tag"
+      className="min-w-0 truncate rounded-full bg-secondary px-2 py-px font-normal text-[10px] text-muted-foreground"
+    >
+      {label}
     </span>
   );
 }

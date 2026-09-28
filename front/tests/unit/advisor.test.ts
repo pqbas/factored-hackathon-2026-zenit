@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   type AdvisorChat,
   type AdvisorMessage,
+  attentionOf,
   canReply,
   inboxFiltersFor,
   inboxUrl,
@@ -10,6 +11,7 @@ import {
   mergeMessages,
   statusOf,
   toBubble,
+  useCaseTag,
 } from '@/lib/advisor';
 
 const ME = 'babbage@example.com';
@@ -126,5 +128,32 @@ describe('inboxFiltersFor', () => {
     expect(ids('admin')).not.toContain('mine');
     expect(ids('advisor')).toContain('mine');
     expect(ids('advisor')).not.toContain('all');
+  });
+});
+
+describe('useCaseTag', () => {
+  it('labels the use case, and shows nothing without one or for small talk', () => {
+    expect(useCaseTag(chat({ useCase: 'GENERAL_INQUIRY' }))).toBe('Consultas generales');
+    expect(useCaseTag(chat({ useCase: 'COMPLAINT' }))).toBe('Reclamo');
+    expect(useCaseTag(chat({ useCase: null }))).toBeNull();
+    expect(useCaseTag(chat({ useCase: 'GREETING' }))).toBeNull();
+    expect(useCaseTag(chat({ useCase: 'NEW_ONE' }))).toBe('NEW_ONE');
+  });
+});
+
+describe('attentionOf', () => {
+  it('says nothing while David handles the chat', () => {
+    expect(attentionOf(chat(), ME)).toBeNull();
+  });
+
+  it('flags waiting, held and resolved chats', () => {
+    expect(attentionOf(chat({ handledBy: 'human_queue' }), ME)?.text).toBe('Sin atender');
+    const mine = chat({ handledBy: 'human_agent', assignedTo: ME });
+    expect(attentionOf(mine, ME)?.text).toBe('Tú');
+    expect(attentionOf(mine, ME, { long: true })?.text).toBe('La atiendes tú');
+    const other = chat({ handledBy: 'human_agent', assignedTo: 'ada@example.com' });
+    expect(attentionOf(other, ME)?.text).toBe('La atiende ada');
+    expect(attentionOf(other, ME, { long: true })?.text).toBe('La atiende ada@example.com');
+    expect(attentionOf(chat({ closedAt: '2026-09-28T11:00:00.000Z' }), ME)?.text).toBe('Resuelta');
   });
 });
