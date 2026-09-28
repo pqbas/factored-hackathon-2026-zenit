@@ -19,7 +19,7 @@ export function RequireSection({
   return <>{children}</>;
 }
 
-function NoAccess() {
+export function NoAccess() {
   return (
     <div
       data-testid="no-access"
