@@ -1,0 +1,18 @@
+# ML roadmap
+
+Specification source: [Fraud model](28-09-26-fraud-model/requirements.md).
+
+| Phase | Outcome | Status |
+|---|---|---|
+| Design | 13-table map, features, and specs | Documented |
+| 0 | Access, profiling, and compute feasibility | **Done 2026-09-28** — profile.py executed, 4,425,008 rows, 4,316 fraud (0.0975%), temporal split viable, fraud_score-label association confirmed |
+| 1 | Causal V1 dataset and reproducible splits | **Done 2026-09-28** — features.py contract + temporal split; normalized USD amount validated (2.25% missing); no fitted preprocessing yet |
+| 2 | B0/B1 + logistic regression + decision tree with MLflow | Pending |
+| 3 | Final evaluation and utility decision | Pending |
+| 4 | V2 / Random Forest / boosting iterations | Optional; evaluate before each version's test |
+| 5 | Registration, scoring, and integration | Pending; depends on evidence |
+
+- [Requirements and models](28-09-26-fraud-model/requirements.md)
+- [Plan and initial hyperparameters](28-09-26-fraud-model/plan.md)
+- [Validation and delivery criteria](28-09-26-fraud-model/validation.md)
+- [Data map](../data_map_and_features.md)
