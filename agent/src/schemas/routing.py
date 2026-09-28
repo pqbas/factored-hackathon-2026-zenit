@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import yaml
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, model_validator
 
 from src.schemas.classification import reply_language
 
@@ -14,6 +14,8 @@ class IntentRoute(BaseModel):
     examples: list[str]
     destination: str
     option: dict[str, str] | None = None
+    schemas: list[str] = []
+    instructions: str | None = None
 
     @field_validator("option")
     @classmethod
@@ -21,6 +23,12 @@ class IntentRoute(BaseModel):
         if value is not None and not {"es", "pt"} <= value.keys():
             raise ValueError("option must include both 'es' and 'pt'")
         return value
+
+    @model_validator(mode="after")
+    def _load_context_needs_schemas_and_instructions(self) -> "IntentRoute":
+        if self.destination == "load_context" and (not self.schemas or not self.instructions):
+            raise ValueError("a load_context route needs both 'schemas' and 'instructions'")
+        return self
 
 
 def load_routing(path: str | Path, allowed_destinations: set[str]) -> list[IntentRoute]:

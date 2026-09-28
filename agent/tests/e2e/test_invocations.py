@@ -9,6 +9,7 @@ import pytest
 from fastapi.testclient import TestClient
 from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
 from langchain_core.messages import AIMessage
+from langchain_core.tools import StructuredTool
 from langgraph.checkpoint.memory import MemorySaver
 
 import src.main as main
@@ -37,8 +38,41 @@ async def _fake_checkpointer():
     yield MemorySaver()
 
 
+class BindableChatModel:
+    """A chat model stand-in that returns one fixed reply. bind_tools returns self so a
+    GENERAL_INQUIRY turn (which now binds the UC-01 tools) doesn't need a special LLM
+    unless a test actually wants to script a tool call."""
+
+    def __init__(self, text: str):
+        self._text = text
+
+    def bind_tools(self, tools):
+        return self
+
+    async def ainvoke(self, messages):
+        return AIMessage(content=self._text)
+
+
+class ScriptedToolChatModel:
+    """A chat model stand-in for scripting a tool call: bind_tools returns self, and
+    ainvoke returns each reply in the given list in turn."""
+
+    def __init__(self, replies: list[AIMessage]):
+        self._replies = iter(replies)
+
+    def bind_tools(self, tools):
+        return self
+
+    async def ainvoke(self, messages):
+        return next(self._replies)
+
+
 def _fake_chat_model_factory():
-    return GenericFakeChatModel(messages=iter([AIMessage(content=FAKE_LLM_TEXT)]))
+    return BindableChatModel(FAKE_LLM_TEXT)
+
+
+async def _fake_tools_for(schema):
+    return []
 
 
 def _jev_ok_response(request: httpx.Request) -> httpx.Response:
@@ -61,7 +95,8 @@ def _jev_ok_response(request: httpx.Request) -> httpx.Response:
                 },
                 "sentiment": {
                     "type": "score", "score": 2.0, "confidence": 0.7,
-                    "probabilities": {"neutral": 1.0},
+                    "probabilities": {"2": 1.0},
+                    "legend": {"0": "very_negative", "1": "negative", "2": "neutral", "3": "positive"},
                 },
             },
             "usage": {},
@@ -89,7 +124,8 @@ def _jev_response_for(intent: str) -> httpx.Response:
                 },
                 "sentiment": {
                     "type": "score", "score": 2.0, "confidence": 0.7,
-                    "probabilities": {"neutral": 1.0},
+                    "probabilities": {"2": 1.0},
+                    "legend": {"0": "very_negative", "1": "negative", "2": "neutral", "3": "positive"},
                 },
             },
             "usage": {},
@@ -117,6 +153,7 @@ class RecordingChatModel:
 def _patch_main(monkeypatch):
     monkeypatch.setattr(main, "checkpointer", _fake_checkpointer)
     monkeypatch.setattr(main, "get_chat_model", _fake_chat_model_factory)
+    monkeypatch.setattr(main, "tools_for", _fake_tools_for)
     monkeypatch.setattr(
         main,
         "jev_client",
@@ -223,3 +260,43 @@ def test_greeting_message_returns_llm_text_with_options_in_the_system_prompt(cli
     for intent in ("GENERAL_INQUIRY", "COMPLAINT", "CASE_STATUS"):
         route = next(r for r in main.routes if r.intent == intent)
         assert route.option["es"] in system_prompt
+
+
+def test_general_inquiry_calls_the_tool_with_the_sessions_customer_id(client, monkeypatch):
+    calls: list[dict] = []
+
+    async def fake_get_products(**kwargs):
+        calls.append(kwargs)
+        return [{"product_type": "Tarjeta Crédito"}]
+
+    get_products_tool = StructuredTool.from_function(
+        coroutine=fake_get_products,
+        name="get_products",
+        description="d",
+        args_schema={
+            "type": "object",
+            "properties": {"customer_id": {"type": "string"}},
+            "required": ["customer_id"],
+        },
+        infer_schema=False,
+    )
+
+    async def fake_tools_for(schema):
+        return [get_products_tool]
+
+    monkeypatch.setattr(main, "tools_for", fake_tools_for)
+    monkeypatch.setattr(
+        main,
+        "get_chat_model",
+        lambda: ScriptedToolChatModel([
+            AIMessage(content="", tool_calls=[{"name": "get_products", "args": {}, "id": "call_1"}]),
+            AIMessage(content=FAKE_LLM_TEXT),
+        ]),
+    )
+
+    response = _invoke(client, "¿cuál es el saldo de mi tarjeta?", thread_id="e2e-general-inquiry")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert _output_text(body) == FAKE_LLM_TEXT
+    assert calls == [{"customer_id": "CLI-FLEUCGTWGAHL"}]  # demo-mx-1's customer_id

@@ -57,6 +57,8 @@ def bind_customer(tool, customer_id):
 
 ## 12.5 Estado
 
-Pendiente. Hoy `WarehouseBankData` ya filtra por el `customer_id` de la sesión
-con una consulta parametrizada (`:cid`), pero dentro del grafo de la disputa,
-sin MCP.
+Parcial. `src/tools/bind_customer.py` quita `customer_id` del schema que ve el
+LLM y agrega el de la sesión en cada llamada a las herramientas de UC-01,
+descartando cualquier valor que mande el LLM.
+
+Pendiente: verificar los permisos de la App desplegada, en la Phase 8.

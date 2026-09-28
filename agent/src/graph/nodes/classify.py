@@ -71,7 +71,9 @@ async def classify(
 
     _tag_trace(classification)
 
-    update: dict = {"classification": classification.model_dump()}
+    # Cleared on every turn so a use case's tools never leak into an unrelated reply
+    # (e.g. a greeting right after a GENERAL_INQUIRY in the same thread).
+    update: dict = {"classification": classification.model_dump(), "use_case": None}
     messages: list = []
 
     # Only the rules path produces a masked value: Jev returns the category, not the matched text.

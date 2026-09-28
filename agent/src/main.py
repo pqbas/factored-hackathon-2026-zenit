@@ -34,6 +34,7 @@ from src.graph.build import GRAPH_NODES, build_graph  # noqa: E402
 from src.llm.chat import get_chat_model  # noqa: E402
 from src.llm.jev import JevClient  # noqa: E402
 from src.schemas.routing import load_routing  # noqa: E402
+from src.tools.mcp_client import tools_for  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -141,6 +142,7 @@ async def streaming(
                     routes,
                     settings.guardrail_threshold,
                     settings.intent_threshold,
+                    tools_for,
                 )
                 async for event in _process_agent_astream_events(
                     graph.astream(input_state, config, stream_mode=["updates", "messages"])
