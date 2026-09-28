@@ -169,12 +169,15 @@ admin) y ninguna otra.
 **Goal:** que un admin revise las conversaciones de cualquier usuario sin poder
 modificarlas.
 
-<!-- Contrato del back (fase nueva del back): GET /api/admin/chats, mismos
-     params y respuesta que /api/history más userId opcional, y
-     GET /api/admin/chats/:id/messages. Admin = email en ADMIN_EMAILS; si no,
-     403. El back suma (Fase 2 del back, commit 3322359): el email del dueño en
-     cada chat, guardado desde esa fase (los chats anteriores vienen sin
-     email), y un GET de usuarios con conversaciones (path y shape pendientes). -->
+<!-- Contrato del back (Fase 2 del back, rama
+     feat/pqbas-back-phase2-admin-conversaciones, sin mergear):
+     GET /api/admin/chats?limit=&starting_after=&ending_before=&status=&intent=&customer=&userId=
+       → { chats, hasMore }; cada chat trae userId y userEmail (null en chats
+       anteriores a la migración); orden createdAt desc.
+     GET /api/admin/users → { users: [{ userId, userEmail }] }, por email.
+     GET /api/admin/chats/:id/messages → como GET /api/messages/:id.
+     Errores: 401 sin sesión, 403 forbidden:chat si no es admin (ADMIN_EMAILS),
+     404 not_found:chat, 204 sin base de datos. -->
 
 - [ ] La vista de conversaciones muestra las de todos los usuarios, de la más
       reciente a la más antigua, con el email de cada usuario.
