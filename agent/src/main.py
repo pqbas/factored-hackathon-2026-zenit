@@ -33,6 +33,7 @@ from src.llm.chat import get_chat_model  # noqa: E402
 from src.llm.jev import JevClient  # noqa: E402
 from src.prompts.advisor import AdvisorPrefixStreamFilter  # noqa: E402
 from src.schemas.routing import load_routing  # noqa: E402
+from src.schemas.turn_outputs import turn_custom_outputs  # noqa: E402
 from src.tools.mcp_client import tools_for  # noqa: E402
 
 logger = logging.getLogger(__name__)
@@ -70,9 +71,10 @@ def _thread_id(request: ResponsesAgentRequest) -> str:
 
 
 async def _process_agent_astream_events(
-    async_stream: AsyncIterator[Any],
+    async_stream: AsyncIterator[Any], turn: dict
 ) -> AsyncGenerator[ResponsesAgentStreamEvent, None]:
-    """Convert LangGraph stream events into ResponsesAgentStreamEvent objects."""
+    """Convert LangGraph stream events into ResponsesAgentStreamEvent objects, recording in
+    `turn` the classification and use case the nodes wrote."""
     prefix_filter = AdvisorPrefixStreamFilter()
     async for event in async_stream:
         if event[0] == "updates":
@@ -82,6 +84,9 @@ async def _process_agent_astream_events(
             for node_name, node_data in event[1].items():
                 if not node_data:
                     continue
+                for key in ("classification", "use_case"):
+                    if key in node_data:
+                        turn[key] = node_data[key]
                 if len(node_data.get("messages", [])) > 0:
                     for msg in node_data["messages"]:
                         if isinstance(msg, ToolMessage) and not isinstance(msg.content, str):
@@ -109,12 +114,16 @@ async def non_streaming(request: ResponsesAgentRequest) -> ResponsesAgentRespons
     request.custom_inputs = dict(request.custom_inputs or {})
     request.custom_inputs["thread_id"] = thread_id
 
-    outputs = [
-        event.item
-        async for event in streaming(request)
-        if event.type == "response.output_item.done"
+    done_events = [
+        event async for event in streaming(request) if event.type == "response.output_item.done"
     ]
-    return ResponsesAgentResponse(output=outputs, custom_outputs={"thread_id": thread_id})
+    custom_outputs = next(
+        (event.custom_outputs for event in reversed(done_events) if event.custom_outputs),
+        {"thread_id": thread_id},
+    )
+    return ResponsesAgentResponse(
+        output=[event.item for event in done_events], custom_outputs=custom_outputs
+    )
 
 
 @stream()
@@ -144,10 +153,24 @@ async def streaming(
         settings.intent_threshold,
         tools_for,
     )
+    # The turn's signals ride on its last output_item.done, so each done event is held back
+    # until the next one arrives or the stream ends.
+    turn: dict = {"classification": None, "use_case": None}
+    last_done = None
     async for event in _process_agent_astream_events(
-        graph.astream(input_state, stream_mode=["updates", "messages"])
+        graph.astream(input_state, stream_mode=["updates", "messages"]), turn
     ):
-        yield event
+        if event.type != "response.output_item.done":
+            yield event
+            continue
+        if last_done is not None:
+            yield last_done
+        last_done = event
+    if last_done is not None:
+        custom_outputs = turn_custom_outputs(
+            thread_id, turn["classification"], turn["use_case"], settings.guardrail_threshold
+        )
+        yield last_done.model_copy(update={"custom_outputs": custom_outputs})
 
 
 server = AgentServer("ResponsesAgent", enable_chat_proxy=False)  # UI lives in ../back
