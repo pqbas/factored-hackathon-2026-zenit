@@ -380,7 +380,10 @@ export async function takeChat({
           "closedAt" = null
       from "prev"
       where c."id" = ${chatId}
-        and ("prev"."handledBy" <> 'human_agent' or "prev"."assignedTo" = ${advisorEmail} or ${force})
+        -- Checked on the target row, not on "prev": when two takes race,
+        -- Postgres re-checks the locked row's current values, so the second
+        -- one sees the first owner and matches nothing (409).
+        and (c."handledBy" <> 'human_agent' or c."assignedTo" = ${advisorEmail} or ${force})
       returning "prev"."handledBy" as "prevHandledBy", "prev"."assignedTo" as "prevAssignedTo"
     `)) as unknown as Array<{
       prevHandledBy: Chat['handledBy'] | null;

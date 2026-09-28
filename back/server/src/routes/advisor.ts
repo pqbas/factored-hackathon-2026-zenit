@@ -33,7 +33,7 @@ advisorRouter.use(requireAuth, requireAdvisor);
 const SYSTEM_MESSAGES = {
   taken: 'Te atiende un asesor.',
   reassigned: 'Otro asesor continúa la conversación.',
-  returned_to_agent: 'Volviste con el asistente.',
+  returned_to_agent: 'Volviste con David.',
   resolved: 'La conversación se cerró.',
 } as const;
 

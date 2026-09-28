@@ -27,6 +27,10 @@ sale de `X-Forwarded-Email`, nunca del body. Sin base de datos responden 204.
   - Aviso de corte: `role 'system'`, `senderType 'system'`.
   - Los mensajes anteriores a esta fase quedan con `senderType: null`: el
     front los interpreta por `role`.
+  - Privacidad: el cliente nunca ve el email de un asesor. En las rutas del
+    cliente (`GET /api/messages/:id`, `GET /api/chat/:id`, `/api/history`)
+    `senderId` y `assignedTo` van siempre en `null`; en `/api/advisor/*` y
+    `/api/admin/*` van completos. Los mensajes system llevan `senderId: null`.
 
 ### 1.2 Rutas
 
@@ -67,8 +71,8 @@ sale de `X-Forwarded-Email`, nunca del body. Sin base de datos responden 204.
   `assignedTo`, `assignedAt` y `closedAt`.
 - Textos de los mensajes system, visibles para el cliente y sin el email del
   asesor: take → "Te atiende un asesor."; take con force → "Otro asesor
-  continúa la conversación."; release `returned_to_agent` → "Volviste con el
-  asistente."; release `resolved` → "La conversación se cerró.".
+  continúa la conversación."; release `returned_to_agent` → "Volviste con
+  David." (el asistente se llama David); release `resolved` → "La conversación se cerró.".
 
 ### 1.3 Historial que va al agente
 

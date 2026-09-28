@@ -163,6 +163,25 @@ test.describe('/api/advisor (with database)', () => {
       expect(body.assignedTo).toBe(`${babbageContext.name}@example.com`);
     });
 
+    test('two simultaneous takes of a free chat: exactly one wins', async ({
+      babbageContext,
+      adaContext,
+    }) => {
+      for (let i = 0; i < 5; i++) {
+        const chatId = await createChat(babbageContext);
+        const statuses = (
+          await Promise.all(
+            [babbageContext, adaContext].map((ctx) =>
+              ctx.request.post(`/api/advisor/conversations/${chatId}/take`, {
+                data: {},
+              }),
+            ),
+          )
+        ).map((r) => r.status());
+        expect(statuses.sort()).toEqual([200, 409]);
+      }
+    });
+
     test('an admin with force reassigns and logs the generic reassignment message', async ({
       babbageContext,
       adaContext,
@@ -288,7 +307,37 @@ test.describe('/api/advisor (with database)', () => {
       const messages = await response.json();
       expect(messages).toHaveLength(1);
       expect(messages[0].senderType).toBe('human_agent');
-      expect(messages[0].senderId).toBe(`${babbageContext.name}@example.com`);
+      // Customer routes never expose the advisor's email; the console does.
+      expect(messages[0].senderId).toBeNull();
+
+      const consoleResponse = await babbageContext.request.get(
+        `/api/advisor/conversations/${chatId}/messages?after=${lastBeforeReply.id}`,
+      );
+      const consoleMessages = await consoleResponse.json();
+      expect(consoleMessages[0].senderId).toBe(
+        `${babbageContext.name}@example.com`,
+      );
+
+      const chat = await (
+        await babbageContext.request.get(`/api/chat/${chatId}`)
+      ).json();
+      expect(chat.handledBy).toBe('human_agent');
+      expect(chat.assignedTo).toBeNull();
+
+      const { chats } = await (
+        await babbageContext.request.get('/api/history?limit=100')
+      ).json();
+      const historyChat = chats.find((c: any) => c.id === chatId);
+      expect(historyChat.assignedTo).toBeNull();
+
+      const { chats: inbox } = await (
+        await babbageContext.request.get(
+          '/api/advisor/conversations?assignedTo=me&limit=100',
+        )
+      ).json();
+      expect(inbox.find((c: any) => c.id === chatId).assignedTo).toBe(
+        `${babbageContext.name}@example.com`,
+      );
     });
 
     test('?after= from a different chat returns 400 on both routes', async ({
@@ -366,7 +415,7 @@ test.describe('/api/advisor (with database)', () => {
       const systemMessages = messages.filter((m) => m.role === 'system');
       const lastSystem = systemMessages[systemMessages.length - 1];
       const text = (lastSystem.parts as Array<{ text: string }>)[0].text;
-      expect(text).toBe('Volviste con el asistente.');
+      expect(text).toBe('Volviste con David.');
       expect(lastSystem.senderId).toBeNull();
       expect(text).not.toContain(babbageContext.name);
       expect(text).not.toContain('@example.com');
@@ -502,7 +551,7 @@ test.describe('/api/advisor (with database)', () => {
       expect(secondInput).toContain(`[Asesor] ${advisorText}`);
       expect(secondInput).toContain(followUpText);
       expect(secondInput).not.toContain('Te atiende un asesor.');
-      expect(secondInput).not.toContain('Volviste con el asistente.');
+      expect(secondInput).not.toContain('Volviste con David.');
     });
   });
 

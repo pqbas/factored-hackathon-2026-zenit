@@ -65,6 +65,7 @@ import {
 } from '@chat-template/core';
 import { ChatSDKError } from '@chat-template/core/errors';
 import { generateTitleFromUserMessage } from '../title';
+import { toCustomerChat } from '../customer-view';
 import { buildAgentHistory, shouldPersistAgentReply } from '../agent-turn';
 
 export const chatRouter: RouterType = Router();
@@ -441,7 +442,7 @@ chatRouter.get(
 
     const { chat } = await checkChatAccess(id, req.session?.user.id);
 
-    return res.status(200).json(chat);
+    return res.status(200).json(chat ? toCustomerChat(chat) : chat);
   },
 );
 
