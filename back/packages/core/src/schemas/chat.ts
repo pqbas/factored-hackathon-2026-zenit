@@ -36,6 +36,8 @@ export const postRequestBodySchema = z.object({
   selectedVisibilityType: z.enum(['public', 'private']),
   // Optional field for ephemeral mode: frontend sends previous conversation history
   previousMessages: z.array(previousMessageSchema).optional(),
+  // Optional customer session token, forwarded to the agent as custom_inputs.session_token
+  sessionToken: z.string().min(1).max(256).optional(),
 });
 
 export type PostRequestBody = z.infer<typeof postRequestBodySchema>;

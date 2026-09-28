@@ -22,14 +22,16 @@ interface CapturedRequest {
     [key: string]: unknown;
   };
   hasContext: boolean;
+  customInputs?: {
+    session_token?: string;
+    [key: string]: unknown;
+  };
 }
 
+// No reset between tests: the capture list lives in the shared test server,
+// so one worker's reset would wipe another worker's requests. Each test looks
+// up its own request by chat id instead.
 test.describe.serial('Context Injection', () => {
-  test.beforeEach(async ({ adaContext }) => {
-    // Reset captured requests before each test
-    await adaContext.request.post('/api/test/reset-captured-requests');
-  });
-
   test.describe('agent/v1/responses endpoints', () => {
     test('injects context with conversation_id and user_id', async ({
       adaContext,
@@ -53,11 +55,11 @@ test.describe.serial('Context Injection', () => {
       const capturedRequests =
         (await capturedResponse.json()) as CapturedRequest[];
 
-      // Find the request to the serving endpoint (responses endpoint)
+      // Match by this chat's id: the capture list is shared by every worker
+      // and also holds title-model calls, so the first endpoint request may
+      // belong to another test.
       const chatRequest = capturedRequests.find(
-        (req) =>
-          req.url.includes('/chat/completions') ||
-          req.url.includes('/responses'),
+        (req) => req.context?.conversation_id === chatId,
       );
 
       expect(chatRequest).toBeDefined();
@@ -150,9 +152,6 @@ test.describe.serial('Context Injection', () => {
         (req) => req.context?.conversation_id === adaChatId,
       );
 
-      // Reset for Babbage's request
-      await babbageContext.request.post('/api/test/reset-captured-requests');
-
       // Babbage's chat
       const babbageChatId = generateUUID();
       await babbageContext.request.post('/api/chat', {
@@ -231,6 +230,135 @@ test.describe.serial('Context Injection', () => {
       // Each request should have its own conversation_id
       expect(firstRequest?.context?.conversation_id).toBe(firstChatId);
       expect(secondRequest?.context?.conversation_id).toBe(secondChatId);
+    });
+  });
+
+  test.describe('session token injection', () => {
+    test('POST /api/chat with sessionToken sends custom_inputs.session_token and context.conversation_id', async ({
+      adaContext,
+    }) => {
+      const chatId = generateUUID();
+      const response = await adaContext.request.post('/api/chat', {
+        data: {
+          id: chatId,
+          message: TEST_PROMPTS.SKY.MESSAGE,
+          selectedChatModel: 'chat-model',
+          selectedVisibilityType: 'private',
+          sessionToken: 'demo-mx-1',
+        },
+      });
+      expect(response.status()).toBe(200);
+
+      const capturedResponse = await adaContext.request.get(
+        '/api/test/captured-requests',
+      );
+      const capturedRequests =
+        (await capturedResponse.json()) as CapturedRequest[];
+
+      const chatRequest = capturedRequests.find(
+        (req) => req.context?.conversation_id === chatId,
+      );
+
+      expect(chatRequest).toBeDefined();
+      expect(chatRequest?.context?.conversation_id).toBe(chatId);
+      expect(chatRequest?.customInputs?.session_token).toBe('demo-mx-1');
+    });
+
+    test('POST /api/chat without sessionToken sends no custom_inputs', async ({
+      adaContext,
+    }) => {
+      const chatId = generateUUID();
+      await adaContext.request.post('/api/chat', {
+        data: {
+          id: chatId,
+          message: TEST_PROMPTS.SKY.MESSAGE,
+          selectedChatModel: 'chat-model',
+          selectedVisibilityType: 'private',
+        },
+      });
+
+      const capturedResponse = await adaContext.request.get(
+        '/api/test/captured-requests',
+      );
+      const capturedRequests =
+        (await capturedResponse.json()) as CapturedRequest[];
+
+      const chatRequest = capturedRequests.find(
+        (req) => req.context?.conversation_id === chatId,
+      );
+
+      expect(chatRequest).toBeDefined();
+      expect(chatRequest?.customInputs).toBeUndefined();
+    });
+
+    test('POST /api/chat/title sends no custom_inputs or context', async ({
+      adaContext,
+    }) => {
+      const titleResponse = await adaContext.request.post('/api/chat/title', {
+        data: { message: TEST_PROMPTS.SKY.MESSAGE },
+      });
+      expect(titleResponse.status()).toBe(200);
+
+      const capturedResponse = await adaContext.request.get(
+        '/api/test/captured-requests',
+      );
+      const capturedRequests =
+        (await capturedResponse.json()) as CapturedRequest[];
+
+      // Only title-model calls hit /chat/completions, and none may carry
+      // context or custom_inputs.
+      const titleRequests = capturedRequests.filter((req) =>
+        req.url.includes('/chat/completions'),
+      );
+
+      expect(titleRequests.length).toBeGreaterThan(0);
+      for (const req of titleRequests) {
+        expect(req.customInputs).toBeUndefined();
+        expect(req.hasContext).toBe(false);
+      }
+    });
+
+    test('two turns of the same chat send the same conversation_id and session_token', async ({
+      adaContext,
+    }) => {
+      const chatId = generateUUID();
+
+      await adaContext.request.post('/api/chat', {
+        data: {
+          id: chatId,
+          message: TEST_PROMPTS.SKY.MESSAGE,
+          selectedChatModel: 'chat-model',
+          selectedVisibilityType: 'private',
+          sessionToken: 'demo-mx-1',
+        },
+      });
+
+      await adaContext.request.post('/api/chat', {
+        data: {
+          id: chatId,
+          message: TEST_PROMPTS.GRASS.MESSAGE,
+          selectedChatModel: 'chat-model',
+          selectedVisibilityType: 'private',
+          sessionToken: 'demo-mx-1',
+          previousMessages: [TEST_PROMPTS.SKY.MESSAGE],
+        },
+      });
+
+      const capturedResponse = await adaContext.request.get(
+        '/api/test/captured-requests',
+      );
+      const capturedRequests =
+        (await capturedResponse.json()) as CapturedRequest[];
+
+      const chatRequests = capturedRequests.filter(
+        (req) => req.context?.conversation_id === chatId,
+      );
+
+      expect(chatRequests.length).toBe(2);
+      for (const req of chatRequests) {
+        expect(req.context?.conversation_id).toBe(chatId);
+        expect(req.customInputs?.session_token).toBe('demo-mx-1');
+      }
     });
   });
 });

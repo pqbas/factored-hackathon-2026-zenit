@@ -58,6 +58,7 @@ import {
   type VisibilityType,
   CONTEXT_HEADER_CONVERSATION_ID,
   CONTEXT_HEADER_USER_ID,
+  CONTEXT_HEADER_SESSION_TOKEN,
   getAndClearWorkflowMetadata,
 } from '@chat-template/core';
 import { ChatSDKError } from '@chat-template/core/errors';
@@ -99,11 +100,13 @@ chatRouter.post('/', requireAuth, async (req: Request, res: Response) => {
       message,
       selectedChatModel,
       selectedVisibilityType,
+      sessionToken,
     }: {
       id: string;
       message?: ChatMessage;
       selectedChatModel: string;
       selectedVisibilityType: VisibilityType;
+      sessionToken?: string;
     } = requestBody;
 
     const session = req.session;
@@ -233,6 +236,9 @@ chatRouter.post('/', requireAuth, async (req: Request, res: Response) => {
       headers: {
         [CONTEXT_HEADER_CONVERSATION_ID]: id,
         [CONTEXT_HEADER_USER_ID]: session.user.email ?? session.user.id,
+        ...(sessionToken
+          ? { [CONTEXT_HEADER_SESSION_TOKEN]: sessionToken }
+          : {}),
       },
       onFinish: ({ usage }) => {
         finalUsage = usage;

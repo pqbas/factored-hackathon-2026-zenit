@@ -17,6 +17,7 @@ import { historyRouter } from './routes/history';
 import { sessionRouter } from './routes/session';
 import { messagesRouter } from './routes/messages';
 import { configRouter } from './routes/config';
+import { demoCustomersRouter } from './routes/demo-customers';
 import { internalRouter } from './routes/internal';
 import { ChatSDKError } from '@chat-template/core/errors';
 
@@ -56,6 +57,7 @@ app.use('/api/history', historyRouter);
 app.use('/api/session', sessionRouter);
 app.use('/api/messages', messagesRouter);
 app.use('/api/config', configRouter);
+app.use('/api/demo-customers', demoCustomersRouter);
 app.use('/api/internal', internalRouter);
 
 // Serve static files in production
