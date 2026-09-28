@@ -118,6 +118,13 @@ export default defineConfig({
       DATABRICKS_CLIENT_ID: 'mock-value',
       DATABRICKS_CLIENT_SECRET: 'mock-value',
       DATABRICKS_HOST: 'mock-value',
+      // ada-<workerIndex> is admin; babbage-<workerIndex> is not. workerIndex
+      // isn't capped at `workers` - a fresh worker (new project, a retry)
+      // gets the next index - so this covers a generous range, not just 0-7.
+      ADMIN_EMAILS: Array.from(
+        { length: 64 },
+        (_, i) => `ada-${i}@example.com`,
+      ).join(','),
       ...(TEST_MODE === 'ephemeral'
         ? {
             POSTGRES_URL: '',
