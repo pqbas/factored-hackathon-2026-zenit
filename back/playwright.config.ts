@@ -92,16 +92,6 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
     },
     {
-      name: 'oauth',
-      testMatch: /oauth\/.*.test.ts/,
-      use: { ...devices['Desktop Chrome'] },
-    },
-    {
-      name: 'e2e',
-      testMatch: /e2e\/.*.test.ts/,
-      use: { ...devices['Desktop Chrome'] },
-    },
-    {
       name: 'routes',
       testMatch: /routes\/.*.test.ts/,
       use: { ...devices['Desktop Chrome'] },
