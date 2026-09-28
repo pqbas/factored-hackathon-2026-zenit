@@ -37,7 +37,7 @@ conectarla a datos reales.
 Modo oscuro revisado; móvil sin revisar. También entraron: riel de secciones
 (Agente / Chats), barra lateral unificada, historial de ejemplo del cliente en
 Agente y la quita de los filtros viejos del historial.
-Shipped en PR #16.
+Shipped en PR #3.
 
 ---
 
@@ -60,7 +60,7 @@ calma y amplitud de una app nativa de Mac.
 
 También entraron: color principal celeste, botón de modo claro/oscuro en el
 riel y un solo avatar de usuario (en el riel). Fase hecha sin carpeta de spec.
-Shipped en PR #16.
+Shipped en PR #5.
 
 ---
 
@@ -81,7 +81,7 @@ en la app de cualquier banco.
 
 Los datos son de la clienta CUS00000322 del dummy del dataset. La categoría del
 gasto (`transaction_category`) no se muestra todavía. Fase hecha sin carpeta de
-spec. Shipped en PR #16.
+spec. Shipped en PR #6.
 
 ---
 
