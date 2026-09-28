@@ -116,7 +116,7 @@ claro.
 
 ---
 
-## Phase 5: Consola del asesor con toma manual
+## Phase 5: Consola del asesor con toma manual (Complete)
 
 **Goal:** que un asesor o admin tome una conversación, le responda al cliente y
 la devuelva al asistente o la cierre, sin depender del handoff automático del
@@ -127,18 +127,20 @@ agente.
      usuario: dos personas nunca responden el mismo chat. Contrato en
      spec/28-09-26-consola-asesor/requirements.md. -->
 
-- [ ] El asesor ve la bandeja de conversaciones y la filtra por quién la
+- [x] El asesor ve la bandeja de conversaciones y la filtra por quién la
       atiende, a quién está asignada y si está abierta o cerrada.
-- [ ] El asesor toma una conversación: el asistente deja de responder y queda
+- [x] El asesor toma una conversación: el asistente deja de responder y queda
       asignada a él. Si ya la tiene otro asesor, recibe un conflicto.
-- [ ] Solo quien tiene tomada la conversación le puede responder al cliente,
+- [x] Solo quien tiene tomada la conversación le puede responder al cliente,
       y el cliente ve esos mensajes en su chat casi en tiempo real.
-- [ ] El asesor devuelve la conversación al asistente o la cierra.
-- [ ] Un admin puede quitarle una conversación a otro asesor o devolverla; un
+- [x] El asesor devuelve la conversación al asistente o la cierra.
+- [x] Un admin puede quitarle una conversación a otro asesor o devolverla; un
       asesor no.
-- [ ] Si el asesor toma la conversación mientras el agente responde, esa
+- [x] Si el asesor toma la conversación mientras el agente responde, esa
       respuesta no se guarda como turno del agente.
-- [ ] Solo asesores y admins usan estas rutas, y la identidad sale del login.
+- [x] Solo asesores y admins usan estas rutas, y la identidad sale del login.
+
+Shipped en PR #22.
 
 ---
 
