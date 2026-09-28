@@ -37,7 +37,9 @@ import {
 } from '../middleware/auth';
 import {
   deleteChatById,
+  getChatById,
   getMessagesByChatId,
+  reopenChat,
   saveChat,
   saveMessages,
   updateChatLastContextById,
@@ -63,6 +65,7 @@ import {
 } from '@chat-template/core';
 import { ChatSDKError } from '@chat-template/core/errors';
 import { generateTitleFromUserMessage } from '../title';
+import { buildAgentHistory, shouldPersistAgentReply } from '../agent-turn';
 
 export const chatRouter: RouterType = Router();
 
@@ -162,6 +165,12 @@ chatRouter.post('/', requireAuth, async (req: Request, res: Response) => {
 
     // If message is provided, add it to the list and save it
     // If not (continuation/regeneration), just use previous messages
+    // A client message reopens a closed chat: closing only means the agent
+    // resolved it, not that the customer is done writing.
+    if (dbAvailable && chat?.closedAt) {
+      await reopenChat({ chatId: id });
+    }
+
     let uiMessages: ChatMessage[];
     if (message) {
       uiMessages = [...previousMessages, message];
@@ -175,6 +184,8 @@ chatRouter.post('/', requireAuth, async (req: Request, res: Response) => {
             attachments: [],
             createdAt: new Date(),
             blocked: false,
+            senderType: 'customer',
+            senderId: null,
           },
         ],
       });
@@ -200,6 +211,8 @@ chatRouter.post('/', requireAuth, async (req: Request, res: Response) => {
                 ? new Date(m.metadata.createdAt)
                 : new Date(),
               blocked: false,
+              senderType: 'ai_agent' as const,
+              senderId: null,
             })),
           });
 
@@ -255,9 +268,11 @@ chatRouter.post('/', requireAuth, async (req: Request, res: Response) => {
     let finalUsage: LanguageModelUsage | undefined;
     const streamId = generateUUID();
 
-    // Blocked turns are kept for the chat history but never resent to the
-    // agent (it rejected them once already).
-    const modelMessages = uiMessages.filter((m) => m.metadata?.blocked !== true);
+    // Blocked turns and system notices are kept for the chat history but
+    // never resent to the agent; advisor replies go out prefixed so the agent
+    // can tell them apart from its own (never persisted, never shown to the
+    // front).
+    const modelMessages = buildAgentHistory(uiMessages);
 
     const model = await myProvider.languageModel(selectedChatModel);
     const result = streamText({
@@ -305,6 +320,22 @@ chatRouter.post('/', requireAuth, async (req: Request, res: Response) => {
           'Finished message stream! Saving message...',
           JSON.stringify(responseMessage, null, 2),
         );
+
+        // An advisor may have taken the chat while the agent was still
+        // streaming. In that race, the reply is discarded: it's no longer
+        // the agent's conversation to answer.
+        if (dbAvailable) {
+          const freshChat = await getChatById({ id });
+          if (freshChat && !shouldPersistAgentReply(freshChat.handledBy)) {
+            console.log(
+              `[Chat] Discarding agent reply for ${id}: no longer handled by the agent`,
+            );
+            getAndClearAgentOutputs(id);
+            streamCache.clearActiveStream(id);
+            return;
+          }
+        }
+
         const agentOutputs = getAndClearAgentOutputs(id);
         const blocked = agentOutputs?.blocked === true;
 
@@ -318,6 +349,8 @@ chatRouter.post('/', requireAuth, async (req: Request, res: Response) => {
               attachments: [],
               chatId: id,
               blocked,
+              senderType: 'ai_agent',
+              senderId: null,
             },
           ],
         });
