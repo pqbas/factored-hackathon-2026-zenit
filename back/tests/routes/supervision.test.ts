@@ -19,10 +19,10 @@ async function createChat(
   return chatId;
 }
 
-test.describe('/api/admin (with database)', () => {
+test.describe('Supervision in the advisor console (with database)', () => {
   skipInEphemeralMode(test);
 
-  test('GET /api/admin/chats as admin includes chats from every user', async ({
+  test('the admin inbox includes chats from every user, with userEmail', async ({
     adaContext,
     babbageContext,
   }) => {
@@ -35,7 +35,7 @@ test.describe('/api/admin (with database)', () => {
     // Other workers create chats in parallel on the same database; with the
     // default limit of 10 they can push these two off the first page.
     const response = await adaContext.request.get(
-      '/api/admin/chats?limit=100',
+      '/api/advisor/conversations?limit=100',
     );
     expect(response.status()).toBe(200);
 
@@ -51,7 +51,7 @@ test.describe('/api/admin (with database)', () => {
     expect(babbageChat.userEmail).toBe(`${babbageContext.name}@example.com`);
   });
 
-  test('GET /api/admin/chats?userId= filters to that user', async ({
+  test('the inbox filters by userId', async ({
     adaContext,
     babbageContext,
   }) => {
@@ -62,7 +62,7 @@ test.describe('/api/admin (with database)', () => {
     const babbageUserId = `${babbageContext.name}-id`;
 
     const response = await adaContext.request.get(
-      `/api/admin/chats?userId=${babbageUserId}`,
+      `/api/advisor/conversations?userId=${babbageUserId}`,
     );
     expect(response.status()).toBe(200);
 
@@ -73,14 +73,14 @@ test.describe('/api/admin (with database)', () => {
     }
   });
 
-  test('GET /api/admin/users includes users that own a chat', async ({
+  test('/api/advisor/users lists users that own a chat, once each', async ({
     adaContext,
     babbageContext,
   }) => {
     await createChat(adaContext);
     await createChat(babbageContext, TEST_PROMPTS.GRASS.MESSAGE);
 
-    const response = await adaContext.request.get('/api/admin/users');
+    const response = await adaContext.request.get('/api/advisor/users');
     expect(response.status()).toBe(200);
 
     const { users } = await response.json();
@@ -93,7 +93,7 @@ test.describe('/api/admin (with database)', () => {
     expect(new Set(userIds).size).toBe(userIds.length);
   });
 
-  test("GET /api/admin/chats/:id/messages as admin reads another user's private chat", async ({
+  test("the admin reads another user's private chat in the console", async ({
     adaContext,
     babbageContext,
   }) => {
@@ -103,7 +103,7 @@ test.describe('/api/admin (with database)', () => {
     );
 
     const response = await adaContext.request.get(
-      `/api/admin/chats/${babbageChatId}/messages`,
+      `/api/advisor/conversations/${babbageChatId}/messages`,
     );
     expect(response.status()).toBe(200);
 
@@ -128,29 +128,43 @@ test.describe('/api/admin (with database)', () => {
     expect(chats.some((c: any) => c.id === babbageChatId)).toBe(false);
   });
 
-  test('a non-admin user gets 403 on the three admin routes', async ({
+  test('a customer gets 403 on the supervision reads; an advisor on /users', async ({
+    curieContext,
     babbageContext,
   }) => {
-    const chatsResponse = await babbageContext.request.get('/api/admin/chats');
+    const chatsResponse = await curieContext.request.get(
+      '/api/advisor/conversations',
+    );
     expect(chatsResponse.status()).toBe(403);
     const chatsBody = await chatsResponse.json();
     expect(chatsBody.code).toEqual('forbidden:chat');
     expect(chatsBody.message).toEqual(getMessageByErrorCode('forbidden:chat'));
 
-    const usersResponse = await babbageContext.request.get('/api/admin/users');
-    expect(usersResponse.status()).toBe(403);
-
-    const messagesResponse = await babbageContext.request.get(
-      `/api/admin/chats/${generateUUID()}/messages`,
+    const messagesResponse = await curieContext.request.get(
+      `/api/advisor/conversations/${generateUUID()}/messages`,
     );
     expect(messagesResponse.status()).toBe(403);
+
+    const usersResponse =
+      await babbageContext.request.get('/api/advisor/users');
+    expect(usersResponse.status()).toBe(403);
   });
 
-  test('GET /api/admin/chats/:id/messages returns 404 for a chat that does not exist', async ({
+  test('the old /api/admin routes are gone', async ({ adaContext }) => {
+    for (const path of [
+      '/api/admin/chats',
+      '/api/admin/users',
+      `/api/admin/chats/${generateUUID()}/messages`,
+    ]) {
+      expect((await adaContext.request.get(path)).status()).toBe(404);
+    }
+  });
+
+  test('console messages return 404 for a chat that does not exist', async ({
     adaContext,
   }) => {
     const response = await adaContext.request.get(
-      `/api/admin/chats/${generateUUID()}/messages`,
+      `/api/advisor/conversations/${generateUUID()}/messages`,
     );
     expect(response.status()).toBe(404);
 
@@ -160,20 +174,22 @@ test.describe('/api/admin (with database)', () => {
   });
 });
 
-test.describe('/api/admin (ephemeral mode)', () => {
+test.describe('Supervision in the advisor console (ephemeral mode)', () => {
   skipInWithDatabaseMode(test);
 
-  test('the three admin routes return 204 when the database is disabled', async ({
+  test('the supervision reads return 204 when the database is disabled', async ({
     adaContext,
   }) => {
-    const chatsResponse = await adaContext.request.get('/api/admin/chats');
+    const chatsResponse = await adaContext.request.get(
+      '/api/advisor/conversations',
+    );
     expect(chatsResponse.status()).toBe(204);
 
-    const usersResponse = await adaContext.request.get('/api/admin/users');
+    const usersResponse = await adaContext.request.get('/api/advisor/users');
     expect(usersResponse.status()).toBe(204);
 
     const messagesResponse = await adaContext.request.get(
-      `/api/admin/chats/${generateUUID()}/messages`,
+      `/api/advisor/conversations/${generateUUID()}/messages`,
     );
     expect(messagesResponse.status()).toBe(204);
   });

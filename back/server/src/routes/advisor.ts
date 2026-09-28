@@ -9,10 +9,13 @@ import {
   authMiddleware,
   requireAuth,
   requireAdvisor,
+  requireAdvisorOnly,
+  requireAdmin,
   getIdFromRequest,
 } from '../middleware/auth';
 import {
   getChats,
+  getChatOwners,
   getChatById,
   getMessagesAfter,
   takeChat,
@@ -22,7 +25,7 @@ import {
 } from '@chat-template/db';
 import { generateUUID } from '@chat-template/core';
 import { ChatSDKError } from '@chat-template/core/errors';
-import { getRole, normalizeEmail } from '../roles';
+import { normalizeEmail } from '../roles';
 
 export const advisorRouter: RouterType = Router();
 
@@ -32,7 +35,6 @@ advisorRouter.use(requireAuth, requireAdvisor);
 // System messages: visible to the customer, never mention the advisor's email.
 const SYSTEM_MESSAGES = {
   taken: 'Te atiende un asesor.',
-  reassigned: 'Otro asesor continúa la conversación.',
   returned_to_agent: 'Volviste con David.',
   resolved: 'La conversación se cerró.',
 } as const;
@@ -60,10 +62,6 @@ async function saveSystemMessage({
     ],
   });
 }
-
-const takeBodySchema = z.object({
-  force: z.boolean().optional(),
-});
 
 const messageBodySchema = z.object({
   text: z.string().min(1).max(4000),
@@ -167,10 +165,28 @@ advisorRouter.get(
 );
 
 /**
+ * GET /api/advisor/users - Users with at least one chat, for the admin's
+ * customer filter. Admin only: it is for supervising.
+ */
+advisorRouter.get('/users', requireAdmin, async (_req: Request, res: Response) => {
+  if (!isDatabaseAvailable()) {
+    return res.status(204).end();
+  }
+
+  try {
+    res.json({ users: await getChatOwners() });
+  } catch (error) {
+    console.error('[/api/advisor/users] Error in handler:', error);
+    res.status(500).json({ error: 'Failed to fetch users' });
+  }
+});
+
+/**
  * POST /api/advisor/conversations/:id/take
  */
 advisorRouter.post(
   '/conversations/:id/take',
+  requireAdvisorOnly,
   async (req: Request, res: Response) => {
     if (!isDatabaseAvailable()) {
       return res.status(204).end();
@@ -185,26 +201,8 @@ advisorRouter.post(
       return res.status(response.status).json(response.json);
     }
 
-    let body: z.infer<typeof takeBodySchema>;
     try {
-      body = takeBodySchema.parse(req.body ?? {});
-    } catch {
-      const error = new ChatSDKError('bad_request:api');
-      const response = error.toResponse();
-      return res.status(response.status).json(response.json);
-    }
-
-    if (body.force && getRole(email) !== 'admin') {
-      const response = new ChatSDKError('forbidden:chat').toResponse();
-      return res.status(response.status).json(response.json);
-    }
-
-    try {
-      const result = await takeChat({
-        chatId: id,
-        advisorEmail: email,
-        force: body.force === true,
-      });
+      const result = await takeChat({ chatId: id, advisorEmail: email });
 
       if (result.outcome === 'not_found') {
         const error = new ChatSDKError('not_found:chat');
@@ -221,12 +219,7 @@ advisorRouter.post(
       }
 
       if (!result.alreadyMine) {
-        await saveSystemMessage({
-          chatId: id,
-          text: result.reassignedFrom
-            ? SYSTEM_MESSAGES.reassigned
-            : SYSTEM_MESSAGES.taken,
-        });
+        await saveSystemMessage({ chatId: id, text: SYSTEM_MESSAGES.taken });
       }
 
       res.json({ chat: result.chat });
@@ -245,6 +238,7 @@ advisorRouter.post(
  */
 advisorRouter.post(
   '/conversations/:id/messages',
+  requireAdvisorOnly,
   async (req: Request, res: Response) => {
     if (!isDatabaseAvailable()) {
       return res.status(204).end();
@@ -312,6 +306,7 @@ advisorRouter.post(
  */
 advisorRouter.post(
   '/conversations/:id/release',
+  requireAdvisorOnly,
   async (req: Request, res: Response) => {
     if (!isDatabaseAvailable()) {
       return res.status(204).end();
@@ -343,11 +338,7 @@ advisorRouter.post(
         return res.status(response.status).json(response.json);
       }
 
-      const isAdmin = getRole(email) === 'admin';
-      if (
-        !isAdmin &&
-        (chat.handledBy !== 'human_agent' || chat.assignedTo !== email)
-      ) {
+      if (chat.handledBy !== 'human_agent' || chat.assignedTo !== email) {
         const error = new ChatSDKError('conflict:chat');
         const response = error.toResponse();
         return res.status(response.status).json(response.json);

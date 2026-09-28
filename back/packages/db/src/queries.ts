@@ -335,14 +335,7 @@ export async function getChatById({ id }: { id: string }) {
 export type TakeChatResult =
   | { outcome: 'not_found' }
   | { outcome: 'conflict'; assignedTo: string | null }
-  | {
-      outcome: 'taken';
-      chat: Chat;
-      alreadyMine: boolean;
-      // The advisor email this chat was force-reassigned away from, or null
-      // when it was free (not a reassignment).
-      reassignedFrom: string | null;
-    };
+  | { outcome: 'taken'; chat: Chat; alreadyMine: boolean };
 
 // Single atomic UPDATE, race-safe: the WHERE clause is evaluated against the
 // row's pre-update state (captured in the `prev` CTE) in the same statement,
@@ -352,11 +345,9 @@ export type TakeChatResult =
 export async function takeChat({
   chatId,
   advisorEmail,
-  force,
 }: {
   chatId: string;
   advisorEmail: string;
-  force: boolean;
 }): Promise<TakeChatResult> {
   if (!isDatabaseAvailable()) {
     console.log('[takeChat] Database not available, skipping update');
@@ -383,7 +374,7 @@ export async function takeChat({
         -- Checked on the target row, not on "prev": when two takes race,
         -- Postgres re-checks the locked row's current values, so the second
         -- one sees the first owner and matches nothing (409).
-        and (c."handledBy" <> 'human_agent' or c."assignedTo" = ${advisorEmail} or ${force})
+        and (c."handledBy" <> 'human_agent' or c."assignedTo" = ${advisorEmail})
       returning "prev"."handledBy" as "prevHandledBy", "prev"."assignedTo" as "prevAssignedTo"
     `)) as unknown as Array<{
       prevHandledBy: Chat['handledBy'] | null;
@@ -399,12 +390,10 @@ export async function takeChat({
     const { prevHandledBy, prevAssignedTo } = rows[0];
     const alreadyMine =
       prevHandledBy === 'human_agent' && prevAssignedTo === advisorEmail;
-    const reassignedFrom =
-      !alreadyMine && prevHandledBy === 'human_agent' ? prevAssignedTo : null;
     const updatedChat = await getChatById({ id: chatId });
     if (!updatedChat) return { outcome: 'not_found' };
 
-    return { outcome: 'taken', chat: updatedChat, alreadyMine, reassignedFrom };
+    return { outcome: 'taken', chat: updatedChat, alreadyMine };
   } catch (error) {
     console.error('[takeChat] Error taking chat:', error);
     throw new ChatSDKError('bad_request:database', 'Failed to take chat');

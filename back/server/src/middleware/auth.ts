@@ -88,6 +88,20 @@ export function requireAdvisor(
   next();
 }
 
+// Console writes (take, messages, release): advisors only. The admin
+// supervises in read-only mode (spec/28-09-26-admin-supervisa).
+export function requireAdvisorOnly(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  if (getRole(req.session?.user?.email) !== 'advisor') {
+    const response = new ChatSDKError('forbidden:chat').toResponse();
+    return res.status(response.status).json(response.json);
+  }
+  next();
+}
+
 export async function requireChatAccess(
   req: Request,
   res: Response,
