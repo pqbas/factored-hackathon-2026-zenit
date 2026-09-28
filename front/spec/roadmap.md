@@ -287,4 +287,4 @@ Shipped en PR #33.
       su número a la derecha; se oculta si es 0 y "Sin atender" se resalta.
 - [x] Los números se refrescan con el polling de la bandeja y tras cada acción.
 
-Shipped en PR #<n>.
+Shipped en PR #35.
