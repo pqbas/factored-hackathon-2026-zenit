@@ -222,13 +222,39 @@ let cliHostCache: string | null = null;
 let cliHostCacheTime = 0;
 const CLI_HOST_CACHE_DURATION = 10 * 60 * 1000; // Cache for 10 minutes
 
+// The identity (30 min) outlives the host (10 min), and callers such as
+// getWorkspaceHostname read the host right after asking for the identity.
+// Reusing a cached identity once the host expired left them with no host, so
+// both are refreshed together by running `auth describe` again.
+export function shouldReuseCliIdentity({
+  identity,
+  identityExpiresAt,
+  hostCached,
+  now,
+}: {
+  identity: string | null;
+  identityExpiresAt: number;
+  hostCached: boolean;
+  now: number;
+}): boolean {
+  return identity !== null && now < identityExpiresAt && hostCached;
+}
+
 /**
  * Get the current user's identity using the Databricks CLI
  */
 export async function getDatabricksUserIdentity(): Promise<string> {
-  // Check if we have a valid cached identity
-  if (cliUserIdentity && Date.now() < cliUserIdentityExpiresAt) {
-    return cliUserIdentity;
+  const now = Date.now();
+  if (
+    shouldReuseCliIdentity({
+      identity: cliUserIdentity,
+      identityExpiresAt: cliUserIdentityExpiresAt,
+      hostCached:
+        cliHostCache !== null && now < cliHostCacheTime + CLI_HOST_CACHE_DURATION,
+      now,
+    })
+  ) {
+    return cliUserIdentity as string;
   }
 
   const { spawnWithOutput } = await import('@chat-template/utils');
