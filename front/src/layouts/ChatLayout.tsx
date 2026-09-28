@@ -30,12 +30,10 @@ export default function ChatLayout() {
     );
   }
 
-  // Get preferred username from session (if available from headers)
-  const preferredUsername = session.user.preferredUsername ?? null;
 
   return (
     <SidebarProvider defaultOpen={!isCollapsed}>
-      <AppSidebar user={session.user} preferredUsername={preferredUsername} />
+      <AppSidebar user={session.user} />
       <SidebarInset className="h-dvh overflow-hidden md:h-[calc(100dvh-1rem)]">
         <Outlet />
       </SidebarInset>

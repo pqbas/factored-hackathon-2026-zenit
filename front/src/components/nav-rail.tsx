@@ -104,8 +104,19 @@ export function NavRail() {
           </TooltipTrigger>
           <TooltipContent side="right">{themeLabel}</TooltipContent>
         </Tooltip>
+        {userName && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div data-testid="user-avatar" aria-label={userName}>
+                <UserAvatar name={userName} />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="right">
+              {session?.user?.email ?? userName}
+            </TooltipContent>
+          </Tooltip>
+        )}
       </TooltipProvider>
-      {userName && <UserAvatar name={userName} />}
     </nav>
   );
 }

@@ -1,12 +1,10 @@
 import { useNavigate } from 'react-router-dom';
 
 import { SidebarHistory } from '@/components/sidebar-history';
-import { SidebarUserNav } from '@/components/sidebar-user-nav';
 import { Button } from '@/components/ui/button';
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarHeader,
   SidebarMenu,
   useSidebar,
@@ -17,10 +15,8 @@ import type { ClientSession } from '@chat-template/auth';
 
 export function AppSidebar({
   user,
-  preferredUsername,
 }: {
   user: ClientSession['user'] | undefined;
-  preferredUsername: string | null;
 }) {
   const navigate = useNavigate();
   const { setOpenMobile } = useSidebar();
@@ -58,11 +54,6 @@ export function AppSidebar({
       <SidebarContent>
         <SidebarHistory user={user} />
       </SidebarContent>
-      <SidebarFooter>
-        {user && (
-          <SidebarUserNav user={user} preferredUsername={preferredUsername} />
-        )}
-      </SidebarFooter>
     </Sidebar>
   );
 }

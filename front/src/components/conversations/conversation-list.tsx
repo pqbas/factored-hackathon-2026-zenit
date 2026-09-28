@@ -1,10 +1,8 @@
 import { Search } from 'lucide-react';
 
-import { SidebarUserNav } from '@/components/sidebar-user-nav';
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarHeader,
@@ -13,7 +11,6 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from '@/components/ui/sidebar';
-import { useSession } from '@/contexts/SessionContext';
 import { formatListTime, getInitials } from '@/lib/conversations';
 import { cn } from '@/lib/utils';
 import type { MockConversation } from '@/mocks/conversations';
@@ -49,7 +46,6 @@ export function ConversationList({
   onQueryChange: (query: string) => void;
 }) {
   const { setOpenMobile } = useSidebar();
-  const { session } = useSession();
   const now = new Date();
 
   return (
@@ -134,14 +130,6 @@ export function ConversationList({
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter>
-        {session?.user && (
-          <SidebarUserNav
-            user={session.user}
-            preferredUsername={session.user.preferredUsername ?? null}
-          />
-        )}
-      </SidebarFooter>
     </Sidebar>
   );
 }
