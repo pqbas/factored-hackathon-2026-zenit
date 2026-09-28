@@ -14,6 +14,7 @@ import {
   getMessageById,
   deleteMessagesByChatIdAfterTimestamp,
   getMessagesByChatId,
+  getMessagesAfter,
   isDatabaseAvailable,
 } from '@chat-template/db';
 import { ChatSDKError, checkChatAccess } from '@chat-template/core';
@@ -34,7 +35,22 @@ messagesRouter.get(
     if (!id) return;
 
     try {
-      const messages = await getMessagesByChatId({ id });
+      const after = req.query.after as string | undefined;
+      if (!after) {
+        const messages = await getMessagesByChatId({ id });
+        return res.status(200).json(messages);
+      }
+
+      const messages = await getMessagesAfter({ chatId: id, afterId: after });
+      if (messages === null) {
+        const error = new ChatSDKError(
+          'bad_request:api',
+          'The after message does not exist in this chat.',
+        );
+        const response = error.toResponse();
+        return res.status(response.status).json(response.json);
+      }
+
       return res.status(200).json(messages);
     } catch (error) {
       console.error('Error getting messages by chat ID:', error);
