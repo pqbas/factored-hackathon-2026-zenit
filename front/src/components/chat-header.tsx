@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { useSidebar } from './ui/sidebar';
 import { PlusIcon, CloudOffIcon, InfoIcon } from 'lucide-react';
 import { useConfig } from '@/hooks/use-config';
+import { cn } from '@/lib/utils';
 import { DemoCustomerSelector } from '@/components/demo-customer-selector';
 import type { DemoCustomer } from '@/hooks/use-demo-customers';
 import {
@@ -21,13 +22,22 @@ export function ChatHeader({
   customerToken = null,
   onCustomerChange = () => {},
   isCustomerLocked = false,
+  handledBy = 'ai_agent',
 }: {
   chatId?: string;
   customers?: DemoCustomer[];
   customerToken?: string | null;
   onCustomerChange?: (token: string) => void;
   isCustomerLocked?: boolean;
+  handledBy?: 'ai_agent' | 'human_queue' | 'human_agent';
 }) {
+  // Who is on the other side of the chat right now.
+  const peer =
+    handledBy === 'human_agent'
+      ? { name: 'Asesor', status: 'Te atiende una persona' }
+      : handledBy === 'human_queue'
+        ? { name: 'Asesor', status: 'Esperando a un asesor' }
+        : { name: 'Asistente', status: 'En línea' };
   const navigate = useNavigate();
   const { open } = useSidebar();
   const { chatHistoryEnabled } = useConfig();
@@ -53,10 +63,17 @@ export function ChatHeader({
       </div>
 
       <div className="flex flex-col items-center leading-tight">
-        <span className="font-semibold text-[13px]">Asistente</span>
+        <span data-testid="chat-peer" className="font-semibold text-[13px]">
+          {peer.name}
+        </span>
         <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-          <span className="size-1.5 rounded-full bg-online" />
-          En línea
+          <span
+            className={cn(
+              'size-1.5 rounded-full',
+              handledBy === 'human_queue' ? 'bg-tint-amber-foreground' : 'bg-online',
+            )}
+          />
+          {peer.status}
         </span>
       </div>
 

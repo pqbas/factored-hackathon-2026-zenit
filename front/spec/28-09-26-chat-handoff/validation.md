@@ -2,30 +2,33 @@
 
 ## Automated Tests
 
-- [ ] `npm run build` y `npm test` en `front/`.
-- [ ] En `back/`, con `front/dist` recién compilado:
+- [x] `npm run build` y `npm test` en `front/`.
+- [x] En `back/`, con `front/dist` recién compilado:
       `FRONT_URL=http://localhost:3100 PORT=3100 NODE_ENV=production TEST_MODE=ephemeral PLAYWRIGHT=True npx playwright test tests/e2e --project=e2e`.
 
 ### Specific test coverage required
 
 #### Unit
-- [ ] `isStateOnlyMessage` reconoce el mensaje con solo el estado.
-- [ ] `mergeNewMessages` no duplica.
-- [ ] `senderOf` distingue asesor, sistema, cliente y agente, también sin
+- [x] `isStateOnlyMessage` reconoce el mensaje con solo el estado.
+- [x] `mergeNewMessages` no duplica.
+- [x] `senderOf` distingue asesor, sistema, cliente y agente, también sin
       `senderType`.
-- [ ] `handoffNotice` por estado.
+- [x] `handoffNotice` por estado.
 
 #### Integration
-- [ ] `fetchNewMessages` usa `after` y recarga completo con 400.
-- [ ] `fetchHandledBy` lee `handledBy` de `/api/chat/:id`.
+- [x] `fetchNewMessages` usa `after` y recarga completo con 400.
+- [x] `fetchHandledBy` lee `handledBy` de `/api/chat/:id`.
 
 #### End-to-end
-- [ ] Mandar un mensaje con la conversación en `human_queue` no deja burbuja
+- [x] Mandar un mensaje con la conversación en `human_queue` no deja burbuja
       vacía y muestra el aviso.
-- [ ] Un mensaje del asesor aparece solo, con "Asesor".
-- [ ] Cuando vuelve a `ai_agent`, desaparece el aviso.
+- [x] Un mensaje del asesor aparece solo, con "Asesor".
+- [x] Cuando vuelve a `ai_agent`, desaparece el aviso.
 
 ## Manual Checks
+
+Pendiente hasta que la Fase 5 del back esté en `main`. El flujo se revisó con
+el back sirviendo `front/dist` y el chat mockeado en el navegador.
 - [ ] Con back, base y agente reales: el cliente pide un asesor, un asesor
       toma la conversación en la consola, responde, y el cliente lo ve en
       menos de 5 s; al devolverla, el agente vuelve a responder.

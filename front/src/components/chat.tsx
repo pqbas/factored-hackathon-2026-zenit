@@ -351,6 +351,7 @@ export function Chat({
           customerToken={customerToken}
           onCustomerChange={setCustomerToken}
           isCustomerLocked={isCustomerLocked}
+          handledBy={handledBy}
         />
 
         <Messages
