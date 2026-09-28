@@ -55,7 +55,7 @@ export class ChatPage {
 
   async sendUserMessageFromSuggestion() {
     await this.page
-      .getByRole('button', { name: 'How can you help me?' })
+      .getByTestId('suggested-action-0')
       .click();
   }
 

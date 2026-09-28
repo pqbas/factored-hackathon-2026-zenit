@@ -41,8 +41,8 @@ test.describe('Conversations mock view', () => {
     const agentBubbles = page.getByTestId('bubble-agent');
     const countBefore = await agentBubbles.count();
 
-    await page.getByPlaceholder('Escribe un mensaje').fill('Hola, este es un mensaje de prueba');
-    await page.getByPlaceholder('Escribe un mensaje').press('Enter');
+    await page.getByPlaceholder('Mensaje', { exact: true }).fill('Hola, este es un mensaje de prueba');
+    await page.getByPlaceholder('Mensaje', { exact: true }).press('Enter');
 
     await expect(agentBubbles).toHaveCount(countBefore + 1);
     await expect(agentBubbles.last()).toContainText('Hola, este es un mensaje de prueba');

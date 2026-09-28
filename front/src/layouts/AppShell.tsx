@@ -6,7 +6,7 @@ import { NavRail } from '@/components/nav-rail';
 // renders its own second (list) and third (content) columns via the Outlet.
 export default function AppShell() {
   return (
-    <div className="flex h-dvh w-full overflow-hidden">
+    <div className="flex h-dvh w-full overflow-hidden bg-sidebar">
       <NavRail />
       <div className="flex min-w-0 flex-1">
         <Outlet />
