@@ -27,14 +27,27 @@ from mlflow.types.responses import (  # noqa: E402
     to_chat_completions_input,
 )
 
+from src.config import settings  # noqa: E402
 from src.db.checkpointer import checkpointer  # noqa: E402
 from src.db.session_repo import resolve_session  # noqa: E402
-from src.graph.build import build_graph  # noqa: E402
+from src.graph.build import GRAPH_NODES, build_graph  # noqa: E402
 from src.llm.chat import get_chat_model  # noqa: E402
+from src.llm.jev import JevClient  # noqa: E402
+from src.schemas.routing import load_routing  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
 mlflow.langchain.autolog()
+
+# Loaded once at import so a bad routing.yaml fails at startup, not on the first request.
+routes = load_routing(settings.routing_path, GRAPH_NODES)
+
+# None when JEV_API_KEY isn't set (local dev without a key): classify then falls back to rules.
+jev_client = (
+    JevClient(api_key=settings.jev_api_key, url=settings.jev_url, timeout=settings.jev_timeout_seconds)
+    if settings.jev_api_key
+    else None
+)
 
 # Only the respond node streams text deltas; every node's final message is
 # emitted as output_item.done via the "updates" branch below.
@@ -121,7 +134,14 @@ async def streaming(
         events_yielded = 0
         try:
             async with checkpointer() as cp:
-                graph = build_graph(get_chat_model(), cp)
+                graph = build_graph(
+                    get_chat_model(),
+                    cp,
+                    jev_client,
+                    routes,
+                    settings.guardrail_threshold,
+                    settings.intent_threshold,
+                )
                 async for event in _process_agent_astream_events(
                     graph.astream(input_state, config, stream_mode=["updates", "messages"])
                 ):

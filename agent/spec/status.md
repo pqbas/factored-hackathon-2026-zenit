@@ -2,20 +2,23 @@
 
 ## Features
 
-- A customer with a valid session can report an unrecognized charge in the
-  chat; the agent finds the transaction, applies the dispute policy and either
-  creates the case or sends it to review.
+- Every message goes through rules and Jev before the LLM: a policy violation
+  gets a fixed refusal, and every turn is tagged with language, intent and
+  sentiment in the graph state and the MLflow trace.
+- If Jev does not answer in time, fallback rules classify the message and the
+  customer still gets a response.
+- Intents and their destinations live in `configs/routing.yaml`.
 - The agent replies in the customer's language and remembers the conversation
   across turns.
 - A message without a valid session gets a response with no data access.
-- The dispute flow has automated tests.
 
 ## Limitations
 
 - Session tokens are hardcoded.
-- The only use case is unrecognized charges; there is no Jev, MCP or handoff to
-  an advisor.
+- There are no use cases yet: every intent goes to the LLM without tools, and
+  it sometimes invents account data.
+- Abuse and customer risk get a fixed reply instead of a handoff to an advisor.
 
 ## Current phase
 
-[Phase 1: Create the project structure](roadmap.md#phase-1-create-the-project-structure-complete)
+[Phase 2: Message classification](roadmap.md#phase-2-message-classification-complete)

@@ -125,10 +125,10 @@ const PureChatItem = ({
 
   return (
     <SidebarMenuItem data-testid="chat-history-item">
-      <SidebarMenuButton asChild isActive={isActive}>
+      <SidebarMenuButton asChild isActive={isActive} className="h-auto rounded-lg px-2.5 py-2 data-[active=true]:font-semibold">
         <Link to={`/chat/${chat.id}`} onClick={() => setOpenMobile(false)}>
           <div className="flex min-w-0 flex-col">
-            <span className="truncate">{chat.title}</span>
+            <span className="truncate text-[13px]">{chat.title}</span>
             <WorkflowBadges chat={chat} />
           </div>
         </Link>
@@ -142,7 +142,7 @@ const PureChatItem = ({
             showOnHover={!isActive}
           >
             <MoreHorizontalIcon />
-            <span className="sr-only">More</span>
+            <span className="sr-only">Más opciones</span>
           </SidebarMenuAction>
         </DropdownMenuTrigger>
 
@@ -150,7 +150,7 @@ const PureChatItem = ({
           <DropdownMenuSub>
             <DropdownMenuSubTrigger className="cursor-pointer">
               <ShareIcon />
-              <span>Share</span>
+              <span>Compartir</span>
             </DropdownMenuSubTrigger>
             <DropdownMenuPortal>
               <DropdownMenuSubContent>
@@ -162,7 +162,7 @@ const PureChatItem = ({
                 >
                   <div className="flex flex-row items-center gap-2">
                     <LockIcon size={12} />
-                    <span>Private</span>
+                    <span>Privada</span>
                   </div>
                   {visibilityType === 'private' ? <CircleCheck /> : null}
                 </DropdownMenuItem>
@@ -174,7 +174,7 @@ const PureChatItem = ({
                 >
                   <div className="flex flex-row items-center gap-2">
                     <GlobeIcon />
-                    <span>Public</span>
+                    <span>Pública</span>
                   </div>
                   {visibilityType === 'public' ? <CircleCheck /> : null}
                 </DropdownMenuItem>
@@ -187,7 +187,7 @@ const PureChatItem = ({
             onSelect={() => onDelete(chat.id)}
           >
             <TrashIcon />
-            <span>Delete</span>
+            <span>Eliminar</span>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

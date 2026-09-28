@@ -102,6 +102,21 @@ export default defineConfig({
       testMatch: /routes\/.*.test.ts/,
       use: { ...devices['Desktop Chrome'] },
     },
+    // Browser tests of the front's UI (../front), which this server doesn't
+    // serve in dev. They only run when FRONT_URL points at a running front,
+    // so `npm test` stays a backend-only run.
+    ...(process.env.FRONT_URL
+      ? [
+          {
+            name: 'e2e',
+            testMatch: /e2e\/.*.test.ts/,
+            use: {
+              ...devices['Desktop Chrome'],
+              baseURL: process.env.FRONT_URL,
+            },
+          },
+        ]
+      : []),
   ],
 
   // Start dev server before running tests

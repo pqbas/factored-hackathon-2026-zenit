@@ -186,7 +186,7 @@ npm test                 # Run all Playwright tests (sets PLAYWRIGHT=True)
 npx playwright test --ui # Run tests in UI mode
 ```
 
-**Test projects:** `unit`, `routes` (the UI lives in `../front`, so there are no browser tests here)
+**Test projects:** `unit`, `routes`, plus `e2e` (the front's browser tests in `tests/e2e/`) only when `FRONT_URL` points at a running front, e.g. `FRONT_URL=http://localhost:3000 npx playwright test --project=e2e`
 **Test port:** 3100, so tests never reuse the Vite (3000) or Express (3001) dev servers
 **Test timeout:** 240 seconds (very generous for AI operations)
 

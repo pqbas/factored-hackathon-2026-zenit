@@ -89,9 +89,18 @@ de falla:
 
 ## 4.5 Estado
 
-Pendiente. Hoy el agente no tiene este nodo: la intención la obtiene el nodo
-`understand` con un LLM. La única protección es que su prompt le indica al LLM
-no seguir instrucciones del mensaje, y que su salida se valida campo por campo.
+Hecho. El grafo es `gate → classify → respond`. `classify` corre las reglas
+primero (inyección, número de tarjeta con Luhn, CVV o contraseña); si ninguna
+coincide, llama a Jev con las cuatro preguntas. Si Jev no responde a tiempo,
+devuelve error o no está configurado, `classify` usa reglas de respaldo
+(palabras clave para la intención, acentos y palabras típicas para el idioma).
+La clasificación queda en el estado del grafo y como tags del trace
+(`classify.*`), y `respond` responde en el idioma detectado.
+
+Pendiente: abuso y riesgo para el cliente hoy responden con el texto fijo de
+`GUARDRAIL_REPLIES`; la derivación a un humano para esas dos categorías llega
+en la Fase 6 (handoff). Tampoco está implementada la detección de estafa en
+curso descrita en 4.4.
 
 Jev es un servicio externo a Databricks: el texto del mensaje sale del
 workspace. Antes de usarlo hay que confirmar sus condiciones de uso de datos y

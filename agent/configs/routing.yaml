@@ -1,0 +1,92 @@
+# Intents Jev classifies against, and the graph node dispatch sends each one
+# to. Adding or editing an entry changes what Jev is asked and where the
+# message goes, with no code change. See docs/05-dispatch.md.
+
+- intent: GENERAL_INQUIRY
+  description: El cliente pregunta por su saldo, movimientos, límites u otra información de su cuenta.
+  examples:
+    - "¿cuál es mi saldo?"
+    - "qual é o meu saldo?"
+    - "quiero ver mis últimos movimientos"
+  destination: respond
+  option:
+    es: "Consultar el saldo y el límite de tu tarjeta o cuenta"
+    pt: "Consultar o saldo e o limite do seu cartão ou conta"
+
+- intent: COMPLAINT
+  description: El cliente reclama por un cobro, la app o la atención.
+  examples:
+    - "no reconozco un cargo"
+    - "me cobraron dos veces"
+    - "não reconheço uma cobrança"
+  destination: respond
+  option:
+    es: "Presentar un reclamo, por ejemplo un cargo que no reconoces"
+    pt: "Registrar uma reclamação, por exemplo uma cobrança que você não reconhece"
+
+- intent: CASE_STATUS
+  description: El cliente pregunta por el estado de un reclamo o caso ya abierto.
+  examples:
+    - "¿cómo va mi reclamo?"
+    - "qual o status do meu caso?"
+    - "quiero saber si ya resolvieron mi caso"
+  destination: respond
+  option:
+    es: "Ver el estado de un reclamo"
+    pt: "Ver o status de uma reclamação"
+
+- intent: HUMAN_AGENT
+  description: El cliente pide hablar con una persona, un asesor o un agente humano.
+  examples:
+    - "quiero hablar con un asesor"
+    - "quero falar com um atendente"
+    - "necesito hablar con una persona"
+  destination: respond
+
+- intent: COMMERCIAL
+  description: El cliente pregunta por productos, tarjetas, préstamos o promociones del banco.
+  examples:
+    - "¿qué tarjetas de crédito tienen?"
+    - "quais são as taxas do empréstimo?"
+    - "quiero información sobre una promoción"
+  destination: respond
+
+- intent: RETENTION
+  description: El cliente quiere cerrar su cuenta o cancelar un producto y el banco busca retenerlo.
+  examples:
+    - "quiero cerrar mi cuenta"
+    - "quero cancelar meu cartão"
+    - "ya no quiero seguir siendo cliente"
+  destination: respond
+
+- intent: CANCEL
+  description: El cliente quiere detener la solicitud o el flujo actual.
+  examples:
+    - "cancelar"
+    - "olvídalo"
+    - "deixa pra lá"
+  destination: cancel
+
+- intent: GREETING
+  description: El cliente solo saluda, sin pedir nada más.
+  examples:
+    - "hola"
+    - "buenos días"
+    - "olá"
+  destination: respond
+
+- intent: GOODBYE
+  description: El cliente se despide o cierra la conversación.
+  examples:
+    - "gracias, eso es todo"
+    - "adiós"
+    - "obrigado, era só isso"
+  destination: respond
+
+- intent: OUT_OF_SCOPE
+  description: El mensaje no corresponde a ninguna de las otras intenciones, o pide algo que el agente no maneja.
+  examples:
+    - "¿qué clima hace hoy?"
+    - "cuéntame un chiste"
+    - "qual é a capital do brasil?"
+  destination: respond
