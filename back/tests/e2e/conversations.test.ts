@@ -98,6 +98,21 @@ async function mockAdvisorApi(page: Page, me: string, role: Role = 'advisor') {
     const target = chats.find((c) => c.id === id);
     const body = request.postDataJSON() ?? {};
 
+    if (id === 'counts') {
+      const open = chats.filter((c) => !c.closedAt);
+      const byUseCase: Record<string, number> = {};
+      for (const c of open) if (c.useCase) byUseCase[c.useCase] = (byUseCase[c.useCase] ?? 0) + 1;
+      return route.fulfill({
+        json: {
+          total: open.length,
+          byUseCase,
+          withoutUseCase: open.filter((c) => !c.useCase).length,
+          unattended: open.filter((c) => c.handledBy === 'human_queue').length,
+          mine: role === 'admin' ? 0 : open.filter((c) => c.assignedTo === me).length,
+          resolved: chats.length - open.length,
+        },
+      });
+    }
     if (!id) {
       const q = url.searchParams;
       const list = chats.filter(
@@ -187,6 +202,22 @@ test.describe('Advisor console', () => {
     await expect(page.getByTestId('inbox-title')).toHaveText('Consultas generales');
     await expect(rows(page)).toHaveCount(3);
     expect(requested.some((u) => u.includes('useCase=GENERAL_INQUIRY'))).toBe(true);
+  });
+
+  test('the views show how many conversations they have', async ({ page }) => {
+    await openConsole(page);
+    await expect(page.getByTestId('view-inbox-count')).toHaveText('4');
+    await expect(page.getByTestId('view-waiting-count')).toHaveText('2');
+    await expect(page.getByTestId('view-resolved-count')).toHaveText('1');
+    await expect(page.getByTestId('view-use-case-GENERAL_INQUIRY-count')).toHaveText('3');
+    // Zero hides the number.
+    await expect(page.getByTestId('view-mine-count')).toHaveCount(0);
+    await expect(page.getByTestId('view-use-case-COMPLAINT-count')).toHaveCount(0);
+
+    // Taking a chat updates the counters.
+    await page.getByTestId('conversation-row-c-assistant').click();
+    await page.getByTestId('assistant-switch').click();
+    await expect(page.getByTestId('view-mine-count')).toHaveText('1');
   });
 
   test('opening a chat shows it beside the list, and X closes it', async ({ page }) => {

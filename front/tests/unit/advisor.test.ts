@@ -5,6 +5,9 @@ import {
   type AdvisorMessage,
   attentionOf,
   canReply,
+  countFor,
+  countsUrl,
+  parseCounts,
   groupByUseCase,
   lastActivityAt,
   rowText,
@@ -205,5 +208,40 @@ describe('rowText and lastActivityAt', () => {
   it('dates the row by the last message, else the chat start', () => {
     expect(lastActivityAt(chat({ lastMessage: last('x') }))).toBe('2026-09-28T12:00:00.000Z');
     expect(lastActivityAt(chat({ lastMessage: null }))).toBe('2026-09-28T10:00:00.000Z');
+  });
+});
+
+describe('view counts', () => {
+  it('reads the counts and treats missing or bad numbers as 0', () => {
+    expect(
+      parseCounts({
+        total: 7,
+        unattended: 2,
+        byUseCase: { COMPLAINT: 3, CANCEL: -1 },
+        withoutUseCase: 1,
+      }),
+    ).toEqual({ inbox: 7, waiting: 2, mine: 0, resolved: 0, useCases: { COMPLAINT: 3, CANCEL: 0 } });
+    expect(parseCounts(null)).toEqual({ inbox: 0, waiting: 0, mine: 0, resolved: 0, useCases: {} });
+  });
+
+  it('picks the number for each view', () => {
+    const counts = parseCounts({
+      total: 7,
+      unattended: 2,
+      mine: 1,
+      resolved: 4,
+      byUseCase: { COMPLAINT: 3 },
+      withoutUseCase: 4,
+    });
+    expect(countFor({ kind: 'inbox' }, counts)).toBe(7);
+    expect(countFor({ kind: 'waiting' }, counts)).toBe(2);
+    expect(countFor({ kind: 'useCase', useCase: 'COMPLAINT' }, counts)).toBe(3);
+    expect(countFor({ kind: 'useCase', useCase: 'CANCEL' }, counts)).toBe(0);
+    expect(countFor({ kind: 'mine' }, undefined)).toBe(0);
+  });
+
+  it('asks for the counts of one user when filtered', () => {
+    expect(countsUrl()).toBe('/api/advisor/conversations/counts');
+    expect(countsUrl('u7')).toBe('/api/advisor/conversations/counts?userId=u7');
   });
 });
