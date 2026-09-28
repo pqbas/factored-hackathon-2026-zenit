@@ -214,23 +214,21 @@ Shipped en PR #18.
 
 ---
 
-## Phase 7: Consola del asesor con datos reales
+## Phase 7: Consola del asesor con datos reales (Complete)
 
 **Goal:** que un asesor tome una conversación derivada, responda al cliente y
 la cierre.
 
-<!-- La UI vive en el front (decisión del usuario: el back solo hace back).
-     El back hace de proxy a las rutas /handoffs del agente
-     (agent/docs/07-handoff.md §7.4), con la identidad del asesor sacada de
-     X-Forwarded-Email; las rutas del proxy dependen de las Fases 6 y 7 del
-     agente, sin contrato todavía. Reusa la pantalla de la Fase 4: se cambia la fuente de
-     los datos mock por el proxy.
-     A AJUSTAR (PR #12, docs/limites-agente-back.md): el back es el único que
-     guarda conversaciones y handoffs, y el agente no tiene memoria. La
-     consola consume la API del back, no un proxy a /handoffs del agente;
-     reescribir esta nota cuando el back publique su API de asesores. -->
+<!-- Consume la API de asesores del back (/api/advisor/*, Fase 5 del back,
+     PR #22): back/spec/28-09-26-consola-asesor/requirements.md §1. -->
 
 - [ ] El asesor ve la bandeja de casos pendientes, ordenada por prioridad.
 - [ ] El asesor abre un caso con su resumen y el historial del chat.
-- [ ] El asesor toma el caso, responde al cliente y lo cierra indicando si
+- [x] El asesor toma el caso, responde al cliente y lo cierra indicando si
       vuelve al agente.
+
+La bandeja ordena por fecha y filtra por estado (Abiertas, Sin atender, Mías,
+Con David, Cerradas); la API no trae prioridad ni resumen del caso, así que
+esas dos quedan pendientes. Solo quien tiene tomada la conversación escribe;
+el admin puede forzar. Fuera del primer corte: etiquetas, imágenes, adjuntos y
+no leídos. Shipped en PR #<n>.
