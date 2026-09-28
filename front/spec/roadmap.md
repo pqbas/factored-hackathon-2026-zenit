@@ -21,10 +21,24 @@
   Hoy solo existe un tipo de usuario: la sesión no trae rol.
 -->
 
-## Phase 1: Selector de cliente demo
+## Phase 1: Vista de conversaciones estilo WhatsApp, con datos mock (In Progress)
 
-**Goal:** que el cliente elija con qué cliente demo habla y el agente sepa
-quién escribe.
+**Goal:** ver cómo va a quedar la pantalla de conversaciones antes de
+conectarla a datos reales.
+
+- [ ] Desde el chat se llega a una pantalla aparte con la lista de clientes a
+      la izquierda y la conversación a la derecha, como WhatsApp Web.
+- [ ] La lista se puede buscar por nombre y muestra el último mensaje, la hora
+      y los no leídos.
+- [ ] La conversación muestra los mensajes del cliente y del agente con hora y
+      separadores por día, y deja escribir mensajes que solo quedan en pantalla.
+- [ ] La pantalla se usa bien en móvil y en modo oscuro.
+
+---
+
+## Phase 1b: Selector de cliente demo en el chat
+
+**Goal:** que el agente sepa con qué cliente demo habla el chat.
 
 <!-- Depende de la Fase 1 del back: GET /api/demo-customers y sessionToken en
      el body de POST /api/chat. -->
@@ -52,7 +66,7 @@ admin) y ninguna otra.
 
 ---
 
-## Phase 3: Vista admin de todas las conversaciones
+## Phase 3: Vista admin con conversaciones reales
 
 **Goal:** que un admin revise las conversaciones de cualquier usuario sin poder
 modificarlas.
@@ -60,7 +74,7 @@ modificarlas.
 <!-- Depende de GET /api/admin/chats (mismos params que /api/history más
      userId) y GET /api/admin/chats/:id/messages, detrás de requireAdmin. -->
 
-- [ ] El admin ve la lista de conversaciones de todos los usuarios, de la más
+- [ ] La vista de conversaciones muestra las de todos los usuarios, de la más
       reciente a la más antigua, con el email de cada usuario.
 - [ ] El admin filtra la lista por usuario.
 - [ ] El admin abre una conversación y la lee completa en modo solo lectura.
