@@ -5,12 +5,9 @@ import {
   eq,
   gt,
   gte,
-  ilike,
   inArray,
-  isNotNull,
   lt,
   max,
-  ne,
   sql,
   type SQL,
 } from 'drizzle-orm';
@@ -144,8 +141,6 @@ export async function deleteChatById({ id }: { id: string }) {
   }
 }
 
-export type ChatStatusFilter = 'open' | 'done' | 'waiting' | 'received' | 'all';
-
 // 'all' is only for admin routes. A user scope with an empty id throws instead
 // of silently dropping the filter and returning every user's chats.
 export type ChatScope = { userId: string } | 'all';
@@ -166,17 +161,17 @@ export async function getChats({
   limit,
   startingAfter,
   endingBefore,
-  status,
+  handledBy,
   intent,
-  customer,
+  useCase,
 }: {
   scope: ChatScope;
   limit: number;
   startingAfter: string | null;
   endingBefore: string | null;
-  status?: ChatStatusFilter;
+  handledBy?: string;
   intent?: string;
-  customer?: string;
+  useCase?: string;
 }) {
   const scopeCondition = chatScopeCondition(scope);
 
@@ -190,23 +185,16 @@ export async function getChats({
 
     const filterConditions: SQL<any>[] = scopeCondition ? [scopeCondition] : [];
 
-    if (status === 'open') {
-      filterConditions.push(isNotNull(chat.stage));
-      filterConditions.push(ne(chat.stage, 'DONE'));
-    } else if (status === 'done') {
-      filterConditions.push(eq(chat.stage, 'DONE'));
-    } else if (status === 'waiting') {
-      filterConditions.push(eq(chat.stage, 'WAITING_FOR_BACKGROUND_CHECK'));
-    } else if (status === 'received') {
-      filterConditions.push(eq(chat.stage, 'BACKGROUND_CHECK_RECEIVED'));
+    if (handledBy) {
+      filterConditions.push(eq(chat.handledBy, handledBy as Chat['handledBy']));
     }
 
     if (intent) {
       filterConditions.push(eq(chat.intent, intent));
     }
 
-    if (customer) {
-      filterConditions.push(ilike(chat.customerName, `%${customer}%`));
+    if (useCase) {
+      filterConditions.push(eq(chat.useCase, useCase));
     }
 
     const query = async (whereCondition?: SQL<any>) => {
@@ -481,31 +469,35 @@ export async function updateChatLastContextById({
   }
 }
 
-export async function updateChatWorkflowState({
+export async function updateChatAgentState({
   chatId,
-  stage,
+  useCase,
   intent,
-  customerName,
+  language,
+  handledBy,
 }: {
   chatId: string;
-  stage?: string;
+  useCase?: string;
   intent?: string;
-  customerName?: string;
+  language?: string;
+  handledBy?: Chat['handledBy'];
 }) {
   if (!isDatabaseAvailable()) {
-    console.log('[updateChatWorkflowState] Database not available, skipping update');
+    console.log('[updateChatAgentState] Database not available, skipping update');
     return;
   }
 
   try {
     const updates: Partial<{
-      stage: string;
+      useCase: string;
       intent: string;
-      customerName: string;
+      language: string;
+      handledBy: Chat['handledBy'];
     }> = {};
-    if (stage !== undefined) updates.stage = stage;
+    if (useCase !== undefined) updates.useCase = useCase;
     if (intent !== undefined) updates.intent = intent;
-    if (customerName !== undefined) updates.customerName = customerName;
+    if (language !== undefined) updates.language = language;
+    if (handledBy !== undefined) updates.handledBy = handledBy;
 
     if (Object.keys(updates).length === 0) return;
 
@@ -514,7 +506,26 @@ export async function updateChatWorkflowState({
       .set(updates)
       .where(eq(chat.id, chatId));
   } catch (error) {
-    console.warn('Failed to update workflow state for chat', chatId, error);
+    console.warn('Failed to update agent state for chat', chatId, error);
+    return;
+  }
+}
+
+export async function markMessagesBlocked({ ids }: { ids: string[] }) {
+  if (!isDatabaseAvailable()) {
+    console.log('[markMessagesBlocked] Database not available, skipping update');
+    return;
+  }
+
+  if (ids.length === 0) return;
+
+  try {
+    return await (await ensureDb())
+      .update(message)
+      .set({ blocked: true })
+      .where(inArray(message.id, ids));
+  } catch (error) {
+    console.warn('Failed to mark messages blocked', ids, error);
     return;
   }
 }

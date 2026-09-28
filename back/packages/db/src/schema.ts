@@ -6,6 +6,7 @@ import {
   jsonb,
   uuid,
   text,
+  boolean,
   pgSchema,
 } from 'drizzle-orm/pg-core';
 import type { LanguageModelV3Usage } from '@ai-sdk/provider';
@@ -36,9 +37,14 @@ export const chat = createTable('Chat', {
     .notNull()
     .default('private'),
   lastContext: jsonb('lastContext').$type<LanguageModelV3Usage | null>(),
-  stage: varchar('stage', { length: 64 }),
+  handledBy: varchar('handledBy', {
+    enum: ['ai_agent', 'human_queue', 'human_agent'],
+  })
+    .notNull()
+    .default('ai_agent'),
+  useCase: varchar('useCase', { length: 128 }),
   intent: varchar('intent', { length: 128 }),
-  customerName: varchar('customerName', { length: 256 }),
+  language: varchar('language', { length: 16 }),
 });
 
 export type Chat = InferSelectModel<typeof chat>;
@@ -52,6 +58,7 @@ export const message = createTable('Message', {
   parts: json('parts').notNull(),
   attachments: json('attachments').notNull(),
   createdAt: timestamp('createdAt').notNull(),
+  blocked: boolean('blocked').notNull().default(false),
 });
 
 export type DBMessage = InferSelectModel<typeof message>;

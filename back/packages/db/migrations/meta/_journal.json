@@ -22,6 +22,20 @@
       "when": 1790609969513,
       "tag": "0002_cloudy_texas_twister",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1790619254661,
+      "tag": "0003_marvelous_klaw",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1790619265714,
+      "tag": "0004_ambitious_kid_colt",
+      "breakpoints": true
     }
   ]
 }
