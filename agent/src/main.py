@@ -135,7 +135,12 @@ async def streaming(
         try:
             async with checkpointer() as cp:
                 graph = build_graph(
-                    get_chat_model(), cp, jev_client, routes, settings.guardrail_threshold
+                    get_chat_model(),
+                    cp,
+                    jev_client,
+                    routes,
+                    settings.guardrail_threshold,
+                    settings.intent_threshold,
                 )
                 async for event in _process_agent_astream_events(
                     graph.astream(input_state, config, stream_mode=["updates", "messages"])

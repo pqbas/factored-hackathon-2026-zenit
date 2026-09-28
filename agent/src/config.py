@@ -15,6 +15,7 @@ class Settings:
     jev_url: str
     jev_timeout_seconds: float
     guardrail_threshold: float
+    intent_threshold: float
     routing_path: str
 
     @classmethod
@@ -29,6 +30,7 @@ class Settings:
             jev_url=os.getenv("JEV_URL", "https://api.typesafe.ai/v1/systemone"),
             jev_timeout_seconds=float(os.getenv("JEV_TIMEOUT_SECONDS", "2.0")),
             guardrail_threshold=float(os.getenv("GUARDRAIL_THRESHOLD", "0.7")),
+            intent_threshold=float(os.getenv("INTENT_THRESHOLD", "0.5")),
             routing_path=os.getenv("ROUTING_PATH", "configs/routing.yaml"),
         )
 

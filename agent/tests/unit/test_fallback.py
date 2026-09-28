@@ -64,5 +64,17 @@ def test_fallback_classify_falls_back_to_out_of_scope():
     assert result.intent == "OUT_OF_SCOPE"
 
 
+def test_fallback_classify_sets_confidence_1_on_a_keyword_match():
+    result = fallback_classify("hola", INTENTS)
+    assert result.intent == "GREETING"
+    assert result.intent_confidence == 1.0
+
+
+def test_fallback_classify_sets_confidence_0_otherwise():
+    result = fallback_classify("¿qué clima hace hoy?", INTENTS)
+    assert result.intent == "OUT_OF_SCOPE"
+    assert result.intent_confidence == 0.0
+
+
 def test_detect_language_returns_other_with_no_signal():
     assert detect_language("1234567890") == "other"

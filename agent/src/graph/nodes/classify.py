@@ -7,8 +7,21 @@ from src.graph.state import AgentState
 from src.llm.fallback import check_guardrail_rules, detect_language, fallback_classify
 from src.llm.jev import JevClient, JevUnavailable
 from src.prompts.messages import GUARDRAIL_REPLIES
-from src.schemas.classification import Classification
+from src.schemas.classification import Classification, country_language, reply_language
 from src.schemas.routing import IntentRoute
+
+
+# es and pt are too close to tell apart from one or two words: Jev labels "Cancelar" as pt
+# and "Ver saldo" as es. Below three words the reply keeps the conversation's language, or
+# the customer's country language on the first turn.
+_MIN_WORDS_TO_SWITCH = 3
+
+
+def conversation_language(detected: str, text: str, previous: dict | None, default: str) -> str:
+    if len(text.split()) >= _MIN_WORDS_TO_SWITCH:
+        return detected
+    previous_language = (previous or {}).get("language")
+    return previous_language if previous_language in ("es", "pt") else default
 
 
 def _last_human_message(messages: list) -> HumanMessage:
@@ -48,6 +61,14 @@ async def classify(
         except JevUnavailable:
             classification = fallback_classify(text, [route.intent for route in routes])
 
+    language = conversation_language(
+        classification.language,
+        text,
+        state.get("classification"),
+        country_language(state.get("session", {}).get("country")),
+    )
+    classification = classification.model_copy(update={"language": language})
+
     _tag_trace(classification)
 
     update: dict = {"classification": classification.model_dump()}
@@ -58,7 +79,7 @@ async def classify(
         messages.append(HumanMessage(content=masked_text, id=human_message.id))
 
     if classification.blocked(threshold):
-        language = classification.language if classification.language in ("es", "pt") else "es"
+        language = reply_language(classification.language)
         messages.append(AIMessage(content=GUARDRAIL_REPLIES[classification.guardrail][language]))
 
     if messages:

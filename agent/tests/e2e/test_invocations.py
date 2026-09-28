@@ -13,6 +13,7 @@ from langgraph.checkpoint.memory import MemorySaver
 
 import src.main as main
 from src.llm.jev import JevClient
+from src.prompts.messages import CANCEL_REPLY
 
 # src.main loads the real .env with override=True at import time, which writes
 # into the shared process environment for the rest of the pytest session, and
@@ -68,8 +69,48 @@ def _jev_ok_response(request: httpx.Request) -> httpx.Response:
     )
 
 
+def _jev_response_for(intent: str) -> httpx.Response:
+    return httpx.Response(
+        200,
+        json={
+            "model": "jev-1.0",
+            "answers": {
+                "guardrail": {
+                    "type": "choice", "choice": "OK", "confidence": 0.95,
+                    "probabilities": {"OK": 0.95},
+                },
+                "language": {
+                    "type": "choice", "choice": "es", "confidence": 0.9,
+                    "probabilities": {"es": 0.9, "pt": 0.1, "other": 0.0},
+                },
+                "intent": {
+                    "type": "choice", "choice": intent, "confidence": 0.8,
+                    "probabilities": {intent: 0.8},
+                },
+                "sentiment": {
+                    "type": "score", "score": 2.0, "confidence": 0.7,
+                    "probabilities": {"neutral": 1.0},
+                },
+            },
+            "usage": {},
+        },
+    )
+
+
 def _jev_timeout(request: httpx.Request):
     raise httpx.ReadTimeout("timed out", request=request)
+
+
+class RecordingChatModel:
+    """A chat model stand-in that saves the messages it received and returns a fixed reply."""
+
+    def __init__(self, text: str):
+        self._text = text
+        self.received = None
+
+    async def ainvoke(self, messages):
+        self.received = messages
+        return AIMessage(content=self._text)
 
 
 @pytest.fixture(autouse=True)
@@ -133,3 +174,37 @@ def test_jev_timeout_still_returns_the_llm_text(client, monkeypatch):
     assert response.status_code == 200
     body = response.json()
     assert _output_text(body) == FAKE_LLM_TEXT
+
+
+def test_cancel_message_returns_the_fixed_reply(client, monkeypatch):
+    monkeypatch.setattr(
+        main,
+        "jev_client",
+        JevClient(api_key="test-key", url="https://api.typesafe.ai/v1/systemone", timeout=2.0,
+                  transport=httpx.MockTransport(lambda request: _jev_response_for("CANCEL"))),
+    )
+    response = _invoke(client, "cancelar", thread_id="e2e-cancel")
+    assert response.status_code == 200
+    body = response.json()
+    assert _output_text(body) == CANCEL_REPLY["es"]
+
+
+def test_greeting_message_returns_llm_text_with_options_in_the_system_prompt(client, monkeypatch):
+    monkeypatch.setattr(
+        main,
+        "jev_client",
+        JevClient(api_key="test-key", url="https://api.typesafe.ai/v1/systemone", timeout=2.0,
+                  transport=httpx.MockTransport(lambda request: _jev_response_for("GREETING"))),
+    )
+    llm = RecordingChatModel(FAKE_LLM_TEXT)
+    monkeypatch.setattr(main, "get_chat_model", lambda: llm)
+
+    response = _invoke(client, "hola", thread_id="e2e-greeting")
+    assert response.status_code == 200
+    body = response.json()
+    assert _output_text(body) == FAKE_LLM_TEXT
+
+    system_prompt = llm.received[0].content
+    for intent in ("GENERAL_INQUIRY", "COMPLAINT", "CASE_STATUS"):
+        route = next(r for r in main.routes if r.intent == intent)
+        assert route.option["es"] in system_prompt

@@ -21,17 +21,19 @@ Shipped en PR #1.
 - [x] If Jev does not answer in time, the customer still gets a response
 - [x] The destination of each intent changes by editing `routing.yaml`, not code
 
-Shipped en PR #<n>.
+Shipped en PR #2 (merge `47a7a62`).
 
 ---
 
-## Phase 3: Conversation without a use case
+## Phase 3: Conversation without a use case (Complete)
 
 **Goal:** the customer knows what the agent can do and how to leave.
 
-- [ ] A greeting gets an introduction with the available options
-- [ ] An out-of-scope question gets an explanation and the options
-- [ ] The customer can cancel or say goodbye at any time
+- [x] A greeting gets an introduction with the available options
+- [x] An out-of-scope question gets an explanation and the options
+- [x] The customer can cancel or say goodbye at any time
+
+Shipped en PR #<n>.
 
 ---
 
@@ -60,6 +62,7 @@ Shipped en PR #<n>.
 **Goal:** the customer reaches an advisor without repeating their story.
 
 - [ ] A commercial or retention request, or a request for a human that meets the policy, is handed off
+- [ ] A customer who writes three words or more in a language other than Spanish or Portuguese is handed off
 - [ ] Every handoff is recorded with a case summary
 - [ ] The agent stops responding in a handed-off conversation
 
