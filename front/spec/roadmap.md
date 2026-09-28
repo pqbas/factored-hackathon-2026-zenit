@@ -37,7 +37,7 @@ conectarla a datos reales.
 Modo oscuro revisado; móvil sin revisar. También entraron: riel de secciones
 (Agente / Chats), barra lateral unificada, historial de ejemplo del cliente en
 Agente y la quita de los filtros viejos del historial.
-Shipped en PR #<n>.
+Shipped en PR #16.
 
 ---
 
@@ -60,7 +60,7 @@ calma y amplitud de una app nativa de Mac.
 
 También entraron: color principal celeste, botón de modo claro/oscuro en el
 riel y un solo avatar de usuario (en el riel). Fase hecha sin carpeta de spec.
-Shipped en PR #<n>.
+Shipped en PR #16.
 
 ---
 
@@ -81,7 +81,7 @@ en la app de cualquier banco.
 
 Los datos son de la clienta CUS00000322 del dummy del dataset. La categoría del
 gasto (`transaction_category`) no se muestra todavía. Fase hecha sin carpeta de
-spec. Shipped en PR #<n>.
+spec. Shipped en PR #16.
 
 ---
 
@@ -154,7 +154,7 @@ en el mismo chat.
 
 ---
 
-## Phase 5: Roles y navegación por rol
+## Phase 5: Roles y navegación por rol (Complete)
 
 **Goal:** que cada usuario vea las pantallas de su rol (cliente, asesor o
 admin) y ninguna otra.
@@ -175,9 +175,11 @@ admin) y ninguna otra.
      Back: requireAdmin en /api/admin; requireAdvisor (advisor o admin) en la
      API de la consola; cuenta/productos solo customer y admin. -->
 
-- [ ] La app sabe el rol del usuario al cargar la sesión.
-- [ ] El riel muestra solo las secciones que la matriz permite al rol.
-- [ ] Entrar por URL a una pantalla de otro rol muestra "sin acceso".
+- [x] La app sabe el rol del usuario al cargar la sesión.
+- [x] El riel muestra solo las secciones que la matriz permite al rol.
+- [x] Entrar por URL a una pantalla de otro rol muestra "sin acceso".
+
+Probado con el rol real del back (PR #15). Shipped en PR #16.
 
 ---
 
