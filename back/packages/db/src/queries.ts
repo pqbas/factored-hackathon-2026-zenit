@@ -10,6 +10,7 @@ import {
   isNull,
   lt,
   max,
+  ne,
   or,
   sql,
   type SQL,
@@ -308,6 +309,30 @@ export async function getChatOwners() {
       .orderBy(asc(userEmail));
   } catch (_error) {
     throw new ChatSDKError('bad_request:database', 'Failed to get chat owners');
+  }
+}
+
+// Latest non-system message of each chat, in one query for a whole page of
+// chats (DISTINCT ON), for the advisor inbox preview.
+export async function getLastVisibleMessages({
+  chatIds,
+}: {
+  chatIds: string[];
+}): Promise<DBMessage[]> {
+  if (!isDatabaseAvailable() || chatIds.length === 0) return [];
+
+  try {
+    return await (await ensureDb())
+      .selectDistinctOn([message.chatId])
+      .from(message)
+      .where(and(inArray(message.chatId, chatIds), ne(message.role, 'system')))
+      .orderBy(message.chatId, desc(message.createdAt), desc(message.id));
+  } catch (error) {
+    console.error('[getLastVisibleMessages] Error:', error);
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to get last messages',
+    );
   }
 }
 

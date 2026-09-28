@@ -603,6 +603,49 @@ test.describe('/api/advisor (with database)', () => {
   });
 
   test.describe('bandeja filters', () => {
+    test('each inbox chat carries lastMessage, skipping system notices', async ({
+      babbageContext,
+    }) => {
+      const chatId = await createChat(babbageContext);
+      const inboxRow = async () => {
+        const { chats } = await (
+          await babbageContext.request.get(
+            `/api/advisor/conversations?userId=${babbageContext.name}-id&limit=100`,
+          )
+        ).json();
+        return chats.find((c: any) => c.id === chatId);
+      };
+
+      expect((await inboxRow()).lastMessage).toBeNull();
+
+      // Taking the chat only adds a system notice: still no visible message.
+      await babbageContext.request.post(
+        `/api/advisor/conversations/${chatId}/take`,
+        { data: {} },
+      );
+      expect((await inboxRow()).lastMessage).toBeNull();
+
+      const longReply = `Hola   ${'a'.repeat(200)}`;
+      await babbageContext.request.post(
+        `/api/advisor/conversations/${chatId}/messages`,
+        { data: { text: longReply } },
+      );
+      const { lastMessage } = await inboxRow();
+      expect(lastMessage.senderType).toBe('human_agent');
+      expect(lastMessage.text).toHaveLength(140);
+      expect(lastMessage.text.startsWith('Hola a')).toBe(true);
+      expect(lastMessage.text.endsWith('…')).toBe(true);
+      expect(typeof lastMessage.createdAt).toBe('string');
+
+      // Customer routes don't carry the preview.
+      const { chats } = await (
+        await babbageContext.request.get('/api/history?limit=100')
+      ).json();
+      const historyRow = chats.find((c: any) => c.id === chatId);
+      expect(historyRow).toBeDefined();
+      expect(historyRow).not.toHaveProperty('lastMessage');
+    });
+
     test('assignedTo=me, status and handledBy filter the inbox', async ({
       babbageContext,
     }) => {
