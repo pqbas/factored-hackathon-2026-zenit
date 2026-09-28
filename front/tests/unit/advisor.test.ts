@@ -6,6 +6,8 @@ import {
   attentionOf,
   canReply,
   groupByUseCase,
+  lastActivityAt,
+  lastMessagePreview,
   sameView,
   useCaseOf,
   viewUrl,
@@ -184,5 +186,24 @@ describe('attentionOf', () => {
     expect(attentionOf(other, ME)?.text).toBe('La atiende ada');
     expect(attentionOf(other, ME, { long: true })?.text).toBe('La atiende ada@example.com');
     expect(attentionOf(chat({ closedAt: '2026-09-28T11:00:00.000Z' }), ME)?.text).toBe('Resuelta');
+  });
+});
+
+describe('lastMessagePreview and lastActivityAt', () => {
+  const last = (text: string) => ({
+    text,
+    senderType: 'customer' as const,
+    createdAt: '2026-09-28T12:00:00.000Z',
+  });
+
+  it('shows the customer\'s last message unless it repeats the subject', () => {
+    expect(lastMessagePreview(chat({ lastMessage: last('Es urgente') }))).toBe('Es urgente');
+    expect(lastMessagePreview(chat({ title: 'Hola', lastMessage: last('Hola') }))).toBeNull();
+    expect(lastMessagePreview(chat({ lastMessage: null }))).toBeNull();
+  });
+
+  it('dates the row by the last message, else the chat start', () => {
+    expect(lastActivityAt(chat({ lastMessage: last('x') }))).toBe('2026-09-28T12:00:00.000Z');
+    expect(lastActivityAt(chat({ lastMessage: null }))).toBe('2026-09-28T10:00:00.000Z');
   });
 });

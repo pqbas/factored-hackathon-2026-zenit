@@ -12,9 +12,6 @@ export function getInitials(name: string): string {
     .filter((word) => /[a-zA-Z]/.test(word));
   if (words.length === 0) return '';
   if (words.length === 1) {
-    // "asesor2" -> "A2", so numbered accounts don't all read "AS".
-    const numbered = words[0].match(/^([a-zA-Z]).*?(\d+)$/);
-    if (numbered) return `${numbered[1]}${numbered[2]}`.toUpperCase().slice(0, 3);
     return words[0].slice(0, 2).toUpperCase();
   }
   const first = words[0][0];

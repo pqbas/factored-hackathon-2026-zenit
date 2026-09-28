@@ -28,8 +28,12 @@ export type AdvisorChat = OverJson<
     | 'useCase'
   >
 > & {
-  // The customer's last message, once the back adds it to the inbox.
-  lastMessage?: string | null;
+  // Preview of the customer's last message (plain text, ≤140 chars).
+  lastMessage?: {
+    text: string;
+    senderType: SenderType | null;
+    createdAt: string;
+  } | null;
 };
 
 export interface AdvisorChatPage {
@@ -344,4 +348,17 @@ export async function fetchUsers(): Promise<ChatOwner[]> {
   const res = await fetch('/api/advisor/users', { credentials: 'include' });
   if (res.status === 204 || !res.ok) return [];
   return (await res.json()).users ?? [];
+}
+
+// The row's gray preview: the customer's last message, unless it just repeats
+// the subject (the chat title is the customer's first message).
+export function lastMessagePreview(chat: AdvisorChat): string | null {
+  const text = chat.lastMessage?.text?.trim();
+  if (!text || text === chat.title.trim()) return null;
+  return text;
+}
+
+// When the row last moved: the customer's last message, else the chat start.
+export function lastActivityAt(chat: AdvisorChat): string {
+  return chat.lastMessage?.createdAt ?? chat.createdAt;
 }

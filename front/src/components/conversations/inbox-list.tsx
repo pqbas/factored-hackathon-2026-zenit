@@ -8,6 +8,8 @@ import {
   attentionOf,
   customerLabel,
   groupByUseCase,
+  lastActivityAt,
+  lastMessagePreview,
 } from '@/lib/advisor';
 import { avatarColor, formatListTime, getInitials } from '@/lib/conversations';
 import { cn } from '@/lib/utils';
@@ -32,6 +34,7 @@ function Row({
   // The inbox API has no unread count: the dot marks chats waiting for someone.
   const waiting = !chat.closedAt && chat.handledBy === 'human_queue';
   const withDavid = !chat.closedAt && chat.handledBy === 'ai_agent';
+  const preview = lastMessagePreview(chat);
 
   return (
     <button
@@ -85,10 +88,10 @@ function Row({
           back sends it, the customer's last message in gray. */}
       <span className="min-w-0 truncate text-sm">
         <span className="text-foreground/90">{chat.title}</span>
-        {chat.lastMessage && (
+        {preview && (
           <span data-testid="last-message" className="text-muted-foreground">
             {' — '}
-            {chat.lastMessage}
+            {preview}
           </span>
         )}
       </span>
@@ -99,7 +102,7 @@ function Row({
         {attention?.text}
       </span>
       <span className="text-right text-muted-foreground text-xs">
-        {formatListTime(chat.createdAt, new Date())}
+        {formatListTime(lastActivityAt(chat), new Date())}
       </span>
       <span />
     </button>
