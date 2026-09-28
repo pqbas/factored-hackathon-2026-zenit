@@ -1,29 +1,30 @@
-import { Plus, SendHorizontal, Zap } from 'lucide-react';
-import { ASSISTANT_NAME } from '@/lib/assistant';
-import { useRef, useState } from 'react';
+import { SendHorizontal, Zap } from 'lucide-react';
+import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { QUICK_REPLIES } from '@/lib/advisor';
 import { cn } from '@/lib/utils';
-import { QUICK_REPLIES } from '@/mocks/conversations';
 
 export function AdvisorComposer({
   disabled,
+  placeholder,
   onSend,
-  onAttach,
 }: {
   disabled: boolean;
-  onSend: (text: string) => void;
-  onAttach: (file: File) => void;
+  placeholder: string;
+  onSend: (text: string) => Promise<boolean>;
 }) {
   const [draft, setDraft] = useState('');
   const [showReplies, setShowReplies] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
+  const [sending, setSending] = useState(false);
 
-  function handleSend() {
+  async function handleSend() {
     const text = draft.trim();
-    if (!text || disabled) return;
-    onSend(text);
-    setDraft('');
+    if (!text || disabled || sending) return;
+    setSending(true);
+    const sent = await onSend(text);
+    setSending(false);
+    if (sent) setDraft('');
   }
 
   return (
@@ -44,29 +45,6 @@ export function AdvisorComposer({
         </div>
       )}
       <div className="flex items-center gap-2">
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/*"
-          hidden
-          data-testid="attach-input"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) onAttach(file);
-            e.target.value = '';
-          }}
-        />
-        <Button
-          type="button"
-          size="icon"
-          variant="secondary"
-          aria-label="Adjuntar imagen"
-          disabled={disabled}
-          onClick={() => fileRef.current?.click()}
-          className="size-9 shrink-0 rounded-full text-muted-foreground"
-        >
-          <Plus className="size-[18px]" />
-        </Button>
         <Button
           type="button"
           size="icon"
@@ -87,9 +65,8 @@ export function AdvisorComposer({
             value={draft}
             disabled={disabled}
             aria-label="Mensaje al cliente"
-            placeholder={
-              disabled ? `${ASSISTANT_NAME} está respondiendo…` : 'Escribe al cliente…'
-            }
+            placeholder={placeholder}
+            maxLength={4000}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
@@ -104,7 +81,7 @@ export function AdvisorComposer({
             size="icon"
             aria-label="Enviar"
             onClick={handleSend}
-            disabled={disabled || !draft.trim()}
+            disabled={disabled || sending || !draft.trim()}
             className="size-[34px] shrink-0 rounded-full"
           >
             <SendHorizontal className="h-4 w-4" />
