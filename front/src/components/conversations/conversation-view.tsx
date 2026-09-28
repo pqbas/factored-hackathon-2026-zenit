@@ -1,7 +1,8 @@
-import { ArrowLeft, CheckCheck, SendHorizontal } from 'lucide-react';
+import { CheckCheck, SendHorizontal } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 import { avatarColor } from '@/components/conversations/conversation-list';
+import { SidebarToggle } from '@/components/sidebar-toggle';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { formatListTime, getInitials, groupMessagesByDay } from '@/lib/conversations';
@@ -11,11 +12,9 @@ import type { MockConversation } from '@/mocks/conversations';
 export function ConversationView({
   conversation,
   onSend,
-  onBack,
 }: {
   conversation: MockConversation;
   onSend: (text: string) => void;
-  onBack?: () => void;
 }) {
   const [draft, setDraft] = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -36,16 +35,8 @@ export function ConversationView({
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center gap-3 border-b px-4 py-3">
-        {onBack && (
-          <button
-            type="button"
-            onClick={onBack}
-            className="rounded-full p-1.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground md:hidden"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </button>
-        )}
+      <div className="flex items-center gap-3 border-b px-2 py-1.5">
+        <SidebarToggle />
         <div
           className={cn(
             'flex h-10 w-10 shrink-0 items-center justify-center rounded-full font-medium text-sm text-white',

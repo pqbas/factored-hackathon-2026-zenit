@@ -45,6 +45,15 @@ Y cambia en estas cosas:
 11. En pantallas angostas (< 768 px) se ve un solo panel a la vez: la lista, o
     la conversación con un botón para volver a la lista.
 12. La pantalla se ve bien en modo claro y oscuro.
+13. La lista de Chats usa el mismo componente `Sidebar` que Agente (mismo
+    ancho, encabezado, filas, pie con el usuario y botón para plegarla). En
+    pantallas angostas se abre como panel deslizable, igual que en Agente.
+14. En Agente, el historial muestra seis chats de ejemplo del lado del cliente
+    del banco (saldo, beneficiario, aumento de límite, tarjeta perdida, cargo
+    no reconocido, sesión vencida), debajo de los chats reales. Al abrir uno
+    se ve la conversación en el chat del agente y se puede seguir escribiendo.
+15. El historial ya no muestra los filtros de etapa, intención y cliente, ni el
+    aviso "Chat history is disabled".
 
 ## 2. Decisions
 

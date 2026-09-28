@@ -3,7 +3,8 @@ import { useMemo, useState } from 'react';
 
 import { ConversationList } from '@/components/conversations/conversation-list';
 import { ConversationView } from '@/components/conversations/conversation-view';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { SidebarToggle } from '@/components/sidebar-toggle';
+import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { filterConversations, sortByLastMessage } from '@/lib/conversations';
 import { MOCK_CONVERSATIONS, type MockMessage } from '@/mocks/conversations';
 
@@ -15,7 +16,8 @@ export default function ConversationsPage() {
   );
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
-  const isMobile = useIsMobile();
+  // Same persisted open/closed state as the Agente section's sidebar.
+  const isCollapsed = localStorage.getItem('sidebar:state') === 'false';
 
   const visibleConversations = useMemo(
     () => sortByLastMessage(filterConversations(conversations, query)),
@@ -49,39 +51,33 @@ export default function ConversationsPage() {
     );
   }
 
-  const showList = !isMobile || !selectedConversation;
-  const showConversation = !isMobile || !!selectedConversation;
-
   return (
-    <div className="flex h-dvh w-full">
-      {showList && (
-        <div className="w-full shrink-0 md:w-[30%] md:min-w-80">
-          <ConversationList
-            conversations={visibleConversations}
-            selectedId={selectedId}
-            onSelect={handleSelect}
-            query={query}
-            onQueryChange={setQuery}
+    <SidebarProvider defaultOpen={!isCollapsed}>
+      <ConversationList
+        conversations={visibleConversations}
+        selectedId={selectedId}
+        onSelect={handleSelect}
+        query={query}
+        onQueryChange={setQuery}
+      />
+      <SidebarInset className="h-dvh min-h-0">
+        {selectedConversation ? (
+          <ConversationView
+            conversation={selectedConversation}
+            onSend={handleSend}
           />
-        </div>
-      )}
-
-      {showConversation && (
-        <div className="flex-1">
-          {selectedConversation ? (
-            <ConversationView
-              conversation={selectedConversation}
-              onSend={handleSend}
-              onBack={isMobile ? () => setSelectedId(null) : undefined}
-            />
-          ) : (
-            <div className="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground">
+        ) : (
+          <div className="flex h-full flex-col">
+            <div className="px-2 py-1.5">
+              <SidebarToggle />
+            </div>
+            <div className="flex flex-1 flex-col items-center justify-center gap-2 text-muted-foreground">
               <MessagesSquare className="h-10 w-10" />
               <p>Elige una conversación</p>
             </div>
-          )}
-        </div>
-      )}
-    </div>
+          </div>
+        )}
+      </SidebarInset>
+    </SidebarProvider>
   );
 }

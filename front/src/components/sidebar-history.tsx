@@ -9,7 +9,6 @@ type ClientUser = {
 };
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
-import { useConfig } from '@/hooks/use-config';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,6 +28,7 @@ import {
 import type { Chat } from '@chat-template/db';
 import { fetcher } from '@/lib/utils';
 import { ChatItem } from './sidebar-history-item';
+import { MOCK_AGENT_CHATS } from '@/mocks/agent-history';
 import useSWRInfinite from 'swr/infinite';
 import { LoaderIcon } from 'lucide-react';
 
@@ -133,7 +133,6 @@ function ChatDateGroup({
 export function SidebarHistory({ user }: { user?: ClientUser | null }) {
   const { setOpenMobile } = useSidebar();
   const { id } = useParams();
-  const { chatHistoryEnabled } = useConfig();
 
   const {
     data: paginatedChatHistories,
@@ -153,9 +152,6 @@ export function SidebarHistory({ user }: { user?: ClientUser | null }) {
     ? paginatedChatHistories.some((page) => page.hasMore === false)
     : false;
 
-  const hasEmptyChatHistory = paginatedChatHistories
-    ? paginatedChatHistories.every((page) => page.chats.length === 0)
-    : false;
 
   const handleDelete = async () => {
     const deletePromise = fetch(`/api/chat/${deleteId}`, {
@@ -240,20 +236,18 @@ export function SidebarHistory({ user }: { user?: ClientUser | null }) {
     <>
       <SidebarGroup>
         <SidebarGroupContent>
-          {hasEmptyChatHistory ? (
-            <div className="flex w-full flex-row items-center justify-center gap-2 px-2 py-4 text-sm text-zinc-500">
-              {chatHistoryEnabled
-                ? 'Your conversations will appear here once you start chatting!'
-                : 'Chat history is disabled - conversations are not saved'}
-            </div>
-          ) : (
             <>
               <SidebarMenu>
                 {paginatedChatHistories &&
                   (() => {
-                    const chatsFromHistory = paginatedChatHistories.flatMap(
-                      (paginatedChatHistory) => paginatedChatHistory.chats,
-                    );
+                    // Demo chats always show under the real ones, so the
+                    // sidebar has example conversations to open.
+                    const chatsFromHistory = [
+                      ...paginatedChatHistories.flatMap(
+                        (paginatedChatHistory) => paginatedChatHistory.chats,
+                      ),
+                      ...MOCK_AGENT_CHATS.map((mock) => mock.chat),
+                    ];
 
                     const groupedChats = groupChatsByDate(chatsFromHistory);
 
@@ -320,7 +314,6 @@ export function SidebarHistory({ user }: { user?: ClientUser | null }) {
                 </div>
               )}
             </>
-          )}
         </SidebarGroupContent>
       </SidebarGroup>
 

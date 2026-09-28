@@ -2,6 +2,7 @@ import useSWR from 'swr';
 import type { Chat } from '@chat-template/db';
 import type { ChatMessage } from '@chat-template/core';
 import { convertToUIMessages } from '@/lib/utils';
+import { getMockAgentChat } from '@/mocks/agent-history';
 
 interface ChatData {
   chat: Chat;
@@ -14,6 +15,9 @@ interface ChatData {
  */
 async function fetchChatData(url: string): Promise<ChatData | null> {
   const chatId = url.split('/').pop();
+
+  const mock = chatId ? getMockAgentChat(chatId) : undefined;
+  if (mock) return mock;
 
   // Fetch chat details
   const chatResponse = await fetch(`/api/chat/${chatId}`, {
