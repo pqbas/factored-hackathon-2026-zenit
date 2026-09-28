@@ -9,7 +9,6 @@ class Settings:
     llm_endpoint: str
     lakebase_instance_name: str
     checkpoint_schema: str
-    demo_session_token: str | None
     demo_sessions_json: str | None
     jev_api_key: str | None
     jev_url: str
@@ -24,7 +23,6 @@ class Settings:
             llm_endpoint=os.getenv("LLM_ENDPOINT", "databricks-qwen3-next-80b-a3b-instruct"),
             lakebase_instance_name=os.getenv("LAKEBASE_INSTANCE_NAME", ""),
             checkpoint_schema=os.getenv("CHECKPOINT_SCHEMA", "agent_checkpoints"),
-            demo_session_token=os.getenv("DEMO_SESSION_TOKEN"),
             demo_sessions_json=os.getenv("DEMO_SESSIONS_JSON"),
             jev_api_key=os.getenv("JEV_API_KEY"),
             jev_url=os.getenv("JEV_URL", "https://api.typesafe.ai/v1/systemone"),
