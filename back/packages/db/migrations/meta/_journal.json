@@ -15,6 +15,13 @@
       "when": 1773228998398,
       "tag": "0001_old_gladiator",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790609969513,
+      "tag": "0002_cloudy_texas_twister",
+      "breakpoints": true
     }
   ]
 }

@@ -91,11 +91,13 @@ async function ensureDb() {
 export async function saveChat({
   id,
   userId,
+  userEmail,
   title,
   visibility,
 }: {
   id: string;
   userId: string;
+  userEmail?: string | null;
   title: string;
   visibility: VisibilityType;
 }) {
@@ -109,6 +111,7 @@ export async function saveChat({
       id,
       createdAt: new Date(),
       userId,
+      userEmail,
       title,
       visibility,
     });
@@ -142,8 +145,8 @@ export async function deleteChatById({ id }: { id: string }) {
 
 export type ChatStatusFilter = 'open' | 'done' | 'waiting' | 'received' | 'all';
 
-export async function getChatsByUserId({
-  id,
+export async function getChats({
+  userId,
   limit,
   startingAfter,
   endingBefore,
@@ -151,7 +154,7 @@ export async function getChatsByUserId({
   intent,
   customer,
 }: {
-  id: string;
+  userId?: string;
   limit: number;
   startingAfter: string | null;
   endingBefore: string | null;
@@ -160,14 +163,18 @@ export async function getChatsByUserId({
   customer?: string;
 }) {
   if (!isDatabaseAvailable()) {
-    console.log('[getChatsByUserId] Database not available, returning empty');
+    console.log('[getChats] Database not available, returning empty');
     return { chats: [], hasMore: false };
   }
 
   try {
     const extendedLimit = limit + 1;
 
-    const filterConditions: SQL<any>[] = [eq(chat.userId, id)];
+    const filterConditions: SQL<any>[] = [];
+
+    if (userId) {
+      filterConditions.push(eq(chat.userId, userId));
+    }
 
     if (status === 'open') {
       filterConditions.push(isNotNull(chat.stage));
@@ -206,10 +213,7 @@ export async function getChatsByUserId({
     let filteredChats: Array<Chat> = [];
 
     if (startingAfter) {
-      console.log(
-        '[getChatsByUserId] Fetching chat for startingAfter:',
-        startingAfter,
-      );
+      console.log('[getChats] Fetching chat for startingAfter:', startingAfter);
       const database = await ensureDb();
       const [selectedChat] = await database
         .select()
@@ -226,10 +230,7 @@ export async function getChatsByUserId({
 
       filteredChats = await query(gt(chat.createdAt, selectedChat.createdAt));
     } else if (endingBefore) {
-      console.log(
-        '[getChatsByUserId] Fetching chat for endingBefore:',
-        endingBefore,
-      );
+      console.log('[getChats] Fetching chat for endingBefore:', endingBefore);
       const database = await ensureDb();
       const [selectedChat] = await database
         .select()
@@ -246,13 +247,13 @@ export async function getChatsByUserId({
 
       filteredChats = await query(lt(chat.createdAt, selectedChat.createdAt));
     } else {
-      console.log('[getChatsByUserId] Executing main query without pagination');
+      console.log('[getChats] Executing main query without pagination');
       filteredChats = await query();
     }
 
     const hasMore = filteredChats.length > limit;
     console.log(
-      '[getChatsByUserId] Query successful, found',
+      '[getChats] Query successful, found',
       filteredChats.length,
       'chats',
     );
@@ -262,15 +263,28 @@ export async function getChatsByUserId({
       hasMore,
     };
   } catch (error) {
-    console.error('[getChatsByUserId] Error details:', error);
+    console.error('[getChats] Error details:', error);
     console.error(
-      '[getChatsByUserId] Error stack:',
+      '[getChats] Error stack:',
       error instanceof Error ? error.stack : 'No stack available',
     );
-    throw new ChatSDKError(
-      'bad_request:database',
-      'Failed to get chats by user id',
-    );
+    throw new ChatSDKError('bad_request:database', 'Failed to get chats');
+  }
+}
+
+export async function getChatOwners() {
+  if (!isDatabaseAvailable()) {
+    console.log('[getChatOwners] Database not available, returning empty');
+    return [];
+  }
+
+  try {
+    return await (await ensureDb())
+      .selectDistinct({ userId: chat.userId, userEmail: chat.userEmail })
+      .from(chat)
+      .orderBy(asc(chat.userEmail));
+  } catch (_error) {
+    throw new ChatSDKError('bad_request:database', 'Failed to get chat owners');
   }
 }
 
