@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { useSidebar } from './ui/sidebar';
 import { PlusIcon, CloudOffIcon, InfoIcon } from 'lucide-react';
 import { useConfig } from '@/hooks/use-config';
+import { DemoCustomerSelector } from '@/components/demo-customer-selector';
+import type { DemoCustomer } from '@/hooks/use-demo-customers';
 import {
   Tooltip,
   TooltipContent,
@@ -13,7 +15,19 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 
-export function ChatHeader({ chatId }: { chatId?: string }) {
+export function ChatHeader({
+  chatId,
+  customers = [],
+  customerToken = null,
+  onCustomerChange = () => {},
+  isCustomerLocked = false,
+}: {
+  chatId?: string;
+  customers?: DemoCustomer[];
+  customerToken?: string | null;
+  onCustomerChange?: (token: string) => void;
+  isCustomerLocked?: boolean;
+}) {
   const navigate = useNavigate();
   const { open } = useSidebar();
   const { chatHistoryEnabled } = useConfig();
@@ -47,6 +61,14 @@ export function ChatHeader({ chatId }: { chatId?: string }) {
       </div>
 
       <div className="flex items-center justify-end gap-3 text-muted-foreground">
+        <TooltipProvider>
+          <DemoCustomerSelector
+            customers={customers}
+            token={customerToken}
+            onChange={onCustomerChange}
+            isLocked={isCustomerLocked}
+          />
+        </TooltipProvider>
         {!chatHistoryEnabled && (
           <TooltipProvider>
             <Tooltip>
