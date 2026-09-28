@@ -55,18 +55,22 @@ desde la pantalla de admin del front.
 
 ---
 
-## Phase 3: Estado del agente en cada conversación
+## Phase 3: Estado de la conversación desde las señales del agente
 
-**Goal:** que el chat y la pantalla de admin sepan quién atiende cada
-conversación y qué caso de uso está activo.
+**Goal:** que el back, único dueño de la conversación, sepa en cada turno quién
+la atiende y qué turnos quedaron bloqueados, y actúe en consecuencia.
 
-<!-- Depende de la Phase 6 del agente: custom_outputs en streaming con
-     { thread_id, handled_by, use_case, intent, language, handoff_id }.
-     use_case llega como el intent de la ruta (GENERAL_INQUIRY), no como UC-01.
-     Hasta que exista el handoff, handled_by es siempre ai_agent. -->
+<!-- docs/limites-agente-back.md: el agente no guarda estado; lo señala en
+     custom_outputs (handoff, blocked) y el back lo persiste. Depende de que
+     el agente emita esas señales (sus Fases 6 y 7 reducidas). La forma exacta
+     de custom_outputs está por confirmar con el agente. -->
 
 - [ ] Cada conversación guarda quién la atiende (agente, cola o asesor) y el
-      caso de uso activo, tal como los reporta el agente en cada turno.
+      caso de uso activo, a partir de lo que señala el agente en cada turno.
+- [ ] Un turno que el agente marca como bloqueado queda guardado como tal y
+      no se le vuelve a mandar al agente en el historial.
+- [ ] Si la conversación no la atiende el agente, el back guarda el mensaje
+      del cliente y no llama al agente: sin mensaje vacío ni stream colgado.
 - [ ] El historial y la pantalla de admin se pueden filtrar por quién atiende
       y por caso de uso.
 - [ ] Se quitan el aviso de "background check" y los campos de etapa,
@@ -74,32 +78,55 @@ conversación y qué caso de uso está activo.
 
 ---
 
-## Phase 4: El chat durante una derivación a asesor
+## Phase 4: Mensajes guardados sin datos sensibles
 
-**Goal:** que el front pueda mostrar cuándo atiende un humano y los mensajes
-del asesor sin recargar la página.
+**Goal:** que la base del back nunca guarde datos sensibles del cliente en
+claro.
 
-<!-- Depende de la Phase 6 del agente: turno pasivo (stream sin texto, con
-     custom_outputs.handled_by) y GET /conversations/{id}/messages. La forma
-     de la respuesta la define el agente en su spec; no diseñar antes. La UI
-     la hace el front. -->
+<!-- docs/limites-agente-back.md: el back guarda los mensajes ya
+     enmascarados. Decidido: el back enmascara con su propia lógica ANTES de
+     guardar, porque routes/chat.ts guarda el mensaje del usuario antes de
+     llamar al agente y no puede esperar su respuesta. Sensible = lo mismo que
+     enmascara agent/src/llm/fallback.py: número de tarjeta (13 a 19 dígitos,
+     con espacios o guiones) y el valor que sigue a cvv/contraseña/senha. Los
+     tests replican los casos de agent/tests/unit/test_fallback.py para que las
+     dos implementaciones no diverjan. -->
 
-- [ ] Un turno en una conversación derivada no deja un mensaje vacío del
-      asistente ni un stream colgado.
-- [ ] El front obtiene los mensajes nuevos de una conversación, incluidos los
-      del asesor y el aviso de derivación, solo si la conversación es del
-      cliente de la sesión.
+- [ ] Los mensajes del cliente y del agente se guardan con los datos
+      sensibles enmascarados.
+- [ ] El historial que el back le manda al agente sale de esos mensajes
+      guardados, así que nunca lleva un dato sensible en claro.
+- [ ] Los chats de la pantalla de admin muestran los mensajes enmascarados.
 
 ---
 
-## Phase 5: API de la consola del asesor
+## Phase 5: Handoff a un asesor
+
+**Goal:** que una conversación que el agente decide derivar quede registrada
+en el back y pase a un humano, sin que el cliente repita su historia.
+
+<!-- Antes era la Phase 6 del agente; ahora el back crea y guarda el handoff.
+     El agente solo detecta la derivación y manda el resumen en
+     custom_outputs. Modelo de referencia: agent/docs/07-handoff.md (tabla
+     handoffs, handled_by, mensaje system), adaptado a la base del back. -->
+
+- [ ] Cuando el agente señala un handoff, el back registra el caso con su
+      resumen y motivo, y la conversación pasa a la cola de asesores.
+- [ ] El historial del chat muestra el aviso de derivación.
+- [ ] El front obtiene los mensajes nuevos de una conversación, incluidos los
+      del asesor, solo si la conversación es del cliente de la sesión.
+- [ ] Dos señales de handoff seguidas en la misma conversación no crean dos
+      casos abiertos.
+
+---
+
+## Phase 6: API de la consola del asesor
 
 **Goal:** que la consola del asesor en el front pueda tomar, responder y cerrar
 casos derivados.
 
-<!-- Depende de la Phase 7 del agente (rutas /handoffs). El contrato lo
-     comparte el agente en su spec de Phase 7; no diseñar los proxies contra
-     una forma supuesta. -->
+<!-- Antes dependía de las rutas /handoffs del agente; ahora la API es del
+     back y el contrato lo define el back para el front. -->
 
 - [ ] El asesor ve la bandeja de casos pendientes, ordenada por prioridad.
 - [ ] El asesor abre un caso con su resumen y el historial del chat.
@@ -110,15 +137,30 @@ casos derivados.
 
 ---
 
-## Phase 6: Conexión con el agente desplegado
+## Phase 7: Asignación de asesores
+
+**Goal:** que cada caso derivado llegue a un asesor disponible con el perfil
+correcto, sin tomarlo a mano.
+
+<!-- Antes era la Phase 7 del agente. Reglas de referencia:
+     agent/docs/08-asignacion-de-asesores.md (especialidad e idioma). -->
+
+- [ ] Cada handoff se asigna a un asesor disponible por especialidad e
+      idioma.
+- [ ] Dos handoffs simultáneos nunca toman al mismo asesor.
+- [ ] El asesor ve los casos que tiene asignados.
+
+---
+
+## Phase 8: Conexión con el agente desplegado
 
 **Goal:** que el chat desplegado en Databricks converse con el agente
 desplegado, no con un endpoint de ejemplo.
 
-<!-- Depende de la Phase 8 del agente. Sin decidir: App + /invocations vía
-     API_PROXY o serving endpoint agent/v1/responses, y cómo se autentica una
-     App contra la otra. -->
+<!-- Depende de la Phase 8 del agente, que ahora despliega sin Lakebase. Sin
+     decidir: App + /invocations vía API_PROXY o serving endpoint
+     agent/v1/responses, y cómo se autentica una App contra la otra. -->
 
-- [ ] El chat desplegado llega al agente desplegado con el token y la
-      conversación en cada turno.
+- [ ] El chat desplegado llega al agente desplegado con el historial, el
+      token y la conversación en cada turno.
 - [ ] Los logs del backend no muestran el token de sesión del cliente.
