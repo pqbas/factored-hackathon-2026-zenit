@@ -219,4 +219,5 @@ sketch
 !.claude/skills/migrate-from-model-serving/
 
 **/.env
-**/.env.localmlflow.db
+**/.env.local
+mlflow.db

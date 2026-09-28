@@ -116,3 +116,15 @@ tiene transcripción.
   cuánto ni en qué contexto.
 - No hay fecha de pago ni pago mínimo de la tarjeta, así que el agente no puede
   responder "cuánto debo pagar" ni "cuándo vence mi pago".
+
+## 9.4 Estado
+
+Implementado en local. `GENERAL_INQUIRY` responde con los datos de
+`bank_uc_consultas.get_products` (saldo, límite y cupo disponible de cada
+tarjeta de crédito, saldo de cada cuenta de ahorro) y
+`bank_uc_consultas.list_transactions` (los 10 movimientos más recientes, con
+filtro opcional por los últimos 4 dígitos), siempre del `customer_id` de la
+sesión. Tarjeta de débito, préstamos, fecha de pago, pago mínimo y
+transferencias responden que todavía no están disponibles.
+
+Pendiente: permisos y despliegue en la Phase 8.
