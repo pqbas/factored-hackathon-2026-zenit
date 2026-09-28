@@ -33,6 +33,15 @@ def test_cvv_or_password_is_sensitive_data_and_masked():
     assert "Secreta123" not in masked
 
 
+def test_cvv_or_password_without_a_separator_is_sensitive_data_and_masked():
+    for text, secret in (("mi cvv 123", "123"), ("mi contraseña 12345", "12345")):
+        result = check_guardrail_rules(text)
+        assert result is not None
+        category, masked = result
+        assert category == "SENSITIVE_DATA"
+        assert secret not in masked
+
+
 def test_mentioning_a_password_without_a_value_matches_no_rule():
     assert check_guardrail_rules("olvidé mi contraseña, ¿cómo la cambio?") is None
     assert check_guardrail_rules("mi contraseña no funciona") is None
