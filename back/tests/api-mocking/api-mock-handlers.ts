@@ -53,6 +53,9 @@ export interface CapturedRequest {
     session_token?: string;
     [key: string]: unknown;
   };
+  // Responses API request body, kept so tests can check which turns were
+  // actually sent to the agent (e.g. that blocked messages are excluded).
+  input?: unknown;
 }
 
 let capturedRequests: CapturedRequest[] = [];
@@ -86,12 +89,14 @@ function captureRequestContext(url: string, body: unknown): void {
   const customInputs = (
     body as { custom_inputs?: CapturedRequest['customInputs'] }
   )?.custom_inputs;
+  const input = (body as { input?: unknown }).input;
   capturedRequests.push({
     url,
     timestamp: Date.now(),
     context,
     hasContext: context !== undefined && context !== null,
     customInputs,
+    input,
   });
 }
 

@@ -3,6 +3,7 @@ import type { LanguageModelUsage, UIMessage } from 'ai';
 
 const messageMetadataSchema = z.object({
   createdAt: z.string(),
+  blocked: z.boolean().optional(),
 });
 
 type MessageMetadata = z.infer<typeof messageMetadataSchema>;
@@ -11,6 +12,7 @@ type MessageMetadata = z.infer<typeof messageMetadataSchema>;
 export type CustomUIDataTypes = {
   error: string;
   usage: LanguageModelUsage;
+  'conversation-state': { handledBy: string };
 };
 
 export type ChatMessage = UIMessage<

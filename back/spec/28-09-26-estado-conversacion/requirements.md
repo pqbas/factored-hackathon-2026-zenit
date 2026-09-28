@@ -60,9 +60,10 @@ Y cambia en estas cosas:
    en los turnos siguientes no los incluye. El chat los sigue mostrando.
 6. Si `handoff` no es `null`, el chat pasa a `handledBy = 'human_queue'`.
 7. Si `handledBy` no es `'ai_agent'`, `POST /api/chat` guarda el mensaje del
-   cliente y no llama al agente. Responde con un stream que solo trae una
-   parte de datos `data-conversation-state` con `{ handledBy }` y ningún
-   mensaje del asistente, y no guarda un mensaje vacío.
+   cliente y no llama al agente. Responde con un stream que solo trae las
+   partes `start` y `finish` y una parte de datos `data-conversation-state`
+   con `{ handledBy }` y ningún mensaje del asistente, y no guarda un mensaje
+   vacío.
 8. `/api/history` y `/api/admin/chats` aceptan los filtros `handledBy` y
    `useCase`, y dejan de aceptar `status` y `customer`, que dependían de los
    campos borrados. `intent` se mantiene.
