@@ -7,7 +7,7 @@ from src.graph.state import AgentState
 from src.llm.fallback import check_guardrail_rules, detect_language, fallback_classify
 from src.llm.jev import JevClient, JevUnavailable
 from src.prompts.messages import GUARDRAIL_REPLIES
-from src.schemas.classification import Classification
+from src.schemas.classification import Classification, reply_language
 from src.schemas.routing import IntentRoute
 
 
@@ -58,7 +58,7 @@ async def classify(
         messages.append(HumanMessage(content=masked_text, id=human_message.id))
 
     if classification.blocked(threshold):
-        language = classification.language if classification.language in ("es", "pt") else "es"
+        language = reply_language(classification.language)
         messages.append(AIMessage(content=GUARDRAIL_REPLIES[classification.guardrail][language]))
 
     if messages:

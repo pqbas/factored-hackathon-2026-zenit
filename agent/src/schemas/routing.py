@@ -5,6 +5,8 @@ from pathlib import Path
 import yaml
 from pydantic import BaseModel, field_validator
 
+from src.schemas.classification import reply_language
+
 
 class IntentRoute(BaseModel):
     intent: str
@@ -42,6 +44,6 @@ def load_routing(path: str | Path, allowed_destinations: set[str]) -> list[Inten
 
 
 def render_options(routes: list[IntentRoute], language: str) -> str:
-    lang = language if language in ("es", "pt") else "es"
+    lang = reply_language(language)
     options = [route.option[lang] for route in routes if route.option]
     return "\n".join(f"{i}. {option}" for i, option in enumerate(options, start=1))

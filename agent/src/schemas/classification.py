@@ -18,6 +18,10 @@ SENTIMENT_LEVELS = ["very_negative", "negative", "neutral", "positive"]
 Source = Literal["rules", "jev", "fallback"]
 
 
+def reply_language(language: str | None) -> str:
+    return language if language in ("es", "pt") else "es"
+
+
 class Classification(BaseModel):
     guardrail: str
     guardrail_probability: float

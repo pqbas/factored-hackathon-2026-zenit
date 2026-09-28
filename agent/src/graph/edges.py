@@ -18,13 +18,8 @@ def dispatch(
     if classification.blocked(threshold):
         return END
 
-    if classification.intent == "CANCEL":
-        for route in routes:
-            if route.intent == "CANCEL":
-                return route.destination
-        return "respond"
-
-    if classification.intent_confidence < intent_threshold:
+    # A cancel is always accepted, so only other intents need enough confidence.
+    if classification.intent != "CANCEL" and classification.intent_confidence < intent_threshold:
         return "respond"
 
     for route in routes:

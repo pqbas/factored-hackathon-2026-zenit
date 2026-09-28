@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from src.prompts.situations import situation_for
 
 THRESHOLD = 0.5
@@ -15,18 +17,15 @@ def test_situation_for_returns_clarify_below_the_threshold_even_for_greeting():
     assert situation_for(classification, THRESHOLD) == "clarify"
 
 
-def test_situation_for_returns_greeting():
-    assert situation_for(_classification(intent="GREETING"), THRESHOLD) == "greeting"
-
-
-def test_situation_for_returns_goodbye():
-    assert situation_for(_classification(intent="GOODBYE"), THRESHOLD) == "goodbye"
-
-
-def test_situation_for_returns_out_of_scope():
-    assert situation_for(_classification(intent="OUT_OF_SCOPE"), THRESHOLD) == "out_of_scope"
-
-
-def test_situation_for_returns_unavailable_for_general_inquiry_and_human_agent():
-    assert situation_for(_classification(intent="GENERAL_INQUIRY"), THRESHOLD) == "unavailable"
-    assert situation_for(_classification(intent="HUMAN_AGENT"), THRESHOLD) == "unavailable"
+@pytest.mark.parametrize(
+    "intent, situation",
+    [
+        ("GREETING", "greeting"),
+        ("GOODBYE", "goodbye"),
+        ("OUT_OF_SCOPE", "out_of_scope"),
+        ("GENERAL_INQUIRY", "unavailable"),
+        ("HUMAN_AGENT", "unavailable"),
+    ],
+)
+def test_situation_for_maps_the_intent_to_its_situation(intent, situation):
+    assert situation_for(_classification(intent=intent), THRESHOLD) == situation
