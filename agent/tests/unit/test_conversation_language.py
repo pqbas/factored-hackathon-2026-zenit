@@ -26,34 +26,53 @@ class FakeJev:
         return self._classification
 
 
-def _classify(
-    text: str, jev: FakeJev, previous: dict | None, history: list | None = None, country: str = "México"
-) -> dict:
+def _classify(text: str, jev: FakeJev, history: list | None = None, country: str = "México") -> dict:
     state = {
         "messages": [*(history or []), HumanMessage(content=text)],
-        "classification": previous,
         "session": {"authenticated": True, "customer_id": "CLI-TEST", "country": country},
     }
     return asyncio.run(classify(state, jev, routes=[], threshold=0.5))
 
 
 def test_cancelar_in_a_spanish_conversation_keeps_spanish():
-    history = [HumanMessage(content="Hola"), AIMessage(content="¡Hola! ¿En qué te ayudo?")]
-    update = _classify("Cancelar", FakeJev("pt", "CANCEL"), {"language": "es"}, history)
+    history = [
+        HumanMessage(content="Hola, quiero saber el saldo de mi tarjeta"),
+        AIMessage(content="Tu saldo es..."),
+    ]
+    update = _classify("Cancelar", FakeJev("pt", "CANCEL"), history)
     assert update["classification"]["language"] == "es"
 
 
+def test_a_short_reply_after_a_long_portuguese_message_is_portuguese():
+    history = [
+        HumanMessage(content="Olá, gostaria de saber o saldo do meu cartão"),
+        AIMessage(content="O seu saldo é..."),
+    ]
+    update = _classify("E limite?", FakeJev("es", "GENERAL_INQUIRY"), history, country="México")
+    assert update["classification"]["language"] == "pt"
+
+
 def test_a_clear_portuguese_first_message_is_portuguese():
-    update = _classify("Olá, quero ver o meu saldo", FakeJev("pt", "GENERAL_INQUIRY"), None)
+    update = _classify("Olá, quero ver o meu saldo", FakeJev("pt", "GENERAL_INQUIRY"))
     assert update["classification"]["language"] == "pt"
 
 
 def test_a_longer_message_in_another_language_switches_the_language():
-    assert conversation_language("pt", "Quero falar com um atendente", {"language": "es"}, "es") == "pt"
+    earlier = ["Hola, quiero saber el saldo de mi tarjeta"]
+    assert conversation_language("pt", "Quero falar com um atendente", earlier, "es") == "pt"
 
 
-def test_a_previous_other_language_falls_back_to_the_country_language():
-    assert conversation_language("es", "Cancelar", {"language": "other"}, "pt") == "pt"
+def test_the_last_long_earlier_message_wins_over_older_ones():
+    earlier = ["Hola, quiero saber el saldo de mi tarjeta", "Quero falar com um atendente", "ok"]
+    assert conversation_language("es", "Sim", earlier, "es") == "pt"
+
+
+def test_short_earlier_messages_are_skipped():
+    assert conversation_language("es", "Cancelar", ["Olá", "Obrigado"], "es") == "es"
+
+
+def test_an_undetected_earlier_message_falls_back_to_the_country_language():
+    assert conversation_language("es", "Cancelar", ["123 456 789"], "pt") == "pt"
 
 
 @pytest.mark.parametrize(
@@ -65,23 +84,25 @@ def test_country_language(country, language):
 
 
 def test_cancelar_as_first_message_of_a_brazilian_customer_is_portuguese():
-    update = _classify("Cancelar", FakeJev("es", "CANCEL"), None, country="Brasil")
+    update = _classify("Cancelar", FakeJev("es", "CANCEL"), country="Brasil")
     assert update["classification"]["language"] == "pt"
 
 
 def test_cancelar_as_first_message_of_a_mexican_customer_is_spanish():
-    update = _classify("Cancelar", FakeJev("pt", "CANCEL"), None, country="México")
+    update = _classify("Cancelar", FakeJev("pt", "CANCEL"), country="México")
     assert update["classification"]["language"] == "es"
 
 
 def test_a_one_word_greeting_keeps_the_country_language():
-    update = _classify("Olá", FakeJev("pt", "GREETING"), None, country="México")
+    update = _classify("Olá", FakeJev("pt", "GREETING"), country="México")
     assert update["classification"]["language"] == "es"
 
 
 def test_a_two_word_message_does_not_switch_the_conversation_language():
-    assert conversation_language("es", "Ver saldo", {"language": "pt"}, "es") == "pt"
+    earlier = ["Olá, gostaria de saber o saldo do meu cartão"]
+    assert conversation_language("es", "Ver saldo", earlier, "es") == "pt"
 
 
 def test_a_three_word_message_switches_the_language():
-    assert conversation_language("pt", "Olá, boa tarde", {"language": "es"}, "es") == "pt"
+    earlier = ["Hola, quiero saber el saldo de mi tarjeta"]
+    assert conversation_language("pt", "Olá, boa tarde", earlier, "es") == "pt"

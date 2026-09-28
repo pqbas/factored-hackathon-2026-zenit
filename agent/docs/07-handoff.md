@@ -8,18 +8,21 @@ la tomó y cómo terminó.
 
 Las condiciones para derivar están en la
 [política de derivación](06-politica-de-derivacion.md). Todas llegan al mismo nodo
-`handoff`, y nadie más escribe en las tablas de handoff. El motivo queda en
-`reason` y la condición que se cumplió, en el `packet`.
+`handoff`, que solo le avisa al back con `custom_outputs.handoff`; el agente no
+escribe en ninguna tabla. El motivo va en `reason` y la condición que se
+cumplió, en el `packet`.
 
 A quién se asigna y qué resumen recibe el asesor está en
 [Asignación de asesores](08-asignacion-de-asesores.md).
 
 ## 7.2 Tablas de registro
 
-Las conversaciones, los mensajes y los handoffs van en **Lakebase (Postgres)**,
-no en Delta. Se escriben y leen en cada turno, y tanto el chat como la consola
-del asesor necesitan verlos al instante; una sentencia por el SQL warehouse
-tarda segundos. Para análisis se sincronizan a Delta.
+Las conversaciones, los mensajes y los handoffs van en **la base del back**
+(Postgres local, Lakebase en producción), no en Delta. El back es el único que
+las escribe y las lee; el agente no tiene base (ver
+[Límites entre el agente y el back](../../docs/limites-agente-back.md)). El chat
+y la consola del asesor necesitan verlas al instante; una sentencia por el SQL
+warehouse tarda segundos. Para análisis se sincronizan a Delta.
 
 ### 7.2.1 `customer_conversations` (campos que usa el handoff)
 
@@ -63,45 +66,50 @@ corte. Los mensajes del asesor van con `sender_type = human_agent` y su
 ```mermaid
 sequenceDiagram
     participant C as Cliente (chat)
+    participant B as Back
     participant A as Agente
-    participant DB as Lakebase
+    participant DB as DB del back
     participant H as Asesor (consola)
-    C->>A: "quiero hablar con un asesor"
-    A->>DB: transacción: INSERT handoffs (pending)<br/>+ UPDATE conversación (handled_by = human_queue, handed_off_at)<br/>+ INSERT mensaje system
-    A->>DB: relee el handoff
-    A-->>C: "Te derivo con un asesor…"
-    C->>A: nuevo mensaje
-    A->>DB: gate ve handled_by ≠ ai_agent: guarda el mensaje y no responde
-    H->>A: POST /handoffs/{id}/claim
-    A->>DB: status = assigned, handled_by = human_agent
-    H->>A: POST /handoffs/{id}/messages
-    A->>DB: INSERT mensaje human_agent
-    C->>A: GET /conversations/{id}/messages
-    H->>A: POST /handoffs/{id}/close
-    A->>DB: status = closed, outcome, handled_by = ai_agent (o conversación cerrada)
+    C->>B: "quiero hablar con un asesor"
+    B->>A: POST /invocations (historial completo)
+    A-->>B: "Te derivo con un asesor…"<br/>+ custom_outputs.handoff (reason, packet)
+    B->>DB: transacción: INSERT handoffs (pending)<br/>+ UPDATE conversación (handled_by = human_queue, handed_off_at)<br/>+ INSERT mensaje system
+    B->>DB: relee el handoff
+    B-->>C: "Te derivo con un asesor…"
+    C->>B: nuevo mensaje
+    B->>DB: handled_by ≠ ai_agent: guarda el mensaje y no llama al agente
+    H->>B: POST /handoffs/{id}/claim
+    B->>DB: status = assigned, handled_by = human_agent
+    H->>B: POST /handoffs/{id}/messages
+    B->>DB: INSERT mensaje human_agent
+    C->>B: GET /conversations/{id}/messages
+    H->>B: POST /handoffs/{id}/close
+    B->>DB: status = closed, outcome, handled_by = ai_agent (o conversación cerrada)
 ```
 
-1. **Una sola transacción.** El handoff, el cambio de `handled_by` y el mensaje
-   `system` se escriben juntos: o quedan los tres o ninguno. Un índice único
-   impide dos handoffs abiertos para la misma conversación, así que un reintento
-   no duplica nada.
-2. **Se relee antes de avisar.** El cliente recibe "te derivo" solo si el
-   handoff quedó guardado. Si falla, recibe el mensaje de error actual
+1. **El agente solo señala.** Cuando se cumple una condición, `handoff` arma
+   el `packet` y responde el texto fijo "te derivo" con
+   `custom_outputs.handoff` (`reason` y `packet`). No escribe en ninguna base.
+2. **El back guarda en una sola transacción.** El handoff, el cambio de
+   `handled_by` y el mensaje `system` se escriben juntos: o quedan los tres o
+   ninguno. Un índice único impide dos handoffs abiertos para la misma
+   conversación, así que un reintento no duplica nada.
+3. **Se relee antes de avisar.** El back le muestra "te derivo" al cliente solo
+   si el handoff quedó guardado. Si falla, muestra el mensaje de error actual
    (`handoff_unsaved`) con la línea de atención.
-3. **El agente queda pasivo.** Desde ese momento, `gate` revisa `handled_by` en
-   cada turno. Si no es `ai_agent`, guarda el mensaje del cliente y no genera
-   respuesta: no llama a `classify` ni a ningún caso de uso.
-4. **El asesor responde por la API.** Sus mensajes van a la misma tabla de
-   mensajes, y el chat los lee de ahí.
-5. **Al cerrar**, el asesor elige si la conversación vuelve al agente
+4. **El back deja de llamar al agente.** Mientras `handled_by` no sea
+   `ai_agent`, el back guarda los mensajes del cliente y no llama a
+   `/invocations`. `gate` ya no revisa `handled_by`.
+5. **El asesor responde por la API del back.** Sus mensajes van a la misma
+   tabla de mensajes, y el chat los lee de ahí.
+6. **Al cerrar**, el asesor elige si la conversación vuelve al agente
    (`handled_by = ai_agent`) o termina. En modo `review` el `outcome` es
-   `approved` o `rejected`, y el agente se lo comunica al cliente con un texto
-   fijo.
+   `approved` o `rejected`, y el cliente lo recibe con un texto fijo.
 
 ## 7.4 API
 
-Rutas propias en la misma App del agente (`agent_server.app`), junto a
-`/invocations`. No hace falta otra App.
+Rutas del back (`back/`), no de la App del agente. El agente solo expone
+`/invocations`.
 
 | Método y ruta                      | Quién la llama | Qué hace                                                   |
 | ---------------------------------- | -------------- | ---------------------------------------------------------- |
@@ -131,3 +139,7 @@ Rutas propias en la misma App del agente (`agent_server.app`), junto a
 Pendiente. Hoy `handoff` guarda un caso `Escalated` en `bank_ops.dispute_cases`
 con el resumen en `handoff_json`, y la conversación termina ahí: el agente sigue
 respondiendo si el cliente escribe, y no hay consola ni API para el asesor.
+
+Del lado del agente, la Fase 7 se reduce a detectar el handoff y emitir
+`custom_outputs.handoff`. Las tablas, la transacción, el corte por `handled_by`
+y la API de la consola son trabajo del back.

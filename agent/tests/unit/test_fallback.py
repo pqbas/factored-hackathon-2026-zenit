@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from src.llm.fallback import check_guardrail_rules, detect_language, fallback_classify
+from src.llm.fallback import check_guardrail_rules, detect_language, fallback_classify, mask_sensitive
 
 INTENTS = ["GENERAL_INQUIRY", "COMPLAINT", "HUMAN_AGENT", "CANCEL", "GREETING", "OUT_OF_SCOPE"]
 
@@ -78,3 +78,13 @@ def test_fallback_classify_sets_confidence_0_otherwise():
 
 def test_detect_language_returns_other_with_no_signal():
     assert detect_language("1234567890") == "other"
+
+
+def test_mask_sensitive_masks_every_card_number_and_cvv():
+    text = "Tarjetas 4111 1111 1111 1111 y 5500-0000-0000-0004, cvv: 123"
+    masked = mask_sensitive(text)
+    assert masked == "Tarjetas [NÚMERO OCULTO] y [NÚMERO OCULTO], [DATO OCULTO]"
+
+
+def test_mask_sensitive_leaves_clean_text_unchanged():
+    assert mask_sensitive("¿Cuál es mi saldo?") == "¿Cuál es mi saldo?"
