@@ -53,7 +53,9 @@ and `session_token=demo-mx-1`.
 - [ ] "Cancelar" → the fixed confirmation. The trace has no CHAT_MODEL span.
 - [ ] "Gracias, eso es todo" → farewell without the options list
 - [ ] An ambiguous message ("lo de antes") → asks to clarify, with the
-  options. The trace has `classify.intent_confidence` below 0.5.
+  options. Jev may label it `OUT_OF_SCOPE` above `INTENT_THRESHOLD` (0.62 in
+  testing); the reply asking to clarify is what counts. `INTENT_THRESHOLD`
+  stays at 0.5 until Phase 8 tunes it.
 - [ ] Add a fourth `option` to an intent in `routing.yaml` and restart → "Hola"
   lists it, with no code change
 
