@@ -13,7 +13,7 @@ from langgraph.checkpoint.memory import MemorySaver
 
 import src.main as main
 from src.llm.jev import JevClient
-from src.prompts.messages import CANCEL_REPLY
+from src.prompts.messages import CANCEL_REPLY, SESSION_REJECTED
 
 # src.main loads the real .env with override=True at import time, which writes
 # into the shared process environment for the rest of the pytest session, and
@@ -147,6 +147,21 @@ def _output_text(payload: dict) -> str:
             if "text" in content:
                 texts.append(content["text"])
     return " ".join(texts)
+
+
+def test_request_without_session_token_gets_the_sign_in_reply(client, monkeypatch):
+    # The back/ chat sends no custom_inputs when there is no session: it must never get a customer's data.
+    monkeypatch.setenv("DEMO_SESSION_TOKEN", "demo-mx-1")
+    llm = RecordingChatModel(FAKE_LLM_TEXT)
+    monkeypatch.setattr(main, "get_chat_model", lambda: llm)
+
+    response = client.post(
+        "/invocations", json={"input": [{"role": "user", "content": "¿Cuál es mi saldo?"}]}
+    )
+
+    assert response.status_code == 200
+    assert _output_text(response.json()) == SESSION_REJECTED["missing"]
+    assert llm.received is None
 
 
 def test_injection_message_returns_the_fixed_refusal(client):

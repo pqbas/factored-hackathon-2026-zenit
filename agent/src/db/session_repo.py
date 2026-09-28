@@ -36,7 +36,8 @@ def _sessions() -> dict[str, dict]:
 
 def resolve_session(custom_inputs: dict | None, now: datetime | None = None) -> Session:
     now = now or datetime.now(timezone.utc)
-    token = (custom_inputs or {}).get("session_token") or settings.demo_session_token
+    # No fallback identity: a request without a token never gets a customer's data.
+    token = (custom_inputs or {}).get("session_token")
     if not token:
         return Session(False, reason="missing")
     entry = _sessions().get(str(token))
