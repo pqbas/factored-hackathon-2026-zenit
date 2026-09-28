@@ -210,7 +210,7 @@ modificarlas.
 - [x] Un usuario que no es admin ve "sin acceso" cuando el back responde 403.
 
 También quitó del historial las insignias viejas (stage/intent/customerName).
-Shipped en PR #<n>.
+Shipped en PR #18.
 
 ---
 
