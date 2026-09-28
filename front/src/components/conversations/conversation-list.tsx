@@ -55,6 +55,8 @@ export function ConversationList({
             <TooltipTrigger asChild>
               <button
                 type="button"
+                data-testid="back-to-chat"
+                aria-label="Volver al chat con el agente"
                 onClick={() => navigate('/')}
                 className="rounded-full p-2 text-muted-foreground hover:bg-accent hover:text-accent-foreground"
               >
@@ -120,7 +122,10 @@ export function ConversationList({
                     {lastMessage?.text}
                   </span>
                   {conversation.unread > 0 && (
-                    <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-wa-agent-bubble px-1.5 font-medium text-[11px] text-emerald-900">
+                    <span
+                      data-testid={`unread-badge-${conversation.customerId}`}
+                      className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-wa-agent-bubble px-1.5 font-medium text-[11px] text-emerald-900"
+                    >
                       {conversation.unread}
                     </span>
                   )}
