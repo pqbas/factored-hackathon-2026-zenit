@@ -10,6 +10,9 @@ import { convertToUIMessages } from '@/lib/utils';
 export type HandledBy = Chat['handledBy'];
 
 export const HANDOFF_POLL_MS = 4000;
+// While the agent handles the chat, only its state is checked, less often: an
+// advisor can take a conversation the customer isn't writing in.
+export const STATE_POLL_MS = 10000;
 
 export function handledByOf(value: unknown): HandledBy {
   return value === 'human_queue' || value === 'human_agent' ? value : 'ai_agent';

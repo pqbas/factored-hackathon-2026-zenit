@@ -19,9 +19,9 @@ type Row = {
   senderId: string | null;
 };
 
-async function mockHandoffChat(page: Page) {
+async function mockHandoffChat(page: Page, initialHandledBy = 'human_queue') {
   let seq = 0;
-  const state = { handledBy: 'human_queue' as string };
+  const state = { handledBy: initialHandledBy };
   const rows: Row[] = [];
   const add = (role: string, text: string, senderType: string | null, id?: string) => {
     seq += 1;
@@ -128,6 +128,24 @@ test.describe('Customer chat during a handoff', () => {
     await expect(page.getByTestId('handoff-notice')).toHaveCount(0, { timeout: 10_000 });
     await expect(page.getByTestId('chat-peer')).toHaveText('David');
     await expect(page.getByTestId('handoff-system-message').last()).toHaveText('Volviste con el asistente.');
+    await page.close();
+  });
+
+  test('notices an advisor taking the chat while the customer is idle', async ({
+    adaContext,
+  }) => {
+    const page = await adaContext.context.newPage();
+    const server = await mockHandoffChat(page, 'ai_agent');
+
+    await page.goto(`/chat/${CHAT_ID}`);
+    await expect(page.getByTestId('chat-peer')).toHaveText('David');
+    await expect(page.getByTestId('handoff-notice')).toHaveCount(0);
+
+    server.advisorTakes('Hola, te escribe un asesor.');
+    await expect(page.getByTestId('handoff-notice')).toHaveText('Te atiende un asesor.', {
+      timeout: 15_000,
+    });
+    await expect(page.getByTestId('advisor-label')).toBeVisible({ timeout: 10_000 });
     await page.close();
   });
 });
