@@ -140,12 +140,12 @@ async def streaming(
             raise
 
 
-agent_server = AgentServer("ResponsesAgent", enable_chat_proxy=False)  # UI lives in ../back
+server = AgentServer("ResponsesAgent", enable_chat_proxy=False)  # UI lives in ../back
 
 # Define the app as a module level variable to enable multiple workers
-app = agent_server.app  # noqa: F841
+app = server.app  # noqa: F841
 setup_mlflow_git_based_version_tracking()
 
 
 def main():
-    agent_server.run(app_import_string="src.main:app")
+    server.run(app_import_string="src.main:app")
