@@ -85,6 +85,29 @@ spec. Shipped en PR #<n>.
 
 ---
 
+## Phase 4: Consola del asesor estilo CRM, con datos mock
+
+**Goal:** que el asesor atienda desde Chats las conversaciones que el
+asistente le deriva, con el estado y el tema de cada una a la vista.
+
+<!-- Referencia visual: artboard "E · Consola del asesor (chats)" del lienzo
+     https://claude.ai/artifact/SfN8i51oncvvSj5dskfiH9 -->
+
+- [ ] El asesor prende o apaga el asistente en cada conversación; con el
+      asistente apagado, el asesor escribe y el asistente no responde.
+- [ ] Cada conversación muestra su estado (sin atender, con asistente, en
+      atención, resuelto) y la lista se filtra por estado.
+- [ ] Cada conversación lleva etiquetas con el tema detectado y el producto
+      relacionado, y el asesor puede agregar más.
+- [ ] Las imágenes que manda el cliente se ven en el chat, con los datos
+      sensibles (CVV, códigos de seguridad) ocultos.
+- [ ] El chat avisa cuando el asistente deriva al asesor y con qué motivo.
+- [ ] El asesor tiene respuestas rápidas, puede adjuntar archivos y saltar al
+      último mensaje.
+- [ ] El encabezado muestra el cliente con su ID y el teléfono enmascarado.
+
+---
+
 ## Phase 1b: Selector de cliente demo en el chat
 
 **Goal:** que el agente sepa con qué cliente demo habla el chat.
@@ -99,7 +122,7 @@ spec. Shipped en PR #<n>.
 
 ---
 
-## Phase 4: Roles y navegación por rol
+## Phase 5: Roles y navegación por rol
 
 **Goal:** que cada usuario vea las pantallas de su rol (cliente, asesor o
 admin) y ninguna otra.
@@ -115,7 +138,7 @@ admin) y ninguna otra.
 
 ---
 
-## Phase 5: Vista admin con conversaciones reales
+## Phase 6: Vista admin con conversaciones reales
 
 **Goal:** que un admin revise las conversaciones de cualquier usuario sin poder
 modificarlas.
@@ -130,7 +153,7 @@ modificarlas.
 
 ---
 
-## Phase 6: Consola del asesor
+## Phase 7: Consola del asesor con datos reales
 
 **Goal:** que un asesor tome una conversación derivada, responda al cliente y
 la cierre.
