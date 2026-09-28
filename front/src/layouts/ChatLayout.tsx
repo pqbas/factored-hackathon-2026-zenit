@@ -5,7 +5,7 @@ import { useSession } from '@/contexts/SessionContext';
 
 export default function ChatLayout() {
   const { session, loading } = useSession();
-  const isCollapsed = localStorage.getItem('sidebar:state') !== 'true';
+  const isCollapsed = localStorage.getItem('sidebar:state') === 'false';
 
   // Wait for session to load
   if (loading) {

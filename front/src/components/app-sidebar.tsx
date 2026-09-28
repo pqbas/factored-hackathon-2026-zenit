@@ -27,7 +27,7 @@ export function AppSidebar({
   const { setOpenMobile } = useSidebar();
 
   return (
-    <Sidebar className="group-data-[side=left]:border-r-0">
+    <Sidebar className="group-data-[side=left]:border-r-0 md:left-16">
       <SidebarHeader>
         <SidebarMenu>
           <div className="flex flex-row items-center justify-between">
@@ -42,24 +42,26 @@ export function AppSidebar({
                 Banking Assistant
               </span>
             </Link>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  type="button"
-                  className="h-8 p-1 md:h-fit md:p-2"
-                  onClick={() => {
-                    setOpenMobile(false);
-                    navigate('/');
-                  }}
-                >
-                  <PlusIcon />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent align="end" className="hidden md:block">
-                New Chat
-              </TooltipContent>
-            </Tooltip>
+            <div className="flex items-center gap-1">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    type="button"
+                    className="h-8 p-1 md:h-fit md:p-2"
+                    onClick={() => {
+                      setOpenMobile(false);
+                      navigate('/');
+                    }}
+                  >
+                    <PlusIcon />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent align="end" className="hidden md:block">
+                  New Chat
+                </TooltipContent>
+              </Tooltip>
+            </div>
           </div>
         </SidebarMenu>
       </SidebarHeader>
