@@ -133,6 +133,14 @@ Ideas para analizar:
 
 ## 5.7 Estado
 
-Pendiente. Hoy `dispatch` está en `agent_server/dispute/graph.py` y mezcla el
-ruteo principal con las etapas internas de la disputa (`SELECT`, `CONFIRM`,
-`COLLECT`).
+Parcial. `dispatch` es una arista condicional (`src/graph/edges.py`) entre
+`classify` y `respond`: si `classify` ya respondió (bloqueo del guardrail),
+termina; si no, `CANCEL` va siempre a `cancel`, una confianza por debajo de
+`INTENT_THRESHOLD` va a `respond` sin mirar la intención, y si no, busca la
+intención en las rutas de `routing.yaml` (`src/schemas/routing.py`) y va a su
+`destination`, o a `respond` si la intención no está en la tabla. `respond`
+sin caso de uso ya cubre §5.3 (saludo, despedida, fuera de alcance, confianza
+baja y opción no disponible aún); `cancel` es un nodo fijo, sin LLM.
+
+Pendiente: `active_use_case`, `load_context` y `handoff` llegan en fases
+posteriores.

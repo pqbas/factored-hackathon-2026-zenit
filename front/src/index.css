@@ -1,5 +1,3 @@
-/* Import Geist fonts from Google Fonts */
-@import url('https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Geist+Mono:wght@100..900&display=swap');
 
 /* set base path to root directory to include utility classes from app, components, pages, etc. */
 @import "tailwindcss";
@@ -13,85 +11,126 @@
 
 /* define design tokens (light mode) */
 :root {
-  --font-geist: 'Geist', sans-serif;
-  --font-geist-mono: 'Geist Mono', monospace;
+  --font-system: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --font-system-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
 
-  --background: hsl(0 0% 100%);
-  --foreground: hsl(240 10% 3.9%);
-  --card: hsl(0 0% 100%);
-  --card-foreground: hsl(240 10% 3.9%);
-  --popover: hsl(0 0% 100%);
-  --popover-foreground: hsl(240 10% 3.9%);
-  --primary: hsl(240 5.9% 10%);
-  --primary-foreground: hsl(0 0% 98%);
-  --secondary: hsl(240 4.8% 95.9%);
-  --secondary-foreground: hsl(240 5.9% 10%);
-  --muted: hsl(240 4.8% 95.9%);
-  --muted-foreground: hsl(240 3.8% 46.1%);
-  --accent: hsl(240 4.8% 95.9%);
-  --accent-foreground: hsl(240 5.9% 10%);
-  --destructive: hsl(0 84.2% 60.2%);
-  --destructive-foreground: hsl(0 0% 98%);
-  --border: hsl(240 5.9% 90%);
-  --input: hsl(240 5.9% 90%);
-  --ring: hsl(240 10% 3.9%);
-  --chart-1: hsl(12 76% 61%);
-  --chart-2: hsl(173 58% 39%);
-  --chart-3: hsl(197 37% 24%);
-  --chart-4: hsl(43 74% 66%);
-  --chart-5: hsl(27 87% 67%);
-  --sidebar-background: hsl(0 0% 98%);
-  --sidebar-foreground: hsl(240 5.3% 26.1%);
-  --sidebar-primary: hsl(240 5.9% 10%);
-  --sidebar-primary-foreground: hsl(0 0% 98%);
-  --sidebar-accent: hsl(240 4.8% 95.9%);
-  --sidebar-accent-foreground: hsl(240 5.9% 10%);
-  --sidebar-border: hsl(220 13% 91%);
-  --sidebar-ring: hsl(217.2 91.2% 59.8%);
-  /* border radius unit */
-  --radius: 0.5rem;
+  --background: #ffffff;
+  --foreground: #1d1d1f;
+  --card: #f7f7f9;
+  --card-foreground: #1d1d1f;
+  --popover: #ffffff;
+  --popover-foreground: #1d1d1f;
+  --primary: #2e7fb3;
+  --primary-foreground: #ffffff;
+  --secondary: #f2f2f5;
+  --secondary-foreground: #1d1d1f;
+  --muted: #f2f2f5;
+  --muted-foreground: #6e6e73;
+  --accent: #f2f2f5;
+  --accent-foreground: #1d1d1f;
+  --destructive: #d0493d;
+  --destructive-foreground: #ffffff;
+  --border: #ececef;
+  --input: #dcdce0;
+  --ring: #2e7fb3;
+  --chart-1: #2e7fb3;
+  --chart-2: #5b8def;
+  --chart-3: #e0a43a;
+  --chart-4: #d0493d;
+  --chart-5: #8e8e93;
+  --sidebar-background: #f5f5f7;
+  --sidebar-foreground: #1d1d1f;
+  --sidebar-primary: #2e7fb3;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #dceaf5;
+  --sidebar-accent-foreground: #1d1d1f;
+  --sidebar-border: #ececef;
+  --sidebar-ring: #2e7fb3;
+  /* border radius unit: soft macOS corners */
+  --radius: 0.75rem;
+
+  /* soft tints for action icons */
+  --tint-green: #e6f0ec;
+  --tint-blue: #e8eefb;
+  --tint-amber: #f6efe1;
+  --tint-red: #f8e8e6;
+  --tint-green-fg: #2e7fb3;
+  --tint-blue-fg: #3f67c4;
+  --tint-amber-fg: #9a6b12;
+  --tint-red-fg: #b3453a;
+  --online: #34c759;
+
+  /* /conversations mock view */
+  --wa-agent-bubble: #2e7fb3;
+  --wa-customer-bubble: #f2f2f5;
+  --wa-chat-bg: #ffffff;
+  --wa-list-active: #dceaf5;
+  --wa-check: rgb(255 255 255 / 0.75);
 }
 
 /* define design tokens (dark mode) */
 .dark {
-  --background: hsl(240 10% 3.9%);
-  --foreground: hsl(0 0% 98%);
-  --card: hsl(240 10% 3.9%);
-  --card-foreground: hsl(0 0% 98%);
-  --popover: hsl(240 10% 3.9%);
-  --popover-foreground: hsl(0 0% 98%);
-  --primary: hsl(0 0% 98%);
-  --primary-foreground: hsl(240 5.9% 10%);
-  --secondary: hsl(240 3.7% 15.9%);
-  --secondary-foreground: hsl(0 0% 98%);
-  --muted: hsl(240 3.7% 15.9%);
-  --muted-foreground: hsl(240 5% 64.9%);
-  --accent: hsl(240 3.7% 15.9%);
-  --accent-foreground: hsl(0 0% 98%);
-  --destructive: hsl(0 62.8% 30.6%);
-  --destructive-foreground: hsl(0 0% 98%);
-  --border: hsl(240 3.7% 15.9%);
-  --input: hsl(240 3.7% 15.9%);
-  --ring: hsl(240 4.9% 83.9%);
-  --chart-1: hsl(220 70% 50%);
-  --chart-2: hsl(160 60% 45%);
-  --chart-3: hsl(30 80% 55%);
-  --chart-4: hsl(280 65% 60%);
-  --chart-5: hsl(340 75% 55%);
-  --sidebar-background: hsl(240 5.9% 10%);
-  --sidebar-foreground: hsl(240 4.8% 95.9%);
-  --sidebar-primary: hsl(224.3 76.3% 48%);
-  --sidebar-primary-foreground: hsl(0 0% 100%);
-  --sidebar-accent: hsl(240 3.7% 15.9%);
-  --sidebar-accent-foreground: hsl(240 4.8% 95.9%);
-  --sidebar-border: hsl(240 3.7% 15.9%);
-  --sidebar-ring: hsl(217.2 91.2% 59.8%);
+  --font-system: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --font-system-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+
+  --background: #1c1c1e;
+  --foreground: #f5f5f7;
+  --card: #2a2a2d;
+  --card-foreground: #f5f5f7;
+  --popover: #2a2a2d;
+  --popover-foreground: #f5f5f7;
+  --primary: #3a8cc2;
+  --primary-foreground: #ffffff;
+  --secondary: #2c2c2e;
+  --secondary-foreground: #f5f5f7;
+  --muted: #2c2c2e;
+  --muted-foreground: #a1a1a6;
+  --accent: #2c2c2e;
+  --accent-foreground: #f5f5f7;
+  --destructive: #f08a7e;
+  --destructive-foreground: #ffffff;
+  --border: #2c2c2e;
+  --input: #38383a;
+  --ring: #3a8cc2;
+  --chart-1: #3a8cc2;
+  --chart-2: #5b8def;
+  --chart-3: #e0a43a;
+  --chart-4: #f08a7e;
+  --chart-5: #8e8e93;
+  --sidebar-background: #232325;
+  --sidebar-foreground: #f5f5f7;
+  --sidebar-primary: #3a8cc2;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #1d3446;
+  --sidebar-accent-foreground: #f5f5f7;
+  --sidebar-border: #2c2c2e;
+  --sidebar-ring: #3a8cc2;
+  /* border radius unit: soft macOS corners */
+  --radius: 0.75rem;
+
+  /* soft tints for action icons */
+  --tint-green: #1f3a33;
+  --tint-blue: #1f2a44;
+  --tint-amber: #3a2f1a;
+  --tint-red: #402321;
+  --tint-green-fg: #6cc3aa;
+  --tint-blue-fg: #7aa2f7;
+  --tint-amber-fg: #e0b45a;
+  --tint-red-fg: #f08a7e;
+  --online: #34c759;
+
+  /* /conversations mock view */
+  --wa-agent-bubble: #3a8cc2;
+  --wa-customer-bubble: #2c2c2e;
+  --wa-chat-bg: #1c1c1e;
+  --wa-list-active: #1d3446;
+  --wa-check: rgb(255 255 255 / 0.75);
 }
 
 /* define theme */
 @theme {
-  --font-sans: var(--font-geist);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-system);
+  --font-mono: var(--font-system-mono);
 
   --breakpoint-toast-mobile: 600px;
 
@@ -141,6 +180,22 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+
+  --color-tint-green: var(--tint-green);
+  --color-tint-blue: var(--tint-blue);
+  --color-tint-amber: var(--tint-amber);
+  --color-tint-red: var(--tint-red);
+  --color-tint-green-foreground: var(--tint-green-fg);
+  --color-tint-blue-foreground: var(--tint-blue-fg);
+  --color-tint-amber-foreground: var(--tint-amber-fg);
+  --color-tint-red-foreground: var(--tint-red-fg);
+  --color-online: var(--online);
+
+  --color-wa-agent-bubble: var(--wa-agent-bubble);
+  --color-wa-customer-bubble: var(--wa-customer-bubble);
+  --color-wa-chat-bg: var(--wa-chat-bg);
+  --color-wa-list-active: var(--wa-list-active);
+  --color-wa-check: var(--wa-check);
 }
 
 /*
@@ -157,7 +212,7 @@
   ::before,
   ::backdrop,
   ::file-selector-button {
-    border-color: var(--color-gray-200, currentcolor);
+    border-color: var(--color-border, currentcolor);
   }
 }
 
@@ -200,7 +255,8 @@
 
   body {
     @apply bg-background text-foreground;
-    font-family: var(--font-geist), sans-serif;
+    font-family: var(--font-system);
+    -webkit-font-smoothing: antialiased;
     overflow-x: hidden;
     position: relative;
   }

@@ -12,24 +12,28 @@ Shipped en PR #1.
 
 ---
 
-## Phase 2: Message classification
+## Phase 2: Message classification (Complete)
 
 **Goal:** every message goes through Jev before reaching any LLM.
 
-- [ ] A message that violates a policy gets a refusal and never reaches the LLM
-- [ ] Every message is tagged with its language, intent and sentiment
-- [ ] If Jev does not answer in time, the customer still gets a response
-- [ ] The destination of each intent changes by editing `routing.yaml`, not code
+- [x] A message that violates a policy gets a refusal and never reaches the LLM
+- [x] Every message is tagged with its language, intent and sentiment
+- [x] If Jev does not answer in time, the customer still gets a response
+- [x] The destination of each intent changes by editing `routing.yaml`, not code
+
+Shipped en PR #2 (merge `47a7a62`).
 
 ---
 
-## Phase 3: Conversation without a use case
+## Phase 3: Conversation without a use case (Complete)
 
 **Goal:** the customer knows what the agent can do and how to leave.
 
-- [ ] A greeting gets an introduction with the available options
-- [ ] An out-of-scope question gets an explanation and the options
-- [ ] The customer can cancel or say goodbye at any time
+- [x] A greeting gets an introduction with the available options
+- [x] An out-of-scope question gets an explanation and the options
+- [x] The customer can cancel or say goodbye at any time
+
+Shipped en PR #<n>.
 
 ---
 
@@ -58,6 +62,7 @@ Shipped en PR #1.
 **Goal:** the customer reaches an advisor without repeating their story.
 
 - [ ] A commercial or retention request, or a request for a human that meets the policy, is handed off
+- [ ] A customer who writes three words or more in a language other than Spanish or Portuguese is handed off
 - [ ] Every handoff is recorded with a case summary
 - [ ] The agent stops responding in a handed-off conversation
 

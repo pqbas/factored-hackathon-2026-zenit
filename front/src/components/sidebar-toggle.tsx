@@ -17,14 +17,15 @@ export function SidebarToggle() {
         <Button
           data-testid="sidebar-toggle-button"
           onClick={toggleSidebar}
-          variant="outline"
-          className="h-8 px-2 md:h-fit md:px-2"
+          variant="ghost"
+          aria-label="Mostrar u ocultar la barra lateral"
+          className="size-8 rounded-[7px] p-0 text-muted-foreground"
         >
-          <PanelLeft size={16} />
+          <PanelLeft size={17} strokeWidth={1.8} />
         </Button>
       </TooltipTrigger>
       <TooltipContent align="start" className="hidden md:block">
-        Toggle Sidebar
+        Barra lateral
       </TooltipContent>
     </Tooltip>
   );
