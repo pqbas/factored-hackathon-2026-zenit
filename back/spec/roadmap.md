@@ -154,7 +154,7 @@ chat abierto cada 10 s.
 
 ---
 
-## Phase 5b: El admin supervisa, no atiende
+## Phase 5b: El admin supervisa, no atiende (Complete)
 
 **Goal:** que el admin vea todas las conversaciones desde la consola sin poder
 tomarlas ni responder, y que solo los asesores atiendan.
@@ -162,16 +162,18 @@ tomarlas ni responder, y que solo los asesores atiendan.
 <!-- Decisión del usuario, 28-09-26. Spec en
      spec/28-09-26-admin-supervisa/. -->
 
-- [ ] La bandeja y los mensajes de la consola los leen asesores y admins; el
+- [x] La bandeja y los mensajes de la consola los leen asesores y admins; el
       admin ve todas las conversaciones, incluidas las que atiende David y las
       cerradas, y filtra por cliente.
-- [ ] Tomar, responder y devolver es solo para asesores; el admin recibe 403.
-- [ ] Ya no existe tomar una conversación ajena a la fuerza.
-- [ ] La vista admin separada desaparece: la lista de clientes para el filtro
+- [x] Tomar, responder y devolver es solo para asesores; el admin recibe 403.
+- [x] Ya no existe tomar una conversación ajena a la fuerza.
+- [x] La vista admin separada desaparece: la lista de clientes para el filtro
       sale de la consola, y las rutas /api/admin se eliminan.
 
 Fuera de alcance / futuro: liberar una conversación que un asesor tomó y
 abandonó (rescate o timeout).
+
+Shipped en PR #27.
 
 ---
 
