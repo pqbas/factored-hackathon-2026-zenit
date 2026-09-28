@@ -12,8 +12,22 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { DemoCustomerSelector } from '@/components/demo-customer-selector';
+import type { DemoCustomer } from '@/hooks/use-demo-customers';
 
-export function ChatHeader({ chatId }: { chatId?: string }) {
+export function ChatHeader({
+  chatId,
+  customers = [],
+  customerToken = null,
+  onCustomerChange,
+  isCustomerLocked = false,
+}: {
+  chatId?: string;
+  customers?: DemoCustomer[];
+  customerToken?: string | null;
+  onCustomerChange?: (token: string) => void;
+  isCustomerLocked?: boolean;
+}) {
   const navigate = useNavigate();
   const { open } = useSidebar();
   const { chatHistoryEnabled } = useConfig();
@@ -35,6 +49,15 @@ export function ChatHeader({ chatId }: { chatId?: string }) {
           <PlusIcon />
           <span className="md:sr-only">New Chat</span>
         </Button>
+      )}
+
+      {onCustomerChange && (
+        <DemoCustomerSelector
+          customers={customers}
+          customerToken={customerToken}
+          onCustomerChange={onCustomerChange}
+          isLocked={isCustomerLocked}
+        />
       )}
 
       {!chatHistoryEnabled && (

@@ -24,6 +24,14 @@ import { ChatTransport } from '../lib/ChatTransport';
 import type { ClientSession } from '@chat-template/auth';
 import { softNavigateToChatId } from '@/lib/navigation';
 import { useAppConfig } from '@/contexts/AppConfigContext';
+import { useDemoCustomers } from '@/hooks/use-demo-customers';
+import {
+  getChatCustomerToken,
+  getLastCustomerToken,
+  pickDefaultToken,
+  setChatCustomerToken,
+  setLastCustomerToken,
+} from '@/lib/demo-customer-storage';
 
 export function Chat({
   id,
@@ -54,6 +62,33 @@ export function Chat({
   const [_usage, setUsage] = useState<LanguageModelUsage | undefined>(
     initialLastContext,
   );
+
+  // Demo customer selected for this chat. Once a chat has a token saved in
+  // localStorage (first user message sent), the selector is locked: the
+  // agent uses the chat id as thread_id, so switching customers mid-thread
+  // would mix two customers' memory.
+  const { customers } = useDemoCustomers();
+  const [customerToken, setCustomerToken] = useState<string | null>(() =>
+    getChatCustomerToken(id),
+  );
+  const customerTokenRef = useRef(customerToken);
+  customerTokenRef.current = customerToken;
+  const isCustomerLocked = getChatCustomerToken(id) !== null;
+
+  useEffect(() => {
+    if (customerToken === null && customers.length > 0) {
+      const defaultToken = pickDefaultToken(customers, getLastCustomerToken());
+      if (defaultToken) {
+        setCustomerToken(defaultToken);
+      }
+    }
+  }, [customers, customerToken]);
+
+  // Only wired while the chat isn't locked yet: the selector disables itself
+  // once isCustomerLocked is true, so this never fires after that point.
+  const handleCustomerChange = useCallback((token: string) => {
+    setCustomerToken(token);
+  }, []);
 
   const [streamCursor, setStreamCursor] = useState(0);
   const streamCursorRef = useRef(streamCursor);
@@ -131,9 +166,22 @@ export function Chat({
         // and hasn't been saved to the database yet.
         const needsPreviousMessages = !chatHistoryEnabled || !isUserMessage;
 
+        // Sending a user message fixes the customer for this chat from now on.
+        if (
+          isUserMessage &&
+          customerTokenRef.current &&
+          getChatCustomerToken(id) === null
+        ) {
+          setChatCustomerToken(id, customerTokenRef.current);
+          setLastCustomerToken(customerTokenRef.current);
+        }
+
         return {
           body: {
             id,
+            ...(customerTokenRef.current
+              ? { sessionToken: customerTokenRef.current }
+              : {}),
             // Only include message field for user messages (new messages)
             // For continuation (assistant messages with tool results), omit message field
             ...(isUserMessage ? { message: lastMessage } : {}),
@@ -278,7 +326,13 @@ export function Chat({
   return (
     <>
       <div className="overscroll-behavior-contain flex h-dvh min-w-0 touch-pan-y flex-col bg-background">
-        <ChatHeader chatId={id} />
+        <ChatHeader
+          chatId={id}
+          customers={customers}
+          customerToken={customerToken}
+          onCustomerChange={handleCustomerChange}
+          isCustomerLocked={isCustomerLocked}
+        />
 
         <Messages
           chatId={id}
