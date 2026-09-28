@@ -49,14 +49,16 @@ Shipped en PR #14.
 
 ---
 
-## Phase 5: Stateless agent
+## Phase 5: Stateless agent (Complete)
 
 **Goal:** the agent answers from the history the back sends and keeps no state of its own ([`docs/limites-agente-back.md`](../../docs/limites-agente-back.md)).
 
-- [ ] The agent answers from the history in each request, capped to the last 20 messages
-- [ ] Sensitive data is masked in the whole history on every request
-- [ ] The reply language is deduced from the history, with no extra calls
-- [ ] The agent has no database: no checkpointer and no Lakebase
+- [x] The agent answers from the history in each request, capped to the last 20 messages
+- [x] Sensitive data is masked in the whole history on every request
+- [x] The reply language is deduced from the history, with no extra calls
+- [x] The agent has no database: no checkpointer and no Lakebase
+
+Shipped en PR #17.
 
 ---
 
@@ -90,6 +92,7 @@ The back stores the handoff, sets who handles the chat, stops calling the agent 
 - [ ] Every turn is traced and can be reviewed
 - [ ] Behavior cards run as an evaluation and report the README metrics
 - [ ] The agent is deployed on Databricks, without Lakebase, and the `back/` chat uses it
+- [ ] `build_graph` and `get_chat_model()` are created once at startup instead of on every request (possible since Phase 5 removed the checkpointer)
 - [ ] Decide how `back/` calls the agent (App URL plus `/invocations` or a serving endpoint) and how the backend App authenticates against the agent App
 
 Advisor assignment and the advisor console API (the former Phase 7) are back work: see `back/spec/roadmap.md`.
