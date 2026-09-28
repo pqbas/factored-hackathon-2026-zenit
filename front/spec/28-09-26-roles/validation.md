@@ -35,8 +35,10 @@ unión entre las piezas.
 
 ## Manual Checks
 
-Los tres primeros se revisaron con un Vite de dev en local; el último queda
-para cuando la Fase 2 del back esté en `main`.
+Los tres primeros se revisaron con un Vite de dev en local. El último, con el
+back de `main` (PR #15) sirviendo `front/dist`, `ADMIN_EMAILS` y
+`ADVISOR_EMAILS` de prueba: customer, advisor y admin ven su riel y "Sin
+acceso" donde corresponde.
 
 Con `npm run dev` en `front/` y el back corriendo:
 
@@ -44,7 +46,7 @@ Con `npm run dev` en `front/` y el back corriendo:
 - [x] `localStorage.setItem('dev:role', 'advisor')` y recargar → Asistente y
       Chats; `/products` muestra "Sin acceso".
 - [x] `dev:role = 'admin'` → las tres secciones.
-- [ ] Con el back que ya manda `role` y un email en `ADVISOR_EMAILS` → riel de
+- [x] Con el back que ya manda `role` y un email en `ADVISOR_EMAILS` → riel de
       asesor sin tocar `localStorage`.
 
 ## Definition of Done
