@@ -116,41 +116,49 @@ claro.
 
 ---
 
-## Phase 5: Handoff a un asesor
+## Phase 5: Consola del asesor con toma manual (Complete)
 
-**Goal:** que una conversación que el agente decide derivar quede registrada
-en el back y pase a un humano, sin que el cliente repita su historia.
+**Goal:** que un asesor o admin tome una conversación, le responda al cliente y
+la devuelva al asistente o la cierre, sin depender del handoff automático del
+agente.
 
-<!-- Antes era la Phase 6 del agente; ahora el back crea y guarda el handoff.
-     El agente solo detecta la derivación y manda el resumen en
-     custom_outputs. Modelo de referencia: agent/docs/07-handoff.md (tabla
-     handoffs, handled_by, mensaje system), adaptado a la base del back. -->
+<!-- Absorbe la vieja "API de la consola" y la parte del handoff que no
+     depende del agente (los mensajes del asesor llegan al chat). Regla del
+     usuario: dos personas nunca responden el mismo chat. Contrato en
+     spec/28-09-26-consola-asesor/requirements.md. -->
 
-- [ ] Cuando el agente señala un handoff, el back registra el caso con su
-      resumen y motivo, y la conversación pasa a la cola de asesores.
-- [ ] El historial del chat muestra el aviso de derivación.
-- [ ] El front obtiene los mensajes nuevos de una conversación, incluidos los
-      del asesor, solo si la conversación es del cliente de la sesión.
-- [ ] Dos señales de handoff seguidas en la misma conversación no crean dos
-      casos abiertos.
+- [x] El asesor ve la bandeja de conversaciones y la filtra por quién la
+      atiende, a quién está asignada y si está abierta o cerrada.
+- [x] El asesor toma una conversación: el asistente deja de responder y queda
+      asignada a él. Si ya la tiene otro asesor, recibe un conflicto.
+- [x] Solo quien tiene tomada la conversación le puede responder al cliente,
+      y el cliente ve esos mensajes en su chat casi en tiempo real.
+- [x] El asesor devuelve la conversación al asistente o la cierra.
+- [x] Un admin puede quitarle una conversación a otro asesor o devolverla; un
+      asesor no.
+- [x] Si el asesor toma la conversación mientras el agente responde, esa
+      respuesta no se guarda como turno del agente.
+- [x] Solo asesores y admins usan estas rutas, y la identidad sale del login.
+
+Shipped en PR #22.
 
 ---
 
-## Phase 6: API de la consola del asesor
+## Phase 6: Handoff automático del agente
 
-**Goal:** que la consola del asesor en el front pueda tomar, responder y cerrar
-casos derivados.
+**Goal:** que una conversación que el agente decide derivar entre sola a la
+bandeja de la consola, con su resumen, sin que el cliente repita su historia.
 
-<!-- Antes dependía de las rutas /handoffs del agente; ahora la API es del
-     back y el contrato lo define el back para el front. Decidido:
-     requireAdvisor acepta advisor o admin. -->
+<!-- Depende de la Fase 7 del agente (custom_outputs.handoff con reason,
+     summary y facts). Reutiliza la consola de la Fase 5: tomar, responder y
+     devolver no cambian. Modelo de referencia: agent/docs/07-handoff.md. -->
 
-- [ ] El asesor ve la bandeja de casos pendientes, ordenada por prioridad.
-- [ ] El asesor abre un caso con su resumen y el historial del chat.
-- [ ] El asesor toma el caso, responde y lo cierra indicando si vuelve al
-      agente.
-- [ ] Solo un usuario del grupo de asesores puede usar estas rutas, y su
-      identidad sale del login, nunca del cuerpo de la petición.
+- [ ] Cuando el agente señala un handoff, el back registra el caso con su
+      motivo, resumen y datos, y la conversación entra a la bandeja.
+- [ ] La bandeja ordena por prioridad y muestra el resumen del caso.
+- [ ] El historial del chat muestra el aviso de derivación.
+- [ ] Dos señales de handoff seguidas en la misma conversación no crean dos
+      casos abiertos.
 
 ---
 

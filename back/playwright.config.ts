@@ -133,12 +133,17 @@ export default defineConfig({
       DATABRICKS_CLIENT_ID: 'mock-value',
       DATABRICKS_CLIENT_SECRET: 'mock-value',
       DATABRICKS_HOST: 'mock-value',
-      // ada-<workerIndex> is admin; babbage-<workerIndex> is not. workerIndex
-      // isn't capped at `workers` - a fresh worker (new project, a retry)
-      // gets the next index - so this covers a generous range, not just 0-7.
+      // ada-<workerIndex> is admin, babbage-<workerIndex> is advisor, and
+      // curie-<workerIndex> is a plain customer. workerIndex isn't capped at
+      // `workers` - a fresh worker (new project, a retry) gets the next
+      // index - so this covers a generous range, not just 0-7.
       ADMIN_EMAILS: Array.from(
         { length: 64 },
         (_, i) => `ada-${i}@example.com`,
+      ).join(','),
+      ADVISOR_EMAILS: Array.from(
+        { length: 64 },
+        (_, i) => `babbage-${i}@example.com`,
       ).join(','),
       ...(TEST_MODE === 'ephemeral'
         ? {

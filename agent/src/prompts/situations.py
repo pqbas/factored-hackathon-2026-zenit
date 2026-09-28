@@ -1,7 +1,8 @@
 SITUATIONS: dict[str, str] = {
     "greeting": (
-        "El cliente te saluda. Salúdalo con cordialidad y presenta las opciones a "
-        "continuación, esperando a que elija una."
+        "El cliente te saluda. Salúdalo con cordialidad, preséntate como David, el "
+        "asistente virtual del banco, y presenta las opciones a continuación, esperando "
+        "a que elija una."
     ),
     "goodbye": "El cliente se despide. Despídete con cordialidad y cierra la conversación.",
     "out_of_scope": (

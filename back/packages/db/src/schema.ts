@@ -45,6 +45,9 @@ export const chat = createTable('Chat', {
   useCase: varchar('useCase', { length: 128 }),
   intent: varchar('intent', { length: 128 }),
   language: varchar('language', { length: 16 }),
+  assignedTo: varchar('assignedTo', { length: 256 }),
+  assignedAt: timestamp('assignedAt'),
+  closedAt: timestamp('closedAt'),
 });
 
 export type Chat = InferSelectModel<typeof chat>;
@@ -59,6 +62,10 @@ export const message = createTable('Message', {
   attachments: json('attachments').notNull(),
   createdAt: timestamp('createdAt').notNull(),
   blocked: boolean('blocked').notNull().default(false),
+  senderType: varchar('senderType', {
+    enum: ['customer', 'ai_agent', 'human_agent', 'system'],
+  }),
+  senderId: varchar('senderId', { length: 256 }),
 });
 
 export type DBMessage = InferSelectModel<typeof message>;

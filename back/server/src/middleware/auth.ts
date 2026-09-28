@@ -64,6 +64,30 @@ export function requireAdmin(req: Request, res: Response, next: NextFunction) {
   next();
 }
 
+/**
+ * Middleware to require advisor access - returns 401 without a session, 403 if
+ * the session's role is neither advisor nor admin.
+ */
+export function requireAdvisor(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  const email = req.session?.user?.email;
+  if (!email) {
+    const response = new ChatSDKError('unauthorized:chat').toResponse();
+    return res.status(response.status).json(response.json);
+  }
+
+  const role = getRole(email);
+  if (role !== 'admin' && role !== 'advisor') {
+    const response = new ChatSDKError('forbidden:chat').toResponse();
+    return res.status(response.status).json(response.json);
+  }
+
+  next();
+}
+
 export async function requireChatAccess(
   req: Request,
   res: Response,
