@@ -16,6 +16,7 @@ import {
 import {
   getChats,
   getChatOwners,
+  getConversationCounts,
   getLastCustomerMessages,
   getChatById,
   getMessagesAfter,
@@ -26,7 +27,7 @@ import {
 } from '@chat-template/db';
 import { generateUUID } from '@chat-template/core';
 import { ChatSDKError } from '@chat-template/core/errors';
-import { normalizeEmail } from '../roles';
+import { getRole, normalizeEmail } from '../roles';
 import { toLastMessagePreview } from '../inbox';
 
 export const advisorRouter: RouterType = Router();
@@ -173,6 +174,32 @@ advisorRouter.get(
         error,
       );
       res.status(500).json({ error: 'Failed to fetch messages' });
+    }
+  },
+);
+
+/**
+ * GET /api/advisor/conversations/counts - Counts for the console's view bar.
+ * `mine` only counts for advisors: the admin never holds a conversation.
+ */
+advisorRouter.get(
+  '/conversations/counts',
+  async (req: Request, res: Response) => {
+    if (!isDatabaseAvailable()) {
+      return res.status(204).end();
+    }
+
+    const email = normalizeEmail(req.session?.user.email);
+    try {
+      res.json(
+        await getConversationCounts({
+          userId: (req.query.userId as string | undefined) || undefined,
+          advisorEmail: getRole(email) === 'advisor' ? email : undefined,
+        }),
+      );
+    } catch (error) {
+      console.error('[/api/advisor/conversations/counts] Error:', error);
+      res.status(500).json({ error: 'Failed to count conversations' });
     }
   },
 );
