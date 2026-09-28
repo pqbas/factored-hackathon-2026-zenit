@@ -1,8 +1,11 @@
 import { expect, test } from '../fixtures';
+import { mockSessionRole } from '../session-role';
 
 // /products reads a fixture exported from the dummy dataset: no back calls.
 test.describe('Mis productos', () => {
+  // Admin sees both Mis productos and Chats, which the last test switches between.
   test.beforeEach(async ({ page }) => {
+    await mockSessionRole(page, 'admin');
     await page.goto('/products');
   });
 
