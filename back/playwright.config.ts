@@ -29,6 +29,10 @@ if (TEST_MODE === 'with-db') {
   config({ path: ['.env'] });
 }
 
+// A local .env pointing at a real agent (API_PROXY) would send the test
+// server's requests past the MSW mocks, which only match /serving-endpoints.
+Reflect.deleteProperty(process.env, 'API_PROXY');
+
 console.log(`[Playwright] Running in "${TEST_MODE}" mode)`);
 
 // For with-db mode, verify database is available
@@ -44,7 +48,9 @@ if (TEST_MODE === 'with-db') {
     console.error('\nPlease either:');
     console.error('  1. Add database configuration to .env, or');
     console.error('  2. Run ephemeral tests instead: npm run test:ephemeral\n');
-    process.exit(0);
+    // Fail instead of passing with zero tests, so `npm test` can't look green
+    // when the with-db suite never ran.
+    process.exit(1);
   }
 
   console.log('✓ Database configuration found, tests will use database');

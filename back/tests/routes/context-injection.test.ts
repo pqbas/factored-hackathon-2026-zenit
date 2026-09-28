@@ -28,12 +28,10 @@ interface CapturedRequest {
   };
 }
 
+// No reset between tests: the capture list lives in the shared test server,
+// so one worker's reset would wipe another worker's requests. Each test looks
+// up its own request by chat id instead.
 test.describe.serial('Context Injection', () => {
-  test.beforeEach(async ({ adaContext }) => {
-    // Reset captured requests before each test
-    await adaContext.request.post('/api/test/reset-captured-requests');
-  });
-
   test.describe('agent/v1/responses endpoints', () => {
     test('injects context with conversation_id and user_id', async ({
       adaContext,
@@ -57,11 +55,11 @@ test.describe.serial('Context Injection', () => {
       const capturedRequests =
         (await capturedResponse.json()) as CapturedRequest[];
 
-      // Find the request to the serving endpoint (responses endpoint)
+      // Match by this chat's id: the capture list is shared by every worker
+      // and also holds title-model calls, so the first endpoint request may
+      // belong to another test.
       const chatRequest = capturedRequests.find(
-        (req) =>
-          req.url.includes('/chat/completions') ||
-          req.url.includes('/responses'),
+        (req) => req.context?.conversation_id === chatId,
       );
 
       expect(chatRequest).toBeDefined();
@@ -153,9 +151,6 @@ test.describe.serial('Context Injection', () => {
       const adaRequest = adaCapturedRequests.find(
         (req) => req.context?.conversation_id === adaChatId,
       );
-
-      // Reset for Babbage's request
-      await babbageContext.request.post('/api/test/reset-captured-requests');
 
       // Babbage's chat
       const babbageChatId = generateUUID();
@@ -310,13 +305,17 @@ test.describe.serial('Context Injection', () => {
       const capturedRequests =
         (await capturedResponse.json()) as CapturedRequest[];
 
-      const titleRequest = capturedRequests.find((req) =>
+      // Only title-model calls hit /chat/completions, and none may carry
+      // context or custom_inputs.
+      const titleRequests = capturedRequests.filter((req) =>
         req.url.includes('/chat/completions'),
       );
 
-      expect(titleRequest).toBeDefined();
-      expect(titleRequest?.customInputs).toBeUndefined();
-      expect(titleRequest?.hasContext).toBe(false);
+      expect(titleRequests.length).toBeGreaterThan(0);
+      for (const req of titleRequests) {
+        expect(req.customInputs).toBeUndefined();
+        expect(req.hasContext).toBe(false);
+      }
     });
 
     test('two turns of the same chat send the same conversation_id and session_token', async ({
