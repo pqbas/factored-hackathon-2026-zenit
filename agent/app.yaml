@@ -9,8 +9,6 @@ env:
     value: "databricks-uc"
   - name: MLFLOW_EXPERIMENT_ID
     valueFrom: "experiment"
-  - name: LAKEBASE_INSTANCE_NAME
-    value: "banking-agent-memory"
   - name: DATABRICKS_WAREHOUSE_ID
     valueFrom: "sql_warehouse"
   - name: BANK_CATALOG

@@ -23,24 +23,14 @@ agent/
 │   │   ├── system.md
 │   │   └── messages.py
 │   ├── db/
-│   │   ├── connection.py
-│   │   ├── checkpointer.py
-│   │   ├── session_repo.py
-│   │   ├── conversation_repo.py
-│   │   ├── handoff_repo.py
-│   │   └── advisor_repo.py
+│   │   └── session_repo.py
 │   ├── llm/
 │   │   ├── chat.py
 │   │   ├── jev.py
 │   │   └── fallback.py
 │   ├── schemas/
 │   │   ├── classification.py
-│   │   ├── routing.py
-│   │   └── api.py
-│   ├── api/
-│   │   ├── handoffs.py
-│   │   ├── advisors.py
-│   │   └── conversations.py
+│   │   └── routing.py
 │   ├── config.py
 │   └── main.py
 ├── tests/
@@ -58,3 +48,7 @@ agent/
 ├── pyproject.toml
 └── README.md
 ```
+
+El agente no guarda estado entre requests: no hay checkpointer y el historial
+llega del back en cada llamada (ver
+[Límites entre el agente y el back](../../docs/limites-agente-back.md)).

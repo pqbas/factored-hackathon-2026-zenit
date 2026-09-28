@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import importlib
 import os
-from contextlib import asynccontextmanager
 
 import httpx
 import pytest
@@ -10,7 +9,6 @@ from fastapi.testclient import TestClient
 from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
 from langchain_core.messages import AIMessage
 from langchain_core.tools import StructuredTool
-from langgraph.checkpoint.memory import MemorySaver
 
 import src.main as main
 from src.llm.jev import JevClient
@@ -33,9 +31,6 @@ importlib.reload(_session_repo)
 FAKE_LLM_TEXT = "Hola, ¿en qué más te ayudo?"
 
 
-@asynccontextmanager
-async def _fake_checkpointer():
-    yield MemorySaver()
 
 
 class BindableChatModel:
@@ -46,7 +41,7 @@ class BindableChatModel:
     def __init__(self, text: str):
         self._text = text
 
-    def bind_tools(self, tools):
+    def bind_tools(self, tools, **kwargs):
         return self
 
     async def ainvoke(self, messages):
@@ -60,7 +55,7 @@ class ScriptedToolChatModel:
     def __init__(self, replies: list[AIMessage]):
         self._replies = iter(replies)
 
-    def bind_tools(self, tools):
+    def bind_tools(self, tools, **kwargs):
         return self
 
     async def ainvoke(self, messages):
@@ -151,7 +146,6 @@ class RecordingChatModel:
 
 @pytest.fixture(autouse=True)
 def _patch_main(monkeypatch):
-    monkeypatch.setattr(main, "checkpointer", _fake_checkpointer)
     monkeypatch.setattr(main, "get_chat_model", _fake_chat_model_factory)
     monkeypatch.setattr(main, "tools_for", _fake_tools_for)
     monkeypatch.setattr(
@@ -300,3 +294,46 @@ def test_general_inquiry_calls_the_tool_with_the_sessions_customer_id(client, mo
     body = response.json()
     assert _output_text(body) == FAKE_LLM_TEXT
     assert calls == [{"customer_id": "CLI-FLEUCGTWGAHL"}]  # demo-mx-1's customer_id
+
+
+def _greeting_jev():
+    return JevClient(api_key="test-key", url="https://api.typesafe.ai/v1/systemone", timeout=2.0,
+                     transport=httpx.MockTransport(lambda request: _jev_response_for("GREETING")))
+
+
+def _invoke_history(client, messages, session_token="demo-mx-1"):
+    return client.post(
+        "/invocations",
+        json={"input": messages, "custom_inputs": {"session_token": session_token}},
+    )
+
+
+def test_the_llm_receives_the_whole_history_sent_in_the_request(client, monkeypatch):
+    llm = RecordingChatModel(FAKE_LLM_TEXT)
+    monkeypatch.setattr(main, "get_chat_model", lambda: llm)
+    monkeypatch.setattr(main, "jev_client", _greeting_jev())
+    history = [
+        {"role": "user", "content": "Hola, quiero saber mi saldo"},
+        {"role": "assistant", "content": "Claro, ¿de qué producto?"},
+        {"role": "user", "content": "De mi tarjeta de crédito, por favor"},
+    ]
+
+    response = _invoke_history(client, history)
+
+    assert response.status_code == 200
+    assert [m.content for m in llm.received[1:]] == [m["content"] for m in history]
+
+
+def test_the_llm_receives_only_the_last_20_messages_of_a_long_history(client, monkeypatch):
+    llm = RecordingChatModel(FAKE_LLM_TEXT)
+    monkeypatch.setattr(main, "get_chat_model", lambda: llm)
+    monkeypatch.setattr(main, "jev_client", _greeting_jev())
+    history = [
+        {"role": "user" if i % 2 == 0 else "assistant", "content": f"mensaje número {i}"}
+        for i in range(30)
+    ]
+
+    response = _invoke_history(client, history)
+
+    assert response.status_code == 200
+    assert [m.content for m in llm.received[1:]] == [m["content"] for m in history[-20:]]

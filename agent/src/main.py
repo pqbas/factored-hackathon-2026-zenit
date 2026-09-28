@@ -10,7 +10,6 @@ import uuid  # noqa: E402
 from typing import Any, AsyncGenerator, AsyncIterator  # noqa: E402
 
 import mlflow  # noqa: E402
-import psycopg  # noqa: E402
 from langchain_core.messages import AIMessageChunk, ToolMessage  # noqa: E402
 from mlflow.genai.agent_server import (  # noqa: E402
     AgentServer,
@@ -28,7 +27,6 @@ from mlflow.types.responses import (  # noqa: E402
 )
 
 from src.config import settings  # noqa: E402
-from src.db.checkpointer import checkpointer  # noqa: E402
 from src.db.session_repo import resolve_session  # noqa: E402
 from src.graph.build import GRAPH_NODES, build_graph  # noqa: E402
 from src.llm.chat import get_chat_model  # noqa: E402
@@ -49,6 +47,9 @@ jev_client = (
     if settings.jev_api_key
     else None
 )
+
+# Keeps the prompt bounded on long chats; the back still stores the whole conversation.
+MAX_HISTORY_MESSAGES = 20
 
 # Only the respond node streams text deltas; every node's final message is
 # emitted as output_item.done via the "updates" branch below.
@@ -118,46 +119,29 @@ async def streaming(
     mlflow.update_current_trace(metadata={"mlflow.trace.session": thread_id})
 
     custom_inputs = dict(request.custom_inputs or {})
-    config = {"configurable": {"thread_id": thread_id}}
     # Identity is resolved from the trusted session token on every turn, never from chat text.
     session = resolve_session(custom_inputs)
+    # The back owns the conversation and sends the whole history on every request
+    # (docs/limites-agente-back.md); the agent keeps no state between requests.
+    history = to_chat_completions_input([i.model_dump() for i in request.input])
     input_state = {
-        "messages": to_chat_completions_input([i.model_dump() for i in request.input])[-1:],
+        "messages": history[-MAX_HISTORY_MESSAGES:],
         "session": session.as_dict(),
         "thread_id": thread_id,
     }
 
-    # One-shot retry guards against a transient psycopg OperationalError that
-    # sometimes fires on the first Lakebase checkpoint write after a cold
-    # start ("SSL error: unexpected eof while reading"). We only retry when
-    # no events have been streamed to the client yet.
-    for attempt in range(2):
-        events_yielded = 0
-        try:
-            async with checkpointer() as cp:
-                graph = build_graph(
-                    get_chat_model(),
-                    cp,
-                    jev_client,
-                    routes,
-                    settings.guardrail_threshold,
-                    settings.intent_threshold,
-                    tools_for,
-                )
-                async for event in _process_agent_astream_events(
-                    graph.astream(input_state, config, stream_mode=["updates", "messages"])
-                ):
-                    yield event
-                    events_yielded += 1
-            return
-        except psycopg.OperationalError as exc:
-            if attempt == 0 and events_yielded == 0:
-                logger.warning(
-                    "Lakebase checkpoint connection dropped before any output; "
-                    "retrying once. Error: %s", exc,
-                )
-                continue
-            raise
+    graph = build_graph(
+        get_chat_model(),
+        jev_client,
+        routes,
+        settings.guardrail_threshold,
+        settings.intent_threshold,
+        tools_for,
+    )
+    async for event in _process_agent_astream_events(
+        graph.astream(input_state, stream_mode=["updates", "messages"])
+    ):
+        yield event
 
 
 server = AgentServer("ResponsesAgent", enable_chat_proxy=False)  # UI lives in ../back

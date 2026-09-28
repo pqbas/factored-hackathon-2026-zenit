@@ -54,10 +54,13 @@ async def _respond_with_tools(
     ]
     tools_by_name = {tool.name: tool for tool in tools}
     bound_llm = llm.bind_tools(tools)
+    # The first round must call a tool: without it the LLM answered a follow-up ("E limite?")
+    # with made-up figures, since the history only holds earlier replies, never tool results.
+    first_llm = llm.bind_tools(tools, tool_choice="required")
 
     messages = [SystemMessage(content=system_prompt), *state["messages"]]
     rounds = 0
-    reply = await bound_llm.ainvoke(messages)
+    reply = await first_llm.ainvoke(messages)
     while reply.tool_calls and rounds < _MAX_TOOL_ROUNDS:
         messages.append(reply)
         for tool_call in reply.tool_calls:
