@@ -83,6 +83,10 @@ test.describe('/api/admin (with database)', () => {
     const emails = users.map((u: any) => u.userEmail);
     expect(emails).toContain(`${adaContext.name}@example.com`);
     expect(emails).toContain(`${babbageContext.name}@example.com`);
+
+    // One row per user, even when older chats of that user have no email.
+    const userIds = users.map((u: any) => u.userId);
+    expect(new Set(userIds).size).toBe(userIds.length);
   });
 
   test("GET /api/admin/chats/:id/messages as admin reads another user's private chat", async ({

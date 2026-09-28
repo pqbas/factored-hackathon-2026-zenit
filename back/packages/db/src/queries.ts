@@ -9,6 +9,7 @@ import {
   inArray,
   isNotNull,
   lt,
+  max,
   ne,
   sql,
   type SQL,
@@ -278,11 +279,15 @@ export async function getChatOwners() {
     return [];
   }
 
+  // One row per user: chats created before userEmail existed have it null,
+  // so max() keeps the email from any newer chat of the same user.
+  const userEmail = max(chat.userEmail);
   try {
     return await (await ensureDb())
-      .selectDistinct({ userId: chat.userId, userEmail: chat.userEmail })
+      .select({ userId: chat.userId, userEmail })
       .from(chat)
-      .orderBy(asc(chat.userEmail));
+      .groupBy(chat.userId)
+      .orderBy(asc(userEmail));
   } catch (_error) {
     throw new ChatSDKError('bad_request:database', 'Failed to get chat owners');
   }
