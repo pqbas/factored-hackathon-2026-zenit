@@ -1,6 +1,7 @@
 import type { DataUIPart, LanguageModelUsage, UIMessageChunk } from 'ai';
 import { useChat } from '@ai-sdk/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { UserRound } from 'lucide-react';
 import { useSWRConfig } from 'swr';
 import { ChatHeader } from '@/components/chat-header';
 import { fetchWithErrorHandlers, generateUUID } from '@/lib/utils';
@@ -25,6 +26,13 @@ import type { ClientSession } from '@chat-template/auth';
 import { softNavigateToChatId } from '@/lib/navigation';
 import { useAppConfig } from '@/contexts/AppConfigContext';
 import { useDemoCustomers } from '@/hooks/use-demo-customers';
+import { useHandoff } from '@/hooks/use-handoff';
+import {
+  type HandledBy,
+  handledByOf,
+  handoffNotice,
+  isStateOnlyMessage,
+} from '@/lib/handoff';
 import {
   getChatCustomerToken,
   getLastCustomerToken,
@@ -40,6 +48,7 @@ export function Chat({
   initialVisibilityType,
   isReadonly,
   initialLastContext,
+  initialHandledBy = 'ai_agent',
 }: {
   id: string;
   initialMessages: ChatMessage[];
@@ -48,6 +57,7 @@ export function Chat({
   isReadonly: boolean;
   session: ClientSession;
   initialLastContext?: LanguageModelUsage;
+  initialHandledBy?: HandledBy;
 }) {
   const { visibilityType } = useChatVisibility({
     chatId: id,
@@ -206,6 +216,12 @@ export function Chat({
       if (dataPart.type === 'data-usage') {
         setUsage(dataPart.data as LanguageModelUsage);
       }
+      // A person handles this chat: the back answered with just the state.
+      if (dataPart.type === 'data-conversation-state') {
+        setHandledBy(
+          handledByOf((dataPart.data as { handledBy?: string }).handledBy),
+        );
+      }
     },
     onFinish: ({
       isAbort,
@@ -215,6 +231,14 @@ export function Chat({
     }) => {
       // Reset state for next message
       didFetchHistoryOnNewChat.current = false;
+
+      // Drop the empty assistant message a state-only answer leaves behind,
+      // and re-read who handles the chat: the agent may have just handed it
+      // off to an advisor.
+      setMessages((current) =>
+        isStateOnlyMessage(current.at(-1)) ? current.slice(0, -1) : current,
+      );
+      if (chatHistoryEnabled && !isAbort) refreshState();
 
       // If user aborted, don't try to resume
       if (isAbort) {
@@ -290,6 +314,15 @@ export function Chat({
     },
   });
 
+  const { handledBy, setHandledBy, refreshState } = useHandoff({
+    chatId: id,
+    initialHandledBy,
+    messages,
+    setMessages,
+    enabled: chatHistoryEnabled,
+  });
+  const notice = handoffNotice(handledBy);
+
   const [searchParams] = useSearchParams();
   const query = searchParams.get('query');
 
@@ -318,6 +351,7 @@ export function Chat({
           customerToken={customerToken}
           onCustomerChange={setCustomerToken}
           isCustomerLocked={isCustomerLocked}
+          handledBy={handledBy}
         />
 
         <Messages
@@ -332,6 +366,15 @@ export function Chat({
           selectedModelId={initialChatModel}
         />
 
+        {notice && (
+          <div
+            data-testid="handoff-notice"
+            className="mx-auto flex w-full max-w-4xl items-center justify-center gap-1.5 px-4 pb-1 text-muted-foreground text-xs"
+          >
+            <UserRound className="size-3.5 text-primary" strokeWidth={2} />
+            {notice}
+          </div>
+        )}
         <div className="sticky bottom-0 z-1 mx-auto flex w-full max-w-4xl gap-2 border-t-0 bg-background px-2 pb-3 md:px-4 md:pb-4">
           {!isReadonly && (
             <MultimodalInput
