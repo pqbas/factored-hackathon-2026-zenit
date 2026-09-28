@@ -15,6 +15,8 @@ import {
   fetchInbox,
   fetchMessages,
   type InboxView,
+  countsUrl,
+  fetchCounts,
   fetchUsers,
   useCaseLabelOf,
   viewUrl,
@@ -89,6 +91,12 @@ export default function ConversationsPage() {
   // Same persisted open/closed state as the Agente section's sidebar.
   const isCollapsed = localStorage.getItem('sidebar:state') === 'false';
 
+  // Counters in the views sidebar, on the same polling as the inbox.
+  const { data: counts, mutate: mutateCounts } = useSWR(countsUrl(userId), fetchCounts, {
+    refreshInterval: POLL_MS,
+    revalidateOnFocus: false,
+  });
+
   const { data: pages, size, setSize, mutate } = useSWRInfinite<AdvisorChatPage>(
     (index, previous: AdvisorChatPage | null) => {
       if (previous && !previous.hasMore) return null;
@@ -127,6 +135,7 @@ export default function ConversationsPage() {
     } finally {
       setBusy(false);
       mutate();
+      mutateCounts();
     }
   }
 
@@ -188,6 +197,7 @@ export default function ConversationsPage() {
         users={users ?? []}
         userId={userId}
         onUserChange={setUserId}
+        counts={counts}
       />
       <SidebarInset className="h-dvh min-h-0 overflow-hidden md:h-[calc(100dvh-1rem)]">
         <div className="flex h-full min-h-0">

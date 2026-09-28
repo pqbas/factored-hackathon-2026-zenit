@@ -19,7 +19,14 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from '@/components/ui/sidebar';
-import { type ChatOwner, type InboxView, sameView, USE_CASES } from '@/lib/advisor';
+import {
+  type ChatOwner,
+  countFor,
+  type InboxView,
+  sameView,
+  USE_CASES,
+  type ViewCounts,
+} from '@/lib/advisor';
 import { cn } from '@/lib/utils';
 
 function ViewItem({
@@ -29,6 +36,8 @@ function ViewItem({
   icon,
   label,
   testId,
+  count,
+  highlight = false,
 }: {
   view: InboxView;
   current: InboxView;
@@ -36,6 +45,9 @@ function ViewItem({
   icon: ReactNode;
   label: string;
   testId: string;
+  count: number;
+  // "Sin atender" stands out while there are chats waiting.
+  highlight?: boolean;
 }) {
   const { setOpenMobile } = useSidebar();
   return (
@@ -50,7 +62,20 @@ function ViewItem({
         className="h-8 gap-2.5 rounded-lg px-2.5 text-[13px]"
       >
         {icon}
-        <span className="truncate">{label}</span>
+        <span className="flex-1 truncate">{label}</span>
+        {count > 0 && (
+          <span
+            data-testid={`${testId}-count`}
+            className={cn(
+              'shrink-0 text-xs tabular-nums',
+              highlight
+                ? 'rounded-full bg-tint-amber px-1.5 font-semibold text-tint-amber-foreground'
+                : 'text-muted-foreground',
+            )}
+          >
+            {count}
+          </span>
+        )}
       </SidebarMenuButton>
     </SidebarMenuItem>
   );
@@ -65,6 +90,7 @@ export function InboxViews({
   users,
   userId,
   onUserChange,
+  counts,
 }: {
   view: InboxView;
   onViewChange: (view: InboxView) => void;
@@ -72,6 +98,7 @@ export function InboxViews({
   users: ChatOwner[];
   userId: string | null;
   onUserChange: (userId: string | null) => void;
+  counts: ViewCounts | undefined;
 }) {
   const selectedUser = users.find((u) => u.userId === userId);
   const item = (v: InboxView, icon: ReactNode, label: string, testId: string) => (
@@ -83,6 +110,8 @@ export function InboxViews({
       icon={icon}
       label={label}
       testId={testId}
+      count={countFor(v, counts)}
+      highlight={v.kind === 'waiting'}
     />
   );
   const muted = 'size-4 shrink-0 text-muted-foreground';

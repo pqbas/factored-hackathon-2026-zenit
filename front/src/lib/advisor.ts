@@ -360,3 +360,55 @@ export function rowText(chat: AdvisorChat): string {
 export function lastActivityAt(chat: AdvisorChat): string {
   return chat.lastMessage?.createdAt ?? chat.createdAt;
 }
+
+// How many conversations each view has, for the counters in the views sidebar.
+export interface ViewCounts {
+  inbox: number;
+  waiting: number;
+  mine: number;
+  resolved: number;
+  useCases: Record<string, number>;
+}
+
+export function countsUrl(userId?: string | null): string {
+  const params = new URLSearchParams();
+  if (userId) params.set('userId', userId);
+  const query = params.toString();
+  return `${BASE}/counts${query ? `?${query}` : ''}`;
+}
+
+// The one place that knows the shape of GET /api/advisor/conversations/counts:
+// { total, byUseCase, withoutUseCase, unattended, mine, resolved }. total is
+// the open chats (the inbox); mine is always 0 for the admin. Missing or bad
+// numbers read as 0.
+export function parseCounts(body: unknown): ViewCounts {
+  const raw = (body ?? {}) as {
+    total?: unknown;
+    byUseCase?: Record<string, unknown>;
+    unattended?: unknown;
+    mine?: unknown;
+    resolved?: unknown;
+  };
+  const n = (value: unknown) => (typeof value === 'number' && value > 0 ? value : 0);
+  const useCases: Record<string, number> = {};
+  for (const [id, value] of Object.entries(raw.byUseCase ?? {})) useCases[id] = n(value);
+  return {
+    inbox: n(raw.total),
+    waiting: n(raw.unattended),
+    mine: n(raw.mine),
+    resolved: n(raw.resolved),
+    useCases,
+  };
+}
+
+export function countFor(view: InboxView, counts: ViewCounts | undefined): number {
+  if (!counts) return 0;
+  if (view.kind === 'useCase') return counts.useCases[view.useCase] ?? 0;
+  return counts[view.kind];
+}
+
+export async function fetchCounts(url: string): Promise<ViewCounts | undefined> {
+  const res = await fetch(url, { credentials: 'include' });
+  if (res.status === 204 || !res.ok) return undefined;
+  return parseCounts(await res.json());
+}
