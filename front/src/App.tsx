@@ -8,6 +8,7 @@ import RootLayout from '@/layouts/RootLayout';
 import ChatLayout from '@/layouts/ChatLayout';
 import NewChatPage from '@/pages/NewChatPage';
 import ChatPage from '@/pages/ChatPage';
+import ConversationsPage from '@/pages/ConversationsPage';
 
 function App() {
   return (
@@ -27,6 +28,7 @@ function App() {
                   <Route index element={<NewChatPage />} />
                   <Route path="chat/:id" element={<ChatPage />} />
                 </Route>
+                <Route path="conversations" element={<ConversationsPage />} />
               </Route>
             </Routes>
           </DataStreamProvider>
