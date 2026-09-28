@@ -272,4 +272,4 @@ Fuera de alcance / futuro: mensajes no leídos (la API no los trae; el punto
 marca "Sin atender").
 
 Incluye la consola "con menos ruido" (estado solo cuando pide atención).
-Shipped en PR #<n>.
+Shipped en PR #33.
