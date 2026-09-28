@@ -69,7 +69,7 @@ Shipped en PR #15.
 
 ---
 
-## Phase 3: Estado de la conversación desde las señales del agente
+## Phase 3: Estado de la conversación desde las señales del agente (Complete)
 
 **Goal:** que el back, único dueño de la conversación, sepa en cada turno quién
 la atiende y qué turnos quedaron bloqueados, y actúe en consecuencia.
@@ -79,16 +79,18 @@ la atiende y qué turnos quedaron bloqueados, y actúe en consecuencia.
      el agente emita esas señales (sus Fases 6 y 7 reducidas). La forma exacta
      de custom_outputs está por confirmar con el agente. -->
 
-- [ ] Cada conversación guarda quién la atiende (agente, cola o asesor) y el
+- [x] Cada conversación guarda quién la atiende (agente, cola o asesor) y el
       caso de uso activo, a partir de lo que señala el agente en cada turno.
-- [ ] Un turno que el agente marca como bloqueado queda guardado como tal y
+- [x] Un turno que el agente marca como bloqueado queda guardado como tal y
       no se le vuelve a mandar al agente en el historial.
-- [ ] Si la conversación no la atiende el agente, el back guarda el mensaje
+- [x] Si la conversación no la atiende el agente, el back guarda el mensaje
       del cliente y no llama al agente: sin mensaje vacío ni stream colgado.
-- [ ] El historial y la pantalla de admin se pueden filtrar por quién atiende
+- [x] El historial y la pantalla de admin se pueden filtrar por quién atiende
       y por caso de uso.
-- [ ] Se quitan el aviso de "background check" y los campos de etapa,
+- [x] Se quitan el aviso de "background check" y los campos de etapa,
       intención y nombre del cliente del flujo anterior.
+
+Shipped en PR #19.
 
 ---
 
