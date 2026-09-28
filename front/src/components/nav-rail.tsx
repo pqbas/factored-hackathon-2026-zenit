@@ -1,3 +1,4 @@
+import { ASSISTANT_NAME } from '@/lib/assistant';
 import {
   MessageCircle,
   MessagesSquare,
@@ -42,7 +43,7 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     id: 'agent',
-    label: 'Agente',
+    label: `${ASSISTANT_NAME} (asistente virtual)`,
     to: '/',
     section: 'agent',
     icon: MessageCircle,

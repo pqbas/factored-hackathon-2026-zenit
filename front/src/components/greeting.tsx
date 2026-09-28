@@ -1,4 +1,5 @@
 import type { UseChatHelpers } from '@ai-sdk/react';
+import { ASSISTANT_KIND, ASSISTANT_NAME } from '@/lib/assistant';
 import type { ChatMessage } from '@chat-template/core';
 import { motion } from 'framer-motion';
 
@@ -54,7 +55,8 @@ export const Greeting = ({
         transition={{ delay: 0.4 }}
         className="text-base text-muted-foreground md:text-[17px]"
       >
-        ¿En qué te puedo ayudar hoy?
+        Soy {ASSISTANT_NAME}, tu {ASSISTANT_KIND.toLowerCase()}. ¿En qué te puedo
+        ayudar hoy?
       </motion.p>
       <div className="mt-8 w-full">
         <SuggestedActions chatId={chatId} sendMessage={sendMessage} />
