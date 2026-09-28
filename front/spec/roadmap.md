@@ -111,7 +111,7 @@ y las respuestas rápidas se abren con el botón del rayo. Shipped en PR #7.
 
 ---
 
-## Phase 1b: Selector de cliente demo en el chat
+## Phase 1b: Selector de cliente demo en el chat (Complete)
 
 **Goal:** que el agente sepa con qué cliente demo habla el chat.
 
@@ -121,11 +121,14 @@ y las respuestas rápidas se abren con el botón del rayo. Shipped en PR #7.
      sessionToken (string de 1 a 256, opcional): va en CADA mensaje porque el
      back no lo guarda, y un string vacío da 400. -->
 
-- [ ] El usuario elige un cliente demo antes de empezar a chatear.
-- [ ] Cada mensaje del chat va con el token de ese cliente; sin cliente
+- [x] El usuario elige un cliente demo antes de empezar a chatear.
+- [x] Cada mensaje del chat va con el token de ese cliente; sin cliente
       elegido no se manda el campo (nunca un string vacío).
-- [ ] Si el token es inválido, venció o no viene, el chat muestra la respuesta
+- [x] Si el token es inválido, venció o no viene, el chat muestra la respuesta
       de "inicia sesión" que da el agente, sin lógica propia en el front.
+
+Los checks manuales contra el agente real quedan para el usuario. Shipped en
+PR #<n>.
 
 ---
 

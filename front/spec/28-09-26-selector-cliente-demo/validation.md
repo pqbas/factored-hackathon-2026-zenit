@@ -4,24 +4,24 @@ La fase está lista para mergear cuando se cumple todo lo siguiente.
 
 ## Automated Tests
 
-- [ ] `npm run build` en `front/` termina sin errores de tipos ni de build.
-- [ ] `npm test` en `front/` termina con exit code 0.
-- [ ] En `back/`, con `front/dist` recién compilado (el back lo sirve en
+- [x] `npm run build` en `front/` termina sin errores de tipos ni de build.
+- [x] `npm test` en `front/` termina con exit code 0.
+- [x] En `back/`, con `front/dist` recién compilado (el back lo sirve en
       producción):
       `FRONT_URL=http://localhost:3100 PORT=3100 NODE_ENV=production TEST_MODE=ephemeral PLAYWRIGHT=True npx playwright test tests/e2e/demo-customer.test.ts tests/e2e/conversations.test.ts --project=e2e`
       termina con exit code 0.
-- [ ] `grep -rn "style={{" front/src/components/demo-customer-selector.tsx`
+- [x] `grep -rn "style={{" front/src/components/demo-customer-selector.tsx`
       no devuelve nada.
 
 ### Specific test coverage required
 
 #### Unit
 
-- [ ] `pickDefaultToken` devuelve el último elegido si sigue en la lista.
-- [ ] `pickDefaultToken` devuelve el primero si el último no está en la lista.
-- [ ] `pickDefaultToken` devuelve `null` con lista vacía.
-- [ ] El token guardado para un chat no pisa el de otro chat.
-- [ ] Si `localStorage` lanza, las funciones de guardado no lanzan.
+- [x] `pickDefaultToken` devuelve el último elegido si sigue en la lista.
+- [x] `pickDefaultToken` devuelve el primero si el último no está en la lista.
+- [x] `pickDefaultToken` devuelve `null` con lista vacía.
+- [x] El token guardado para un chat no pisa el de otro chat.
+- [x] Si `localStorage` lanza, las funciones de guardado no lanzan.
 
 #### Integration
 
@@ -30,17 +30,21 @@ e2e cubre la unión entre las piezas.
 
 #### End-to-end
 
-- [ ] El selector de un chat nuevo lista los clientes de
+- [x] El selector de un chat nuevo lista los clientes de
       `GET /api/demo-customers`.
-- [ ] Enviar un mensaje con `demo-co-1` elegido manda
+- [x] Enviar un mensaje con `demo-co-1` elegido manda
       `sessionToken: 'demo-co-1'` en el body de `POST /api/chat`.
-- [ ] El selector queda deshabilitado después del primer mensaje.
-- [ ] Recargar el chat y enviar otro mensaje manda el mismo token.
-- [ ] Un chat nuevo arranca con el último cliente elegido.
-- [ ] Si `GET /api/demo-customers` falla, no hay selector y el body no trae
+- [x] El selector queda deshabilitado después del primer mensaje.
+- [ ] Recargar el chat y enviar otro mensaje manda el mismo token. (Existe
+      en el e2e pero se salta en modo efímero: necesita base de datos.)
+- [x] Un chat nuevo arranca con el último cliente elegido.
+- [x] Si `GET /api/demo-customers` falla, no hay selector y el body no trae
       `sessionToken`.
 
 ## Manual Checks
+
+Pendientes para el usuario contra el agente real: al validar la fase, los
+servidores y el agente no estaban corriendo.
 
 Con el back de `main`, el agente y el front corriendo en local:
 
