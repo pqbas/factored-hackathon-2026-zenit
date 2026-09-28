@@ -6,8 +6,9 @@ La fase está lista para mergear cuando se cumple todo lo siguiente.
 
 - [ ] `npm run build` en `front/` termina sin errores de tipos ni de build.
 - [ ] `npm test` en `front/` termina con exit code 0.
-- [ ] En `back/`, con `front/dist` recién compilado:
-      `PORT=3100 NODE_ENV=production TEST_MODE=ephemeral PLAYWRIGHT=True npx playwright test tests/e2e/demo-customer.test.ts tests/e2e/conversations.test.ts --project=e2e`
+- [ ] En `back/`, con `front/dist` recién compilado (el back lo sirve en
+      producción):
+      `FRONT_URL=http://localhost:3100 PORT=3100 NODE_ENV=production TEST_MODE=ephemeral PLAYWRIGHT=True npx playwright test tests/e2e/demo-customer.test.ts tests/e2e/conversations.test.ts --project=e2e`
       termina con exit code 0.
 - [ ] `grep -rn "style={{" front/src/components/demo-customer-selector.tsx`
       no devuelve nada.
@@ -41,8 +42,7 @@ e2e cubre la unión entre las piezas.
 
 ## Manual Checks
 
-Con el back de `feat/identidad-cliente-conversacion` (o `main` cuando esté
-mergeado), el agente y el front corriendo en local:
+Con el back de `main`, el agente y el front corriendo en local:
 
 - [ ] Abrir `/`, ver el selector en el encabezado con los cinco clientes demo.
 - [ ] Elegir "Santiago · México", preguntar "¿cuál es mi saldo?" y recibir

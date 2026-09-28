@@ -58,15 +58,12 @@ Y cambia en estas cosas:
   con el servidor real que sirve `front/dist`. El e2e mockea
   `GET /api/demo-customers` con `page.route` y revisa el body de
   `POST /api/chat` desde el navegador, así prueba el contrato del front sin
-  depender de que la Fase 1 del back esté en `main`; el reenvío al agente ya lo
-  prueban los tests del back.
-- Hasta que el back esté en `main`, `npm run dev` responde
-  `GET /api/demo-customers` con un mock de Vite (solo en dev), para poder
-  probar el selector contra el back de `main`.
-- El PR se abre recién cuando la Fase 1 del back esté en `main`, porque sin
-  ella el schema de `POST /api/chat` descarta `sessionToken` y el token no
-  llega al agente. Después va el fix del agente que quita el cliente por
-  defecto (`fix/pqbas-agent-no-default-session`).
+  depender de los clientes demo del agente; el reenvío al agente ya lo prueban
+  los tests del back.
+- Esta fase se mergea después de la Fase 1 del back (ya en `main`, PR #8) y
+  antes del fix del agente que quita el cliente por defecto
+  (`fix/pqbas-agent-no-default-session`): si el fix entra antes, todos los
+  chats piden iniciar sesión.
 - El login real queda fuera de esta fase, porque todavía no está definido del
   lado del banco. Cuando exista, cambia de dónde sale el token, no cómo viaja.
 - Los roles (cliente, asesor, admin) quedan fuera; llegan en la Fase 5.
