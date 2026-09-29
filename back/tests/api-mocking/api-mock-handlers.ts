@@ -310,6 +310,30 @@ export const handlers = [
     }
   }),
 
+  // Mock the SQL warehouse (Statement Execution API) used by /api/products.
+  http.post(/\/api\/2\.0\/sql\/statements$/, async (req) => {
+    const { statement } = (await req.request.json()) as { statement: string };
+    const table = (columns: string[], rows: string[][]) =>
+      HttpResponse.json({
+        status: { state: 'SUCCEEDED' },
+        manifest: { schema: { columns: columns.map((name) => ({ name })) } },
+        result: { data_array: rows },
+      });
+    if (statement.includes('customer_360')) {
+      return table(['first_name', 'last_name'], [['Santiago', 'Contreras López']]);
+    }
+    if (statement.includes('get_products')) {
+      return table(
+        ['product_type', 'product_number_last4', 'currency', 'current_balance', 'credit_limit', 'available_credit'],
+        [['Tarjeta Crédito', '1070', 'USD', '3332.62', '8672.72', '5340.10']],
+      );
+    }
+    return table(
+      ['transaction_date', 'product_type', 'product_number_last4', 'transaction_type', 'merchant_name', 'amount', 'currency', 'transaction_status'],
+      [['2026-06-08T15:00:51.000Z', 'Tarjeta Crédito', '4930', 'Purchase', 'Internet Plus', '329.44', 'USD', 'Approved']],
+    );
+  }),
+
   // Mock fetching SCIM user
   http.get(/\/api\/2\.0\/preview\/scim\/v2\/Me$/, () => {
     return HttpResponse.json({

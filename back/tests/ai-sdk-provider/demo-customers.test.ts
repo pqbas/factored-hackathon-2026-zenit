@@ -19,7 +19,9 @@ test.describe('getDemoCustomers', () => {
   });
 
   test('returns the parsed list when the env var is valid JSON', () => {
-    const customers = [{ token: 'demo-custom-1', label: 'Custom Customer' }];
+    const customers = [
+      { token: 'demo-custom-1', label: 'Custom Customer', customerId: 'CLI-X' },
+    ];
     process.env.DEMO_CUSTOMERS_JSON = JSON.stringify(customers);
     expect(getDemoCustomers()).toEqual(customers);
   });

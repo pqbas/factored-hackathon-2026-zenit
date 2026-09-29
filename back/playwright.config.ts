@@ -133,6 +133,7 @@ export default defineConfig({
       DATABRICKS_CLIENT_ID: 'mock-value',
       DATABRICKS_CLIENT_SECRET: 'mock-value',
       DATABRICKS_HOST: 'mock-value',
+      DATABRICKS_WAREHOUSE_ID: 'mock-warehouse',
       // ada-<workerIndex> is admin, babbage-<workerIndex> is advisor, and
       // curie-<workerIndex> is a plain customer. workerIndex isn't capped at
       // `workers` - a fresh worker (new project, a retry) gets the next
