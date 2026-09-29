@@ -168,7 +168,7 @@ async def _collect(state: AgentState, llm, route: IntentRoute, tools_for) -> dic
     if failed:
         logger.warning("Collector %s: fetching %s failed", reason, failed)
         return {"messages": [AIMessage(content=_tool_down(state))]}
-    kind, text = next_step(reason, fields, rows_by_tool, language)
+    kind, text = next_step(reason, fields, rows_by_tool, language, state["messages"])
     logger.info("Collector %s: %s", reason, kind)
     return {"messages": [AIMessage(content=text)]}
 

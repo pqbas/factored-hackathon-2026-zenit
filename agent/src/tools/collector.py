@@ -8,6 +8,7 @@ from typing import Literal
 from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel
 
+from src.llm.fallback import normalize
 from src.prompts import messages as texts
 from src.tools.handoff import PartialComplaintCase, PartialRetentionCase
 
@@ -172,12 +173,12 @@ def card_to_fetch(reason: str, fields, rows_by_tool: dict) -> str | None:
 
 
 def next_step(
-    reason: str, fields, rows_by_tool: dict[str, list[dict]], language: str = "es"
+    reason: str, fields, rows_by_tool: dict[str, list[dict]], language: str = "es", messages: list | None = None
 ) -> tuple[Literal["ask", "summary"], str]:
     """The fixed question for the first missing or mismatching field of the case, or the summary
     when every field is there and matches the bank's rows. Calls nothing."""
     if reason == "retention":
-        return _retention_step(fields, rows_by_tool, language)
+        return _retention_step(fields, rows_by_tool, language, messages or [])
     return _complaint_step(fields, rows_by_tool, language)
 
 
@@ -216,12 +217,32 @@ def _complaint_step(fields, rows_by_tool: dict, language: str):
     return "summary", summary
 
 
-def _retention_step(fields, rows_by_tool: dict, language: str):
+_KIND_WORDS = (
+    (re.compile(r"\b(tarjeta|cartao)\b"), "Tarjeta"),
+    (re.compile(r"\b(cuenta|ahorro|conta|poupanca)\b"), "Cuenta"),
+)
+
+
+def _kind_named(messages: list) -> str | None:
+    """The kind of product ("Tarjeta", "Cuenta") the customer named in their latest message
+    that names exactly one kind."""
+    for text in reversed(_human_texts(messages)):
+        kinds = {kind for pattern, kind in _KIND_WORDS if pattern.search(normalize(text))}
+        if len(kinds) == 1:
+            return kinds.pop()
+    return None
+
+
+def _retention_step(fields, rows_by_tool: dict, language: str, messages: list):
     products = rows_by_tool.get("get_products", [])
     if not products:
         raise CollectorUnavailable("no products")
-    ask_product = texts.ASK_PRODUCT[language].format(options=format_products(products, language))
-    last4 = _named_or_only(_last4(fields.product_last4), products)
+    # "Cerrar mi tarjeta" with one card is that card; with several, only the cards are listed.
+    candidates = products
+    if kind := _kind_named(messages):
+        candidates = [p for p in products if p["product_type"].startswith(kind)] or products
+    ask_product = texts.ASK_PRODUCT[language].format(options=format_products(candidates, language))
+    last4 = _named_or_only(_last4(fields.product_last4), candidates)
     if last4 is None:
         return "ask", ask_product
     product = next((p for p in products if p["product_number_last4"] == last4), None)
