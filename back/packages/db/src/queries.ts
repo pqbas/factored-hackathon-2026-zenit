@@ -174,7 +174,7 @@ export async function getChats({
   limit: number;
   startingAfter: string | null;
   endingBefore: string | null;
-  handledBy?: string;
+  handledBy?: string | Chat['handledBy'][];
   intent?: string;
   useCase?: string;
   assignedTo?: string;
@@ -192,7 +192,9 @@ export async function getChats({
 
     const filterConditions: SQL<any>[] = scopeCondition ? [scopeCondition] : [];
 
-    if (handledBy) {
+    if (Array.isArray(handledBy)) {
+      filterConditions.push(inArray(chat.handledBy, handledBy));
+    } else if (handledBy) {
       filterConditions.push(eq(chat.handledBy, handledBy as Chat['handledBy']));
     }
 
@@ -351,10 +353,18 @@ export interface ConversationCounts {
   unattended: number;
   mine: number;
   resolved: number;
+  aiAgent: number;
 }
 
+// The human inbox: chats a person has to handle. David's own chats stay out.
+export const HUMAN_HANDLED_BY: Chat['handledBy'][] = [
+  'human_queue',
+  'human_agent',
+];
+
 // Counts for the advisor console's view bar, with the same semantics as each
-// view: total/byUseCase = open chats (the inbox), unattended = human_queue,
+// view: total/byUseCase = open human cases (the inbox), aiAgent = open chats
+// David handles, unattended = human_queue,
 // mine = open and assigned to advisorEmail, resolved = closed. One aggregate
 // query (a row per use case), no chat rows.
 export async function getConversationCounts({
@@ -371,6 +381,7 @@ export async function getConversationCounts({
     unattended: 0,
     mine: 0,
     resolved: 0,
+    aiAgent: 0,
   };
   if (!isDatabaseAvailable()) return counts;
 
@@ -381,7 +392,15 @@ export async function getConversationCounts({
     const rows = await (await ensureDb())
       .select({
         useCase: chat.useCase,
-        open: countWhere(isNull(chat.closedAt)),
+        open: countWhere(
+          and(
+            isNull(chat.closedAt),
+            inArray(chat.handledBy, HUMAN_HANDLED_BY),
+          ) as SQL,
+        ),
+        aiAgent: countWhere(
+          and(isNull(chat.closedAt), eq(chat.handledBy, 'ai_agent')) as SQL,
+        ),
         unattended: countWhere(eq(chat.handledBy, 'human_queue')),
         mine: advisorEmail
           ? countWhere(
@@ -396,11 +415,12 @@ export async function getConversationCounts({
 
     for (const row of rows) {
       counts.total += row.open;
-      if (row.useCase) counts.byUseCase[row.useCase] = row.open;
-      else counts.withoutUseCase += row.open;
+      if (!row.useCase) counts.withoutUseCase += row.open;
+      else if (row.open > 0) counts.byUseCase[row.useCase] = row.open;
       counts.unattended += row.unattended;
       counts.mine += row.mine;
       counts.resolved += row.resolved;
+      counts.aiAgent += row.aiAgent;
     }
     return counts;
   } catch (error) {

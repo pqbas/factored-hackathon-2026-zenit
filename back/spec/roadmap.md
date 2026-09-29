@@ -133,6 +133,9 @@ agente.
 
 - [x] El asesor ve la bandeja de conversaciones y la filtra por quién la
       atiende, a quién está asignada y si está abierta o cerrada.
+- [x] La bandeja por defecto trae solo casos humanos abiertos (en cola o con
+      un asesor); las que David atiende solo se piden con handledBy=ai_agent
+      y se cuentan aparte en counts.aiAgent (decisión del usuario, 28-09-26).
 - [x] El asesor toma una conversación: el asistente deja de responder y queda
       asignada a él. Si ya la tiene otro asesor, recibe un conflicto.
 - [x] Solo quien tiene tomada la conversación le puede responder al cliente,

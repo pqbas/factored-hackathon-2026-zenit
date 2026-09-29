@@ -26,11 +26,16 @@ test.describe('/api/advisor/conversations/counts (with database)', () => {
   }) => {
     const userId = `counts-${generateUUID()}`;
 
-    const inquiry = await createChatFor(userId);
-    await updateChatAgentState({ chatId: inquiry, useCase: 'GENERAL_INQUIRY' });
+    // David handles it: out of the human inbox, counted in aiAgent.
+    const withDavid = await createChatFor(userId);
+    await updateChatAgentState({ chatId: withDavid, useCase: 'CARD_BLOCK' });
 
     const queued = await createChatFor(userId);
-    await updateChatAgentState({ chatId: queued, handledBy: 'human_queue' });
+    await updateChatAgentState({
+      chatId: queued,
+      handledBy: 'human_queue',
+      useCase: 'GENERAL_INQUIRY',
+    });
 
     const mine = await createChatFor(userId);
     await babbageContext.request.post(
@@ -53,12 +58,13 @@ test.describe('/api/advisor/conversations/counts (with database)', () => {
     );
     expect(advisorResponse.status()).toBe(200);
     expect(await advisorResponse.json()).toEqual({
-      total: 3,
+      total: 2,
       byUseCase: { GENERAL_INQUIRY: 1 },
-      withoutUseCase: 2,
+      withoutUseCase: 1,
       unattended: 1,
       mine: 1,
       resolved: 1,
+      aiAgent: 1,
     });
 
     const adminResponse = await adaContext.request.get(
@@ -67,7 +73,7 @@ test.describe('/api/advisor/conversations/counts (with database)', () => {
     expect(adminResponse.status()).toBe(200);
     const adminCounts = await adminResponse.json();
     expect(adminCounts.mine).toBe(0); // babbage holds them, not ada
-    expect(adminCounts.total).toBe(3);
+    expect(adminCounts.total).toBe(2);
     expect(adminCounts.resolved).toBe(1);
   });
 
