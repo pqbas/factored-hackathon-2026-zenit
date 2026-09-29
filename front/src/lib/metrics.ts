@@ -1,6 +1,7 @@
-// Resolution metrics for the admin: GET /api/advisor/metrics?from&to (back
+// Resolution metrics for the admin: GET /api/advisor/metrics?from&to&tz (back
 // PR #47, docs/flujo-atencion.md §6). Every closure is an event; total =
-// aiContained + human + assisted.
+// aiContained + human + assisted. Days are the viewer's local days: the back
+// reads from/to and groups byDay in `tz`.
 
 import { OTHER_GROUP, USE_CASES } from '@/lib/advisor';
 
@@ -37,26 +38,48 @@ export const EMPTY_METRICS: Metrics = {
   byDay: [],
 };
 
-// YYYY-MM-DD of a date in UTC, the back's day boundary.
-export function utcDay(date: Date): string {
-  return date.toISOString().slice(0, 10);
+// The browser's IANA time zone (e.g. "America/Lima"); UTC if unknown.
+export function browserTimeZone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+  } catch {
+    return 'UTC';
+  }
 }
 
+// YYYY-MM-DD of an instant as a calendar day in `timeZone`.
+export function localDay(date: Date, timeZone: string): string {
+  // en-CA formats dates as YYYY-MM-DD.
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date);
+}
+
+// Calendar arithmetic on YYYY-MM-DD (no time zone involved).
 function addDays(day: string, delta: number): string {
   const date = new Date(`${day}T00:00:00.000Z`);
   date.setUTCDate(date.getUTCDate() + delta);
-  return utcDay(date);
+  return date.toISOString().slice(0, 10);
 }
 
-// Inclusive UTC days: today, or the last 7 or 30 days ending today.
-export function rangeDays(range: MetricsRange, now: Date): { from: string; to: string } {
-  const to = utcDay(now);
+export interface MetricsWindow {
+  from: string;
+  to: string;
+  tz: string;
+}
+
+// Inclusive local days in `timeZone`: today, or the last 7 or 30 days ending today.
+export function rangeDays(range: MetricsRange, now: Date, timeZone: string): MetricsWindow {
+  const to = localDay(now, timeZone);
   const days = RANGES.find((r) => r.id === range)?.days ?? 1;
-  return { from: addDays(to, -(days - 1)), to };
+  return { from: addDays(to, -(days - 1)), to, tz: timeZone };
 }
 
-export function metricsUrl({ from, to }: { from: string; to: string }): string {
-  return `/api/advisor/metrics?${new URLSearchParams({ from, to }).toString()}`;
+export function metricsUrl({ from, to, tz }: MetricsWindow): string {
+  return `/api/advisor/metrics?${new URLSearchParams({ from, to, tz }).toString()}`;
 }
 
 const count = (value: unknown) =>
