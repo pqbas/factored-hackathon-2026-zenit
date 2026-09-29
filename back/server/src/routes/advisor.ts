@@ -248,6 +248,34 @@ advisorRouter.get(
 );
 
 /**
+ * GET /api/advisor/conversations/:id - One chat, as the inbox lists it.
+ * Registered after /conversations/counts so that path isn't taken as an id.
+ */
+advisorRouter.get(
+  '/conversations/:id',
+  async (req: Request, res: Response) => {
+    if (!isDatabaseAvailable()) {
+      return res.status(204).end();
+    }
+
+    const id = getIdFromRequest(req);
+    if (!id) return;
+
+    try {
+      const chat = await getChatById({ id });
+      if (!chat) {
+        const response = new ChatSDKError('not_found:chat').toResponse();
+        return res.status(response.status).json(response.json);
+      }
+      res.json(chat);
+    } catch (error) {
+      console.error('[/api/advisor/conversations/:id] Error in handler:', error);
+      res.status(500).json({ error: 'Failed to fetch conversation' });
+    }
+  },
+);
+
+/**
  * GET /api/advisor/users - Users with at least one chat, for the admin's
  * customer filter. Admin only: it is for supervising.
  */

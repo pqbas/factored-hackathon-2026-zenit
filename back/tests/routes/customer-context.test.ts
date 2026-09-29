@@ -1,6 +1,10 @@
 import { expect, test } from '../fixtures';
 import { generateUUID } from '@chat-template/core';
-import { getChatById, saveChat } from '@chat-template/db';
+import {
+  getChatById,
+  getCustomerIdsWithoutName,
+  saveChat,
+} from '@chat-template/db';
 import { skipInEphemeralMode } from '../helpers';
 
 async function postChatMessage(
@@ -134,6 +138,90 @@ test.describe('Customer context in the console (with database)', () => {
       (
         await curieContext.request.get(
           `/api/advisor/conversations/${chatId}/customer-context`,
+        )
+      ).status(),
+    ).toBe(403);
+  });
+
+  test('the console shows the bank customer name; customer routes do not', async ({
+    adaContext,
+    babbageContext,
+  }) => {
+    const chatId = generateUUID();
+    await postChatMessage(adaContext, chatId, 'demo-mx-1');
+    await expect
+      .poll(async () => (await getChatById({ id: chatId }))?.customerName)
+      .toBe('Santiago Contreras López');
+
+    const one = await babbageContext.request.get(
+      `/api/advisor/conversations/${chatId}`,
+    );
+    expect(one.status()).toBe(200);
+    expect((await one.json()).customerName).toBe('Santiago Contreras López');
+
+    const { chats } = await (
+      await babbageContext.request.get(
+        `/api/advisor/conversations?userId=${adaContext.name}-id&limit=100&handledBy=ai_agent`,
+      )
+    ).json();
+    expect(chats.find((c: any) => c.id === chatId)?.customerName).toBe(
+      'Santiago Contreras López',
+    );
+
+    const own = await (await adaContext.request.get(`/api/chat/${chatId}`)).json();
+    expect(own).not.toHaveProperty('customerName');
+    const history = await (
+      await adaContext.request.get('/api/history?limit=100')
+    ).json();
+    expect(
+      history.chats.find((c: any) => c.id === chatId),
+    ).not.toHaveProperty('customerName');
+  });
+
+  test('a chat whose name lookup is missing gets it on the next turn', async ({
+    adaContext,
+  }) => {
+    // Stands for a failed lookup: customerId set, customerName still null.
+    const chatId = generateUUID();
+    await saveChat({
+      id: chatId,
+      userId: `${adaContext.name}-id`,
+      title: 'Lookup pending',
+      visibility: 'private',
+      customerId: 'CLI-FLEUCGTWGAHL',
+    });
+    // The startup backfill picks up customers with a chat missing the name.
+    const pendingCustomer = `CLI-TEST-${generateUUID()}`;
+    await saveChat({
+      id: generateUUID(),
+      userId: `${adaContext.name}-id`,
+      title: 'Backfill pending',
+      visibility: 'private',
+      customerId: pendingCustomer,
+    });
+    expect(await getCustomerIdsWithoutName()).toContain(pendingCustomer);
+
+    await postChatMessage(adaContext, chatId, 'demo-mx-1');
+    await expect
+      .poll(async () => (await getChatById({ id: chatId }))?.customerName)
+      .toBe('Santiago Contreras López');
+  });
+
+  test('GET /api/advisor/conversations/:id: 404 unknown, 403 customer', async ({
+    babbageContext,
+    curieContext,
+  }) => {
+    expect(
+      (
+        await babbageContext.request.get(
+          `/api/advisor/conversations/${generateUUID()}`,
+        )
+      ).status(),
+    ).toBe(404);
+    expect(
+      (
+        await curieContext.request.get(
+          `/api/advisor/conversations/${generateUUID()}`,
         )
       ).status(),
     ).toBe(403);
