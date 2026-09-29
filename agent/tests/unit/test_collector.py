@@ -1,6 +1,7 @@
 import asyncio
 
 import pytest
+from langchain_core.messages import AIMessage, HumanMessage
 
 from src.tools.collector import (
     CollectorUnavailable,
@@ -69,6 +70,18 @@ def test_a_card_that_is_not_the_customers_is_said_and_asked_again_with_the_real_
     assert kind == "ask"
     assert text.startswith("No encuentro esa tarjeta entre las tuyas.")
     assert "¿De qué tarjeta es el cargo?" in text and "4930" in text
+
+
+def test_a_customer_with_a_single_card_is_not_asked_which_one():
+    rows = {**ROWS, "get_products": [PRODUCTS[0], PRODUCTS[2]]}
+    kind, text = _step(PartialComplaintCase(), rows=rows)
+    assert text.startswith("¿Cuál es el cargo?") and "terminada en 4930" in text
+    assert card_to_fetch("complaint", PartialComplaintCase(), rows) == "4930"
+
+
+def test_a_customer_with_a_single_product_is_not_asked_which_one():
+    rows = {"get_products": [PRODUCTS[0]]}
+    assert _step(PartialRetentionCase(), reason="retention", rows=rows) == ("ask", "¿Por qué quieres cancelarlo?")
 
 
 def test_a_savings_account_is_not_a_card_of_the_complaint():
@@ -228,15 +241,34 @@ class _Structured:
 
 def test_extract_fields_returns_the_structured_answer_over_the_whole_conversation():
     llm = _Structured(PartialComplaintCase(card_last4="4930"))
-    fields = asyncio.run(extract_fields(llm, "complaint", ["hola", "la 4930"]))
+    messages = [HumanMessage(content="hola"), AIMessage(content="¿De qué tarjeta?"), HumanMessage(content="la 4930")]
+    fields = asyncio.run(extract_fields(llm, "complaint", messages))
     assert fields.card_last4 == "4930"
     assert llm.schema is PartialComplaintCase
-    assert llm.received[1:] == ["hola", "la 4930"]
+    assert llm.received[1:] == messages
 
 
 def test_extract_fields_accepts_a_dict_answer():
     llm = _Structured({"product_last4": "1070"})
-    assert asyncio.run(extract_fields(llm, "retention", [])).product_last4 == "1070"
+    assert asyncio.run(extract_fields(llm, "retention", [HumanMessage(content="la 1070")])).product_last4 == "1070"
+
+
+def test_extract_fields_drops_a_card_the_customer_never_wrote():
+    llm = _Structured(PartialComplaintCase(card_last4="5170", merchant="Internet Plus"))
+    messages = [
+        HumanMessage(content="não reconheço uma cobrança"),
+        AIMessage(content="De qual cartão é a cobrança?\n- com final 5170 (ARS)"),
+        HumanMessage(content="o da Internet Plus"),
+    ]
+    fields = asyncio.run(extract_fields(llm, "complaint", messages))
+    assert fields.card_last4 is None
+    assert fields.merchant == "Internet Plus"
+
+
+def test_extract_fields_keeps_digits_the_customer_wrote_in_any_form():
+    llm = _Structured(PartialComplaintCase(card_last4="4930"))
+    messages = [HumanMessage(content="mi tarjeta termina en 4 9 3 0")]
+    assert asyncio.run(extract_fields(llm, "complaint", messages)).card_last4 == "4930"
 
 
 @pytest.mark.parametrize("llm", [

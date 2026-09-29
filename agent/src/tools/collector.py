@@ -5,7 +5,7 @@ import logging
 import re
 from typing import Literal
 
-from langchain_core.messages import SystemMessage
+from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel
 
 from src.prompts import messages as texts
@@ -63,7 +63,28 @@ async def extract_fields(llm, reason: str, messages: list, timeout: float = EXTR
         raise CollectorUnavailable(type(exc).__name__) from exc
     if answer is None:
         raise CollectorUnavailable("empty answer")
-    return answer if isinstance(answer, schema) else schema.model_validate(answer)
+    fields = answer if isinstance(answer, schema) else schema.model_validate(answer)
+    return _grounded(fields, messages)
+
+
+def _grounded(fields, messages: list):
+    """Drops the card or product digits the customer never wrote: the LLM filled them in on its
+    own (a card named by nobody). A customer who picks from the list types its digits."""
+    typed = [re.sub(r"\D", "", text) for text in _human_texts(messages)]
+    updates = {
+        name: None
+        for name in ("card_last4", "product_last4")
+        if getattr(fields, name, None) and not any((_last4(getattr(fields, name)) or "\0") in t for t in typed)
+    }
+    return fields.model_copy(update=updates) if updates else fields
+
+
+def _human_texts(messages: list) -> list[str]:
+    return [
+        m.content if isinstance(m.content, str) else str(m.content)
+        for m in messages
+        if isinstance(m, HumanMessage)
+    ]
 
 
 def _last4(value: str | None) -> str | None:
@@ -133,10 +154,20 @@ def _matching_charges(fields, movements: list[dict]) -> list[dict]:
     ]
 
 
+def _named_or_only(named: str | None, rows: list[dict]) -> str | None:
+    """The digits the customer named, or the customer's only one: with a single card or product
+    there is nothing to ask (docs/flujo-atencion.md, 3.C and 3.D1: "si tiene una sola, la propone")."""
+    if named is None and len(rows) == 1:
+        return rows[0]["product_number_last4"]
+    return named
+
+
 def card_to_fetch(reason: str, fields, rows_by_tool: dict) -> str | None:
     """The last 4 digits of the card the customer named, if it is one of theirs: the caller
     fetches its movements."""
-    card = _last4(fields.card_last4) if reason == "complaint" else None
+    if reason != "complaint":
+        return None
+    card = _named_or_only(_last4(fields.card_last4), _cards(rows_by_tool))
     return card if card in {c["product_number_last4"] for c in _cards(rows_by_tool)} else None
 
 
@@ -154,7 +185,7 @@ def _complaint_step(fields, rows_by_tool: dict, language: str):
     cards = _cards(rows_by_tool)
     if not cards:
         raise CollectorUnavailable("no cards")
-    card = _last4(fields.card_last4)
+    card = _named_or_only(_last4(fields.card_last4), cards)
     if card is None:
         return "ask", texts.ASK_CARD[language].format(options=format_cards(cards, language))
     if card not in {c["product_number_last4"] for c in cards}:
@@ -190,7 +221,7 @@ def _retention_step(fields, rows_by_tool: dict, language: str):
     if not products:
         raise CollectorUnavailable("no products")
     ask_product = texts.ASK_PRODUCT[language].format(options=format_products(products, language))
-    last4 = _last4(fields.product_last4)
+    last4 = _named_or_only(_last4(fields.product_last4), products)
     if last4 is None:
         return "ask", ask_product
     product = next((p for p in products if p["product_number_last4"] == last4), None)

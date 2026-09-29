@@ -626,6 +626,10 @@ _TRANSACTIONS_RESULT = [{"type": "text", "text": json.dumps({
     "columns": ["transaction_date", "product_number_last4", "merchant_name", "amount", "currency", "transaction_status"],
     "rows": [["2026-06-08T15:00:51.000+0000", "4930", "Internet Plus", 329.44, "USD", "Approved"]],
 })}]
+_TWO_CARDS_RESULT = [{"type": "text", "text": json.dumps({
+    "columns": ["product_type", "product_number_last4", "currency"],
+    "rows": [["Tarjeta Crédito", "4930", "USD"], ["Tarjeta Crédito", "1070", "PEN"]],
+})}]
 _CASE = {
     "card_last4": "4930", "transaction_date": "2026-06-08", "merchant": "Internet Plus", "amount": 329.44,
     "complaint_type": "not_recognized", "description": "Nunca contraté ese servicio",
@@ -855,11 +859,26 @@ def test_a_field_already_given_is_never_asked_again_on_the_next_turn():
     assert llm.bound_tools is None
 
 
+def _graph_with_cards(llm, products_result, intent="COMPLAINT", language="es"):
+    get_products = FakeMCPTool("get_products", GET_PRODUCTS_SCHEMA, result=products_result)
+    list_transactions = FakeMCPTool("list_transactions", LIST_TRANSACTIONS_SCHEMA, result=_TRANSACTIONS_RESULT)
+    jev = FakeJev(_classification(intent=intent, language=language))
+    return _build_graph(llm, jev, tools_for=_fake_tools_for(get_products, list_transactions))
+
+
 def test_the_collector_asks_the_card_first_with_the_customers_cards():
     llm = _CollectingLLM([_partial()])
+    result = _run(_graph_with_cards(llm, _TWO_CARDS_RESULT), "C")
+    text = result["messages"][-1].content
+    assert text.startswith("¿De qué tarjeta es el cargo?")
+    assert "terminada en 4930 (USD)" in text and "terminada en 1070 (PEN)" in text
+
+
+def test_a_single_card_is_not_asked_and_its_charges_are_listed():
+    llm = _CollectingLLM([_partial()])
     result = _run(_complaint_graph(llm), "C")
-    assert result["messages"][-1].content.startswith("¿De qué tarjeta es el cargo?")
-    assert "terminada en 4930 (USD)" in result["messages"][-1].content
+    text = result["messages"][-1].content
+    assert text.startswith("¿Cuál es el cargo?") and "Internet Plus" in text
 
 
 def test_a_confirmation_turn_runs_no_extraction():
@@ -911,10 +930,7 @@ def test_a_card_that_is_not_the_customers_is_said_and_the_real_cards_listed():
 
 def test_a_portuguese_complaint_gets_portuguese_questions():
     llm = _CollectingLLM([_partial()])
-    get_products = FakeMCPTool("get_products", GET_PRODUCTS_SCHEMA, result=_PRODUCTS_RESULT)
-    list_transactions = FakeMCPTool("list_transactions", LIST_TRANSACTIONS_SCHEMA, result=_TRANSACTIONS_RESULT)
-    jev = FakeJev(_classification(intent="COMPLAINT", language="pt"))
-    graph = _build_graph(llm, jev, tools_for=_fake_tools_for(get_products, list_transactions))
+    graph = _graph_with_cards(llm, _TWO_CARDS_RESULT, language="pt")
     result = _run(graph, "não reconheço uma cobrança no meu cartão")
     assert result["messages"][-1].content.startswith("De qual cartão é a cobrança?")
 
