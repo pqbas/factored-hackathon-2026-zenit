@@ -101,6 +101,8 @@ advisorRouter.get('/conversations', async (req: Request, res: Response) => {
   const status = humanInbox ? 'open' : statusParam;
   const useCase = req.query.useCase as string | undefined;
   const userId = req.query.userId as string | undefined;
+  const handoffReason =
+    (req.query.handoffReason as string | undefined) || undefined;
   const assignedToParam = req.query.assignedTo as string | undefined;
   const assignedTo =
     normalizeEmail(
@@ -117,13 +119,15 @@ advisorRouter.get('/conversations', async (req: Request, res: Response) => {
   }
 
   try {
-    // One row per bank customer, by their most recent chat.
+    // One row per bank customer: their in-progress chat (closed view: the
+    // latest resolved one).
     if (req.query.groupBy === 'customer') {
       const { rows, hasMore } = await getCustomerInbox({
         userId,
         handledBy,
         useCase,
         assignedTo,
+        handoffReason,
         status,
         limit,
         startingAfter,
@@ -158,6 +162,7 @@ advisorRouter.get('/conversations', async (req: Request, res: Response) => {
       useCase,
       assignedTo,
       status,
+      handoffReason,
     });
 
     const lastMessages = await getLastCustomerMessages({

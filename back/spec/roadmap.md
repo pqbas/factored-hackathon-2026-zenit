@@ -285,3 +285,25 @@ cliente y su historia con el banco.
       queda en una cola en Postgres y un worker lo responde cuando vuelve; se
       descarta si un asesor toma el chat y vence a los 20 min con un aviso
       (decisión del usuario, 28-09-26).
+
+---
+
+## Phase 11: Filtro por motivo de derivación y conversación en curso (Complete)
+
+**Goal:** que la consola filtre y cuente por el motivo real de la derivación
+(complaint, retention, case_status) y muestre de cada cliente lo que pasa
+ahora, con casos sembrados en local para probarlo.
+
+<!-- Pedido del usuario vía w1:p4, 29-09-26. Spec en
+     spec/29-09-26-filtro-motivo-handoff/. -->
+
+- [x] La consola filtra por el motivo del handoff (`handoffReason`) y cuenta
+      por motivo (`byHandoffReason`) y "Con asesor" (`withAdvisor`).
+- [x] En la vista agrupada, las vistas abiertas toman la conversación en curso
+      de cada cliente y Resueltas la cerrada más reciente.
+- [x] Eduardo (`demo-mx-2`) es cliente demo, y cada chat expone su cliente
+      guardado (`demoCustomerToken`) para el selector del front.
+- [x] `npm run seed:console` siembra en local todos los casos de la consola.
+
+Pendiente: sembrar el caso de Eduardo (`case_status`) cuando el agente local
+lo derive (bloque c del agente).

@@ -65,6 +65,8 @@ test.describe('/api/advisor/conversations/counts (with database)', () => {
       mine: 1,
       resolved: 1,
       aiAgent: 1,
+      withAdvisor: 1,
+      byHandoffReason: { complaint: 0, retention: 0, case_status: 0 },
     });
 
     const adminResponse = await adaContext.request.get(
