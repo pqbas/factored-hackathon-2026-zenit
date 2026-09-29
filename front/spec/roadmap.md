@@ -440,3 +440,16 @@ Shipped en PR #69.
 - [x] En la fila de la bandeja, el motivo como etiqueta corta mientras el caso está abierto.
 
 Shipped en PR #72.
+
+---
+
+## Phase 21: Filtros por motivo y cliente demo fijo
+
+**Goal:** que los filtros de la consola sean los motivos reales de derivación y que el cliente demo elegido no cambie solo.
+
+- [ ] Tres filtros por motivo de derivación (Reclamo, Cancelación de producto, Estado de un
+      reclamo) con contador, evaluados sobre la conversación en curso de cada cliente.
+- [ ] "Mías" pasa a "Con asesor" (human_agent); la Bandeja se agrupa por motivo.
+- [ ] El cliente demo elegido queda fijo para la sesión; un chat existente usa el cliente que guardó el back.
+
+Spec: `spec/29-09-26-filtros-handoff-y-cliente-fijo/`.
