@@ -33,7 +33,7 @@ It goes on top of `reliable-collection` (it touches `respond.py` and `main.py`),
 5. `src/graph/build.py` and `src/graph/edges.py`: `gate` → (authenticated) → `paused` → `classify`, or `END` if `paused`.
 6. `src/main.py`: pass `custom_inputs.get("handled_by")` into `session` (or a separate state key). Record `paused` from the updates in `turn`.
 7. `src/schemas/turn_outputs.py`: `turn_custom_outputs(..., paused=False)` adds `"paused": paused`. In `main.streaming`:
-   - When the turn ends with no output items and `paused`, yield a `response.output_item.done` with no text but carrying `custom_outputs`, or the smallest event the back accepts. Check it with w1:p1 before implementing.
+   - When the turn is paused, the stream has no text items. `custom_outputs.paused=true` travels in the smallest event with no text content that carries `custom_outputs` (format decided: no text items, only `custom_outputs.paused`; w1:p1 doesn't save an empty message).
    - `non_streaming` returns `output: []` with `custom_outputs.paused: true`.
 
 ---
