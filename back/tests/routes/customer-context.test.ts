@@ -80,6 +80,7 @@ test.describe('Customer context in the console (with database)', () => {
       expect(body.interactions).toEqual([
         {
           date: '2026-04-23T06:01:09.000Z',
+          interactionType: 'Inbound Call',
           channel: 'Phone',
           reason: 'Transaccional',
           resolved: true,
@@ -92,6 +93,9 @@ test.describe('Customer context in the console (with database)', () => {
           date: '2026-04-22',
           customerText: 'Mi tarjeta es [NÚMERO OCULTO] y el [DATO OCULTO]',
           agentText: 'Gracias, ya lo reviso.',
+          language: 'es',
+          intents: 'consulta_general',
+          topics: 'Queja',
         },
       ]);
       expect(body.cases).toEqual([
