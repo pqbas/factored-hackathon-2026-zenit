@@ -165,7 +165,7 @@ async def _fetch_missing_rows(reason: str, args: dict, tools_by_name: dict, rows
         rows_by_tool.setdefault(name, []).extend(tool_rows(result))
     # Names and counts only: which rows the handoff check had, never their values.
     logger.info(
-        "Handoff %s with args %s: fetched %s, rows %s",
-        reason, sorted(args), [name for name, _ in needed],
+        "Handoff %s with args %s: needed %s, tools %s, rows %s",
+        reason, sorted(args), [name for name, _ in needed], sorted(tools_by_name),
         {name: len(rows) for name, rows in rows_by_tool.items()},
     )
