@@ -1,0 +1,10 @@
+{
+  "name": "07-fuera-de-alcance",
+  "description": "Pregunta fuera de alcance y luego el menú",
+  "sessionToken": "demo-mx-1",
+  "customer": 4,
+  "messages": [
+    "¿cómo va a estar el clima mañana?",
+    "menú"
+  ]
+}

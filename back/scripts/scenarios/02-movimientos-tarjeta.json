@@ -1,0 +1,12 @@
+{
+  "name": "02-movimientos-tarjeta",
+  "description": "Movimientos de una tarjeta puntual",
+  "sessionToken": "demo-co-1",
+  "customer": 2,
+  "messages": [
+    "hola",
+    "quiero ver los movimientos de mi tarjeta de crédito",
+    "la que termina en 4930",
+    "no, eso es todo"
+  ]
+}
