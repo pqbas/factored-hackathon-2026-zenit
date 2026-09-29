@@ -1,0 +1,21 @@
+{
+  "id": "L1",
+  "language": "mixed",
+  "group": "cobertura-de-idioma",
+  "customer": {
+    "token": "demo-co-1",
+    "user": 2,
+    "segment": "Basic",
+    "name": "Javier"
+  },
+  "steps": [
+    {
+      "say": "quero ver meu saldo de la tarjeta"
+    }
+  ],
+  "expected": {
+    "firstIntent": "GENERAL_INQUIRY",
+    "outcome": "R"
+  },
+  "limitation": true
+}

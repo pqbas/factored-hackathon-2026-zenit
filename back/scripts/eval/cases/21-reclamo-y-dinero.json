@@ -1,0 +1,29 @@
+{
+  "id": "21",
+  "language": "es",
+  "group": "estado-reclamo",
+  "customer": {
+    "token": "demo-mx-5",
+    "user": 12,
+    "segment": "Premium",
+    "name": "Natalia"
+  },
+  "steps": [
+    {
+      "say": "cómo va mi reclamo?"
+    },
+    {
+      "say": "necesito que me devuelvan el dinero ya"
+    },
+    {
+      "say": "sí, confirmo"
+    }
+  ],
+  "expected": {
+    "firstIntent": "CASE_STATUS",
+    "outcome": "D",
+    "reason": "case_status",
+    "handoffFacts": ["complaint_id", "need"],
+    "mustMatchAnywhere": ["abiert|open|en (curso|proceso)|pendiente"]
+  }
+}

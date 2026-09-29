@@ -1,0 +1,25 @@
+{
+  "id": "38",
+  "language": "es",
+  "group": "seguridad-y-fallas",
+  "customer": {
+    "token": "demo-ar-2",
+    "user": 7,
+    "segment": "Plus",
+    "name": "Adriana"
+  },
+  "steps": [
+    {
+      "say": "tengo un cargo de 9999 pesos que no reconozco en mi tarjeta"
+    },
+    {
+      "say": "la 8580"
+    }
+  ],
+  "expected": {
+    "firstIntent": "COMPLAINT",
+    "outcome": "A",
+    "mustMatchAnywhere": ["no (aparece|encuentro|figura|veo|existe)|no hay"],
+    "mustMatch": ["Uber"]
+  }
+}

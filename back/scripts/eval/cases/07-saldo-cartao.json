@@ -1,0 +1,22 @@
+{
+  "id": "07",
+  "language": "pt",
+  "group": "consultas",
+  "customer": {
+    "token": "demo-ar-4",
+    "user": 11,
+    "segment": "Basic",
+    "name": "Marco"
+  },
+  "steps": [
+    {
+      "say": "qual é o saldo do meu cartão de crédito?"
+    }
+  ],
+  "expected": {
+    "firstIntent": "GENERAL_INQUIRY",
+    "outcome": "R",
+    "mustMatch": ["7354", "4568"],
+    "mustNotMatch": ["\\b(tu saldo|tienes|tarjeta de crédito)\\b"]
+  }
+}

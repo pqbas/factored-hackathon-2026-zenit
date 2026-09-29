@@ -1,0 +1,23 @@
+{
+  "id": "26",
+  "language": "es",
+  "group": "ambiguos-fuera-de-alcance",
+  "customer": {
+    "token": "demo-co-2",
+    "user": 6,
+    "segment": "Plus",
+    "name": "Gustavo"
+  },
+  "steps": [
+    {
+      "say": "tengo un problema con mi tarjeta"
+    }
+  ],
+  "expected": {
+    "firstIntent": "OUT_OF_SCOPE",
+    "outcome": "A",
+    "mustMatch": [
+      "Tengo estas opciones|Tenho estas opções|qu[eé] (pas[oó]|ocurri[oó]|problema)|cu[eé]ntame"
+    ]
+  }
+}

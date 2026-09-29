@@ -19,6 +19,7 @@ import {
   getCustomerInbox,
   getChatsByCustomerKey,
   getResolutionMetrics,
+  getTurnMetrics,
   HUMAN_HANDLED_BY,
   getLastCustomerMessages,
   getChatById,
@@ -35,6 +36,7 @@ import { normalizeEmail } from '../roles';
 import { toLastMessagePreview } from '../inbox';
 import { getCustomerContext } from '../bank-data';
 import { withHandoff, withHandoffs } from '../handoff-view';
+import { PRICING_ASSUMPTIONS, estimateCostUsd } from '../pricing';
 
 export const advisorRouter: RouterType = Router();
 
@@ -408,10 +410,59 @@ advisorRouter.get(
     }
 
     try {
-      res.json(await getResolutionMetrics(query.data));
+      const { cost, ...metrics } = await getResolutionMetrics(query.data);
+      const estimatedUsd = estimateCostUsd({
+        inputTokens: cost.turnsWithUsage ? cost.inputTokens : null,
+        outputTokens: cost.turnsWithUsage ? cost.outputTokens : null,
+        durationMs: cost.durationMs,
+      });
+      res.json({
+        ...metrics,
+        cost: {
+          turnsWithUsage: cost.turnsWithUsage,
+          inputTokens: cost.inputTokens,
+          outputTokens: cost.outputTokens,
+          estimatedUsd,
+          perConversationUsd:
+            estimatedUsd !== null && cost.conversations > 0
+              ? estimatedUsd / cost.conversations
+              : null,
+          assumptions: PRICING_ASSUMPTIONS,
+        },
+      });
     } catch (error) {
       console.error('[/api/advisor/metrics] Error in handler:', error);
       res.status(500).json({ error: 'Failed to get metrics' });
+    }
+  },
+);
+
+/**
+ * GET /api/advisor/conversations/:id/turns - The chat's TurnMetric rows,
+ * oldest first (duration, intent, tokens per agent turn). Admin only: the
+ * evaluation runner reads them.
+ */
+advisorRouter.get(
+  '/conversations/:id/turns',
+  requireAdmin,
+  async (req: Request, res: Response) => {
+    if (!isDatabaseAvailable()) {
+      return res.status(204).end();
+    }
+
+    const id = getIdFromRequest(req);
+    if (!id) return;
+
+    try {
+      const chat = await getChatById({ id });
+      if (!chat) {
+        const response = new ChatSDKError('not_found:chat').toResponse();
+        return res.status(response.status).json(response.json);
+      }
+      res.json({ turns: await getTurnMetrics({ chatId: id }) });
+    } catch (error) {
+      console.error('[/api/advisor/conversations/:id/turns] Error:', error);
+      res.status(500).json({ error: 'Failed to fetch turns' });
     }
   },
 );

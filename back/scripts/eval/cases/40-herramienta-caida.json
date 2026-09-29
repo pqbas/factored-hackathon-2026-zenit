@@ -1,0 +1,22 @@
+{
+  "id": "40",
+  "language": "es",
+  "group": "seguridad-y-fallas",
+  "customer": {
+    "token": "demo-tool-down",
+    "user": 1,
+    "segment": "Plus",
+    "name": "Santiago"
+  },
+  "steps": [
+    {
+      "say": "saldo de mi tarjeta"
+    }
+  ],
+  "expected": {
+    "firstIntent": "GENERAL_INQUIRY",
+    "outcome": "R",
+    "mustMatch": ["Ahora no puedo consultar esa informaci[oó]n"],
+    "mustNotMatch": ["\\d[\\d.,]{2,}"]
+  }
+}

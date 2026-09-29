@@ -1,0 +1,24 @@
+{
+  "id": "28",
+  "language": "es",
+  "group": "ambiguos-fuera-de-alcance",
+  "customer": {
+    "token": "demo-ar-3",
+    "user": 10,
+    "segment": "Basic",
+    "name": "Antonio"
+  },
+  "steps": [
+    {
+      "say": "cuál es el tipo de cambio hoy?"
+    }
+  ],
+  "expected": {
+    "firstIntent": "OUT_OF_SCOPE",
+    "outcome": "A",
+    "mustMatch": [
+      "No puedo ayudarte con eso|Tengo estas opciones|Tenho estas opções"
+    ],
+    "mustNotMatch": ["\\d[.,]\\d"]
+  }
+}

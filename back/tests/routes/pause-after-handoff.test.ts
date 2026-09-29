@@ -161,8 +161,17 @@ test.describe('David pauses after a handoff (with database)', () => {
     adaContext,
   }) => {
     const chatId = generateUUID();
-    await sendMessage(adaContext, chatId, '[agent-outputs:paused] hola');
+    const { status, body } = await sendMessage(
+      adaContext,
+      chatId,
+      '[agent-outputs:paused] hola',
+    );
 
+    // The customer sees nothing: no text and no error message.
+    expect(status).toBe(200);
+    expect(body).not.toContain('"type":"text-delta"');
+    expect(body).not.toContain('"type":"data-error"');
+    expect(body).not.toContain('"type":"error"');
     expect(await roles(chatId)).toEqual(['user']);
     const chat = await getChatById({ id: chatId });
     expect(chat?.useCase).toBeNull();

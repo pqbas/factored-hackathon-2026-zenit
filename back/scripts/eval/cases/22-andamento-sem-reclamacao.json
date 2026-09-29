@@ -1,0 +1,38 @@
+{
+  "id": "22",
+  "language": "pt",
+  "group": "estado-reclamo",
+  "customer": {
+    "token": "demo-ar-4",
+    "user": 11,
+    "segment": "Basic",
+    "name": "Marco"
+  },
+  "steps": [
+    {
+      "say": "qual o andamento da minha reclamação?"
+    },
+    {
+      "say": "foi uma compra no cartão 4568, na Clínica Médica, de 105662.81 em 3 de junho"
+    },
+    {
+      "say": "preciso saber quando vão me responder"
+    },
+    {
+      "say": "sim, confirmo"
+    }
+  ],
+  "expected": {
+    "firstIntent": "CASE_STATUS",
+    "outcome": "D",
+    "reason": "case_status",
+    "handoffFacts": [
+      "need",
+      "card_last4",
+      "transaction_date",
+      "merchant",
+      "amount"
+    ],
+    "mustMatch": ["transferir|atendente"]
+  }
+}

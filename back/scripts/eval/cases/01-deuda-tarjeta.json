@@ -1,0 +1,21 @@
+{
+  "id": "01",
+  "language": "es",
+  "group": "consultas",
+  "customer": {
+    "token": "demo-co-1",
+    "user": 2,
+    "segment": "Basic",
+    "name": "Javier"
+  },
+  "steps": [
+    {
+      "say": "cuánto debo en mi tarjeta?"
+    }
+  ],
+  "expected": {
+    "firstIntent": "GENERAL_INQUIRY",
+    "outcome": "R",
+    "mustMatch": ["0279", "0844", "4885"]
+  }
+}

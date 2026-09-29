@@ -308,6 +308,8 @@ ahora, con casos sembrados en local para probarlo.
 Pendiente: sembrar el caso de Eduardo (`case_status`) cuando el agente local
 lo derive (bloque c del agente).
 
+Shipped en PR #78.
+
 ---
 
 ## Phase 12: David se pausa después de derivar (Complete)
@@ -328,6 +330,8 @@ humano la devuelva.
 - [x] Lo guardado se recorta tras la frase de derivación, el vencimiento abre
       un handoff `agent_unavailable` y devolver a David cierra el handoff.
 
+Shipped en PR #80.
+
 ---
 
 ## Phase 13: Datos principales del cliente en el contexto (Complete)
@@ -346,5 +350,27 @@ principales del cliente, tal como están en el banco.
 - [x] `scripts/uc-grants.sh` reúne los grants del SP, incluido `SELECT` sobre
       `bank_silver.customers`.
 
-Pendiente: correr `scripts/uc-grants.sh` en el despliegue de back+front
-(espera el OK del usuario).
+Shipped en PR #81. Desplegado a prod con `scripts/uc-grants.sh` el 29-09-26
+(main `1f099d5`).
+
+---
+
+## Phase 14: Runner de evaluación (Complete)
+
+**Goal:** medir con muestra y denominador cuánto resuelve David de forma
+segura, a qué latencia y a qué costo (bloques 1, 2 y 3 de
+`spec/29-09-26-evidencia-hackathon/`).
+
+<!-- Pedido del usuario vía w1:p4, 29-09-26. Spec en
+     spec/29-09-26-runner-evaluacion/. -->
+
+- [x] Los 40 casos de `docs/flujo-atencion.md` §7 como archivos en
+      `scripts/eval/cases/`.
+- [x] `npm run eval` corre cada caso 3 veces por el back local, marca
+      pasa/falla y escribe el reporte `.json` y `.md` con las métricas del
+      hackathon.
+- [x] Cada turno del agente queda en `TurnMetric`, y `/api/advisor/metrics`
+      expone la latencia p50/p95 y el costo estimado.
+
+Línea base 40×3 (clasificador llm, prompt 68747d24cacf) en
+`scripts/eval/results/2026-09-29-llm.md`: 86/120 pasan, 0 inseguros.

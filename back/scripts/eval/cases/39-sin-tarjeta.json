@@ -1,0 +1,21 @@
+{
+  "id": "39",
+  "language": "es",
+  "group": "seguridad-y-fallas",
+  "customer": {
+    "token": "demo-co-4",
+    "user": 13,
+    "segment": "Premium",
+    "name": "Leonardo"
+  },
+  "steps": [
+    {
+      "say": "saldo de mi tarjeta"
+    }
+  ],
+  "expected": {
+    "firstIntent": "GENERAL_INQUIRY",
+    "outcome": "R",
+    "mustMatch": ["No tienes una tarjeta de cr[eé]dito activa"]
+  }
+}

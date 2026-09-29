@@ -134,6 +134,8 @@ export async function processAgentTurn(turn: AgentTurn) {
         role: 'assistant',
         parts: [{ type: 'text', text }],
       },
+      startedAt: turn.createdAt,
+      source: 'queue',
     });
     await finishAgentTurn({
       id: turn.id,

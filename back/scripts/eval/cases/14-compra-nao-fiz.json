@@ -1,0 +1,42 @@
+{
+  "id": "14",
+  "language": "pt",
+  "group": "reclamo-cargo",
+  "customer": {
+    "token": "demo-ar-2",
+    "user": 7,
+    "segment": "Plus",
+    "name": "Adriana"
+  },
+  "steps": [
+    {
+      "say": "tem uma compra no meu cartão que eu não fiz"
+    },
+    {
+      "say": "no cartão final 8580, a do Uber de 65171.52 de 29 de abril"
+    },
+    {
+      "say": "não reconheço essa compra"
+    },
+    {
+      "say": "eu não usei nenhum Uber"
+    },
+    {
+      "say": "sim, confirmo"
+    }
+  ],
+  "expected": {
+    "firstIntent": "COMPLAINT",
+    "outcome": "D",
+    "reason": "complaint",
+    "handoffFacts": [
+      "card_last4",
+      "transaction_date",
+      "merchant",
+      "amount",
+      "complaint_type",
+      "description"
+    ],
+    "mustMatch": ["transferir|atendente"]
+  }
+}
