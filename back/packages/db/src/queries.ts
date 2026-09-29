@@ -177,8 +177,12 @@ export function chatScopeCondition(scope: ChatScope): SQL | undefined {
   return eq(chat.userId, scope.userId);
 }
 
+// Qualified by hand: a select list renders a bare column name, which the
+// subquery below would read as its own.
+const CHAT_ID = sql`${chat}."id"`;
+
 // The reason of a chat's most recent handoff (open or closed), or null.
-const latestReason = (chatId: SQL | typeof chat.id) => sql<string | null>`(
+const latestReason = (chatId: SQL) => sql<string | null>`(
   select h."reason" from ${handoff} h
   where h."chatId" = ${chatId}
   order by h."createdAt" desc limit 1
@@ -244,7 +248,7 @@ export async function getChats({
     }
 
     if (handoffReason) {
-      filterConditions.push(sql`${latestReason(chat.id)} = ${handoffReason}`);
+      filterConditions.push(sql`${latestReason(CHAT_ID)} = ${handoffReason}`);
     }
 
     if (status === 'open') {
@@ -607,7 +611,7 @@ export async function getConversationCounts({
         handledBy: chat.handledBy,
         assignedTo: chat.assignedTo,
         closedAt: chat.closedAt,
-        reason: latestReason(chat.id).as('reason'),
+        reason: latestReason(CHAT_ID).as('reason'),
       })
       .from(chat)
       .where(and(userCondition, isNull(chat.closedAt)))
@@ -646,7 +650,7 @@ export async function getConversationCounts({
 
     const reason = byCustomer
       ? sql<string | null>`${latest.reason}`
-      : latestReason(chat.id);
+      : latestReason(CHAT_ID);
     const reasonRows = await database
       .select({ reason, n: sql<number>`count(*)`.mapWith(Number) })
       .from(byCustomer ? latest : chat)
