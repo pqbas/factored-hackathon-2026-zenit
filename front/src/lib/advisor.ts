@@ -4,6 +4,7 @@
 import type { Chat, DBMessage } from '@chat-template/db';
 
 import { ASSISTANT_NAME } from '@/lib/assistant';
+import type { AgentHandoff } from '@/lib/handoff-case';
 import { type ConversationStatus, STATUS_LABEL } from '@/lib/conversations';
 
 // Row types from @chat-template/db as they arrive over JSON: dates are strings.
@@ -31,6 +32,10 @@ export type AdvisorChat = OverJson<
     | 'customerName'
   >
 > & {
+  // The latest case David handed off in this conversation (null: none), and
+  // whether it is still open.
+  handoff?: AgentHandoff | null;
+  hasHandoff?: boolean;
   // Preview of the customer's last message (plain text, ≤140 chars).
   lastMessage?: {
     text: string;
