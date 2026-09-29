@@ -49,6 +49,8 @@ jev_client = (
     if settings.jev_api_key
     else None
 )
+# Warning level so it shows in the App logs, where INFO from src/ isn't printed.
+logger.warning("Jev configured: %s", jev_client is not None)
 
 # Keeps the prompt bounded on long chats; the back still stores the whole conversation.
 MAX_HISTORY_MESSAGES = 20

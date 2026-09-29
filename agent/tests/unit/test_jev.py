@@ -116,14 +116,22 @@ def test_timeout_raises_jev_unavailable():
         raise httpx.ReadTimeout("timed out", request=request)
 
     client = _client_with_handler(handler)
-    with pytest.raises(JevUnavailable):
+    with pytest.raises(JevUnavailable, match="request failed: ReadTimeout: timed out"):
         asyncio.run(client.classify("hola", ROUTES))
 
 
-def test_529_raises_jev_unavailable():
+def test_529_raises_jev_unavailable_with_the_status():
     client = _client_with_handler(lambda r: httpx.Response(529, json={"error": "overloaded"}))
-    with pytest.raises(JevUnavailable):
+    with pytest.raises(JevUnavailable, match="^HTTP 529$"):
         asyncio.run(client.classify("hola", ROUTES))
+
+
+def test_unavailable_reason_never_carries_the_text_or_the_key():
+    client = _client_with_handler(lambda r: httpx.Response(401, text="bad key for mensaje secreto"))
+    with pytest.raises(JevUnavailable) as info:
+        asyncio.run(client.classify("mensaje secreto", ROUTES))
+    assert "mensaje secreto" not in str(info.value)
+    assert client._api_key not in str(info.value)
 
 
 def test_reuses_a_single_http_client_across_calls():
@@ -140,5 +148,5 @@ def test_missing_probability_for_the_chosen_guardrail_raises_jev_unavailable():
         "type": "choice", "choice": "OK", "confidence": 0.95, "probabilities": {},
     }
     client = _client_with_handler(lambda r: httpx.Response(200, json=body))
-    with pytest.raises(JevUnavailable):
+    with pytest.raises(JevUnavailable, match="incomplete answer: KeyError"):
         asyncio.run(client.classify("hola", ROUTES))

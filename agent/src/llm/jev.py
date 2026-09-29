@@ -69,17 +69,20 @@ class JevClient:
             "Content-Type": "application/json",
         }
 
+        # The reasons below name the status or exception only: never the customer's text,
+        # the response body or the API key.
         try:
             response = await self._client.post(self._url, json=body, headers=headers)
-            response.raise_for_status()
         except httpx.HTTPError as exc:
-            raise JevUnavailable("Jev request failed") from exc
+            raise JevUnavailable(f"request failed: {type(exc).__name__}: {exc}") from exc
+        if response.is_error:
+            raise JevUnavailable(f"HTTP {response.status_code}")
 
         try:
             answers = response.json()["answers"]
             return self._parse(answers)
         except (KeyError, TypeError, ValueError) as exc:
-            raise JevUnavailable("Jev returned an incomplete answer") from exc
+            raise JevUnavailable(f"incomplete answer: {type(exc).__name__}: {exc}") from exc
 
     @staticmethod
     def _parse(answers: dict[str, Any]) -> Classification:
