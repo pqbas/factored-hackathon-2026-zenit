@@ -717,3 +717,32 @@ def test_a_case_status_handoff_carries_the_banks_case_id():
     assert result["handoff"]["reason"] == "case_status"
     assert result["handoff"]["facts"]["case_id"] == "CMP-1"
     assert result["handoff"]["facts"]["verified_data"]["status"] == "In Process"
+
+
+def test_a_yes_after_the_case_status_confirmation_question_skips_the_classifier_and_hands_off():
+    cases_result = [{"type": "text", "text": json.dumps({
+        "columns": ["complaint_id", "creation_date", "subcategory", "claimed_amount", "currency", "status", "resolution"],
+        "rows": [["CMP-1", "2025-10-09T00:18:40.000+0000", "Cargo no reconocido", None, None, "In Process", None]],
+    })}]
+    get_cases = FakeMCPTool("get_cases", GET_PRODUCTS_SCHEMA, result=cases_result)
+
+    async def tools_for(schema):
+        return [get_cases]
+
+    llm = _SummarizingToolLLM([
+        AIMessage(content="", tool_calls=[{"name": "hand_off_to_advisor", "id": "c1",
+                                           "args": {"complaint_id": "CMP-1", "need": "saber cuándo lo resuelven"}}]),
+    ])
+    jev = FakeJev(_classification(intent="GOODBYE"))
+    history = [
+        {"role": "user", "content": "quiero saber cuándo lo van a resolver"},
+        {"role": "assistant", "content": "Tu reclamo del 09/10/2025 sigue en revisión.\n\n"
+                                         "¿Confirmas estos datos para pasar tu consulta a un asesor?"},
+    ]
+    result = _run(_build_graph(llm, jev, tools_for=tools_for), "sí", history=history)
+
+    assert jev.calls == 0
+    assert result["classification"]["intent"] == "CASE_STATUS"
+    assert result["messages"][-1].content == HANDOFF_REPLY["es"]
+    assert result["handoff"]["reason"] == "case_status"
+    assert result["handoff"]["facts"]["case_id"] == "CMP-1"
