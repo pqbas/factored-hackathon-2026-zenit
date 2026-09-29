@@ -150,6 +150,9 @@ export async function deleteChatById({ id }: { id: string }) {
       .where(eq(resolutionEvent.chatId, id));
     await (await ensureDb()).delete(agentTurn).where(eq(agentTurn.chatId, id));
     await (await ensureDb()).delete(handoff).where(eq(handoff.chatId, id));
+    await (await ensureDb())
+      .delete(turnMetric)
+      .where(eq(turnMetric.chatId, id));
 
     const [chatsDeleted] = await (await ensureDb())
       .delete(chat)

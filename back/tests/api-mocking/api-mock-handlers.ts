@@ -277,6 +277,19 @@ export const AGENT_OUTPUTS = {
       facts: null,
     },
   },
+  // A plain answer with the turn's token usage, model and classifier.
+  usage: {
+    thread_id: 'mock',
+    use_case: 'GENERAL_INQUIRY',
+    intent: 'GENERAL_INQUIRY',
+    language: 'es',
+    blocked: false,
+    handoff: null,
+    usage: { input_tokens: 1200, output_tokens: 300 },
+    model: 'mock-model',
+    prompt_version: 'mock-prompt-v1',
+    classifier: 'llm',
+  },
   // The agent was called on a conversation it doesn't own and says nothing.
   paused: {
     thread_id: 'mock',

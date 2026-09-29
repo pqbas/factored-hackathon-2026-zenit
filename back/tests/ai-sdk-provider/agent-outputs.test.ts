@@ -76,4 +76,51 @@ test.describe('parseAgentOutputs', () => {
   test('returns nothing for a non-object payload', () => {
     expect(parseAgentOutputs('oops')).toEqual({});
   });
+
+  test('reads usage, model, prompt_version and classifier', () => {
+    const outputs = parseAgentOutputs({
+      intent: 'GENERAL_INQUIRY',
+      usage: { input_tokens: 1200, output_tokens: 300 },
+      model: 'databricks-qwen3-next-80b-a3b-instruct',
+      prompt_version: 'v3',
+      classifier: 'llm',
+    });
+
+    expect(outputs.usage).toEqual({ inputTokens: 1200, outputTokens: 300 });
+    expect(outputs.model).toBe('databricks-qwen3-next-80b-a3b-instruct');
+    expect(outputs.promptVersion).toBe('v3');
+    expect(outputs.classifier).toBe('llm');
+  });
+
+  test('leaves usage, model, prompt_version and classifier undefined when absent', () => {
+    const outputs = parseAgentOutputs({ intent: 'GREETING' });
+
+    expect(outputs.usage).toBeUndefined();
+    expect(outputs.model).toBeUndefined();
+    expect(outputs.promptVersion).toBeUndefined();
+    expect(outputs.classifier).toBeUndefined();
+  });
+
+  test('drops a malformed usage whole, keeping zero as a valid count', () => {
+    const bad = [
+      { input_tokens: -1, output_tokens: 5 },
+      { input_tokens: 1.5, output_tokens: 5 },
+      { input_tokens: '10', output_tokens: 5 },
+      { input_tokens: 10 },
+      'lots',
+      null,
+    ];
+    for (const usage of bad) {
+      expect(
+        parseAgentOutputs({ usage }).usage,
+        JSON.stringify(usage),
+      ).toBeUndefined();
+    }
+    expect(
+      parseAgentOutputs({ usage: { input_tokens: 0, output_tokens: 0 } }).usage,
+    ).toEqual({ inputTokens: 0, outputTokens: 0 });
+    expect(
+      parseAgentOutputs({ model: 7, classifier: false }).model,
+    ).toBeUndefined();
+  });
 });
