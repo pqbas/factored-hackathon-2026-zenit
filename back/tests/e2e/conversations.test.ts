@@ -58,6 +58,17 @@ async function mockAdvisorApi(page: Page, me: string, role: Role = 'advisor') {
     chat('c-old', 'daniela@banco.test', {
       customerName: 'Daniela Sosa Ruiz',
       useCase: 'CASE_STATUS',
+      // A retention handoff that was already resolved: it must not count once
+      // she has a newer ongoing conversation.
+      hasHandoff: false,
+      handoff: {
+        reason: 'retention',
+        summary: 'La clienta pidió cancelar una tarjeta.',
+        verifiedData: null,
+        facts: null,
+        at: '2026-09-20T10:00:00.000Z',
+        resolvedAt: '2026-09-21T10:00:00.000Z',
+      },
       closedAt: now(),
     }),
     chat('c-assistant', 'javier@banco.test', {}),
@@ -137,44 +148,52 @@ async function mockAdvisorApi(page: Page, me: string, role: Role = 'advisor') {
     const target = chats.find((c) => c.id === id);
     const body = request.postDataJSON() ?? {};
 
-    // One row per customer (keyed by email here): their latest conversation.
+    // One row per customer (keyed by email here). Open views take their
+    // ongoing conversation (the latest with closedAt null); Resueltas their
+    // latest closed one.
     const keyOf = (c: Chat) => c.userEmail ?? c.userId;
-    const latest = [...new Map(chats.map((c) => [keyOf(c), c])).values()].map((c) => ({
+    const rowOf = (c: Chat) => ({
       ...c,
       customerKey: keyOf(c),
       conversationCount: chats.filter((x) => keyOf(x) === keyOf(c)).length,
-    }));
+    });
+    const lastOf = (closed: boolean) => {
+      const byCustomer = new Map<string, Chat>();
+      for (const c of chats) if (!!c.closedAt === closed) byCustomer.set(keyOf(c), c);
+      return [...byCustomer.values()].map(rowOf);
+    };
+    const ongoing = lastOf(false);
+    const lastClosed = lastOf(true);
 
     if (id === 'counts') {
-      const open = latest.filter((c) => !c.closedAt);
       // The inbox counts only the cases that need a person.
-      const human = open.filter((c) => c.handledBy !== 'ai_agent');
-      const byUseCase: Record<string, number> = {};
-      for (const c of human) if (c.useCase) byUseCase[c.useCase] = (byUseCase[c.useCase] ?? 0) + 1;
+      const human = ongoing.filter((c) => c.handledBy !== 'ai_agent');
+      const byHandoffReason: Record<string, number> = { complaint: 0, retention: 0, case_status: 0 };
+      for (const c of human) {
+        const reason = c.handoff?.reason as string | undefined;
+        if (reason) byHandoffReason[reason] = (byHandoffReason[reason] ?? 0) + 1;
+      }
       return route.fulfill({
         json: {
           total: human.length,
-          aiAgent: open.length - human.length,
-          byUseCase,
-          withoutUseCase: human.filter((c) => !c.useCase).length,
-          unattended: open.filter((c) => c.handledBy === 'human_queue').length,
-          mine: open.filter((c) => c.assignedTo === me).length,
-          resolved: latest.length - open.length,
+          aiAgent: ongoing.length - human.length,
+          byHandoffReason,
+          unattended: ongoing.filter((c) => c.handledBy === 'human_queue').length,
+          withAdvisor: ongoing.filter((c) => c.handledBy === 'human_agent').length,
+          resolved: lastClosed.length,
         },
       });
     }
     if (!id) {
       const q = url.searchParams;
       expect(q.get('groupBy')).toBe('customer');
-      const list = latest.filter(
+      const list = (q.get('status') === 'closed' ? lastClosed : ongoing).filter(
         (c) =>
-          (!q.get('status') || (q.get('status') === 'closed' ? !!c.closedAt : !c.closedAt)) &&
           (!q.get('userId') || c.userId === q.get('userId')) &&
-          (!q.get('useCase') || c.useCase === q.get('useCase')) &&
+          (!q.get('handoffReason') || c.handoff?.reason === q.get('handoffReason')) &&
           (q.get('handledBy')
             ? c.handledBy === q.get('handledBy')
-            : q.get('status') === 'closed' || c.handledBy !== 'ai_agent') &&
-          (q.get('assignedTo') !== 'me' || c.assignedTo === me),
+            : q.get('status') === 'closed' || c.handledBy !== 'ai_agent'),
       );
       return route.fulfill({ json: { chats: list, hasMore: false } });
     }
@@ -232,28 +251,42 @@ const headerStatus = (page: Page) => page.locator('header').getByTestId('attenti
 const input = (page: Page) => page.getByLabel('Mensaje al cliente');
 
 test.describe('Advisor console', () => {
-  test('the inbox groups by use case and each view asks for its params', async ({ page }) => {
+  test('the inbox groups by handoff reason and each view asks for its params', async ({ page }) => {
     const requested = await openConsole(page);
     await expect(page.getByTestId('inbox-title')).toHaveText('Bandeja');
     // Only the cases that need a person: David's own chat isn't here.
     await expect(rows(page)).toHaveCount(3);
     await expect(page.getByTestId('conversation-row-c-assistant')).toHaveCount(0);
-    await expect(page.getByTestId('inbox-section-GENERAL_INQUIRY')).toBeVisible();
-    await expect(page.getByTestId('use-case-chip-GENERAL_INQUIRY')).toHaveText('Consultas generales');
-    await expect(page.getByTestId('inbox-section-OTHER').getByTestId('conversation-row-c-race')).toBeVisible();
+    // Sections by handoff reason; the ones without a handoff go in "Otros".
+    await expect(page.getByTestId('inbox-section-complaint').getByTestId('conversation-row-c-waiting')).toBeVisible();
+    await expect(page.getByTestId('reason-chip-complaint')).toHaveText('Reclamo');
+    await expect(page.getByTestId('inbox-section-retention')).toHaveCount(0);
+    await expect(page.getByTestId('reason-chip-NONE')).toHaveText('Otros');
+    await expect(page.getByTestId('inbox-section-NONE').getByTestId('conversation-row-c-race')).toBeVisible();
+    await expect(page.getByTestId('inbox-section-NONE').getByTestId('conversation-row-c-other')).toBeVisible();
 
     await page.getByTestId('view-waiting').click();
     await expect(rows(page)).toHaveCount(2);
     expect(requested.some((u) => u.includes('handledBy=human_queue'))).toBe(true);
 
+    // Each customer's latest closed conversation: Daniela's c-old and Marta's.
     await page.getByTestId('view-resolved').click();
-    await expect(rows(page)).toHaveCount(1);
+    await expect(rows(page)).toHaveCount(2);
     expect(requested.some((u) => u.includes('status=closed'))).toBe(true);
 
-    await page.getByTestId('view-use-case-GENERAL_INQUIRY').click();
-    await expect(page.getByTestId('inbox-title')).toHaveText('Consultas generales');
-    await expect(rows(page)).toHaveCount(2);
-    expect(requested.some((u) => u.includes('useCase=GENERAL_INQUIRY'))).toBe(true);
+    await page.getByTestId('view-reason-complaint').click();
+    await expect(page.getByTestId('inbox-title')).toHaveText('Reclamo');
+    await expect(rows(page)).toHaveCount(1);
+    await expect(page.getByTestId('conversation-row-c-waiting')).toBeVisible();
+    expect(requested.some((u) => u.includes('handoffReason=complaint'))).toBe(true);
+
+    // Con asesor lists every chat in human_agent, also the ones held by others.
+    await page.getByTestId('view-advisor').click();
+    await expect(page.getByTestId('inbox-title')).toHaveText('Con asesor');
+    await expect(rows(page)).toHaveCount(1);
+    await expect(page.getByTestId('conversation-row-c-other')).toBeVisible();
+    expect(requested.some((u) => u.includes('handledBy=human_agent') && u.includes('status=open'))).toBe(true);
+    await expect(page.getByTestId('view-mine')).toHaveCount(0);
 
     await page.getByTestId('view-david').click();
     await expect(page.getByTestId('inbox-title')).toHaveText('Con AI');
@@ -269,17 +302,33 @@ test.describe('Advisor console', () => {
     await expect(page.getByTestId('view-inbox-count')).toHaveText('3');
     await expect(page.getByTestId('view-david-count')).toHaveText('1');
     await expect(page.getByTestId('view-waiting-count')).toHaveText('2');
-    await expect(page.getByTestId('view-resolved-count')).toHaveText('1');
-    await expect(page.getByTestId('view-use-case-GENERAL_INQUIRY-count')).toHaveText('2');
-    // Zero hides the number.
-    await expect(page.getByTestId('view-mine-count')).toHaveCount(0);
-    await expect(page.getByTestId('view-use-case-COMPLAINT-count')).toHaveCount(0);
+    await expect(page.getByTestId('view-resolved-count')).toHaveText('2');
+    await expect(page.getByTestId('view-advisor-count')).toHaveText('1');
+    // Exactly three reason filters, each with its counter, zero included.
+    await expect(page.locator('[data-testid^="view-reason-"]:not([data-testid$="-count"])')).toHaveCount(3);
+    await expect(page.getByTestId('view-reason-complaint')).toContainText('Reclamo');
+    await expect(page.getByTestId('view-reason-retention')).toContainText('Cancelación de producto');
+    await expect(page.getByTestId('view-reason-case_status')).toContainText('Estado de un reclamo');
+    await expect(page.getByTestId('view-reason-complaint-count')).toHaveText('1');
+    // Daniela's resolved retention handoff is not her ongoing conversation.
+    await expect(page.getByTestId('view-reason-retention-count')).toHaveText('0');
+    await expect(page.getByTestId('view-reason-case_status-count')).toHaveText('0');
+    await expect(page.getByTestId('view-use-case-GENERAL_INQUIRY')).toHaveCount(0);
 
     // Taking a chat updates the counters.
     await page.getByTestId('view-david').click();
     await page.getByTestId('conversation-row-c-assistant').click();
     await page.getByTestId('assistant-switch').click();
-    await expect(page.getByTestId('view-mine-count')).toHaveText('1');
+    await expect(page.getByTestId('view-advisor-count')).toHaveText('2');
+  });
+
+  test('only the ongoing conversation counts for the reason filters', async ({ page }) => {
+    await openConsole(page);
+    await page.getByTestId('view-reason-retention').click();
+    await expect(page.getByTestId('inbox-title')).toHaveText('Cancelación de producto');
+    await expect(rows(page)).toHaveCount(0);
+    await expect(page.getByTestId('conversation-row-c-old')).toHaveCount(0);
+    await expect(page.getByTestId('conversation-row-c-waiting')).toHaveCount(0);
   });
 
   test('opening a chat shows it beside the list, and X closes it', async ({ page }) => {
@@ -350,7 +399,7 @@ test.describe('Advisor console', () => {
     const requested = await openConsole(page, 'admin', 'root@example.com');
     await expect(page.getByTestId('nav-admin')).toHaveCount(0);
     await expect(page.getByTestId('inbox-title')).toHaveText('Bandeja');
-    await expect(page.getByTestId('view-mine')).toBeVisible();
+    await expect(page.getByTestId('view-advisor')).toBeVisible();
     await expect(rows(page)).toHaveCount(3);
 
     // Waiting: the admin takes it, replies and resolves it.
@@ -361,8 +410,8 @@ test.describe('Advisor console', () => {
     await input(page).fill('Hola, soy el administrador.');
     await input(page).press('Enter');
     await expect(page.getByText('Hola, soy el administrador.')).toBeVisible();
-    await page.getByTestId('view-mine').click();
-    await expect(rows(page)).toHaveCount(1);
+    await page.getByTestId('view-advisor').click();
+    await expect(rows(page)).toHaveCount(2);
     await page.getByTestId('conversation-row-c-waiting').click();
     await page.getByTestId('resolve-button').click();
     await expect(page.getByTestId('customer-meta')).toContainText('Resuelta');
@@ -539,8 +588,8 @@ test.describe('Advisor console', () => {
   test('a customer is one row; opening it shows all their conversations in order', async ({ page }) => {
     const requested = await openConsole(page);
     await page.getByTestId('view-resolved').click();
-    // Daniela's old conversation is resolved, but her latest one isn't: she's not here.
-    await expect(page.getByTestId('conversation-row-c-old')).toHaveCount(0);
+    // Her latest closed conversation is c-old: she is here, and also in the inbox with c-waiting.
+    await expect(page.getByTestId('conversation-row-c-old')).toHaveCount(1);
     await page.getByTestId('view-inbox').click();
     await expect(page.getByTestId('conversation-row-c-waiting')).toHaveCount(1);
     expect(requested.some((u) => u.includes('groupBy=customer'))).toBe(true);
