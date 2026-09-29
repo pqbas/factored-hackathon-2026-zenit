@@ -1053,3 +1053,50 @@ def test_a_verified_handoff_ends_the_round_without_running_the_other_tool_calls_
     assert len(get_products.calls) == 1
     assert llm.calls == ["required"]  # the round's reply only, never a follow-up round
 
+
+class _ExplodingJev:
+    async def classify(self, text, routes, context=None):
+        raise AssertionError("a paused conversation must not be classified")
+
+
+_AFTER_HANDOFF = [
+    {"role": "user", "content": "sí, confirmo"},
+    {"role": "assistant", "content": HANDOFF_REPLY["es"]},
+]
+
+
+def test_a_paused_conversation_calls_neither_the_classifier_nor_the_llm_nor_the_tools():
+    graph = _build_graph(ExplodingLLM(), _ExplodingJev())
+
+    result = _run(graph, "¿ya me atienden?", history=_AFTER_HANDOFF)
+
+    assert result["paused"] is True
+    assert result["messages"][-1].content == "¿ya me atienden?"
+    assert result.get("handoff") is None
+
+
+def test_handled_by_a_human_pauses_the_turn_without_a_handoff_in_the_history():
+    graph = _build_graph(ExplodingLLM(), _ExplodingJev())
+
+    result = _run(graph, "hola", session={**VALID_SESSION, "handled_by": "human_agent"})
+
+    assert result["paused"] is True
+
+
+def test_handled_by_ai_agent_answers_normally_even_with_the_handoff_in_the_history():
+    graph = _build_graph(_fake_llm("Claro, ¿en qué más te ayudo?"), FakeJev(_classification()))
+
+    result = _run(graph, "gracias", session={**VALID_SESSION, "handled_by": "ai_agent"}, history=_AFTER_HANDOFF)
+
+    assert result["paused"] is False
+    assert result["messages"][-1].content == "Claro, ¿en qué más te ayudo?"
+
+
+def test_an_advisor_message_after_the_handoff_gets_a_normal_answer():
+    history = [*_AFTER_HANDOFF, {"role": "assistant", "content": "[Asesor] Hola, te ayudo con tu reclamo."}]
+    graph = _build_graph(_fake_llm("De nada."), FakeJev(_classification()))
+
+    result = _run(graph, "gracias", history=history)
+
+    assert result["paused"] is False
+    assert result["messages"][-1].content == "De nada."

@@ -800,3 +800,80 @@ def test_a_handoff_turn_whose_llm_writes_text_next_to_the_call_only_carries_the_
     done = [e for e in events if e.get("type") == "response.output_item.done"]
     assert [e["item"]["content"][0]["text"] for e in done] == [HANDOFF_REPLY["es"]]
 
+
+_AFTER_HANDOFF = [
+    {"role": "user", "content": "sí, confirmo"},
+    {"role": "assistant", "content": HANDOFF_REPLY["es"]},
+    {"role": "user", "content": "¿ya me atienden?"},
+]
+_PAUSED_OUTPUTS = {
+    "thread_id": "e2e-paused", "use_case": None, "intent": None, "language": None,
+    "blocked": False, "handoff": None, "paused": True,
+}
+
+
+def _paused_request(handled_by=None, stream=True):
+    custom_inputs = {"session_token": "demo-mx-1", "thread_id": "e2e-paused"}
+    if handled_by:
+        custom_inputs["handled_by"] = handled_by
+    return {"input": _AFTER_HANDOFF, "custom_inputs": custom_inputs, "stream": stream}
+
+
+def _parse_events(response):
+    assert response.status_code == 200
+    return [
+        json.loads(line[len("data:"):])
+        for line in response.text.splitlines()
+        if line.startswith("data:") and line[len("data:"):].strip() not in ("", "[DONE]")
+    ]
+
+
+def _must_not_be_called(monkeypatch):
+    def jev_must_not_be_called(request):
+        raise AssertionError("a paused turn never reaches the classifier")
+
+    monkeypatch.setattr(
+        main, "jev_client",
+        JevClient(api_key="test-key", url="https://api.typesafe.ai/v1/systemone", timeout=2.0,
+                  transport=httpx.MockTransport(jev_must_not_be_called)),
+    )
+    monkeypatch.setattr(main, "get_chat_model", lambda: ScriptedToolChatModel([]))
+
+
+def test_a_request_with_the_history_after_the_handoff_streams_no_text_and_is_paused(client, monkeypatch):
+    _must_not_be_called(monkeypatch)
+
+    events = _parse_events(client.post("/invocations", json=_paused_request()))
+
+    assert not [e for e in events if e.get("type") in ("response.output_text.delta", "response.output_item.done")]
+    assert [e["custom_outputs"] for e in events if e.get("custom_outputs")] == [_PAUSED_OUTPUTS]
+
+
+def test_a_paused_request_without_streaming_returns_no_output_and_paused_true(client, monkeypatch):
+    _must_not_be_called(monkeypatch)
+
+    body = client.post("/invocations", json=_paused_request(stream=False)).json()
+
+    assert body["output"] == []
+    assert body["custom_outputs"] == _PAUSED_OUTPUTS
+
+
+def test_handled_by_a_human_queue_pauses_a_history_with_no_handoff(client, monkeypatch):
+    _must_not_be_called(monkeypatch)
+    request = _paused_request(handled_by="human_queue")
+    request["input"] = [{"role": "user", "content": "hola"}]
+
+    events = _parse_events(client.post("/invocations", json=request))
+
+    assert not [e for e in events if e.get("type") == "response.output_item.done"]
+    assert [e["custom_outputs"] for e in events if e.get("custom_outputs")] == [_PAUSED_OUTPUTS]
+
+
+def test_the_same_history_with_handled_by_ai_agent_gets_a_normal_answer(client, monkeypatch):
+    monkeypatch.setattr(main, "jev_client", _goodbye_jev())
+    monkeypatch.setattr(main, "get_chat_model", lambda: BindableChatModel(FAKE_LLM_TEXT))
+
+    body = client.post("/invocations", json=_paused_request(handled_by="ai_agent", stream=False)).json()
+
+    assert _output_text(body) == FAKE_LLM_TEXT
+    assert body["custom_outputs"]["paused"] is False
