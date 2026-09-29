@@ -443,24 +443,28 @@ Shipped en PR #72.
 
 ---
 
-## Phase 21: Filtros por motivo y cliente demo fijo
+## Phase 21: Filtros por motivo y cliente demo fijo (Complete)
 
 **Goal:** que los filtros de la consola sean los motivos reales de derivación y que el cliente demo elegido no cambie solo.
 
-- [ ] Tres filtros por motivo de derivación (Reclamo, Cancelación de producto, Estado de un
+- [x] Tres filtros por motivo de derivación (Reclamo, Cancelación de producto, Estado de un
       reclamo) con contador, evaluados sobre la conversación en curso de cada cliente.
-- [ ] "Mías" pasa a "Con asesor" (human_agent); la Bandeja se agrupa por motivo.
-- [ ] El cliente demo elegido queda fijo para la sesión; un chat existente usa el cliente que guardó el back.
+- [x] "Mías" pasa a "Con asesor" (human_agent); la Bandeja se agrupa por motivo.
+- [x] El cliente demo elegido queda fijo para la sesión; un chat existente usa el cliente que guardó el back.
 
 Spec: `spec/29-09-26-filtros-handoff-y-cliente-fijo/`.
 
+Shipped en PR #<n>.
+
 ---
 
-## Phase 22: Datos del cliente en el panel Contexto
+## Phase 22: Datos del cliente en el panel Contexto (Complete)
 
 **Goal:** que el asesor vea primero quién es el cliente, tal como está en el banco.
 
-- [ ] Sección "Datos del cliente" como primera del panel Contexto (ubicación, segmento, estado,
+- [x] Sección "Datos del cliente" como primera del panel Contexto (ubicación, segmento, estado,
       cliente desde, productos activos, email, celular y canal preferido), sin repetir el nombre ni el id.
 
 Spec: `spec/29-09-26-datos-del-cliente/`.
+
+Shipped en PR #<n>.
