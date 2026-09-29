@@ -367,6 +367,8 @@ Shipped en PR #49.
 - [x] Refleja tal cual lo registrado en el banco: pestañas Casos, Interacciones
       (tipo, canal, motivo, resuelta, escalada, sentimiento) y Transcripciones
       (idioma, intenciones, temas y texto de cliente y agente), traducidos 1 a 1.
+- [x] Cada interacción con transcripción tiene "Ver transcripción", que la abre
+      dentro de la interacción; la pestaña Transcripciones sigue como lista completa.
 
 Shipped en PR #50.
 
