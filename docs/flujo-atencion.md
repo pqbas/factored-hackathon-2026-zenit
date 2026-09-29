@@ -1,141 +1,258 @@
 # Flujo de atención: David y los asesores
 
-Estado: **borrador para aprobar**. Una vez aprobado, es la referencia para el
-agente, el back y el front. Se complementa con
-[`limites-agente-back.md`](limites-agente-back.md), que define quién guarda qué.
+Estado: **borrador para aprobar**. Una vez aprobado, es la referencia del
+agente, el back y el front: cualquier cambio de comportamiento se hace primero
+aquí. Quién guarda qué está en
+[`limites-agente-back.md`](limites-agente-back.md).
+
+Las marcas **(nuevo)** señalan lo que todavía no está implementado. Todo lo
+demás describe cómo funciona hoy.
 
 ## 1. Principio
 
-David (el asistente virtual) resuelve lo que puede resolver solo. A un humano
-le llega **solo lo que requiere una persona**, y le llega **con la información
-ya recolectada**, para que no pierda tiempo preguntando.
+1. David resuelve solo lo que tiene herramientas para resolver.
+2. A una persona le llega **solo una operación que requiere una persona**, y le
+   llega **con los datos ya recolectados y verificados**.
+3. Se deriva **por la operación**, nunca por el ánimo del cliente ni porque pida
+   hablar con alguien.
+4. La **Bandeja** del asesor tiene solo casos humanos. Las conversaciones de
+   David están en **Atendidas por David**, por si alguien quiere intervenir.
 
-- La **Bandeja** del asesor no es para revisar lo que hace David. Contiene
-  casos humanos: conversaciones derivadas o tomadas por una persona.
-- Las conversaciones que David atiende solo están en una vista aparte,
-  **Atendidas por David**, por si alguien quiere intervenir.
-- Se deriva **por la operación** que el cliente quiere hacer, nunca por su
-  estado de ánimo ni porque insista en hablar con alguien.
+## 2. Recorrido de un mensaje
 
-## 2. Roles
+Cada mensaje del cliente pasa por estas etapas, en este orden. El agente no
+guarda estado: en cada turno recibe del back todo el historial (máximo los
+últimos 20 mensajes) y lo vuelve a leer.
 
-| Rol | Asistente | Mis productos | Chats (Bandeja y conversaciones) |
-| --- | --- | --- | --- |
-| Cliente | Sí | Sí | No |
-| Asesor | Sí | No | Atiende: toma, responde, devuelve y resuelve |
-| Admin | Sí | Sí | Atiende como el asesor y además ve todo, con filtro por usuario |
+```mermaid
+flowchart TD
+    B0["Etapa 0 · Back: ¿quién atiende la conversación?"] -->|una persona| H["Se guarda el mensaje. David no responde."]
+    B0 -->|David| E1["Etapa 1 · Sesión"]
+    E1 -->|inválida| R1["Respuesta fija de sesión. Fin."]
+    E1 -->|válida| E2["Etapa 2 · Guardrails"]
+    E2 -->|bloqueado| R2["Respuesta fija de seguridad. Fin."]
+    E2 -->|ok| E3["Etapa 3 · Clasificación"]
+    E3 --> E4["Etapa 4 · Decisión"]
+    E4 --> E5["Etapa 5 · Respuesta según el caso (§3)"]
+    E5 --> E6["Etapa 6 · Señales al back"]
+```
 
-Dos personas nunca responden la misma conversación. Si otra persona la tiene,
-se ve "La atiende…" y no se puede tomar.
+### Etapa 0 · Back: quién atiende
 
-## 3. Qué hace David con cada mensaje
+| Condición                                                              | Qué pasa                                                                                                                                                    |
+| ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| La conversación la atiende una persona (`human_queue` o `human_agent`) | El back guarda el mensaje del cliente y **no llama a David**. El asesor lo ve en la consola.                                                                |
+| La atiende David (`ai_agent`)                                          | El back manda a David el historial, sin los turnos bloqueados. Los mensajes del asesor van con el prefijo `[Asesor] ` y los avisos de sistema no se mandan. |
+| La conversación estaba resuelta                                        | Se reabre y la atiende David.                                                                                                                               |
 
-| El cliente quiere… | David | ¿Deriva? |
-| --- | --- | --- |
-| Saludar, despedirse | Responde | No |
-| Consultar saldo, límite, cupo o movimientos (UC-01) | Consulta los datos reales y responde | No |
-| Algo fuera del banco (clima, chistes) | Dice qué puede hacer | No |
-| Hablar con "un humano" sin decir para qué | Pregunta qué necesita y sigue según la respuesta | No, por sí solo |
-| **Presentar un reclamo por un cargo** | Recolecta los datos (§4) | **Sí, al completar** |
-| **Cancelar un producto** | Recolecta los datos (§4) | **Sí, al completar** |
-| Detener lo que está haciendo ("cancelar", "olvídalo") | Corta la recolección en curso | No |
+### Etapa 1 · Sesión
 
-Si el mensaje no se entiende con suficiente confianza, David pide que lo
-aclare.
+El token del cliente demo tiene que existir y no estar vencido.
 
-## 4. Operaciones que van a un humano
+| Resultado      | Respuesta fija de David                                               |
+| -------------- | --------------------------------------------------------------------- |
+| Sin token      | "Para ayudarte necesito que inicies sesión en la banca digital…"      |
+| Token inválido | "No pude verificar tu sesión…"                                        |
+| Token vencido  | "Tu sesión expiró. Vuelve a iniciar sesión y retomamos tu solicitud." |
 
-David hace **una pregunta a la vez** y **verifica con los datos del banco**
-antes de dar un dato por bueno.
+Con cualquiera de estos resultados, el turno termina aquí.
+
+### Etapa 2 · Guardrails
+
+Primero se aplican reglas locales al último mensaje. Si no disparan, lo evalúa
+Jev. Un turno se bloquea si la categoría no es `OK` y la probabilidad es de al
+menos **0,7**.
+
+| Categoría                  | Cómo se detecta                                                                                  | Respuesta fija                                                                                        |
+| -------------------------- | ------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
+| Datos sensibles            | Regla: número de tarjeta válido (13-19 dígitos) o valor después de "cvv", "contraseña" o "senha" | "Por tu seguridad, no compartas el número completo de tu tarjeta…". El mensaje se guarda enmascarado. |
+| Inyección de instrucciones | Regla ("ignora tus instrucciones"…) o Jev                                                        | "No puedo seguir instrucciones que vengan dentro de un mensaje…"                                      |
+| Datos de terceros          | Jev                                                                                              | "Solo puedo ver y compartir información de tu propia cuenta…"                                         |
+| Abuso                      | Jev                                                                                              | "Quiero ayudarte, pero necesito que sigamos la conversación con respeto."                             |
+| Riesgo de estafa           | Jev                                                                                              | "Esto suena a una posible estafa en curso…"                                                           |
+
+Un turno bloqueado queda visible en el chat, pero el back no lo vuelve a mandar
+en el historial. Además, en cada turno David enmascara las tarjetas y los CVV de
+todos los mensajes anteriores antes de pasarlos al LLM.
+
+En la App desplegada no hay salida a internet, así que Jev no responde y solo
+aplican las reglas locales.
+
+### Etapa 3 · Clasificación
+
+Jev devuelve la intención, su confianza, el idioma y el sentimiento del último
+mensaje. Sin Jev, las reglas locales clasifican por palabras clave.
+
+| Intención              | Qué significa                                            |
+| ---------------------- | -------------------------------------------------------- |
+| `GENERAL_INQUIRY`      | Saldo, límite, cupo o movimientos                        |
+| `COMPLAINT`            | Reclamo por un cargo                                     |
+| `RETENTION`            | Cancelar un producto o cerrar la cuenta                  |
+| `HUMAN_AGENT`          | Pide hablar con una persona                              |
+| `CASE_STATUS`          | Estado de un reclamo ya abierto                          |
+| `COMMERCIAL`           | Productos o promociones del banco                        |
+| `CANCEL`               | Detener lo que se está haciendo ("cancelar", "olvídalo") |
+| `GREETING` / `GOODBYE` | Saludo / despedida                                       |
+| `OUT_OF_SCOPE`         | Nada de lo anterior                                      |
+
+**Idioma de la respuesta.** Si el mensaje tiene 3 palabras o más, se usa el
+idioma detectado. Si tiene menos, se usa el del último mensaje anterior con 3
+palabras o más. Si no hay ninguno, se usa el del país del cliente: Brasil,
+portugués; el resto, español.
+
+**Operación en curso (nuevo).** Si hay una recolección abierta (§4) y el mensaje
+no trae una intención nueva clara, el turno sigue esa operación. Por ejemplo,
+"la de 1070" o "el de Amazon" continúan un reclamo.
+
+### Etapa 4 · Decisión
+
+Se aplica la primera regla que se cumple:
+
+1. Turno bloqueado en la etapa 2: fin.
+2. `CANCEL`: David confirma que lo deja ahí y se descarta cualquier recolección
+   en curso.
+3. Confianza de la intención menor a **0,5**: David pide que aclare y muestra
+   las opciones.
+4. Operación en curso (nuevo): se sigue la recolección (§4).
+5. Según la intención: tabla de §3.
+
+### Etapa 6 · Señales al back
+
+En cada turno David manda `custom_outputs` con `use_case`, `intent`, `language`,
+`blocked` y `handoff`.
+
+- El back guarda el caso de uso de la conversación. Un turno sin caso de uso no
+  borra el que ya había.
+- `intent = GOODBYE`, cuando atiende David: la conversación pasa a
+  **Resueltas**.
+- `handoff` con datos (nuevo): la conversación pasa a la cola humana (§5).
+
+## 3. Qué hace David según la intención
+
+| Intención                    | Pasos de David                                                                                                                                                                                                                                                                                                                                                                                                                                        | ¿Deriva?           |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ |
+| `GREETING`                   | Saluda, se presenta como David, el asistente virtual, y lista las opciones: consultar, reclamo, estado de un reclamo.                                                                                                                                                                                                                                                                                                                                 | No                 |
+| `GENERAL_INQUIRY`            | 1. Consulta los productos (`get_products`) o los movimientos (`list_transactions`) del cliente. 2. Responde solo con cifras que le devolvió la herramienta en ese turno, en la moneda del producto. Tarjeta: últimos 4, saldo, límite y cupo. Cuenta: últimos 4 y saldo. 3. Si la herramienta falla, dice que ahora no puede consultar. 4. Débito, préstamos, fecha de pago o transferencias: "esa consulta todavía no está disponible en este chat". | No                 |
+| `COMPLAINT`                  | Recolección de un reclamo (§4.1).                                                                                                                                                                                                                                                                                                                                                                                                                     | Sí, al completarla |
+| `RETENTION`                  | Recolección de una cancelación (§4.2).                                                                                                                                                                                                                                                                                                                                                                                                                | Sí, al completarla |
+| `HUMAN_AGENT`                | Pregunta qué necesita (nuevo). Si el cliente pide algo que David resuelve, lo resuelve. Si es una operación de §4, empieza la recolección.                                                                                                                                                                                                                                                                                                            | No, por sí solo    |
+| `CASE_STATUS` / `COMMERCIAL` | "Esa opción todavía no está disponible en este chat" y lista las opciones.                                                                                                                                                                                                                                                                                                                                                                            | No                 |
+| `OUT_OF_SCOPE`               | Explica que no puede ayudar con eso y lista las opciones. Nunca ofrece operaciones ni manda a otro canal.                                                                                                                                                                                                                                                                                                                                             | No                 |
+| `GOODBYE`                    | Se despide. La conversación queda resuelta.                                                                                                                                                                                                                                                                                                                                                                                                           | No                 |
+| `CANCEL`                     | "Listo, lo dejamos ahí. Si necesitas algo más, escríbeme."                                                                                                                                                                                                                                                                                                                                                                                            | No                 |
+
+Reglas de David en cualquier respuesta:
+
+- Es un asistente virtual y lo dice si le preguntan. No firma los mensajes.
+- Nunca pide datos para "verificar" al cliente: la identidad viene de la sesión.
+- Nunca inventa ni asume datos de la cuenta, y nunca promete dinero, reversiones
+  ni acciones.
+- Lo que empieza con `[Asesor]` lo dijo una persona: no se lo atribuye.
+
+## 4. Recolección antes de derivar (nuevo)
+
+David pregunta **un dato a la vez** y **verifica contra los datos del banco**
+cada dato verificable. En cada turno relee la conversación para saber qué
+operación está en curso y qué datos ya tiene.
 
 ### 4.1 Reclamo por un cargo
 
-| Dato | Cómo se obtiene |
-| --- | --- |
-| Tarjeta | Últimos 4 dígitos, verificados contra los productos del cliente |
-| Movimiento | Identificado en los movimientos reales de esa tarjeta: fecha, comercio, monto, moneda y estado |
-| Tipo | No lo reconozco / cobro duplicado / monto distinto |
-| Descripción | Lo que cuenta el cliente, en sus palabras |
+| Paso | David pregunta                                                            | Cómo lo valida                                                                                                                                                                             |
+| ---- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1    | ¿De qué tarjeta es el cargo?                                              | Los últimos 4 dígitos tienen que ser de una tarjeta activa del cliente (`get_products`). Si tiene una sola, la propone.                                                                    |
+| 2    | ¿Cuál es el cargo?                                                        | Le muestra los últimos movimientos de esa tarjeta (`list_transactions`) y el cliente elige uno, o lo describe por comercio, monto o fecha. El cargo tiene que existir en esos movimientos. |
+| 3    | ¿Qué pasó? No lo reconozco / me cobraron dos veces / el monto es distinto | Una de las tres opciones.                                                                                                                                                                  |
+| 4    | Contame brevemente lo que pasó                                            | Texto libre del cliente.                                                                                                                                                                   |
+| 5    | Confirma el resumen del caso con el cliente                               | Si el cliente corrige algo, vuelve al paso correspondiente.                                                                                                                                |
 
 ### 4.2 Cancelación de un producto
 
-| Dato | Cómo se obtiene |
-| --- | --- |
-| Producto | Tipo y últimos 4 dígitos, verificados contra los productos del cliente |
-| Motivo | Lo que cuenta el cliente |
+| Paso | David pregunta                     | Cómo lo valida                                                                                              |
+| ---- | ---------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| 1    | ¿Qué producto quieres cancelar?    | Tipo y últimos 4 dígitos de un producto activo del cliente (`get_products`). Si tiene uno solo, lo propone. |
+| 2    | ¿Por qué quieres cancelarlo?       | Texto libre del cliente.                                                                                    |
+| 3    | Confirma el resumen con el cliente | Si corrige algo, vuelve al paso correspondiente.                                                            |
 
 ### 4.3 Reglas de la recolección
 
-- El agente no guarda estado: en cada turno relee la conversación, detecta qué
-  operación está en curso y qué datos ya se dieron, y pide el que falta.
-- El caso está **completo** cuando todos los datos obligatorios están y los
-  verificables coinciden con los datos del banco.
-- Si el cliente cambia de tema a algo que David resuelve (por ejemplo, su
-  saldo), David responde y después retoma la recolección.
-- Si el cliente dice "cancelar" a mitad de camino, la recolección se descarta y
-  no se deriva nada.
+- Si el cliente ya dio un dato antes (por ejemplo, "no reconozco un cargo de
+  Uber en la 1070"), David lo toma y no lo vuelve a preguntar.
+- Si el cliente pregunta algo que David resuelve (por ejemplo, su saldo), David
+  responde y después retoma la pregunta pendiente.
+- Si el cliente dice "cancelar", se descarta la recolección y no se deriva.
+- Si un dato no se puede verificar (la tarjeta no es suya, el cargo no aparece),
+  David lo dice y vuelve a preguntar.
+- El caso está **completo** cuando el cliente confirmó el resumen y todos los
+  datos verificables coinciden con los datos del banco.
 
-## 5. La derivación
+## 5. La derivación (nuevo)
 
 Cuando el caso está completo:
 
-1. David le dice al cliente, en su idioma: "Te comunico con un asesor, que ya
-   tiene los datos de tu caso".
-2. El agente manda al back `custom_outputs.handoff`:
-   - `reason`: `complaint` o `retention` (cancelación de producto).
-   - `summary`: 2-3 líneas para el asesor (qué pide el cliente y qué quedó
-     verificado). Puede venir vacío si falla la generación; el caso igual se
+1. David le responde al cliente, en su idioma: "Te comunico con un asesor, que
+   ya tiene los datos de tu caso".
+2. David manda al back `custom_outputs.handoff`:
+   - `reason`: `complaint` o `retention`.
+   - `summary`: 2-3 líneas para el asesor, con qué pide el cliente y qué quedó
+     verificado. Puede venir vacío si falla la generación; el caso igual se
      deriva.
-   - `facts.verified_data`: los datos recolectados. Tarjetas solo con los
-     últimos 4 dígitos; nunca datos sensibles.
+   - `facts.verified_data`: los datos del §4. Las tarjetas van solo con los
+     últimos 4 dígitos y nunca se incluyen datos sensibles.
 3. El back pasa la conversación a la cola humana (`human_queue`). Aparece en la
    Bandeja como **Sin atender**, agrupada por su caso de uso.
-4. Mientras la conversación está en la cola o con una persona, el back no llama
-   a David. Los mensajes del cliente se guardan y los ve el asesor.
+4. Desde ese momento el back no llama a David (etapa 0). El cliente ve "Te
+   pasamos con un asesor…" y sus mensajes le llegan al asesor.
 
 ## 6. Qué hace el asesor
 
-1. Ve el caso en la Bandeja con el motivo, el resumen y los datos verificados.
-2. Lo **toma**: queda asignado a su nombre y nadie más puede responder.
+1. Ve el caso en la Bandeja, con el motivo, el resumen y los datos verificados.
+2. Lo **toma**: queda asignado a su nombre, y nadie más puede responder. Si otra
+   persona lo tiene, ve "La atiende…" y no puede tomarlo.
 3. **Responde** al cliente desde la consola. El cliente ve "Asesor", nunca el
    email del empleado.
-4. Termina de dos formas:
-   - **Resolver**: la conversación queda en Resueltas.
-   - **Devolver a David**: David vuelve a atender. Recibe los mensajes del
-     asesor marcados con `[Asesor]` para no atribuírselos.
+4. Termina de una de dos formas:
+   - **Resolver**: la conversación pasa a Resueltas.
+   - **Devolver a David**: David vuelve a atender desde el siguiente mensaje del
+     cliente.
 
-El asesor también puede entrar a **Atendidas por David** y tomar una
-conversación para intervenir, aunque David no la haya derivado.
+También puede entrar a **Atendidas por David** y tomar una conversación para
+intervenir, aunque David no la haya derivado.
+
+| Rol     | Qué puede hacer en Chats                                                             |
+| ------- | ------------------------------------------------------------------------------------ |
+| Asesor  | Tomar, responder, devolver y resolver                                                |
+| Admin   | Lo mismo que el asesor, y además ver todas las conversaciones con filtro por usuario |
+| Cliente | No tiene acceso                                                                      |
 
 ## 7. Estados de una conversación
 
 ```mermaid
 stateDiagram-v2
     [*] --> David: el cliente escribe
-    David --> David: consultas, saludos, recolección
+    David --> David: consulta, saludo o recolección
     David --> Resuelta: despedida
-    David --> SinAtender: caso completo, handoff
-    David --> Asesor: un asesor interviene
-    SinAtender --> Asesor: un asesor la toma
-    Asesor --> David: devolver
-    Asesor --> Resuelta: resolver
+    David --> SinAtender: caso completo (handoff)
+    David --> ConAsesor: un asesor interviene
+    SinAtender --> ConAsesor: un asesor la toma
+    ConAsesor --> David: devolver
+    ConAsesor --> Resuelta: resolver
     Resuelta --> David: el cliente vuelve a escribir
 ```
 
-| Estado | `handledBy` | Dónde se ve en la consola |
-| --- | --- | --- |
-| David | `ai_agent` | Atendidas por David |
-| Sin atender | `human_queue` | Bandeja, Sin atender |
-| Con un asesor | `human_agent` | Bandeja, Mías (del que la tiene) |
-| Resuelta | cualquiera, con `closedAt` | Resueltas |
+| Estado        | `handledBy`                | Dónde se ve en la consola           |
+| ------------- | -------------------------- | ----------------------------------- |
+| David         | `ai_agent`                 | Atendidas por David                 |
+| Sin atender   | `human_queue`              | Bandeja y Sin atender               |
+| Con un asesor | `human_agent`              | Bandeja, y Mías para quien la tiene |
+| Resuelta      | cualquiera, con `closedAt` | Resueltas                           |
 
 ## 8. Fuera de alcance (futuro)
 
-- Derivar por frustración, insistencia o riesgo de fraude.
+- Derivar por frustración, insistencia o riesgo de estafa.
 - Estado de un reclamo existente, operaciones comerciales y otras operaciones
   humanas fuera de §4.
 - Derivar cuando fallan los datos: David avisa que ahora no puede consultar.
-- Rescate de conversaciones abandonadas por un asesor, asignación automática y
-  prioridad de la bandeja.
+- Rescatar conversaciones abandonadas, asignarlas automáticamente y priorizar la
+  bandeja.
 - Registrar el reclamo en un sistema de casos del banco: el asesor lo gestiona
   desde la consola.
