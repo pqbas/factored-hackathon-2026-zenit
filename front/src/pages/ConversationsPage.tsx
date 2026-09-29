@@ -27,6 +27,7 @@ import {
   takeConversation,
   toBubble,
 } from '@/lib/advisor';
+import { ASSISTANT_NAME } from '@/lib/assistant';
 import { matchesQuery } from '@/lib/conversations';
 import { cn } from '@/lib/utils';
 
@@ -69,7 +70,13 @@ function useConversationMessages(chatId: string | null) {
   return { messages, append: (m: AdvisorMessage) => apply([m], false), refresh };
 }
 
-const VIEW_TITLE = { inbox: 'Bandeja', waiting: 'Sin atender', mine: 'Mías', resolved: 'Resueltas' };
+const VIEW_TITLE = {
+  inbox: 'Bandeja',
+  david: `Atendidas por ${ASSISTANT_NAME}`,
+  waiting: 'Sin atender',
+  mine: 'Mías',
+  resolved: 'Resueltas',
+};
 
 function viewTitle(view: InboxView): string {
   return view.kind === 'useCase' ? useCaseLabelOf(view.useCase) : VIEW_TITLE[view.kind];
@@ -117,6 +124,34 @@ export default function ConversationsPage() {
     [pages, query],
   );
   const hasMore = pages?.at(-1)?.hasMore ?? false;
+
+  function openView(next: InboxView) {
+    setView(next);
+    setSelected(null);
+  }
+
+  // An empty inbox means nobody needs a person; say what David has instead.
+  const davidCount = counts?.david ?? 0;
+  const inboxEmpty =
+    view.kind === 'inbox' && !query ? (
+      <span data-testid="inbox-empty-david">
+        No hay casos para atender.
+        {davidCount > 0 && (
+          <>
+            {' '}
+            <button
+              type="button"
+              data-testid="inbox-empty-david-link"
+              onClick={() => openView({ kind: 'david' })}
+              className="text-primary hover:underline"
+            >
+              {ASSISTANT_NAME} está atendiendo {davidCount}{' '}
+              {davidCount === 1 ? 'conversación' : 'conversaciones'}
+            </button>
+          </>
+        )}
+      </span>
+    ) : undefined;
 
   // Keep the open conversation in sync with each inbox refresh; it stays open
   // even when it no longer matches the current filter.
@@ -189,10 +224,7 @@ export default function ConversationsPage() {
     <SidebarProvider defaultOpen={!isCollapsed}>
       <InboxViews
         view={view}
-        onViewChange={(next) => {
-          setView(next);
-          setSelected(null);
-        }}
+        onViewChange={openView}
         isAdmin={isAdmin}
         users={users ?? []}
         userId={userId}
@@ -218,6 +250,7 @@ export default function ConversationsPage() {
               onQueryChange={setQuery}
               compact={!!current}
               hasMore={hasMore}
+              empty={pages ? inboxEmpty : undefined}
               onLoadMore={() => setSize(size + 1)}
             />
           </div>

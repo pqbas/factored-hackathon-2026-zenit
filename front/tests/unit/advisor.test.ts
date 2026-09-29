@@ -99,6 +99,7 @@ describe('viewUrl', () => {
       useCase: 'COMPLAINT',
     });
     expect(params(viewUrl({ kind: 'waiting' }))).toMatchObject({ status: 'open', handledBy: 'human_queue' });
+    expect(params(viewUrl({ kind: 'david' }))).toMatchObject({ status: 'open', handledBy: 'ai_agent' });
     expect(params(viewUrl({ kind: 'mine' }))).toMatchObject({ assignedTo: 'me' });
     expect(params(viewUrl({ kind: 'resolved' }))).toMatchObject({ status: 'closed' });
     expect(params(viewUrl({ kind: 'inbox' }, { startingAfter: 'c9', userId: 'u7' }))).toMatchObject({
@@ -222,8 +223,22 @@ describe('view counts', () => {
         byUseCase: { COMPLAINT: 3, CANCEL: -1 },
         withoutUseCase: 1,
       }),
-    ).toEqual({ inbox: 7, waiting: 2, mine: 0, resolved: 0, useCases: { COMPLAINT: 3, CANCEL: 0 } });
-    expect(parseCounts(null)).toEqual({ inbox: 0, waiting: 0, mine: 0, resolved: 0, useCases: {} });
+    ).toEqual({
+      inbox: 7,
+      david: 0,
+      waiting: 2,
+      mine: 0,
+      resolved: 0,
+      useCases: { COMPLAINT: 3, CANCEL: 0 },
+    });
+    expect(parseCounts(null)).toEqual({
+      inbox: 0,
+      david: 0,
+      waiting: 0,
+      mine: 0,
+      resolved: 0,
+      useCases: {},
+    });
   });
 
   it('picks the number for each view', () => {
@@ -232,10 +247,12 @@ describe('view counts', () => {
       unattended: 2,
       mine: 1,
       resolved: 4,
+      aiAgent: 12,
       byUseCase: { COMPLAINT: 3 },
       withoutUseCase: 4,
     });
     expect(countFor({ kind: 'inbox' }, counts)).toBe(7);
+    expect(countFor({ kind: 'david' }, counts)).toBe(12);
     expect(countFor({ kind: 'waiting' }, counts)).toBe(2);
     expect(countFor({ kind: 'useCase', useCase: 'COMPLAINT' }, counts)).toBe(3);
     expect(countFor({ kind: 'useCase', useCase: 'CANCEL' }, counts)).toBe(0);

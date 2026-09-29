@@ -100,13 +100,16 @@ async function mockAdvisorApi(page: Page, me: string, role: Role = 'advisor') {
 
     if (id === 'counts') {
       const open = chats.filter((c) => !c.closedAt);
+      // The inbox counts only the cases that need a person.
+      const human = open.filter((c) => c.handledBy !== 'ai_agent');
       const byUseCase: Record<string, number> = {};
-      for (const c of open) if (c.useCase) byUseCase[c.useCase] = (byUseCase[c.useCase] ?? 0) + 1;
+      for (const c of human) if (c.useCase) byUseCase[c.useCase] = (byUseCase[c.useCase] ?? 0) + 1;
       return route.fulfill({
         json: {
-          total: open.length,
+          total: human.length,
+          aiAgent: open.length - human.length,
           byUseCase,
-          withoutUseCase: open.filter((c) => !c.useCase).length,
+          withoutUseCase: human.filter((c) => !c.useCase).length,
           unattended: open.filter((c) => c.handledBy === 'human_queue').length,
           mine: open.filter((c) => c.assignedTo === me).length,
           resolved: chats.length - open.length,
@@ -120,7 +123,9 @@ async function mockAdvisorApi(page: Page, me: string, role: Role = 'advisor') {
           (!q.get('status') || (q.get('status') === 'closed' ? !!c.closedAt : !c.closedAt)) &&
           (!q.get('userId') || c.userId === q.get('userId')) &&
           (!q.get('useCase') || c.useCase === q.get('useCase')) &&
-          (!q.get('handledBy') || c.handledBy === q.get('handledBy')) &&
+          (q.get('handledBy')
+            ? c.handledBy === q.get('handledBy')
+            : q.get('status') === 'closed' || c.handledBy !== 'ai_agent') &&
           (q.get('assignedTo') !== 'me' || c.assignedTo === me),
       );
       return route.fulfill({ json: { chats: list, hasMore: false } });
@@ -180,7 +185,9 @@ test.describe('Advisor console', () => {
   test('the inbox groups by use case and each view asks for its params', async ({ page }) => {
     const requested = await openConsole(page);
     await expect(page.getByTestId('inbox-title')).toHaveText('Bandeja');
-    await expect(rows(page)).toHaveCount(4);
+    // Only the cases that need a person: David's own chat isn't here.
+    await expect(rows(page)).toHaveCount(3);
+    await expect(page.getByTestId('conversation-row-c-assistant')).toHaveCount(0);
     await expect(page.getByTestId('inbox-section-GENERAL_INQUIRY')).toBeVisible();
     await expect(page.getByTestId('use-case-chip-GENERAL_INQUIRY')).toHaveText('Consultas generales');
     await expect(page.getByTestId('inbox-section-OTHER').getByTestId('conversation-row-c-race')).toBeVisible();
@@ -195,21 +202,29 @@ test.describe('Advisor console', () => {
 
     await page.getByTestId('view-use-case-GENERAL_INQUIRY').click();
     await expect(page.getByTestId('inbox-title')).toHaveText('Consultas generales');
-    await expect(rows(page)).toHaveCount(3);
+    await expect(rows(page)).toHaveCount(2);
     expect(requested.some((u) => u.includes('useCase=GENERAL_INQUIRY'))).toBe(true);
+
+    await page.getByTestId('view-david').click();
+    await expect(page.getByTestId('inbox-title')).toHaveText('Atendidas por David');
+    await expect(rows(page)).toHaveCount(1);
+    await expect(page.getByTestId('conversation-row-c-assistant')).toBeVisible();
+    expect(requested.some((u) => u.includes('handledBy=ai_agent') && u.includes('status=open'))).toBe(true);
   });
 
   test('the views show how many conversations they have', async ({ page }) => {
     await openConsole(page);
-    await expect(page.getByTestId('view-inbox-count')).toHaveText('4');
+    await expect(page.getByTestId('view-inbox-count')).toHaveText('3');
+    await expect(page.getByTestId('view-david-count')).toHaveText('1');
     await expect(page.getByTestId('view-waiting-count')).toHaveText('2');
     await expect(page.getByTestId('view-resolved-count')).toHaveText('1');
-    await expect(page.getByTestId('view-use-case-GENERAL_INQUIRY-count')).toHaveText('3');
+    await expect(page.getByTestId('view-use-case-GENERAL_INQUIRY-count')).toHaveText('2');
     // Zero hides the number.
     await expect(page.getByTestId('view-mine-count')).toHaveCount(0);
     await expect(page.getByTestId('view-use-case-COMPLAINT-count')).toHaveCount(0);
 
     // Taking a chat updates the counters.
+    await page.getByTestId('view-david').click();
     await page.getByTestId('conversation-row-c-assistant').click();
     await page.getByTestId('assistant-switch').click();
     await expect(page.getByTestId('view-mine-count')).toHaveText('1');
@@ -217,15 +232,17 @@ test.describe('Advisor console', () => {
 
   test('opening a chat shows it beside the list, and X closes it', async ({ page }) => {
     await openConsole(page);
+    await page.getByTestId('view-david').click();
     await page.getByTestId('conversation-row-c-assistant').click();
     await expect(page.getByTestId('customer-meta')).toBeVisible();
-    await expect(rows(page)).toHaveCount(4);
+    await expect(rows(page)).toHaveCount(1);
     await page.getByTestId('close-conversation').click();
     await expect(page.getByTestId('customer-meta')).toHaveCount(0);
   });
 
   test('turning the assistant off takes the chat and lets the advisor reply', async ({ page }) => {
     await openConsole(page);
+    await page.getByTestId('view-david').click();
     await page.getByTestId('conversation-row-c-assistant').click();
     await expect(input(page)).toBeDisabled();
 
@@ -278,7 +295,7 @@ test.describe('Advisor console', () => {
     await expect(page.getByTestId('nav-admin')).toHaveCount(0);
     await expect(page.getByTestId('inbox-title')).toHaveText('Bandeja');
     await expect(page.getByTestId('view-mine')).toBeVisible();
-    await expect(rows(page)).toHaveCount(4);
+    await expect(rows(page)).toHaveCount(3);
 
     // Waiting: the admin takes it, replies and resolves it.
     await page.getByTestId('conversation-row-c-waiting').click();
@@ -330,6 +347,7 @@ test.describe('Advisor console', () => {
             ],
       });
     });
+    await page.getByTestId('view-david').click();
     await page.getByTestId('conversation-row-c-assistant').click();
     await expect(page.getByTestId('bubble-customer').last()).toContainText('¿Cuál es mi saldo?');
     await expect(page.getByTestId('typing-indicator')).toBeVisible();
@@ -341,6 +359,17 @@ test.describe('Advisor console', () => {
     await expect(page.getByTestId('typing-indicator')).toHaveCount(0);
   });
 
+  test('an empty inbox says how many chats David has and links to them', async ({ page }) => {
+    await openConsole(page, 'admin', 'root@example.com');
+    // Javier only talks to David: nothing in his inbox needs a person.
+    await page.getByTestId('user-filter').click();
+    await page.getByTestId('user-option-c-assistant-user').click();
+    await expect(page.getByTestId('inbox-empty-david')).toContainText('No hay casos para atender.');
+    await page.getByTestId('inbox-empty-david-link').click();
+    await expect(page.getByTestId('inbox-title')).toHaveText('Atendidas por David');
+    await expect(page.getByTestId('conversation-row-c-assistant')).toBeVisible();
+  });
+
   test('/admin now leads to Chats', async ({ page }) => {
     await mockSessionRole(page, 'admin', 'root@example.com');
     await mockAdvisorApi(page, 'root@example.com', 'admin');
@@ -350,6 +379,7 @@ test.describe('Advisor console', () => {
 
   test('renders David\'s markdown: bullets and bold', async ({ page }) => {
     await openConsole(page);
+    await page.getByTestId('view-david').click();
     await page.getByTestId('conversation-row-c-assistant').click();
     const reply = page.getByTestId('bubble-agent').last();
     await expect(reply.locator('li')).toHaveCount(2);
@@ -366,18 +396,20 @@ test.describe('Advisor console', () => {
   test('rows: robot for David, text state only when it needs attention', async ({ page }) => {
     await openConsole(page);
     const assistantRow = page.getByTestId('conversation-row-c-assistant');
-    await expect(assistantRow.getByTestId('david-icon')).toHaveAttribute('title', 'Lo atiende David');
-    await expect(assistantRow.getByTestId('attention')).toHaveCount(0);
     const waitingRow = page.getByTestId('conversation-row-c-waiting');
     await expect(waitingRow.getByTestId('attention')).toHaveText('Sin atender');
     await expect(waitingRow.getByTestId('waiting-dot')).toBeVisible();
     await expect(waitingRow.getByTestId('row-text')).toHaveText('Es urgente, por favor');
     await expect(waitingRow.getByTestId('row-text')).toHaveAttribute('title', 'Consulta de daniela');
-    await expect(assistantRow.getByTestId('row-text')).toHaveText('Consulta de javier');
     await expect(waitingRow.getByTestId('david-icon')).toHaveCount(0);
     await expect(page.getByTestId('conversation-row-c-other').getByTestId('attention')).toHaveText('La atiende ada');
-    await expect(page.locator('body')).not.toContainText('Con David');
     await expect(page.locator('body')).not.toContainText('Sin caso de uso');
+
+    await page.getByTestId('view-david').click();
+    await expect(assistantRow.getByTestId('david-icon')).toHaveAttribute('title', 'Lo atiende David');
+    await expect(assistantRow.getByTestId('attention')).toHaveCount(0);
+    await expect(assistantRow.getByTestId('row-text')).toHaveText('Consulta de javier');
+    await expect(page.locator('body')).not.toContainText('Con David');
   });
 
   test('customer text is shown literally: no images or links', async ({ page }) => {
@@ -398,6 +430,7 @@ test.describe('Advisor console', () => {
 
   test('a quick reply fills the message field', async ({ page }) => {
     await openConsole(page);
+    await page.getByTestId('view-david').click();
     await page.getByTestId('conversation-row-c-assistant').click();
     await page.getByTestId('assistant-switch').click();
     await page.getByRole('button', { name: 'Respuestas rápidas' }).click();

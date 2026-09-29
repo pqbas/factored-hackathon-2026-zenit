@@ -318,3 +318,18 @@ Shipped en PR #37.
       explica que elige qué cliente del banco simular (chat y Mis productos).
 
 Shipped en PR #42.
+
+---
+
+## Phase 13: Bandeja solo con casos humanos (Complete)
+
+**Goal:** que la Bandeja del asesor muestre solo lo que necesita a una persona.
+
+- [x] La Bandeja (y los casos de uso) muestran solo las conversaciones derivadas
+      o en manos de un humano, agrupadas por caso de uso.
+- [x] Nueva vista "Atendidas por David" con su contador, para ver las
+      conversaciones autónomas e intervenir si hace falta.
+- [x] Con la Bandeja vacía: "No hay casos para atender. David está atendiendo N
+      conversaciones", con link a esa vista.
+
+Shipped en PR #44.

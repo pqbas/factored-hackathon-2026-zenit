@@ -62,9 +62,11 @@ export const QUICK_REPLIES = [
 
 const BASE = '/api/advisor/conversations';
 
-// What the inbox shows: everything open, one use case, or a state.
+// What the inbox shows: the open cases that need a person, one use case, the
+// chats David handles on his own, or a state.
 export type InboxView =
   | { kind: 'inbox' }
+  | { kind: 'david' }
   | { kind: 'useCase'; useCase: string }
   | { kind: 'waiting' }
   | { kind: 'mine' }
@@ -78,6 +80,7 @@ export function viewUrl(
   params.set('status', view.kind === 'resolved' ? 'closed' : 'open');
   if (view.kind === 'useCase') params.set('useCase', view.useCase);
   if (view.kind === 'waiting') params.set('handledBy', 'human_queue');
+  if (view.kind === 'david') params.set('handledBy', 'ai_agent');
   if (view.kind === 'mine') params.set('assignedTo', 'me');
   if (userId) params.set('userId', userId);
   if (startingAfter) params.set('starting_after', startingAfter);
@@ -364,6 +367,7 @@ export function lastActivityAt(chat: AdvisorChat): string {
 // How many conversations each view has, for the counters in the views sidebar.
 export interface ViewCounts {
   inbox: number;
+  david: number;
   waiting: number;
   mine: number;
   resolved: number;
@@ -378,12 +382,13 @@ export function countsUrl(userId?: string | null): string {
 }
 
 // The one place that knows the shape of GET /api/advisor/conversations/counts:
-// { total, byUseCase, withoutUseCase, unattended, mine, resolved }. total is
-// the open chats (the inbox); mine is always 0 for the admin. Missing or bad
-// numbers read as 0.
+// { total, byUseCase, withoutUseCase, unattended, mine, resolved, aiAgent }.
+// total is the open cases that need a person (the inbox); aiAgent the open
+// chats David handles alone. Missing or bad numbers read as 0.
 export function parseCounts(body: unknown): ViewCounts {
   const raw = (body ?? {}) as {
     total?: unknown;
+    aiAgent?: unknown;
     byUseCase?: Record<string, unknown>;
     unattended?: unknown;
     mine?: unknown;
@@ -394,6 +399,7 @@ export function parseCounts(body: unknown): ViewCounts {
   for (const [id, value] of Object.entries(raw.byUseCase ?? {})) useCases[id] = n(value);
   return {
     inbox: n(raw.total),
+    david: n(raw.aiAgent),
     waiting: n(raw.unattended),
     mine: n(raw.mine),
     resolved: n(raw.resolved),

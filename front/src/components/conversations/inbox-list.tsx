@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Bot, Search } from 'lucide-react';
 
 import { UseCaseChip } from '@/components/conversations/use-case-style';
@@ -119,6 +120,7 @@ export function InboxList({
   compact,
   hasMore,
   onLoadMore,
+  empty,
 }: {
   title: string;
   chats: AdvisorChat[];
@@ -131,6 +133,8 @@ export function InboxList({
   compact: boolean;
   hasMore: boolean;
   onLoadMore: () => void;
+  // Replaces the generic empty message.
+  empty?: ReactNode;
 }) {
   const groups = grouped
     ? groupByUseCase(chats)
@@ -175,7 +179,7 @@ export function InboxList({
             data-testid="inbox-empty"
             className="py-10 text-center text-muted-foreground text-sm"
           >
-            No hay conversaciones en esta vista.
+            {empty ?? 'No hay conversaciones en esta vista.'}
           </p>
         )}
         {/* One grid for every row: margin | dot | avatar | name | David |
