@@ -241,6 +241,21 @@ export const AGENT_OUTPUTS = {
   },
 } as const;
 
+// '[agent-down-N:<key>]' in the prompt: the agent answers 502 the first N
+// times it sees that key (its App redeploying), then normally.
+const agentDownRemaining = new Map<string, number>();
+
+function agentIsDown(body: unknown): boolean {
+  const text = JSON.stringify((body as { input?: unknown[] })?.input?.at(-1));
+  const match = text?.match(/\[agent-down-(\d+):([^\]]+)\]/);
+  if (!match) return false;
+  const [, count, key] = match;
+  const remaining = agentDownRemaining.get(key) ?? Number(count);
+  if (remaining <= 0) return false;
+  agentDownRemaining.set(key, remaining - 1);
+  return true;
+}
+
 function agentOutputsFor(body: unknown) {
   const text = JSON.stringify((body as { input?: unknown[] })?.input?.at(-1));
   const key = (
@@ -297,6 +312,10 @@ export const handlers = [
           mockMcpApprovalRequestStream({ requestId: MCP_REQUEST_ID }),
         );
       }
+    }
+
+    if (agentIsDown(body)) {
+      return new HttpResponse('Bad Gateway', { status: 502 });
     }
 
     // Prompts containing an AGENT_OUTPUTS key make the mock attach the

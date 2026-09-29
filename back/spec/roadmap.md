@@ -277,3 +277,7 @@ cliente y su historia con el banco.
 - [x] La consola agrupa por cliente: una fila por cliente con su conversación
       más reciente (`?groupBy=customer`), contadores por cliente y todas sus
       conversaciones en orden cronológico (decisión del usuario, 28-09-26).
+- [x] Si el agente no está disponible (502/503/504 o sin conexión), el turno
+      queda en una cola en Postgres y un worker lo responde cuando vuelve; se
+      descarta si un asesor toma el chat y vence a los 20 min con un aviso
+      (decisión del usuario, 28-09-26).

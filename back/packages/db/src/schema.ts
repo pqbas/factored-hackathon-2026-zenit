@@ -7,6 +7,7 @@ import {
   uuid,
   text,
   boolean,
+  integer,
   pgSchema,
 } from 'drizzle-orm/pg-core';
 import type { LanguageModelV3Usage } from '@ai-sdk/provider';
@@ -94,3 +95,26 @@ export const resolutionEvent = createTable('ResolutionEvent', {
 });
 
 export type ResolutionEvent = InferSelectModel<typeof resolutionEvent>;
+
+// A customer turn the agent couldn't take (it was unavailable): the message is
+// stored and a worker answers it once the agent is back (server/src/agent-queue.ts).
+// nextAttemptAt doubles as a lease while a worker holds the turn.
+export const agentTurn = createTable('AgentTurn', {
+  id: uuid('id').primaryKey().notNull().defaultRandom(),
+  chatId: uuid('chatId')
+    .notNull()
+    .references(() => chat.id),
+  messageId: uuid('messageId').notNull(),
+  userId: text('userId').notNull(),
+  sessionToken: varchar('sessionToken', { length: 256 }),
+  status: varchar('status', {
+    enum: ['pending', 'done', 'discarded', 'expired'],
+  })
+    .notNull()
+    .default('pending'),
+  attempts: integer('attempts').notNull().default(0),
+  nextAttemptAt: timestamp('nextAttemptAt').notNull().defaultNow(),
+  createdAt: timestamp('createdAt').notNull().defaultNow(),
+});
+
+export type AgentTurn = InferSelectModel<typeof agentTurn>;
