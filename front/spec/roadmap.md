@@ -415,3 +415,16 @@ Shipped en PR #64.
 - [x] Las acciones aplican a la conversación más reciente; las anteriores son de solo lectura.
 
 Shipped en PR #66.
+
+---
+
+## Phase 19: David no disponible, con cola (Complete)
+
+**Goal:** que el mensaje del cliente nunca se pierda cuando el agente no está disponible.
+
+- [x] Con data-agent-pending, el indicador de David pasa a ámbar "No disponible", sin
+      burbuja ni texto de espera; la respuesta llega sola por polling y vuelve "En línea".
+- [x] Se mantiene al recargar (agentPending en GET /api/chat/:id).
+- [x] Nunca se muestra un error técnico: cualquier otro error sale con un texto amable.
+
+Shipped en PR #<n>.
