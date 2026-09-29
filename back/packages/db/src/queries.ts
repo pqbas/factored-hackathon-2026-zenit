@@ -17,7 +17,13 @@ import {
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 
-import { chat, message, type DBMessage, type Chat } from './schema';
+import {
+  chat,
+  message,
+  resolutionEvent,
+  type DBMessage,
+  type Chat,
+} from './schema';
 import type { VisibilityType } from '@chat-template/utils';
 import { ChatSDKError } from '@chat-template/core/errors';
 import type { LanguageModelV3Usage } from '@ai-sdk/provider';
@@ -130,6 +136,9 @@ export async function deleteChatById({ id }: { id: string }) {
 
   try {
     await (await ensureDb()).delete(message).where(eq(message.chatId, id));
+    await (await ensureDb())
+      .delete(resolutionEvent)
+      .where(eq(resolutionEvent.chatId, id));
 
     const [chatsDeleted] = await (await ensureDb())
       .delete(chat)
@@ -489,7 +498,8 @@ export async function takeChat({
       set "handledBy" = 'human_agent',
           "assignedTo" = ${advisorEmail},
           "assignedAt" = now(),
-          "closedAt" = null
+          "closedAt" = null,
+          "hadHuman" = true
       from "prev"
       where c."id" = ${chatId}
         -- Checked on the target row, not on "prev": when two takes race,
@@ -544,6 +554,15 @@ export async function releaseChat({
       })
       .where(eq(chat.id, chatId))
       .returning();
+    if (updated && outcome === 'resolved') {
+      await (await ensureDb()).insert(resolutionEvent).values({
+        chatId,
+        resolvedBy: 'human',
+        hadHuman: updated.hadHuman,
+        useCase: updated.useCase,
+        resolvedAt: updated.closedAt ?? new Date(),
+      });
+    }
     return updated;
   } catch (_error) {
     throw new ChatSDKError('bad_request:database', 'Failed to release chat');
@@ -559,7 +578,7 @@ export async function reopenChat({ chatId }: { chatId: string }) {
   try {
     return await (await ensureDb())
       .update(chat)
-      .set({ closedAt: null })
+      .set({ closedAt: null, hadHuman: false })
       .where(eq(chat.id, chatId));
   } catch (_error) {
     throw new ChatSDKError('bad_request:database', 'Failed to reopen chat');
@@ -794,16 +813,12 @@ export async function updateChatAgentState({
   intent,
   language,
   handledBy,
-  resolved,
 }: {
   chatId: string;
   useCase?: string | null;
   intent?: string | null;
   language?: string | null;
   handledBy?: Chat['handledBy'];
-  // The agent closed the conversation: closedAt = now, only while the agent
-  // still handles it. handledBy stays as is, like release resolved.
-  resolved?: boolean;
 }) {
   if (!isDatabaseAvailable()) {
     console.log('[updateChatAgentState] Database not available, skipping update');
@@ -816,15 +831,13 @@ export async function updateChatAgentState({
       intent: string | null;
       language: string | null;
       handledBy: Chat['handledBy'];
-      closedAt: SQL;
+      hadHuman: boolean;
     }> = {};
     if (useCase !== undefined) updates.useCase = useCase;
     if (intent !== undefined) updates.intent = intent;
     if (language !== undefined) updates.language = language;
     if (handledBy !== undefined) updates.handledBy = handledBy;
-    if (resolved) {
-      updates.closedAt = sql`CASE WHEN ${chat.handledBy} = 'ai_agent' THEN now() ELSE ${chat.closedAt} END`;
-    }
+    if (handledBy && handledBy !== 'ai_agent') updates.hadHuman = true;
 
     if (Object.keys(updates).length === 0) return;
 
@@ -835,6 +848,131 @@ export async function updateChatAgentState({
   } catch (error) {
     console.warn('Failed to update agent state for chat', chatId, error);
     return;
+  }
+}
+
+// The agent said goodbye: closes the chat and logs an 'ai' resolution event
+// in one statement, only while the agent handles it and it is still open.
+// handledBy stays as is, like release resolved.
+export async function resolveChatByAgent({ chatId }: { chatId: string }) {
+  if (!isDatabaseAvailable()) {
+    console.log('[resolveChatByAgent] Database not available, skipping');
+    return;
+  }
+
+  try {
+    await (await ensureDb()).execute(sql`
+      with "closed" as (
+        update ${chat} set "closedAt" = now()
+        where "id" = ${chatId}
+          and "handledBy" = 'ai_agent'
+          and "closedAt" is null
+        returning "id", "hadHuman", "useCase", "closedAt"
+      )
+      insert into ${resolutionEvent}
+        ("chatId", "resolvedBy", "hadHuman", "useCase", "resolvedAt")
+      select "id", 'ai', "hadHuman", "useCase", "closedAt" from "closed"
+    `);
+  } catch (error) {
+    console.warn('Failed to resolve chat by agent', chatId, error);
+  }
+}
+
+export interface ResolutionTotals {
+  total: number;
+  aiContained: number;
+  human: number;
+  assisted: number;
+}
+
+export interface ResolutionMetrics extends ResolutionTotals {
+  byUseCase: Record<string, ResolutionTotals>;
+  byDay: Array<{ day: string } & ResolutionTotals>;
+}
+
+// Chats resolved without a use case are grouped under this key.
+export const NO_USE_CASE = 'NONE';
+
+// Resolution metrics from ResolutionEvent (docs/flujo-atencion.md §6), one
+// aggregate query grouped by day (UTC) and use case. from/to are inclusive
+// YYYY-MM-DD dates.
+export async function getResolutionMetrics({
+  from,
+  to,
+}: {
+  from?: string;
+  to?: string;
+}): Promise<ResolutionMetrics> {
+  const metrics: ResolutionMetrics = {
+    total: 0,
+    aiContained: 0,
+    human: 0,
+    assisted: 0,
+    byUseCase: {},
+    byDay: [],
+  };
+  if (!isDatabaseAvailable()) return metrics;
+
+  const countWhere = (condition: SQL) =>
+    sql<number>`count(*) filter (where ${condition})`.mapWith(Number);
+  const day = sql<string>`to_char(${resolutionEvent.resolvedAt}, 'YYYY-MM-DD')`;
+  const conditions: SQL[] = [];
+  if (from) conditions.push(sql`${resolutionEvent.resolvedAt} >= ${from}::date`);
+  if (to) {
+    conditions.push(
+      sql`${resolutionEvent.resolvedAt} < ${to}::date + interval '1 day'`,
+    );
+  }
+
+  try {
+    const rows = await (await ensureDb())
+      .select({
+        day,
+        useCase: resolutionEvent.useCase,
+        total: sql<number>`count(*)`.mapWith(Number),
+        aiContained: countWhere(
+          sql`${resolutionEvent.resolvedBy} = 'ai' and not ${resolutionEvent.hadHuman}`,
+        ),
+        human: countWhere(sql`${resolutionEvent.resolvedBy} = 'human'`),
+        assisted: countWhere(
+          sql`${resolutionEvent.resolvedBy} = 'ai' and ${resolutionEvent.hadHuman}`,
+        ),
+      })
+      .from(resolutionEvent)
+      .where(conditions.length ? and(...conditions) : undefined)
+      .groupBy(day, resolutionEvent.useCase)
+      .orderBy(day);
+
+    const empty = (): ResolutionTotals => ({
+      total: 0,
+      aiContained: 0,
+      human: 0,
+      assisted: 0,
+    });
+    const add = (target: ResolutionTotals, row: ResolutionTotals) => {
+      target.total += row.total;
+      target.aiContained += row.aiContained;
+      target.human += row.human;
+      target.assisted += row.assisted;
+    };
+    const byDay = new Map<string, { day: string } & ResolutionTotals>();
+
+    for (const row of rows) {
+      add(metrics, row);
+      const useCase = row.useCase ?? NO_USE_CASE;
+      metrics.byUseCase[useCase] ??= empty();
+      add(metrics.byUseCase[useCase], row);
+      if (!byDay.has(row.day)) byDay.set(row.day, { day: row.day, ...empty() });
+      add(byDay.get(row.day) as ResolutionTotals, row);
+    }
+    metrics.byDay = [...byDay.values()];
+    return metrics;
+  } catch (error) {
+    console.error('[getResolutionMetrics] Error:', error);
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to get resolution metrics',
+    );
   }
 }
 

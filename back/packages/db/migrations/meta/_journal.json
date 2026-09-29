@@ -43,6 +43,13 @@
       "when": 1790623661866,
       "tag": "0005_demonic_sir_ram",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1790646024106,
+      "tag": "0006_sweet_alice",
+      "breakpoints": true
     }
   ]
 }

@@ -16,6 +16,7 @@ import {
   getChats,
   getChatOwners,
   getConversationCounts,
+  getResolutionMetrics,
   HUMAN_HANDLED_BY,
   getLastCustomerMessages,
   getChatById,
@@ -225,6 +226,42 @@ advisorRouter.get('/users', requireAdmin, async (_req: Request, res: Response) =
     res.status(500).json({ error: 'Failed to fetch users' });
   }
 });
+
+const metricsQuerySchema = z.object({
+  from: z.iso.date().optional(),
+  to: z.iso.date().optional(),
+});
+
+/**
+ * GET /api/advisor/metrics?from=YYYY-MM-DD&to=YYYY-MM-DD - Resolution metrics
+ * (docs/flujo-atencion.md §6). Admin only. Both dates inclusive, in UTC.
+ */
+advisorRouter.get(
+  '/metrics',
+  requireAdmin,
+  async (req: Request, res: Response) => {
+    if (!isDatabaseAvailable()) {
+      return res.status(204).end();
+    }
+
+    const query = metricsQuerySchema.safeParse(req.query);
+    if (!query.success) {
+      const error = new ChatSDKError(
+        'bad_request:api',
+        'from and to must be YYYY-MM-DD dates.',
+      );
+      const response = error.toResponse();
+      return res.status(response.status).json(response.json);
+    }
+
+    try {
+      res.json(await getResolutionMetrics(query.data));
+    } catch (error) {
+      console.error('[/api/advisor/metrics] Error in handler:', error);
+      res.status(500).json({ error: 'Failed to get metrics' });
+    }
+  },
+);
 
 /**
  * POST /api/advisor/conversations/:id/take
