@@ -1,0 +1,45 @@
+{
+  "id": "24",
+  "language": "es",
+  "group": "despues-de-derivar",
+  "customer": {
+    "token": "demo-mx-3",
+    "user": 5,
+    "segment": "Plus",
+    "name": "Fernando"
+  },
+  "steps": [
+    {
+      "say": "hay un cobro raro en mi tarjeta"
+    },
+    {
+      "say": "la 3677"
+    },
+    {
+      "say": "el de Cable TV de 361.19 del 16 de junio"
+    },
+    {
+      "say": "no lo reconozco"
+    },
+    {
+      "say": "nunca contraté ningún servicio de cable"
+    },
+    {
+      "say": "sí, confirmo"
+    },
+    {
+      "take": "asesor1"
+    },
+    {
+      "release": "returned_to_agent"
+    },
+    {
+      "say": "y mi saldo de ahorro?"
+    }
+  ],
+  "expected": {
+    "firstIntent": "COMPLAINT",
+    "outcome": "R",
+    "mustMatch": ["6359|8768|4[.,\\s]?542|3[.,\\s]?545"]
+  }
+}

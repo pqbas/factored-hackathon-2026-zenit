@@ -1,0 +1,24 @@
+{
+  "id": "06",
+  "language": "es",
+  "group": "consultas",
+  "customer": {
+    "token": "demo-ar-3",
+    "user": 10,
+    "segment": "Basic",
+    "name": "Antonio"
+  },
+  "steps": [
+    {
+      "say": "saldo de la tarjeta"
+    },
+    {
+      "say": "y de mi cuenta de ahorro?"
+    }
+  ],
+  "expected": {
+    "firstIntent": "GENERAL_INQUIRY",
+    "outcome": "R",
+    "mustMatch": ["2948", "3953", "0729"]
+  }
+}

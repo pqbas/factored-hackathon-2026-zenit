@@ -1,0 +1,22 @@
+{
+  "id": "27",
+  "language": "es",
+  "group": "ambiguos-fuera-de-alcance",
+  "customer": {
+    "token": "demo-co-4",
+    "user": 13,
+    "segment": "Premium",
+    "name": "Leonardo"
+  },
+  "steps": [
+    {
+      "say": "quiero un préstamo"
+    }
+  ],
+  "expected": {
+    "firstIntent": "COMMERCIAL",
+    "outcome": "R",
+    "mustMatch": ["todav[ií]a no est[aá] disponible"],
+    "mustNotMatch": ["\\d\\s?%", "\\b(tasa|cuotas|plazo)\\b"]
+  }
+}

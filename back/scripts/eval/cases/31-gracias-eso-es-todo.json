@@ -1,0 +1,30 @@
+{
+  "id": "31",
+  "language": "es",
+  "group": "ambiguos-fuera-de-alcance",
+  "customer": {
+    "token": "demo-mx-4",
+    "user": 8,
+    "segment": "Plus",
+    "name": "Victoria"
+  },
+  "steps": [
+    {
+      "say": "tengo un cobro que no entiendo en mi tarjeta"
+    },
+    {
+      "say": "la 1670"
+    },
+    {
+      "say": "el de Conciertos Live de 244.43"
+    },
+    {
+      "say": "gracias, eso es todo"
+    }
+  ],
+  "expected": {
+    "firstIntent": "COMPLAINT",
+    "outcome": "A",
+    "resolved": true
+  }
+}

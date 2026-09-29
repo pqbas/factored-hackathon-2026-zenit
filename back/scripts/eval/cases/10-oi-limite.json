@@ -1,0 +1,25 @@
+{
+  "id": "10",
+  "language": "pt",
+  "group": "consultas",
+  "customer": {
+    "token": "demo-mx-1",
+    "user": 1,
+    "segment": "Plus",
+    "name": "Santiago"
+  },
+  "steps": [
+    {
+      "say": "oi, tudo bem?"
+    },
+    {
+      "say": "qual o limite do meu cartão?"
+    }
+  ],
+  "expected": {
+    "firstIntent": "GREETING",
+    "outcome": "R",
+    "mustMatch": ["1070", "6262", "4930"],
+    "mustNotMatch": ["\\b(tu límite|tienes)\\b"]
+  }
+}

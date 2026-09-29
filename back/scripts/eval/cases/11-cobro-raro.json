@@ -1,0 +1,44 @@
+{
+  "id": "11",
+  "language": "es",
+  "group": "reclamo-cargo",
+  "customer": {
+    "token": "demo-mx-3",
+    "user": 5,
+    "segment": "Plus",
+    "name": "Fernando"
+  },
+  "steps": [
+    {
+      "say": "hay un cobro raro en mi tarjeta"
+    },
+    {
+      "say": "la 3677"
+    },
+    {
+      "say": "el de Cable TV de 361.19 del 16 de junio"
+    },
+    {
+      "say": "no lo reconozco"
+    },
+    {
+      "say": "nunca contraté ningún servicio de cable"
+    },
+    {
+      "say": "sí, confirmo"
+    }
+  ],
+  "expected": {
+    "firstIntent": "COMPLAINT",
+    "outcome": "D",
+    "reason": "complaint",
+    "handoffFacts": [
+      "card_last4",
+      "transaction_date",
+      "merchant",
+      "amount",
+      "complaint_type",
+      "description"
+    ]
+  }
+}

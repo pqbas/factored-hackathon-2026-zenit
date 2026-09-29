@@ -1,0 +1,22 @@
+{
+  "id": "L2",
+  "language": "en",
+  "group": "cobertura-de-idioma",
+  "customer": {
+    "token": "demo-co-3",
+    "user": 9,
+    "segment": "Basic",
+    "name": "Pilar"
+  },
+  "steps": [
+    {
+      "say": "I want to check my credit card balance"
+    }
+  ],
+  "expected": {
+    "firstIntent": "GENERAL_INQUIRY",
+    "outcome": "R",
+    "mustNotMatch": ["\\b(your|balance|credit card|please)\\b"]
+  },
+  "limitation": true
+}
