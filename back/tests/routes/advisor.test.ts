@@ -5,6 +5,7 @@ import {
   saveMessages,
   getChatById,
   getMessagesByChatId,
+  updateChatAgentState,
 } from '@chat-template/db';
 import { skipInEphemeralMode } from '../helpers';
 
@@ -650,16 +651,18 @@ test.describe('/api/advisor (with database)', () => {
       babbageContext,
     }) => {
       const chatId = await createChat(babbageContext);
-      const inboxRow = async () => {
+      // With David it's only listed under handledBy=ai_agent; once taken, in
+      // the default (human) inbox.
+      const inboxRow = async (handledBy = '') => {
         const { chats } = await (
           await babbageContext.request.get(
-            `/api/advisor/conversations?userId=${babbageContext.name}-id&limit=100`,
+            `/api/advisor/conversations?userId=${babbageContext.name}-id&limit=100${handledBy}`,
           )
         ).json();
         return chats.find((c: any) => c.id === chatId);
       };
 
-      expect((await inboxRow()).lastMessage).toBeNull();
+      expect((await inboxRow('&handledBy=ai_agent')).lastMessage).toBeNull();
 
       const longQuestion = `Hola   ${'a'.repeat(200)}`;
       await (await postChatMessage(babbageContext, chatId, longQuestion)).text();
@@ -713,12 +716,46 @@ test.describe('/api/advisor (with database)', () => {
 
       const { chats } = await (
         await babbageContext.request.get(
-          `/api/advisor/conversations?userId=${babbageContext.name}-id&limit=100`,
+          `/api/advisor/conversations?userId=${babbageContext.name}-id&limit=100&handledBy=ai_agent`,
         )
       ).json();
       const row = chats.find((c: any) => c.id === chatId);
       expect(row.lastMessage.text).toBe('mensaje viejo del cliente');
       expect(row.lastMessage.senderType).toBeNull();
+    });
+
+    test("the default inbox holds only human cases; David's come with handledBy=ai_agent", async ({
+      babbageContext,
+    }) => {
+      const withDavid = await createChat(babbageContext);
+      const queued = await createChat(babbageContext);
+      await updateChatAgentState({ chatId: queued, handledBy: 'human_queue' });
+      const taken = await createChat(babbageContext);
+      await babbageContext.request.post(
+        `/api/advisor/conversations/${taken}/take`,
+        { data: {} },
+      );
+
+      const ids = async (query: string) => {
+        const { chats } = await (
+          await babbageContext.request.get(
+            `/api/advisor/conversations?userId=${babbageContext.name}-id&limit=100${query}`,
+          )
+        ).json();
+        return chats.map((c: any) => c.id);
+      };
+
+      for (const query of ['', '&status=open']) {
+        const inbox = await ids(query);
+        expect(inbox).toContain(queued);
+        expect(inbox).toContain(taken);
+        expect(inbox).not.toContain(withDavid);
+      }
+
+      const david = await ids('&status=open&handledBy=ai_agent');
+      expect(david).toContain(withDavid);
+      expect(david).not.toContain(queued);
+      expect(david).not.toContain(taken);
     });
 
     test('assignedTo=me, status and handledBy filter the inbox', async ({
