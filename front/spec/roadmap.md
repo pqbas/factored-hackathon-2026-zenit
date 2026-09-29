@@ -349,4 +349,4 @@ Shipped en PR #44.
       en barras apiladas (IA / asistidas / asesor).
 - [x] Estados de carga, sin resoluciones y error con reintento.
 
-Shipped en PR #<n>.
+Shipped en PR #49.
