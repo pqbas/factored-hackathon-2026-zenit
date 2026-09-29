@@ -52,11 +52,12 @@ export function avatarColor(customerId: string): string {
 
 export type ConversationStatus = 'assistant' | 'waiting' | 'advisor' | 'resolved';
 
+// The four states a conversation is always in (docs/flujo-atencion.md §5).
 export const STATUS_LABEL: Record<ConversationStatus, string> = {
-  assistant: `Con ${ASSISTANT_NAME}`,
-  waiting: 'Sin atender',
-  advisor: 'En atención',
-  resolved: 'Resuelto',
+  assistant: 'Con AI',
+  waiting: 'En espera',
+  advisor: 'Con asesor',
+  resolved: 'Resuelta',
 };
 
 export type DayGroup<T> = {

@@ -12,7 +12,7 @@ import {
   lastActivityAt,
   rowText,
 } from '@/lib/advisor';
-import { avatarColor, formatListTime, getInitials } from '@/lib/conversations';
+import { avatarColor, formatListTime, getInitials, STATUS_LABEL } from '@/lib/conversations';
 import { cn } from '@/lib/utils';
 
 function Row({
@@ -76,8 +76,8 @@ function Row({
         {withDavid && (
           <span
             data-testid="david-icon"
-            title={`Lo atiende ${ASSISTANT_NAME}`}
-            aria-label={`Lo atiende ${ASSISTANT_NAME}`}
+            title={`${STATUS_LABEL.assistant}: lo atiende ${ASSISTANT_NAME}`}
+            aria-label={`${STATUS_LABEL.assistant}: lo atiende ${ASSISTANT_NAME}`}
             className="flex text-muted-foreground"
           >
             <Bot className="size-4" strokeWidth={1.8} />

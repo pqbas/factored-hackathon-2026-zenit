@@ -206,7 +206,9 @@ test.describe('Advisor console', () => {
     expect(requested.some((u) => u.includes('useCase=GENERAL_INQUIRY'))).toBe(true);
 
     await page.getByTestId('view-david').click();
-    await expect(page.getByTestId('inbox-title')).toHaveText('Atendidas por David');
+    await expect(page.getByTestId('inbox-title')).toHaveText('Con AI');
+    await expect(page.getByTestId('view-david')).toContainText('Con AI');
+    await expect(page.getByTestId('view-waiting')).toContainText('En espera');
     await expect(rows(page)).toHaveCount(1);
     await expect(page.getByTestId('conversation-row-c-assistant')).toBeVisible();
     expect(requested.some((u) => u.includes('handledBy=ai_agent') && u.includes('status=open'))).toBe(true);
@@ -247,7 +249,7 @@ test.describe('Advisor console', () => {
     await expect(input(page)).toBeDisabled();
 
     await page.getByTestId('assistant-switch').click();
-    await expect(headerStatus(page)).toHaveText('La atiendes tú');
+    await expect(headerStatus(page)).toHaveText('Con asesor · la atiendes tú');
     await expect(page.getByTestId('system-notice').last()).toContainText('Te atiende un asesor.');
     await expect(input(page)).toBeEnabled();
 
@@ -261,10 +263,10 @@ test.describe('Advisor console', () => {
     await openConsole(page);
     await page.getByTestId('conversation-row-c-waiting').click();
     await page.getByTestId('take-button').click();
-    await expect(headerStatus(page)).toHaveText('La atiendes tú');
+    await expect(headerStatus(page)).toHaveText('Con asesor · la atiendes tú');
 
     await page.getByTestId('assistant-switch').click();
-    await expect(headerStatus(page)).toHaveCount(0);
+    await expect(headerStatus(page)).toHaveText('Con AI');
     await expect(input(page)).toBeDisabled();
     await expect(page.getByTestId('system-notice').last()).toContainText('Volviste con el asistente.');
 
@@ -285,7 +287,7 @@ test.describe('Advisor console', () => {
   test('a chat held by someone else is read-only for an advisor', async ({ page }) => {
     await openConsole(page);
     await page.getByTestId('conversation-row-c-other').click();
-    await expect(page.getByTestId('customer-meta')).toContainText(`La atiende ${OTHER}`);
+    await expect(page.getByTestId('customer-meta')).toContainText(`Con asesor · ${OTHER}`);
     await expect(input(page)).toBeDisabled();
     await expect(page.getByTestId('force-take-button')).toHaveCount(0);
   });
@@ -366,7 +368,7 @@ test.describe('Advisor console', () => {
     await page.getByTestId('user-option-c-assistant-user').click();
     await expect(page.getByTestId('inbox-empty-david')).toContainText('No hay casos para atender.');
     await page.getByTestId('inbox-empty-david-link').click();
-    await expect(page.getByTestId('inbox-title')).toHaveText('Atendidas por David');
+    await expect(page.getByTestId('inbox-title')).toHaveText('Con AI');
     await expect(page.getByTestId('conversation-row-c-assistant')).toBeVisible();
   });
 
@@ -397,16 +399,16 @@ test.describe('Advisor console', () => {
     await openConsole(page);
     const assistantRow = page.getByTestId('conversation-row-c-assistant');
     const waitingRow = page.getByTestId('conversation-row-c-waiting');
-    await expect(waitingRow.getByTestId('attention')).toHaveText('Sin atender');
+    await expect(waitingRow.getByTestId('attention')).toHaveText('En espera');
     await expect(waitingRow.getByTestId('waiting-dot')).toBeVisible();
     await expect(waitingRow.getByTestId('row-text')).toHaveText('Es urgente, por favor');
     await expect(waitingRow.getByTestId('row-text')).toHaveAttribute('title', 'Consulta de daniela');
     await expect(waitingRow.getByTestId('david-icon')).toHaveCount(0);
-    await expect(page.getByTestId('conversation-row-c-other').getByTestId('attention')).toHaveText('La atiende ada');
+    await expect(page.getByTestId('conversation-row-c-other').getByTestId('attention')).toHaveText('Con asesor · ada');
     await expect(page.locator('body')).not.toContainText('Sin caso de uso');
 
     await page.getByTestId('view-david').click();
-    await expect(assistantRow.getByTestId('david-icon')).toHaveAttribute('title', 'Lo atiende David');
+    await expect(assistantRow.getByTestId('david-icon')).toHaveAttribute('title', 'Con AI: lo atiende David');
     await expect(assistantRow.getByTestId('attention')).toHaveCount(0);
     await expect(assistantRow.getByTestId('row-text')).toHaveText('Consulta de javier');
     await expect(page.locator('body')).not.toContainText('Con David');
