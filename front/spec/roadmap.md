@@ -364,6 +364,9 @@ Shipped en PR #49.
 - [x] Estados de carga, sin cliente del banco y error con reintento, sin
       bloquear la conversación.
 - [x] En pantallas de menos de 1600 px el panel ocupa el lugar de la lista.
+- [x] Refleja tal cual lo registrado en el banco: pestañas Casos, Interacciones
+      (tipo, canal, motivo, resuelta, escalada, sentimiento) y Transcripciones
+      (idioma, intenciones, temas y texto de cliente y agente), traducidos 1 a 1.
 
 Shipped en PR #50.
 
