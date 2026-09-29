@@ -11,7 +11,7 @@ import { skipInEphemeralMode } from '../helpers';
 // Never curie: history.test.ts expects curie to have no chats.
 // A second advisor, via headers on babbage's context (ADVISOR_EMAILS in
 // playwright.config.ts). curie must stay chat-free, and ada is an admin, who
-// only supervises.
+// can also take chats.
 const ASESOR2 = {
   'X-Forwarded-User': 'asesor2',
   'X-Forwarded-Email': 'asesor2@example.com',
@@ -92,33 +92,76 @@ test.describe('/api/advisor (with database)', () => {
       expect(release.status()).toBe(403);
     });
 
-    test('the admin reads the console but gets 403 on every write', async ({
+    test('the admin takes, answers and releases like an advisor', async ({
       babbageContext,
       adaContext,
     }) => {
       const chatId = await createChat(babbageContext);
 
-      const inbox = await adaContext.request.get(
-        '/api/advisor/conversations?limit=100',
+      const take = await adaContext.request.post(
+        `/api/advisor/conversations/${chatId}/take`,
+        { data: {} },
       );
-      expect(inbox.status()).toBe(200);
-      const messages = await adaContext.request.get(
-        `/api/advisor/conversations/${chatId}/messages`,
+      expect(take.status()).toBe(200);
+      expect((await take.json()).chat.assignedTo).toBe(
+        `${adaContext.name}@example.com`,
       );
-      expect(messages.status()).toBe(200);
 
+      const send = await adaContext.request.post(
+        `/api/advisor/conversations/${chatId}/messages`,
+        { data: { text: 'hola' } },
+      );
+      expect(send.status()).toBe(201);
+
+      const release = await adaContext.request.post(
+        `/api/advisor/conversations/${chatId}/release`,
+        { data: { outcome: 'resolved' } },
+      );
+      expect(release.status()).toBe(200);
+      expect((await release.json()).chat.handledBy).toBe('ai_agent');
+    });
+
+    test('admin and advisor get 409 on a chat the other one holds', async ({
+      babbageContext,
+      adaContext,
+    }) => {
+      const heldByAdvisor = await createChat(babbageContext);
+      await babbageContext.request.post(
+        `/api/advisor/conversations/${heldByAdvisor}/take`,
+        { data: {} },
+      );
+      const adminTake = await adaContext.request.post(
+        `/api/advisor/conversations/${heldByAdvisor}/take`,
+        { data: { force: true } },
+      );
+      expect(adminTake.status()).toBe(409);
+      expect((await adminTake.json()).assignedTo).toBe(
+        `${babbageContext.name}@example.com`,
+      );
       for (const [path, data] of [
-        ['take', {}],
         ['messages', { text: 'hola' }],
         ['release', { outcome: 'resolved' }],
       ] as const) {
         const response = await adaContext.request.post(
-          `/api/advisor/conversations/${chatId}/${path}`,
+          `/api/advisor/conversations/${heldByAdvisor}/${path}`,
           { data },
         );
-        expect(response.status()).toBe(403);
-        expect((await response.json()).code).toBe('forbidden:chat');
+        expect(response.status()).toBe(409);
       }
+
+      const heldByAdmin = await createChat(babbageContext);
+      await adaContext.request.post(
+        `/api/advisor/conversations/${heldByAdmin}/take`,
+        { data: {} },
+      );
+      const advisorTake = await babbageContext.request.post(
+        `/api/advisor/conversations/${heldByAdmin}/take`,
+        { data: {} },
+      );
+      expect(advisorTake.status()).toBe(409);
+      expect((await advisorTake.json()).assignedTo).toBe(
+        `${adaContext.name}@example.com`,
+      );
     });
 
     test('/users is for the admin only', async ({

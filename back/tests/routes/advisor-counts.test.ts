@@ -20,7 +20,7 @@ async function createChatFor(userId: string) {
 test.describe('/api/advisor/conversations/counts (with database)', () => {
   skipInEphemeralMode(test);
 
-  test('counts match each view, and mine only counts for the advisor', async ({
+  test("counts match each view, and mine counts only the caller's own chats", async ({
     babbageContext,
     adaContext,
   }) => {
@@ -66,7 +66,7 @@ test.describe('/api/advisor/conversations/counts (with database)', () => {
     );
     expect(adminResponse.status()).toBe(200);
     const adminCounts = await adminResponse.json();
-    expect(adminCounts.mine).toBe(0);
+    expect(adminCounts.mine).toBe(0); // babbage holds them, not ada
     expect(adminCounts.total).toBe(3);
     expect(adminCounts.resolved).toBe(1);
   });

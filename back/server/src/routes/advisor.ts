@@ -9,7 +9,6 @@ import {
   authMiddleware,
   requireAuth,
   requireAdvisor,
-  requireAdvisorOnly,
   requireAdmin,
   getIdFromRequest,
 } from '../middleware/auth';
@@ -27,7 +26,7 @@ import {
 } from '@chat-template/db';
 import { generateUUID } from '@chat-template/core';
 import { ChatSDKError } from '@chat-template/core/errors';
-import { getRole, normalizeEmail } from '../roles';
+import { normalizeEmail } from '../roles';
 import { toLastMessagePreview } from '../inbox';
 
 export const advisorRouter: RouterType = Router();
@@ -180,7 +179,6 @@ advisorRouter.get(
 
 /**
  * GET /api/advisor/conversations/counts - Counts for the console's view bar.
- * `mine` only counts for advisors: the admin never holds a conversation.
  */
 advisorRouter.get(
   '/conversations/counts',
@@ -194,7 +192,7 @@ advisorRouter.get(
       res.json(
         await getConversationCounts({
           userId: (req.query.userId as string | undefined) || undefined,
-          advisorEmail: getRole(email) === 'advisor' ? email : undefined,
+          advisorEmail: email,
         }),
       );
     } catch (error) {
@@ -226,7 +224,6 @@ advisorRouter.get('/users', requireAdmin, async (_req: Request, res: Response) =
  */
 advisorRouter.post(
   '/conversations/:id/take',
-  requireAdvisorOnly,
   async (req: Request, res: Response) => {
     if (!isDatabaseAvailable()) {
       return res.status(204).end();
@@ -278,7 +275,6 @@ advisorRouter.post(
  */
 advisorRouter.post(
   '/conversations/:id/messages',
-  requireAdvisorOnly,
   async (req: Request, res: Response) => {
     if (!isDatabaseAvailable()) {
       return res.status(204).end();
@@ -346,7 +342,6 @@ advisorRouter.post(
  */
 advisorRouter.post(
   '/conversations/:id/release',
-  requireAdvisorOnly,
   async (req: Request, res: Response) => {
     if (!isDatabaseAvailable()) {
       return res.status(204).end();
