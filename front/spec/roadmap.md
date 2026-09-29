@@ -427,4 +427,4 @@ Shipped en PR #66.
 - [x] Se mantiene al recargar (agentPending en GET /api/chat/:id).
 - [x] Nunca se muestra un error técnico: cualquier otro error sale con un texto amable.
 
-Shipped en PR #<n>.
+Shipped en PR #69.
