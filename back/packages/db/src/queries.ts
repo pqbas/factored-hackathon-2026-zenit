@@ -1373,6 +1373,20 @@ export async function retryAgentTurnLater({
     .where(eq(agentTurn.id, id));
 }
 
+// Puts a claimed turn back without counting an attempt (it wasn't tried).
+export async function deferAgentTurn({
+  id,
+  delayMs,
+}: {
+  id: string;
+  delayMs: number;
+}) {
+  await (await ensureDb())
+    .update(agentTurn)
+    .set({ nextAttemptAt: sql`now() + ${`${delayMs} milliseconds`}::interval` })
+    .where(eq(agentTurn.id, id));
+}
+
 export async function hasPendingAgentTurn({
   chatId,
 }: {

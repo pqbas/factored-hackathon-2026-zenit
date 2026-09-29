@@ -24,9 +24,14 @@ import {
   CONTEXT_HEADER_SESSION_TOKEN,
   CONTEXT_HEADER_HANDLED_BY,
   getAndClearAgentOutputs,
+  StreamCache,
 } from '@chat-template/core';
 import { isAgentUnavailableError } from '@chat-template/ai-sdk-providers';
 import { buildAgentHistory, isPaused, trimAfterHandoff } from './agent-turn';
+
+// The live streams of POST /api/chat, shared with the queue worker so it
+// doesn't answer a chat's turn while another is still streaming.
+export const streamCache = new StreamCache();
 
 // Convert ai's LanguageModelUsage to @ai-sdk/provider's LanguageModelV3Usage
 function toV3Usage(usage: LanguageModelUsage): LanguageModelV3Usage {

@@ -1,5 +1,6 @@
 import {
   claimAgentTurns,
+  deferAgentTurn,
   finishAgentTurn,
   getChatById,
   getMessagesByChatId,
@@ -11,7 +12,11 @@ import {
   type AgentTurn,
 } from '@chat-template/db';
 import { convertToUIMessages, generateUUID } from '@chat-template/core';
-import { persistAgentReply, streamAgentTurn } from './agent-reply';
+import {
+  persistAgentReply,
+  streamAgentTurn,
+  streamCache,
+} from './agent-reply';
 import { isPaused } from './agent-turn';
 
 // Customer turns the agent couldn't take (its App was redeploying) wait in
@@ -88,6 +93,13 @@ export async function processAgentTurn(turn: AgentTurn) {
     })
   ) {
     await finishAgentTurn({ id: turn.id, status: 'discarded' });
+    return;
+  }
+
+  // David is still answering an earlier message of this chat: one turn at a
+  // time, and that one may end in a handoff that cancels this turn.
+  if (streamCache.getActiveStreamId(turn.chatId)) {
+    await deferAgentTurn({ id: turn.id, delayMs: BACKOFF_MS });
     return;
   }
 

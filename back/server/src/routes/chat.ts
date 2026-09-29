@@ -37,7 +37,6 @@ import {
   myProvider,
   postRequestBodySchema,
   type PostRequestBody,
-  StreamCache,
   type VisibilityType,
   getAndClearAgentOutputs,
 } from '@chat-template/core';
@@ -47,7 +46,11 @@ import { generateTitleFromUserMessage } from '../title';
 import { toCustomerChat } from '../customer-view';
 import { findDemoCustomer, tokenForCustomerId } from '../demo-customers';
 import { resolveCustomerName } from '../customer-name';
-import { persistAgentReply, streamAgentTurn } from '../agent-reply';
+import {
+  persistAgentReply,
+  streamAgentTurn,
+  streamCache,
+} from '../agent-reply';
 import { isPaused } from '../agent-turn';
 
 const CUSTOMER_ERROR_MESSAGE =
@@ -55,7 +58,6 @@ const CUSTOMER_ERROR_MESSAGE =
 
 export const chatRouter: RouterType = Router();
 
-const streamCache = new StreamCache();
 // Apply auth middleware to all chat routes
 chatRouter.use(authMiddleware);
 
