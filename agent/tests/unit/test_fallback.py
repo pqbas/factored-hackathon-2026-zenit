@@ -153,3 +153,22 @@ def test_cancelling_a_product_is_retention_not_cancel(text):
 def test_a_bare_cancelar_is_still_cancel():
     assert not names_a_product_to_cancel("cancelar")
     assert fallback_classify("cancelar", INTENTS + ["RETENTION"]).intent == "CANCEL"
+
+
+@pytest.mark.parametrize(
+    "previous, intent",
+    [
+        ("Tarjeta 0279, motivo: comisión. ¿Confirmas estos datos para pasar tu solicitud a un asesor?", "RETENTION"),
+        ("…¿Confirmas estos datos para pasar tu reclamo a un asesor?", "COMPLAINT"),
+        ("…¿Confirmas estos datos para pasar tu consulta a un asesor?", "CASE_STATUS"),
+        ("…Você confirma estes dados para passar sua reclamação a um atendente?", "COMPLAINT"),
+        ("Está en revisión.\n¿Necesitas que te ayude a pasar esta consulta a un asesor?", "CASE_STATUS"),
+    ],
+)
+def test_a_yes_to_a_confirmation_question_keeps_its_operation(previous, intent):
+    for text in ("sí", "Sí, confirmo", "sim", "correcto"):
+        assert menu_rule_intent(text, previous, SUBMENUS) == intent
+
+
+def test_a_yes_to_any_other_question_is_not_a_rule():
+    assert menu_rule_intent("sí", "¿Quieres ver tus movimientos?", SUBMENUS) is None
