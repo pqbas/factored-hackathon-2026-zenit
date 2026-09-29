@@ -107,9 +107,10 @@ advisorRouter.get('/conversations', async (req: Request, res: Response) => {
   const handoffReason =
     (req.query.handoffReason as string | undefined) || undefined;
   const assignedToParam = req.query.assignedTo as string | undefined;
-  const assignedTo = normalizeEmail(
-    assignedToParam === 'me' ? req.session?.user.email : assignedToParam,
-  );
+  const assignedTo =
+    normalizeEmail(
+      assignedToParam === 'me' ? req.session?.user.email : assignedToParam,
+    );
 
   if (startingAfter && endingBefore) {
     const error = new ChatSDKError(
@@ -299,26 +300,29 @@ advisorRouter.get(
  * GET /api/advisor/conversations/:id - One chat, as the inbox lists it.
  * Registered after /conversations/counts so that path isn't taken as an id.
  */
-advisorRouter.get('/conversations/:id', async (req: Request, res: Response) => {
-  if (!isDatabaseAvailable()) {
-    return res.status(204).end();
-  }
-
-  const id = getIdFromRequest(req);
-  if (!id) return;
-
-  try {
-    const chat = await getChatById({ id });
-    if (!chat) {
-      const response = new ChatSDKError('not_found:chat').toResponse();
-      return res.status(response.status).json(response.json);
+advisorRouter.get(
+  '/conversations/:id',
+  async (req: Request, res: Response) => {
+    if (!isDatabaseAvailable()) {
+      return res.status(204).end();
     }
-    res.json(await withHandoff(chat));
-  } catch (error) {
-    console.error('[/api/advisor/conversations/:id] Error in handler:', error);
-    res.status(500).json({ error: 'Failed to fetch conversation' });
-  }
-});
+
+    const id = getIdFromRequest(req);
+    if (!id) return;
+
+    try {
+      const chat = await getChatById({ id });
+      if (!chat) {
+        const response = new ChatSDKError('not_found:chat').toResponse();
+        return res.status(response.status).json(response.json);
+      }
+      res.json(await withHandoff(chat));
+    } catch (error) {
+      console.error('[/api/advisor/conversations/:id] Error in handler:', error);
+      res.status(500).json({ error: 'Failed to fetch conversation' });
+    }
+  },
+);
 
 /**
  * GET /api/advisor/customers/:customerKey/conversations - Every conversation
@@ -354,22 +358,18 @@ advisorRouter.get(
  * GET /api/advisor/users - Users with at least one chat, for the admin's
  * customer filter. Admin only: it is for supervising.
  */
-advisorRouter.get(
-  '/users',
-  requireAdmin,
-  async (_req: Request, res: Response) => {
-    if (!isDatabaseAvailable()) {
-      return res.status(204).end();
-    }
+advisorRouter.get('/users', requireAdmin, async (_req: Request, res: Response) => {
+  if (!isDatabaseAvailable()) {
+    return res.status(204).end();
+  }
 
-    try {
-      res.json({ users: await getChatOwners() });
-    } catch (error) {
-      console.error('[/api/advisor/users] Error in handler:', error);
-      res.status(500).json({ error: 'Failed to fetch users' });
-    }
-  },
-);
+  try {
+    res.json({ users: await getChatOwners() });
+  } catch (error) {
+    console.error('[/api/advisor/users] Error in handler:', error);
+    res.status(500).json({ error: 'Failed to fetch users' });
+  }
+});
 
 const isTimeZone = (tz: string) => {
   try {
