@@ -8,7 +8,9 @@ import httpx
 import pytest
 from fastapi.testclient import TestClient
 from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
-from langchain_core.messages import AIMessage
+from langchain_core.language_models import BaseChatModel
+from langchain_core.messages import AIMessage, AIMessageChunk, HumanMessage
+from langchain_core.outputs import ChatGeneration, ChatGenerationChunk, ChatResult
 from langchain_core.tools import StructuredTool
 
 import src.main as main
@@ -511,3 +513,84 @@ def test_a_confirmed_retention_carries_the_handoff_in_custom_outputs(client, mon
     assert handoff["facts"]["verified_data"] == {
         "product_type": "Tarjeta Crédito", "product_last4": "1070", "currency": "USD", "reason": "comisión alta",
     }
+
+
+SUMMARY_TEXT = "El cliente pide cancelar su tarjeta 1070 por la comisión."
+
+
+class StreamingScriptedChatModel(BaseChatModel):
+    """A chat model that really streams (token by token through LangGraph's messages mode),
+    scripted like ScriptedToolChatModel; the case summary call gets SUMMARY_TEXT."""
+
+    replies: list = []
+
+    @property
+    def _llm_type(self) -> str:
+        return "streaming-scripted"
+
+    def bind_tools(self, tools, **kwargs):
+        return self
+
+    def _next(self, messages) -> AIMessage:
+        if isinstance(messages[-1], HumanMessage) and messages[-1].content.startswith("{"):
+            return AIMessage(content=SUMMARY_TEXT)
+        return self.replies.pop(0)
+
+    def _generate(self, messages, stop=None, run_manager=None, **kwargs):
+        return ChatResult(generations=[ChatGeneration(message=self._next(messages))])
+
+    async def _astream(self, messages, stop=None, run_manager=None, **kwargs):
+        reply = self._next(messages)
+        if reply.tool_calls:
+            chunk = AIMessageChunk(content="", tool_call_chunks=[
+                {"name": c["name"], "args": json.dumps(c["args"]), "id": c["id"], "index": i}
+                for i, c in enumerate(reply.tool_calls)
+            ])
+            yield ChatGenerationChunk(message=chunk)
+            return
+        for token in reply.content.split(" "):
+            chunk = ChatGenerationChunk(message=AIMessageChunk(content=token + " "))
+            if run_manager:
+                await run_manager.on_llm_new_token(token + " ", chunk=chunk)
+            yield chunk
+
+
+def test_the_handoff_summary_never_reaches_the_customers_text(client, monkeypatch):
+    products = [{"type": "text", "text": json.dumps({
+        "columns": ["product_type", "product_number_last4", "currency"],
+        "rows": [["Tarjeta Crédito", "1070", "USD"]],
+    })}]
+
+    async def fake_get_products(**kwargs):
+        return products
+
+    get_products_tool = StructuredTool.from_function(
+        coroutine=fake_get_products, name="get_products", description="d",
+        args_schema={"type": "object", "properties": {"customer_id": {"type": "string"}}, "required": ["customer_id"]},
+        infer_schema=False,
+    )
+
+    async def fake_tools_for(schema):
+        return [get_products_tool]
+
+    llm = StreamingScriptedChatModel(replies=[
+        AIMessage(content="", tool_calls=[{"name": "get_products", "args": {}, "id": "c1"}]),
+        AIMessage(content="", tool_calls=[{"name": "hand_off_to_advisor", "id": "c2",
+                                           "args": {"product_last4": "1070", "reason": "comisión alta"}}]),
+    ])
+    monkeypatch.setattr(main, "tools_for", fake_tools_for)
+    monkeypatch.setattr(main, "get_chat_model", lambda: llm)
+    monkeypatch.setattr(
+        main, "jev_client",
+        JevClient(api_key="test-key", url="https://api.typesafe.ai/v1/systemone", timeout=2.0,
+                  transport=httpx.MockTransport(lambda request: _jev_response_for("RETENTION"))),
+    )
+
+    events = _stream_events(client, "sí, confirmo")
+
+    deltas = "".join(e["delta"] for e in events if e.get("type") == "response.output_text.delta")
+    done = [e for e in events if e.get("type") == "response.output_item.done"]
+    customer_text = deltas + " ".join(c["text"] for e in done for c in e["item"].get("content", []))
+    assert "El cliente pide" not in customer_text
+    assert done[-1]["item"]["content"][0]["text"] == HANDOFF_REPLY["es"]
+    assert done[-1]["custom_outputs"]["handoff"]["summary"] == SUMMARY_TEXT
