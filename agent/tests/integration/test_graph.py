@@ -6,7 +6,7 @@ import json
 from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 
-from src.graph.build import build_graph
+from src.graph.build import GRAPH_NODES, build_graph
 from src.llm.jev import JevUnavailable
 from src.prompts.messages import (
     CANCEL_REPLY,
@@ -23,7 +23,7 @@ from src.prompts.messages import (
 )
 from src.prompts.situations import SITUATIONS
 from src.schemas.classification import Classification
-from src.schemas.routing import IntentRoute
+from src.schemas.routing import IntentRoute, load_routing
 
 VALID_SESSION = {"authenticated": True, "customer_id": "CLI-TEST", "reason": None}
 EXPIRED_SESSION = {"authenticated": False, "customer_id": None, "reason": "expired"}
@@ -1230,3 +1230,106 @@ def test_cancelling_the_card_with_the_reason_given_summarizes_and_the_yes_hands_
     verified = result["handoff"]["facts"]["verified_data"]
     assert result["handoff"]["reason"] == "retention"
     assert verified["product_last4"] == "2705" and verified["reason"] == "la anualidad es muy cara"
+
+
+MOVEMENTS_DRAFT = "Tus movimientos:\n- 26/02/2026 Tienda X 443.88 USD Aprobado"
+
+
+# The real route, for its grounding entries.
+_REAL_INQUIRY = next(
+    route for route in load_routing("configs/routing.yaml", GRAPH_NODES) if route.intent == "GENERAL_INQUIRY"
+)
+GUARDED_ROUTES = [_REAL_INQUIRY, *ROUTES[1:]]
+
+
+def _movements_tools():
+    get_products = FakeMCPTool("get_products", GET_PRODUCTS_SCHEMA, result=[{"product_last4": "1234"}])
+    list_transactions = FakeMCPTool(
+        "list_transactions", LIST_TRANSACTIONS_SCHEMA, result=[{"merchant": "Tienda X", "amount": 443.88}]
+    )
+    return get_products, list_transactions
+
+
+def _call(name, call_id="call_1", args=None):
+    return AIMessage(content="", tool_calls=[{"name": name, "args": args or {}, "id": call_id}])
+
+
+def test_movements_after_only_get_products_get_one_forced_retry_and_pass_the_second_time():
+    get_products, list_transactions = _movements_tools()
+    llm = ScriptedToolLLM([
+        _call("get_products"),
+        AIMessage(content=MOVEMENTS_DRAFT),
+        _call("list_transactions", "call_2", {"product_last4": "1234"}),
+        AIMessage(content=MOVEMENTS_DRAFT),
+    ])
+    graph = _build_graph(llm, FakeJev(_classification(intent="GENERAL_INQUIRY")), routes=GUARDED_ROUTES,
+                         tools_for=_fake_tools_for(get_products, list_transactions))
+
+    result = _run(graph, "muéstrame mis movimientos")
+
+    assert result["messages"][-1].content == MOVEMENTS_DRAFT
+    assert len(list_transactions.calls) == 1
+    assert llm.tool_choices[-1].endswith("list_transactions")
+    assert result["guard"] == {"fired": True, "missing_tool": "list_transactions", "action": "retried_ok"}
+
+
+def test_a_second_ungrounded_answer_gets_the_tool_down_reply_and_the_draft_never_goes_out():
+    get_products, list_transactions = _movements_tools()
+    llm = ScriptedToolLLM([
+        _call("get_products"),
+        AIMessage(content=MOVEMENTS_DRAFT),
+        AIMessage(content=MOVEMENTS_DRAFT),
+    ])
+    graph = _build_graph(llm, FakeJev(_classification(intent="GENERAL_INQUIRY")), routes=GUARDED_ROUTES,
+                         tools_for=_fake_tools_for(get_products, list_transactions))
+
+    result = _run(graph, "muéstrame mis movimientos")
+
+    assert result["messages"][-1].content == TOOL_DOWN["es"]
+    assert not any(MOVEMENTS_DRAFT == getattr(m, "content", None) for m in result["messages"])
+    assert result["guard"] == {"fired": True, "missing_tool": "list_transactions", "action": "safe_reply"}
+
+
+def test_the_forced_tool_failing_gets_the_tool_down_reply():
+    get_products, _ = _movements_tools()
+    list_transactions = FakeMCPTool(
+        "list_transactions", LIST_TRANSACTIONS_SCHEMA, error=RuntimeError("warehouse timeout")
+    )
+    llm = ScriptedToolLLM([
+        _call("get_products"),
+        AIMessage(content=MOVEMENTS_DRAFT),
+        _call("list_transactions", "call_2"),
+    ])
+    graph = _build_graph(llm, FakeJev(_classification(intent="GENERAL_INQUIRY")), routes=GUARDED_ROUTES,
+                         tools_for=_fake_tools_for(get_products, list_transactions))
+
+    result = _run(graph, "muéstrame mis movimientos")
+
+    assert result["messages"][-1].content == TOOL_DOWN["es"]
+    assert result["guard"] == {"fired": True, "missing_tool": "list_transactions", "action": "safe_reply"}
+
+
+def test_grounded_movements_and_a_question_without_figures_leave_the_guard_null():
+    get_products, list_transactions = _movements_tools()
+    llm = ScriptedToolLLM([
+        _call("get_products"),
+        _call("list_transactions", "call_2", {"product_last4": "1234"}),
+        AIMessage(content=MOVEMENTS_DRAFT),
+    ])
+    graph = _build_graph(llm, FakeJev(_classification(intent="GENERAL_INQUIRY")), routes=GUARDED_ROUTES,
+                         tools_for=_fake_tools_for(get_products, list_transactions))
+
+    result = _run(graph, "muéstrame mis movimientos")
+
+    assert result["messages"][-1].content == MOVEMENTS_DRAFT
+    assert result["guard"] is None
+
+    question = "¿De cuál tarjeta? Terminadas en 1234 y 5678."
+    llm = ScriptedToolLLM([_call("get_products"), AIMessage(content=question)])
+    graph = _build_graph(llm, FakeJev(_classification(intent="GENERAL_INQUIRY")), routes=GUARDED_ROUTES,
+                         tools_for=_fake_tools_for(get_products, list_transactions))
+
+    result = _run(graph, "muéstrame mis movimientos")
+
+    assert result["messages"][-1].content == question
+    assert result["guard"] is None

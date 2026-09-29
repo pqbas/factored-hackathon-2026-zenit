@@ -49,6 +49,7 @@ def _signals(usage=None, classifier="jev"):
     return {
         "usage": usage or {"input_tokens": 0, "output_tokens": 0}, "model": main.settings.llm_endpoint,
         "prompt_version": main.prompt_version(), "classifier": classifier,
+        "guard": None,
     }
 
 
@@ -1013,3 +1014,36 @@ def test_a_commercial_request_gets_not_available_and_the_menu(client, monkeypatc
 
     assert _output_text(body) == NOT_AVAILABLE["es"] + "\n\n" + MENU["es"]
     assert llm.received is None
+
+
+def test_a_grounded_use_case_turn_reports_a_null_guard(client, monkeypatch):
+    monkeypatch.setattr(
+        main, "get_chat_model",
+        lambda: ScriptedToolChatModel([AIMessage(content=FAKE_LLM_TEXT)]),
+    )
+
+    body = _invoke(client, "¿cuál es el saldo de mi tarjeta?", thread_id="e2e-guard-null").json()
+
+    assert body["custom_outputs"]["use_case"] == "GENERAL_INQUIRY"
+    assert body["custom_outputs"]["guard"] is None
+
+
+def test_a_fired_guard_shows_in_custom_outputs_and_the_draft_never_reaches_the_customer(client, monkeypatch):
+    draft = "Tus movimientos: 26/02/2026 Tienda X 443.88 USD"
+    call = {"name": "get_products", "args": {}, "id": "call_1"}
+    monkeypatch.setattr(
+        main, "get_chat_model",
+        lambda: ScriptedToolChatModel([
+            AIMessage(content="", tool_calls=[call]), AIMessage(content=draft),
+            # The forced list_transactions is not bound in this fake: it answers with text again.
+            AIMessage(content=draft),
+        ]),
+    )
+
+    body = _invoke(client, "muéstrame mis movimientos", thread_id="e2e-guard-fired").json()
+
+    assert body["custom_outputs"]["guard"] == {
+        "fired": True, "missing_tool": "list_transactions", "action": "safe_reply",
+    }
+    assert "443.88" not in _output_text(body)
+    assert "443.88" not in json.dumps(body["custom_outputs"])
