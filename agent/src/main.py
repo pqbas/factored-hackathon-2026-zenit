@@ -98,7 +98,7 @@ async def _process_agent_astream_events(
             for node_name, node_data in event[1].items():
                 if not node_data:
                     continue
-                for key in ("classification", "use_case", "handoff"):
+                for key in ("classification", "use_case", "handoff", "paused"):
                     if key in node_data:
                         turn[key] = node_data[key]
                 if len(node_data.get("messages", [])) > 0:
@@ -112,6 +112,10 @@ async def _process_agent_astream_events(
                 chunk = event[1][0]
                 metadata = event[1][1] if len(event[1]) > 1 else {}
                 if metadata.get("langgraph_node") not in _STREAMING_NODES:
+                    continue
+                # A use-case turn goes out whole: the LLM may write text next to a
+                # hand_off_to_advisor call, and none of it may reach the customer.
+                if turn.get("use_case"):
                     continue
                 if isinstance(chunk, AIMessageChunk) and (content := chunk.content):
                     if delta := prefix_filter.feed(chunk.id, content):
@@ -128,11 +132,11 @@ async def non_streaming(request: ResponsesAgentRequest) -> ResponsesAgentRespons
     request.custom_inputs = dict(request.custom_inputs or {})
     request.custom_inputs["thread_id"] = thread_id
 
-    done_events = [
-        event async for event in streaming(request) if event.type == "response.output_item.done"
-    ]
+    events = [event async for event in streaming(request)]
+    done_events = [event for event in events if event.type == "response.output_item.done"]
+    # A paused turn has no items, so its custom_outputs ride on a bare event.
     custom_outputs = next(
-        (event.custom_outputs for event in reversed(done_events) if event.custom_outputs),
+        (event.custom_outputs for event in reversed(events) if event.custom_outputs),
         {"thread_id": thread_id},
     )
     return ResponsesAgentResponse(
@@ -155,7 +159,8 @@ async def streaming(
     history = to_chat_completions_input([i.model_dump() for i in request.input])
     input_state = {
         "messages": history[-MAX_HISTORY_MESSAGES:],
-        "session": session.as_dict(),
+        # handled_by says who owns the conversation now; the paused node reads it.
+        "session": {**session.as_dict(), "handled_by": custom_inputs.get("handled_by")},
         "thread_id": thread_id,
     }
 
@@ -173,7 +178,7 @@ async def streaming(
     )
     # The turn's signals ride on its last output_item.done, so each done event is held back
     # until the next one arrives or the stream ends.
-    turn: dict = {"classification": None, "use_case": None, "handoff": None}
+    turn: dict = {"classification": None, "use_case": None, "handoff": None, "paused": False}
     last_done = None
     async for event in _process_agent_astream_events(
         graph.astream(input_state, stream_mode=["updates", "messages"]), turn
@@ -184,10 +189,14 @@ async def streaming(
         if last_done is not None:
             yield last_done
         last_done = event
-    if last_done is not None:
-        custom_outputs = turn_custom_outputs(
-            thread_id, turn["classification"], turn["use_case"], settings.guardrail_threshold, turn["handoff"]
-        )
+    custom_outputs = turn_custom_outputs(
+        thread_id, turn["classification"], turn["use_case"], settings.guardrail_threshold,
+        turn["handoff"], turn["paused"],
+    )
+    if turn["paused"]:
+        # No text item at all: the smallest event that carries custom_outputs.
+        yield ResponsesAgentStreamEvent(type="response.in_progress", custom_outputs=custom_outputs)
+    elif last_done is not None:
         yield last_done.model_copy(update={"custom_outputs": custom_outputs})
 
 

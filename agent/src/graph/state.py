@@ -11,3 +11,4 @@ class AgentState(TypedDict):
     use_case: str | None
     handoff: dict | None
     confirmation: bool
+    paused: bool

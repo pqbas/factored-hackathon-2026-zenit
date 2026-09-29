@@ -105,6 +105,7 @@ async def _respond_with_tools(
                 await _fetch_missing_rows(route.handoff_reason, tool_call["args"], tools_by_name, rows_by_tool)
                 verified = verify_case(route.handoff_reason, tool_call["args"], rows_by_tool)
                 if isinstance(verified, dict):
+                    # The turn ends here: the other tool calls of this round never run and the LLM isn't called again.
                     return _hand_off(state, route, verified, rows_by_tool)
                 # The error names only product digits and field names, never the customer's text.
                 logger.warning("Handoff not verified: %s", verified)
