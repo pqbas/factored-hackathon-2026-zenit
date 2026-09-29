@@ -185,7 +185,7 @@ export function toBubble(message: AdvisorMessage, me: string | undefined): Bubbl
   const text = message.parts
     .filter((part) => part.type === 'text')
     .map((part) => part.text ?? '')
-    .join('');
+    .join('\n\n');
   const base = { id: message.id, text, sentAt: message.createdAt };
   const sender: SenderType =
     message.senderType ??
