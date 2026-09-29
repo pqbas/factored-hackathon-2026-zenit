@@ -25,6 +25,48 @@ function nextChatRequest(page: Page): Promise<Request> {
   );
 }
 
+const OLD_CHAT_ID = '00000000-0000-4000-8000-0000000000aa';
+
+// A saved chat as GET /api/chat/:id returns it; demoCustomerToken is the
+// customer the back stored for it.
+async function mockSavedChat(page: Page, demoCustomerToken: string | null) {
+  await page.route('**/api/config', (route) =>
+    route.fulfill({ json: { features: { chatHistory: true } } }),
+  );
+  await page.route(`**/api/chat/${OLD_CHAT_ID}`, (route) =>
+    route.fulfill({
+      json: {
+        id: OLD_CHAT_ID,
+        title: 'Chat de Santiago',
+        createdAt: '2026-09-28T10:00:00.000Z',
+        userId: 'ada-id',
+        visibility: 'private',
+        lastContext: null,
+        handledBy: 'ai_agent',
+        assignedTo: null,
+        demoCustomerToken,
+      },
+    }),
+  );
+  await page.route(`**/api/chat/${OLD_CHAT_ID}/stream`, (route) => route.fulfill({ status: 204 }));
+  await page.route(`**/api/messages/${OLD_CHAT_ID}**`, (route) =>
+    route.fulfill({
+      json: [
+        {
+          id: 'm1',
+          chatId: OLD_CHAT_ID,
+          role: 'user',
+          parts: [{ type: 'text', text: 'Hola' }],
+          attachments: [],
+          createdAt: '2026-09-28T10:00:00.000Z',
+          senderType: 'customer',
+          senderId: null,
+        },
+      ],
+    }),
+  );
+}
+
 // Tests share the worker's authenticated context (and its localStorage), so
 // they run in order and each opens its own page.
 test.describe.configure({ mode: 'serial' });
@@ -146,5 +188,39 @@ test.describe('Demo customer selector', () => {
     await expect(page.getByText('Chat de Javier')).toBeVisible();
     await expect(page.getByText('Chat de Santiago')).toHaveCount(0);
     expect(historyTokens).toContain('demo-co-1');
+  });
+
+  test('the picked customer stays when moving to an existing chat and back', async () => {
+    await mockCustomers(page);
+    await mockSavedChat(page, 'demo-mx-1');
+    await chat.createNewChat();
+    await page.evaluate(() => localStorage.clear());
+    await page.reload();
+    await chat.selectDemoCustomer('demo-co-1');
+    await expect(chat.demoCustomerSelector).toContainText('Javier · Colombia');
+
+    // The existing chat shows the customer the back stored for it, locked.
+    await page.goto(`/chat/${OLD_CHAT_ID}`);
+    await expect(chat.demoCustomerSelector).toContainText('Santiago · México');
+    await expect(chat.demoCustomerSelector).toBeDisabled();
+
+    // Opening it did not change the session: the new chat is still Javier's.
+    await chat.createNewChat();
+    await expect(chat.demoCustomerSelector).toContainText('Javier · Colombia');
+    await expect(chat.demoCustomerSelector).toBeEnabled();
+    await expect(page.getByTestId('greeting')).toContainText(', Javier');
+  });
+
+  test('an existing chat without a customer from the back falls back to the browser', async () => {
+    await mockCustomers(page);
+    await mockSavedChat(page, null);
+    await page.goto('/');
+    await page.evaluate((chatId) => {
+      localStorage.setItem('demo-customer:last', 'demo-co-1');
+      localStorage.setItem(`demo-customer:chat:${chatId}`, 'demo-mx-1');
+    }, OLD_CHAT_ID);
+    await page.goto(`/chat/${OLD_CHAT_ID}`);
+    await expect(chat.demoCustomerSelector).toContainText('Santiago · México');
+    await expect(chat.demoCustomerSelector).toBeDisabled();
   });
 });
