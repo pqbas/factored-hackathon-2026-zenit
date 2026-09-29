@@ -108,7 +108,7 @@ async function mockAdvisorApi(page: Page, me: string, role: Role = 'advisor') {
           byUseCase,
           withoutUseCase: open.filter((c) => !c.useCase).length,
           unattended: open.filter((c) => c.handledBy === 'human_queue').length,
-          mine: role === 'admin' ? 0 : open.filter((c) => c.assignedTo === me).length,
+          mine: open.filter((c) => c.assignedTo === me).length,
           resolved: chats.length - open.length,
         },
       });
@@ -126,11 +126,6 @@ async function mockAdvisorApi(page: Page, me: string, role: Role = 'advisor') {
       return route.fulfill({ json: { chats: list, hasMore: false } });
     }
     if (!target) return route.fulfill({ status: 404, json: { code: 'not_found:chat' } });
-    // The admin only reads: every write is 403 for them.
-    if (request.method() === 'POST' && role === 'admin') {
-      return route.fulfill({ status: 403, json: { code: 'forbidden:chat' } });
-    }
-
     if (action === 'messages' && request.method() === 'GET') {
       const all = messages.filter((m) => m.chatId === id);
       const after = url.searchParams.get('after');
@@ -278,28 +273,39 @@ test.describe('Advisor console', () => {
     await expect(page.getByTestId('force-take-button')).toHaveCount(0);
   });
 
-  test('the admin supervises: sees everything, filters by user, reads only', async ({
-    page,
-  }) => {
+  test('the admin supervises everything and attends like an advisor', async ({ page }) => {
     const requested = await openConsole(page, 'admin', 'root@example.com');
     await expect(page.getByTestId('nav-admin')).toHaveCount(0);
     await expect(page.getByTestId('inbox-title')).toHaveText('Bandeja');
-    await expect(page.getByTestId('view-mine')).toHaveCount(0);
+    await expect(page.getByTestId('view-mine')).toBeVisible();
     await expect(rows(page)).toHaveCount(4);
 
+    // Waiting: the admin takes it, replies and resolves it.
+    await page.getByTestId('conversation-row-c-waiting').click();
+    await expect(page.getByTestId('read-only-badge')).toHaveCount(0);
+    await page.getByTestId('take-button').click();
+    await expect(input(page)).toBeEnabled();
+    await input(page).fill('Hola, soy el administrador.');
+    await input(page).press('Enter');
+    await expect(page.getByText('Hola, soy el administrador.')).toBeVisible();
+    await page.getByTestId('view-mine').click();
+    await expect(rows(page)).toHaveCount(1);
+    await page.getByTestId('conversation-row-c-waiting').click();
+    await page.getByTestId('resolve-button').click();
+    await expect(page.getByTestId('customer-meta')).toContainText('Resuelta');
+
+    // Held by another advisor: no controls, no force.
+    await page.getByTestId('view-inbox').click();
     await page.getByTestId('user-filter').click();
     await page.getByTestId('user-option-c-other-user').click();
     await expect(rows(page)).toHaveCount(1);
     expect(requested.some((u) => u.includes('userId=c-other-user'))).toBe(true);
-
     await page.getByTestId('conversation-row-c-other').click();
-    await expect(page.getByTestId('read-only-badge')).toBeVisible();
-    await expect(page.getByTestId('status-banner')).toHaveText('Supervisión: solo lectura.');
-    await expect(page.getByTestId('customer-meta')).toContainText(`La atiende ${OTHER}`);
+    await expect(page.getByTestId('status-banner')).toContainText(`La atiende ${OTHER}`);
     for (const id of ['assistant-switch', 'take-button', 'resolve-button', 'force-take-button']) {
       await expect(page.getByTestId(id)).toHaveCount(0);
     }
-    await expect(input(page)).toHaveCount(0);
+    await expect(input(page)).toBeDisabled();
   });
 
   test('/admin now leads to Chats', async ({ page }) => {

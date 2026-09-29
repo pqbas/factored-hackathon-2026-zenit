@@ -194,8 +194,7 @@ export function InboxViews({
                 'Sin atender',
                 'view-waiting',
               )}
-              {!isAdmin &&
-                item({ kind: 'mine' }, <UserCheck className={muted} strokeWidth={1.8} />, 'Mías', 'view-mine')}
+              {item({ kind: 'mine' }, <UserCheck className={muted} strokeWidth={1.8} />, 'Mías', 'view-mine')}
               {item(
                 { kind: 'resolved' },
                 <CheckCircle2 className="size-4 shrink-0 text-tint-green-foreground" strokeWidth={1.8} />,

@@ -1,5 +1,5 @@
 import { ASSISTANT_NAME } from '@/lib/assistant';
-import { ArrowDown, Bot, Eye, Hourglass, Lock, UserRound } from 'lucide-react';
+import { ArrowDown, Bot, Hourglass, Lock, UserRound } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 import { AdvisorComposer } from '@/components/conversations/advisor-composer';
@@ -21,14 +21,7 @@ import { cn } from '@/lib/utils';
 // How far from the end the advisor has to scroll before the jump button shows.
 const SCROLL_THRESHOLD = 120;
 
-function hint(chat: AdvisorChat, me: string | undefined, readOnly: boolean) {
-  if (readOnly) {
-    return {
-      icon: Eye,
-      text: 'Supervisión: solo lectura.',
-      className: 'text-muted-foreground',
-    };
-  }
+function hint(chat: AdvisorChat, me: string | undefined) {
   if (isHeldByOther(chat, me)) {
     return {
       icon: Lock,
@@ -75,7 +68,6 @@ export function ConversationView({
   chat,
   bubbles,
   me,
-  readOnly,
   busy,
   onTake,
   onRelease,
@@ -85,7 +77,6 @@ export function ConversationView({
   chat: AdvisorChat;
   bubbles: Bubble[];
   me: string | undefined;
-  readOnly: boolean;
   busy: boolean;
   onTake: () => void;
   onRelease: (outcome: 'returned_to_agent' | 'resolved') => void;
@@ -96,7 +87,7 @@ export function ConversationView({
   const bottomRef = useRef<HTMLDivElement>(null);
   const [awayFromBottom, setAwayFromBottom] = useState(false);
   const now = new Date();
-  const banner = hint(chat, me, readOnly);
+  const banner = hint(chat, me);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: 'end' });
@@ -115,7 +106,6 @@ export function ConversationView({
       <ConversationHeader
         chat={chat}
         me={me}
-        readOnly={readOnly}
         busy={busy}
         onTake={onTake}
         onRelease={onRelease}
@@ -169,16 +159,12 @@ export function ConversationView({
         {banner.text}
       </div>
 
-      {readOnly ? (
-        <div className="pb-4" />
-      ) : (
-        <AdvisorComposer
-          key={chat.id}
-          disabled={!canReply(chat, me)}
-          placeholder={placeholderFor(chat, me)}
-          onSend={onSend}
-        />
-      )}
+      <AdvisorComposer
+        key={chat.id}
+        disabled={!canReply(chat, me)}
+        placeholder={placeholderFor(chat, me)}
+        onSend={onSend}
+      />
     </div>
   );
 }
