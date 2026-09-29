@@ -28,7 +28,7 @@ import {
   type ViewCounts,
 } from '@/lib/advisor';
 import { cn } from '@/lib/utils';
-import { ASSISTANT_NAME } from '@/lib/assistant';
+import { STATUS_LABEL } from '@/lib/conversations';
 
 function ViewItem({
   view,
@@ -47,7 +47,7 @@ function ViewItem({
   label: string;
   testId: string;
   count: number;
-  // "Sin atender" stands out while there are chats waiting.
+  // "En espera" stands out while there are chats waiting.
   highlight?: boolean;
 }) {
   const { setOpenMobile } = useSidebar();
@@ -168,7 +168,7 @@ export function InboxViews({
               {item(
                 { kind: 'david' },
                 <Bot className={muted} strokeWidth={1.8} />,
-                `Atendidas por ${ASSISTANT_NAME}`,
+                STATUS_LABEL.assistant,
                 'view-david',
               )}
             </SidebarMenu>
@@ -198,7 +198,7 @@ export function InboxViews({
               {item(
                 { kind: 'waiting' },
                 <Hourglass className="size-4 shrink-0 text-tint-amber-foreground" strokeWidth={1.8} />,
-                'Sin atender',
+                STATUS_LABEL.waiting,
                 'view-waiting',
               )}
               {item({ kind: 'mine' }, <UserCheck className={muted} strokeWidth={1.8} />, 'Mías', 'view-mine')}

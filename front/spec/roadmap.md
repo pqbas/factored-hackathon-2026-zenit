@@ -331,5 +331,7 @@ Shipped en PR #42.
       conversaciones autónomas e intervenir si hace falta.
 - [x] Con la Bandeja vacía: "No hay casos para atender. David está atendiendo N
       conversaciones", con link a esa vista.
+- [x] Los estados se llaman Con AI, En espera, Con asesor y Resuelta en vistas,
+      filas y encabezado (docs/flujo-atencion.md §5); la vista de David es "Con AI".
 
 Shipped en PR #44.

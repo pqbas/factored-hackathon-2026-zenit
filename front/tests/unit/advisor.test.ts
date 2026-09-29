@@ -179,18 +179,19 @@ describe('useCaseTag', () => {
 });
 
 describe('attentionOf', () => {
-  it('says nothing while David handles the chat', () => {
+  it('rows say nothing while David handles the chat; the header says Con AI', () => {
     expect(attentionOf(chat(), ME)).toBeNull();
+    expect(attentionOf(chat(), ME, { long: true })?.text).toBe('Con AI');
   });
 
   it('flags waiting, held and resolved chats', () => {
-    expect(attentionOf(chat({ handledBy: 'human_queue' }), ME)?.text).toBe('Sin atender');
+    expect(attentionOf(chat({ handledBy: 'human_queue' }), ME)?.text).toBe('En espera');
     const mine = chat({ handledBy: 'human_agent', assignedTo: ME });
-    expect(attentionOf(mine, ME)?.text).toBe('Tú');
-    expect(attentionOf(mine, ME, { long: true })?.text).toBe('La atiendes tú');
+    expect(attentionOf(mine, ME)?.text).toBe('Con asesor · tú');
+    expect(attentionOf(mine, ME, { long: true })?.text).toBe('Con asesor · la atiendes tú');
     const other = chat({ handledBy: 'human_agent', assignedTo: 'ada@example.com' });
-    expect(attentionOf(other, ME)?.text).toBe('La atiende ada');
-    expect(attentionOf(other, ME, { long: true })?.text).toBe('La atiende ada@example.com');
+    expect(attentionOf(other, ME)?.text).toBe('Con asesor · ada');
+    expect(attentionOf(other, ME, { long: true })?.text).toBe('Con asesor · ada@example.com');
     expect(attentionOf(chat({ closedAt: '2026-09-28T11:00:00.000Z' }), ME)?.text).toBe('Resuelta');
   });
 });

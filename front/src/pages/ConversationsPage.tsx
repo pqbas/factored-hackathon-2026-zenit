@@ -28,7 +28,7 @@ import {
   toBubble,
 } from '@/lib/advisor';
 import { ASSISTANT_NAME } from '@/lib/assistant';
-import { matchesQuery } from '@/lib/conversations';
+import { matchesQuery, STATUS_LABEL } from '@/lib/conversations';
 import { cn } from '@/lib/utils';
 
 // Messages of the open conversation: full list on open, then only the new
@@ -72,8 +72,8 @@ function useConversationMessages(chatId: string | null) {
 
 const VIEW_TITLE = {
   inbox: 'Bandeja',
-  david: `Atendidas por ${ASSISTANT_NAME}`,
-  waiting: 'Sin atender',
+  david: STATUS_LABEL.assistant,
+  waiting: STATUS_LABEL.waiting,
   mine: 'Mías',
   resolved: 'Resueltas',
 };

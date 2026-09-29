@@ -4,7 +4,7 @@
 import type { Chat, DBMessage } from '@chat-template/db';
 
 import { ASSISTANT_NAME } from '@/lib/assistant';
-import type { ConversationStatus } from '@/lib/conversations';
+import { type ConversationStatus, STATUS_LABEL } from '@/lib/conversations';
 
 // Row types from @chat-template/db as they arrive over JSON: dates are strings.
 type OverJson<T> = {
@@ -231,7 +231,7 @@ export function groupByUseCase(
     .map((id) => ({ id, label: useCaseLabelOf(id), chats: groups.get(id) ?? [] }));
 }
 
-export type AttentionTone = 'waiting' | 'mine' | 'other' | 'resolved';
+export type AttentionTone = 'assistant' | 'waiting' | 'mine' | 'other' | 'resolved';
 
 // State worth showing: only when the chat needs attention or changes hands.
 // "With David" is the normal case and shows nothing.
@@ -242,23 +242,25 @@ export function attentionOf(
   // header spells it out.
   { long = false }: { long?: boolean } = {},
 ): { text: string; tone: AttentionTone } | null {
-  if (chat.closedAt) return { text: 'Resuelta', tone: 'resolved' };
-  if (chat.handledBy === 'human_queue') return { text: 'Sin atender', tone: 'waiting' };
+  if (chat.closedAt) return { text: STATUS_LABEL.resolved, tone: 'resolved' };
+  if (chat.handledBy === 'human_queue') return { text: STATUS_LABEL.waiting, tone: 'waiting' };
   if (chat.handledBy === 'human_agent') {
-    return isMine(chat, me)
-      ? { text: long ? 'La atiendes tú' : 'Tú', tone: 'mine' }
-      : {
-          text: `La atiende ${
-            chat.assignedTo
-              ? long
-                ? chat.assignedTo
-                : chat.assignedTo.split('@')[0]
-              : 'otro asesor'
-          }`,
-          tone: 'other',
-        };
+    const holder = isMine(chat, me)
+      ? long
+        ? 'la atiendes tú'
+        : 'tú'
+      : chat.assignedTo
+        ? long
+          ? chat.assignedTo
+          : chat.assignedTo.split('@')[0]
+        : 'otro asesor';
+    return {
+      text: `${STATUS_LABEL.advisor} · ${holder}`,
+      tone: isMine(chat, me) ? 'mine' : 'other',
+    };
   }
-  return null;
+  // Rows show David's chats with the robot; the header names the state.
+  return long ? { text: STATUS_LABEL.assistant, tone: 'assistant' } : null;
 }
 
 export class AdvisorRequestError extends Error {
