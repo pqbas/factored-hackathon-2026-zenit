@@ -1,0 +1,11 @@
+{
+  "name": "06-estado-reclamo",
+  "description": "Estado de un reclamo (línea base)",
+  "sessionToken": "demo-ar-1",
+  "customer": 3,
+  "messages": [
+    "hola",
+    "quiero saber el estado de mi reclamo",
+    "no tengo el número de caso"
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "name": "01-saldo-tarjeta",
+  "description": "Saludo, menú, saldo de la tarjeta de crédito y despedida",
+  "sessionToken": "demo-mx-1",
+  "customer": 1,
+  "messages": [
+    "hola",
+    "tarjeta de crédito",
+    "¿cuál es mi saldo?",
+    "no gracias, eso es todo"
+  ]
+}

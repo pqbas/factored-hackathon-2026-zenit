@@ -994,11 +994,38 @@ export async function updateChatCustomer({
   try {
     await (await ensureDb())
       .update(chat)
-      .set({ customerId })
+      .set({ customerId, customerName: null })
       .where(eq(chat.id, chatId));
   } catch (error) {
     console.warn('Failed to update customer for chat', chatId, error);
   }
+}
+
+// Fills customerName on every chat of that customer still missing it.
+export async function setCustomerName({
+  customerId,
+  customerName,
+}: {
+  customerId: string;
+  customerName: string;
+}) {
+  if (!isDatabaseAvailable()) return;
+
+  await (await ensureDb())
+    .update(chat)
+    .set({ customerName })
+    .where(and(eq(chat.customerId, customerId), isNull(chat.customerName)));
+}
+
+// Customer ids with at least one chat missing customerName (backfill).
+export async function getCustomerIdsWithoutName(): Promise<string[]> {
+  if (!isDatabaseAvailable()) return [];
+
+  const rows = await (await ensureDb())
+    .selectDistinct({ customerId: chat.customerId })
+    .from(chat)
+    .where(and(isNotNull(chat.customerId), isNull(chat.customerName)));
+  return rows.map((r) => r.customerId).filter((id): id is string => !!id);
 }
 
 export async function markMessagesBlocked({ ids }: { ids: string[] }) {

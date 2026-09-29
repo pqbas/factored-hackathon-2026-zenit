@@ -69,6 +69,7 @@ import { ChatSDKError } from '@chat-template/core/errors';
 import { generateTitleFromUserMessage } from '../title';
 import { toCustomerChat } from '../customer-view';
 import { findDemoCustomer } from '../demo-customers';
+import { resolveCustomerName } from '../customer-name';
 import { buildAgentHistory, shouldPersistAgentReply } from '../agent-turn';
 
 export const chatRouter: RouterType = Router();
@@ -167,6 +168,16 @@ chatRouter.post('/', requireAuth, async (req: Request, res: Response) => {
       if (customerId && chat.customerId !== customerId) {
         await updateChatCustomer({ chatId: id, customerId });
       }
+    }
+    // One warehouse lookup per customer, not per turn: only while the name
+    // is missing (new chat, new customer, or a lookup that failed before).
+    // It doesn't hold up the reply.
+    if (
+      dbAvailable &&
+      customerId &&
+      (!chat || chat.customerId !== customerId || !chat.customerName)
+    ) {
+      void resolveCustomerName(customerId);
     }
 
     const messagesFromDb = await getMessagesByChatId({ id });

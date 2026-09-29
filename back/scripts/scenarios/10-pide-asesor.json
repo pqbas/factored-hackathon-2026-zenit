@@ -1,0 +1,10 @@
+{
+  "name": "10-pide-asesor",
+  "description": "Pide un asesor sin decir para qué (línea base)",
+  "sessionToken": "demo-mx-1",
+  "customer": 5,
+  "messages": [
+    "quiero hablar con un asesor",
+    "un asesor por favor"
+  ]
+}
