@@ -49,3 +49,40 @@ And he changes in these ways:
   - `src/graph/nodes/respond.py` (`_respond_with_tools`, `_collect`, `_fetch_missing_rows`);
   - `src/tools/collector.py` (`_retention_step`);
   - `src/prompts/messages.py`, `src/prompts/situations.py`.
+
+## 4. Annex: grounding guard per tool (#03, #09, #33)
+
+The user rejected building the movements in code: David shouldn't become ever more deterministic. The LLM stays free to decide which tools to call and how to word the reply, and a guard checks the result before it reaches the customer. The strong movements instruction that made David invent movements in #33 (1 of 3 runs, with merchants, dates and amounts no tool returned) stays reverted. #03, #09 and #33 stay failing until the guard exists.
+
+### Functional requirements
+
+13. Required tool. Before the reply reaches the customer, the turn knows which tool its query needs. It comes from `routing.yaml`: each use-case route lists its data kinds, each with the words that ask for it and the tool that returns it.
+    - GENERAL_INQUIRY: movements (movimientos, movimentações, compras, transacciones) need `list_transactions`; balance, limit and available credit need `get_products`.
+    - CASE_STATUS: the status of a complaint needs `get_cases`.
+    - The data kind is read from the customer's message. With no match, it's read from the reply: a list of movements (lines with a date and an amount) or a balance figure.
+14. Check. After the tool loop, if the reply shows account data of a kind and that kind's tool wasn't called successfully in the turn, the reply is ungrounded and doesn't reach the customer.
+    - Account data means figures with 3 or more digits or decimals, or dates, next to an amount.
+    - Turns without account data aren't checked: questions, menus, the fixed texts.
+15. What happens when the guard fires. The options are below; the user chooses.
+16. Signal. Every use-case turn carries `custom_outputs.guard`:
+    - `null` when the guard didn't fire;
+    - otherwise `{fired: true, missing_tool, action}`, with `action` one of `retried_ok`, `safe_reply`.
+
+    The runner counts them. The LLM's draft text is never stored, only the labels.
+
+### Options for requirement 15
+
+- A (recommended). One retry, then a safe reply.
+  - The turn runs the LLM once more with `tool_choice` forced to the missing tool, followed by a normal round to write the reply.
+  - If the new reply passes the check, it goes out (`retried_ok`).
+  - If it doesn't, or the tool fails, the reply is "Ahora no puedo consultar esa información." (`safe_reply`).
+  - Cost: one or two more LLM calls, only when the guard fires.
+- B. Safe reply at once: "Ahora no puedo consultar esa información." (`safe_reply`). Cheapest, but the customer loses an answer the retry would usually save.
+- C. Retry without forcing the tool (a plain second attempt), then the safe reply. It depends on the LLM choosing the tool, which is exactly what failed.
+
+### Decisions
+
+- The guard checks what the tool log shows (which tools returned rows in the turn), not the wording. That keeps the LLM free and catches the failure seen in #33, where movements appeared without `list_transactions`.
+- The data kinds and their tools live in `routing.yaml`, next to the route's instructions, so adding a kind is a config change.
+- Possible later hardening, out of scope here: also check that every figure in the reply appears in the tool results of the turn. That catches a made-up amount even when the right tool was called. It is noted, not built.
+- The use-case turns already don't stream deltas (silent-after-handoff), so an ungrounded reply can be stopped before the customer sees anything.

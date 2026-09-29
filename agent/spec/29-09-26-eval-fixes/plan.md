@@ -88,3 +88,23 @@
 19. Pending OK, not implemented in this phase unless w1:p4 confirms.
     - Don't reclassify while the complaint or retention collector is in progress: the previous reply is one of the collector's fixed questions (`ASK_CARD`, `ASK_CHARGE`, `ASK_TYPE`, `ASK_DESCRIPTION`, `ASK_PRODUCT`, `ASK_REASON`). The turn keeps that operation, with the same exceptions as rule 11.
     - `CLASSIFIER_TIMEOUT_SECONDS` and `EXTRACTION_TIMEOUT_SECONDS` default to 8.0.
+
+---
+
+## Group 7 (annex, pending approval of the option): grounding guard
+
+20. `configs/routing.yaml` and `src/schemas/routing.py`: `IntentRoute.grounding: list[GroundingKind] = []`, where `GroundingKind = {kind, tool, asks: [regex], shows: regex}`.
+    - GENERAL_INQUIRY: `movements` → `list_transactions` (asks `movimient|movimentac|compras|transaccion`; shows a line with a date and an amount), and `balance` → `get_products` (asks `saldo|limite|cupo|disponible|debo|devo`; shows an amount).
+    - CASE_STATUS: `status` → `get_cases`.
+21. `src/tools/grounding.py`:
+    - `required_kinds(route, customer_text, reply_text) -> list[GroundingKind]`, from the customer's words, else from what the reply shows.
+    - `ungrounded(route, customer_text, reply_text, called_ok: set[str]) -> GroundingKind | None`: the first required kind whose tool isn't in `called_ok`, when the reply has account data (the `shows` regex).
+22. `src/graph/nodes/respond.py`, `_respond_with_tools`:
+    - Track `called_ok` (short names of the UC tools that returned without raising).
+    - After the loop, run `ungrounded`. When it fires, apply the chosen option (A: one forced round with `tool_choice=<tool>`, then one normal round, then the check again; else `TOOL_DOWN`).
+    - Return `{"guard": {...}}` in the state update.
+23. `src/graph/state.py` gets `guard: dict | None`. `src/main.py` records it in `turn`, and `turn_custom_outputs(..., guard=None)` adds it. Logs have the kind and tool only, never the text.
+24. Tests:
+    - unit: `required_kinds` and `ungrounded` (movements without `list_transactions` fire; balance with `get_products` doesn't; a question without figures doesn't);
+    - integration: a scripted LLM that answers movements after only `get_products` gets the forced retry, and with a good second answer `guard.action == "retried_ok"`; with a bad one, `TOOL_DOWN` and `safe_reply`;
+    - e2e: `custom_outputs.guard` over `/invocations` is `null` on a grounded turn.

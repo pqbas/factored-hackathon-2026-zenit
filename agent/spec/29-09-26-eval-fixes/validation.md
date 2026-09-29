@@ -34,3 +34,11 @@
 ## Definition of Done
 
 All boxes checked, w1:p1's rerun shows the 12 fixed with no regressions, and merged with `/spec-ship`. Group 6 is only included if the user approves it.
+
+## Annex: grounding guard (Group 7)
+
+- [ ] Unit: movements shown without `list_transactions` fire the guard; a balance with `get_products` and a question without figures don't
+- [ ] Integration: the chosen option's path (`retried_ok` and `safe_reply`), and the ungrounded draft never reaches the reply
+- [ ] E2E: `custom_outputs.guard` is `null` on a grounded turn and set on a fired one
+- [ ] Manual, local :8001: #33 over 5 runs never shows movements that `list_transactions` didn't return; any time the guard fires, `custom_outputs.guard` shows it
+- [ ] w1:p1's runner counts `guard` firings per case
