@@ -140,8 +140,9 @@ async def _respond_with_tools(
 
 async def _bound_tools(state: AgentState, route: IntentRoute, tools_for) -> list:
     customer_id = state["session"]["customer_id"]
+    fail_tools = state["session"].get("fail_tools", ())
     return [
-        bind_customer(tool, customer_id)
+        bind_customer(tool, customer_id, fail=tool.name.split("__")[-1] in fail_tools)
         for schema in route.schemas
         for tool in await tools_for(schema)
     ]
