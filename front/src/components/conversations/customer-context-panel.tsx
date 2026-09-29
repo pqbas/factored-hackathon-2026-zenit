@@ -15,6 +15,7 @@ import {
 import { type ReactNode, useState } from 'react';
 import useSWR from 'swr';
 
+import { HandoffCard } from '@/components/conversations/handoff-card';
 import { Button } from '@/components/ui/button';
 import {
   type BankCase,
@@ -38,6 +39,7 @@ import {
   transcriptFor,
   yesNo,
 } from '@/lib/customer-context';
+import type { AgentHandoff } from '@/lib/handoff-case';
 import { cn } from '@/lib/utils';
 
 const TONE: Record<CaseTone, string> = {
@@ -243,7 +245,15 @@ function TranscriptCard({ item }: { item: Transcript }) {
 // The bank's history of the customer behind the open chat. Loaded apart from
 // the chat: the warehouse can take a few seconds. Mount it with key={chatId}
 // so each chat starts on its own first tab.
-export function CustomerContextPanel({ chatId }: { chatId: string }) {
+export function CustomerContextPanel({
+  chatId,
+  handoff = null,
+}: {
+  chatId: string;
+  // The case David handed off in the active conversation: the panel's first
+  // section, above the bank history.
+  handoff?: AgentHandoff | null;
+}) {
   const { data, error, isLoading, mutate } = useSWR(customerContextUrl(chatId), fetchCustomerContext, {
     revalidateOnFocus: false,
   });
@@ -339,8 +349,20 @@ export function CustomerContextPanel({ chatId }: { chatId: string }) {
             {id && <span>Cliente {id}</span>}
           </div>
         )}
+      </div>
+      {/* Everything below the title scrolls together: the case can be tall. */}
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        {handoff && (
+          <div className="px-3.5 pt-3.5">
+            <HandoffCard handoff={handoff} />
+          </div>
+        )}
         {data && (
-          <div role="tablist" aria-label="Historial" className="flex gap-0.5 rounded-[9px] bg-secondary p-0.5">
+          <div
+            role="tablist"
+            aria-label="Historial"
+            className="mx-3.5 mt-3.5 flex gap-0.5 rounded-[9px] bg-secondary p-0.5"
+          >
             {tabs.map((t) => (
               <button
                 key={t.id}
@@ -361,8 +383,8 @@ export function CustomerContextPanel({ chatId }: { chatId: string }) {
             ))}
           </div>
         )}
+        <div className="flex flex-col gap-2.5 px-3.5 pt-3.5 pb-4.5">{body}</div>
       </div>
-      <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto px-3.5 pt-3.5 pb-4.5">{body}</div>
     </aside>
   );
 }

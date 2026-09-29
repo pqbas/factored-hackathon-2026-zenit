@@ -41,6 +41,12 @@
 
 5c. Rename the ai_agent view to "Agente AI": add `DAVID_VIEW_LABEL = 'Agente AI'` in `src/lib/advisor.ts` and use it in `inbox-views.tsx` (sidebar item) and `ConversationsPage.tsx` (`VIEW_TITLE.david`) instead of `STATUS_LABEL.assistant`. The row and header state keeps `STATUS_LABEL.assistant` ("Con AI"). Update e2e assertions that look for the view title or item text.
 
+5d. Move the handoff card into the context panel:
+   - Remove `HandoffCard` from `src/components/conversations/conversation-view.tsx`: both the one pinned above the messages and the folded ones in earlier segments.
+   - `CustomerContextPanel` (`src/components/conversations/customer-context-panel.tsx`) takes `handoff` and renders `HandoffCard` as its first section, above the tabs, even when there is no bank customer (204) or the bank fails.
+   - In `src/pages/ConversationsPage.tsx`, opening a customer whose active conversation has a handoff opens the panel without saving that choice. The toggle still closes it.
+   - Adjust the e2e test for the handed-off case to find the card inside `customer-context`.
+
 6. In `src/pages/ConversationsPage.tsx`, `viewTitle`: `reason` → its label; `advisor` → `STATUS_LABEL.advisor` ("Con asesor").
 
 ---

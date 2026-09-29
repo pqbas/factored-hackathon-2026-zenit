@@ -198,6 +198,13 @@ export default function ConversationsPage() {
   const timeline: AdvisorChat[] = conversations?.length ? conversations : row ? [row] : [];
   const current = timeline.at(-1) ?? null;
 
+  // A handed-off case is read in the context panel: open it for that
+  // conversation, without saving the choice (the toggle still closes it).
+  const hasCase = !!current?.handoff;
+  useEffect(() => {
+    if (hasCase) setContextOpen(true);
+  }, [current?.id, hasCase]);
+
   const { messages, append, refresh } = useConversationMessages(current?.id ?? null);
   const bubbles = useMemo(() => messages.map((m) => toBubble(m, me)), [messages, me]);
 
@@ -346,7 +353,11 @@ export default function ConversationsPage() {
             </div>
           )}
           {current && contextOpen && (
-            <CustomerContextPanel key={selectedKey ?? current.id} chatId={current.id} />
+            <CustomerContextPanel
+              key={selectedKey ?? current.id}
+              chatId={current.id}
+              handoff={current.handoff ?? null}
+            />
           )}
         </div>
       </SidebarInset>

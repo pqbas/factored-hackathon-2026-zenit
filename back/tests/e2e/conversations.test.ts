@@ -552,11 +552,12 @@ test.describe('Advisor console', () => {
     await expect(transcript).toContainText('Cliente: Me cobraron dos veces, tarjeta [NÚMERO OCULTO].');
     await expect(transcript).toContainText('Agente: Le abro un reclamo.');
 
-    // The toggle hides it and the choice sticks.
+    // The toggle hides it and the choice sticks (checked on a chat without a
+    // handed-off case, which would open the panel on its own).
     await page.getByTestId('context-toggle').click();
     await expect(panel).toHaveCount(0);
     await page.reload();
-    await page.getByTestId('conversation-row-c-waiting').click();
+    await page.getByTestId('conversation-row-c-race').click();
     await expect(page.getByTestId('context-toggle')).toHaveAttribute('aria-pressed', 'false');
     await expect(page.getByTestId('customer-context')).toHaveCount(0);
   });
@@ -615,9 +616,11 @@ test.describe('Advisor console', () => {
     await expect(dividers.last().getByTestId('divider-status')).toHaveText('Con asesor');
   });
 
-  test('a case David handed off shows its reason in the row and its record above the chat', async ({
+  test('a case David handed off shows its detail in the row and its record in the context panel', async ({
     page,
   }) => {
+    // The advisor left the context panel closed last time.
+    await page.addInitScript(() => localStorage.setItem('console:context-open', 'false'));
     await openConsole(page);
     const row = page.getByTestId('conversation-row-c-waiting');
     // The row shows the case's detail, not the reason again.
@@ -625,7 +628,11 @@ test.describe('Advisor console', () => {
     await expect(page.getByTestId('conversation-row-c-race').getByTestId('row-handoff')).toHaveCount(0);
 
     await row.click();
-    const card = page.getByTestId('handoff-card').first();
+    // A handed-off case opens the panel, and its card is the panel's first section.
+    const panel = page.getByTestId('customer-context');
+    await expect(panel).toBeVisible();
+    await expect(page.getByTestId('handoff-card')).toHaveCount(1);
+    const card = panel.getByTestId('handoff-card');
     await expect(card.getByTestId('handoff-reason')).toHaveText('Reclamo por un cargo');
     await expect(card.getByTestId('handoff-summary')).toContainText('cobro duplicado');
     await expect(card.getByTestId('handoff-fact-card_last4')).toHaveText('••1070');
@@ -635,9 +642,15 @@ test.describe('Advisor console', () => {
     await expect(card.getByTestId('handoff-fact-complaint_type')).toHaveText('Cobro duplicado');
     await expect(card.getByTestId('handoff-fact-description')).toHaveText('Me cobraron dos veces');
 
-    // Folds away to leave room for the chat.
+    // The chat keeps only the messages; the reason chip stays in the header.
+    await expect(page.getByTestId('timeline-segment').getByTestId('handoff-card')).toHaveCount(0);
+    await expect(page.getByTestId('use-case-tag')).toBeVisible();
+
+    // It still folds, and the toggle still closes the panel.
     await card.getByRole('button', { name: /Caso derivado por David/ }).click();
     await expect(card.getByTestId('handoff-facts')).toHaveCount(0);
+    await page.getByTestId('context-toggle').click();
+    await expect(panel).toHaveCount(0);
   });
 
   test('/admin now leads to Chats', async ({ page }) => {
