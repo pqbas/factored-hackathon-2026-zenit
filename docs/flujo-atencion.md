@@ -32,13 +32,15 @@ flowchart TD
     A -->|D · Más opciones| D{"3.D Más opciones"}
     D -->|D1| X["Cancelar un producto"]
     D -->|D2| E["Estado de un reclamo"]
-    TC --> M["Etapa 5 · ¿Algo más?"]
+    TC --> M["Etapa 6 · ¿Algo más?"]
     CA --> M
-    R --> DV["Etapa 4 · Derivación a un asesor"]
-    X --> DV
-    E --> DV
+    E -->|solo consulta| M
+    R --> REC["Etapa 4 · Recolección de información"]
+    X --> REC
+    E -->|necesita algo más| REC
+    REC --> DV["Etapa 5 · Derivación a un asesor"]
     M -->|sí| A
-    M -->|no| F["Etapa 6 · Cierre"]
+    M -->|no| F["Etapa 7 · Cierre"]
 ```
 
 El cliente puede saltar etapas: si su primer mensaje ya dice qué quiere (por
@@ -85,7 +87,7 @@ David resuelve solo, con los datos reales del banco. No deriva.
 | 2    | Si el cliente no dijo qué quiere, le ofrece: 1) saldo, límite y cupo, 2) movimientos.                                                                                                                      |
 | 3a   | **Saldo, límite y cupo:** por cada tarjeta, los últimos 4 dígitos, el saldo, el límite y el cupo disponible, aunque pregunte solo por uno de ellos.                                                        |
 | 3b   | **Movimientos:** si tiene más de una tarjeta y no dijo cuál, pregunta cuál. Consulta `list_transactions` con esos últimos 4 dígitos y lista los últimos 10: fecha, comercio, monto con su moneda y estado. |
-| 4    | Ofrece seguir (etapa 5).                                                                                                                                                                                   |
+| 4    | Ofrece seguir (etapa 6).                                                                                                                                                                                   |
 
 #### 3.B Cuentas de ahorro
 
@@ -95,7 +97,7 @@ David resuelve solo, con los datos reales del banco. No deriva.
 | 2    | Si el cliente no dijo qué quiere, le ofrece: 1) saldo, 2) movimientos.                                                   |
 | 3a   | **Saldo:** por cada cuenta, los últimos 4 dígitos y el saldo.                                                            |
 | 3b   | **Movimientos:** igual que en 3.A, paso 3b.                                                                              |
-| 4    | Ofrece seguir (etapa 5).                                                                                                 |
+| 4    | Ofrece seguir (etapa 6).                                                                                                 |
 
 **Reglas de 3.A y 3.B:**
 
@@ -108,63 +110,93 @@ David resuelve solo, con los datos reales del banco. No deriva.
 
 #### 3.C Reclamo por un cargo (nuevo)
 
-David recolecta y verifica los datos, y recién entonces deriva. Pregunta **un
-dato a la vez**. Si el cliente ya dio un dato, no lo vuelve a preguntar.
+David no resuelve el reclamo: recolecta esta ficha en la **etapa 4** y lo
+deriva con motivo `complaint`.
 
-| Paso | David pregunta                                                            | Cómo lo valida                                                                                                                                                                           |
-| ---- | ------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1    | ¿De qué tarjeta es el cargo?                                              | Los últimos 4 dígitos tienen que ser de una tarjeta activa del cliente (`get_products`). Si tiene una sola, la propone.                                                                  |
-| 2    | ¿Cuál es el cargo?                                                        | Le muestra los últimos movimientos de esa tarjeta (`list_transactions`) y el cliente elige uno, o lo describe por comercio, monto o fecha. El cargo tiene que estar en esos movimientos. |
-| 3    | ¿Qué pasó? No lo reconozco / me cobraron dos veces / el monto es distinto | Una de las tres opciones.                                                                                                                                                                |
-| 4    | Cuéntame brevemente lo que pasó                                           | Texto libre del cliente.                                                                                                                                                                 |
-| 5    | Confirma el resumen del caso                                              | Si el cliente corrige algo, vuelve al paso correspondiente.                                                                                                                              |
-
-Con la confirmación, pasa a la etapa 4 con motivo `complaint`.
+| Dato | Pregunta de David | Cómo lo valida |
+| --- | --- | --- |
+| Tarjeta | ¿De qué tarjeta es el cargo? | Los últimos 4 dígitos tienen que ser de una tarjeta activa del cliente (`get_products`). Si tiene una sola, la propone. |
+| Cargo | ¿Cuál es el cargo? | Le muestra los últimos movimientos de esa tarjeta (`list_transactions`) y el cliente elige uno, o lo describe por comercio, monto o fecha. El cargo tiene que estar en esos movimientos. |
+| Tipo | ¿Qué pasó? No lo reconozco / me cobraron dos veces / el monto es distinto | Una de las tres opciones. |
+| Descripción | Cuéntame brevemente lo que pasó | Texto libre del cliente. |
 
 #### 3.D Más opciones
 
 ##### D1 · Cancelar un producto (nuevo)
 
-David solo recolecta y deriva. **No intenta retener al cliente ni ofrece nada a
-cambio**: aplicar las políticas de retención (beneficios, cambio de producto,
-etc.) le corresponde al asesor.
+David no cancela ni intenta retener al cliente, y no ofrece nada a cambio:
+aplicar las políticas de retención (beneficios, cambio de producto, etc.) le
+corresponde al asesor. David recolecta esta ficha en la **etapa 4** y deriva con
+motivo `retention`.
 
-| Paso | David pregunta                  | Cómo lo valida                                                                                              |
-| ---- | ------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| 1    | ¿Qué producto quieres cancelar? | Tipo y últimos 4 dígitos de un producto activo del cliente (`get_products`). Si tiene uno solo, lo propone. |
-| 2    | ¿Por qué quieres cancelarlo?    | Texto libre del cliente.                                                                                    |
-| 3    | Confirma el resumen             | Si corrige algo, vuelve al paso correspondiente.                                                            |
-
-Con la confirmación, pasa a la etapa 4 con motivo `retention`. El resumen para
-el asesor incluye el producto y el motivo, para que prepare su propuesta.
+| Dato | Pregunta de David | Cómo lo valida |
+| --- | --- | --- |
+| Producto | ¿Qué producto quieres cancelar? | Tipo y últimos 4 dígitos de un producto activo del cliente (`get_products`). Si tiene uno solo, lo propone. |
+| Motivo | ¿Por qué quieres cancelarlo? | Texto libre del cliente. |
 
 ##### D2 · Estado de un reclamo (nuevo)
 
-David identifica de qué reclamo se trata antes de derivar.
+| Paso | Qué hace David |
+| --- | --- |
+| 1 | **Usa lo que el banco ya sabe.** El back le pasa los reclamos anteriores del cliente, es decir, las conversaciones derivadas con motivo `complaint`: fecha, tarjeta, comercio, monto y estado (sin atender, en atención o resuelto). |
+| 2 | Si hay un solo reclamo, lo propone: "¿Es el reclamo por el cargo de Uber de $12.90 del 27/09?". Si hay varios, los lista para que elija. Si no hay ninguno, o el cliente habla de otro, pasa a la etapa 4 con la ficha de abajo. |
+| 3 | Le dice al cliente el estado que conoce el banco: "tu reclamo está en la cola de un asesor", "un asesor lo está atendiendo" o "tu reclamo figura como resuelto". |
+| 4 | Si el cliente necesita algo más sobre ese reclamo (por ejemplo, un plazo o una respuesta), pasa a la etapa 4 con la ficha de abajo y deriva con motivo `case_status`. Si no, pasa a la etapa 6. |
 
-| Paso | Qué hace David                                                                                                                                                                                                                       |
-| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 1    | **Usa lo que el banco ya sabe.** El back le pasa los reclamos anteriores del cliente, es decir, las conversaciones derivadas con motivo `complaint`: fecha, tarjeta, comercio, monto y estado (sin atender, en atención o resuelto). |
-| 2    | Si hay un solo reclamo, lo propone: "¿Es el reclamo por el cargo de Uber de $12.90 del 27/09?". Si hay varios, los lista para que elija.                                                                                             |
-| 3    | Si no hay reclamos registrados, o el cliente habla de otro, pregunta los datos para identificarlo: tarjeta, fecha aproximada y comercio o monto.                                                                                     |
-| 4    | Le dice al cliente el estado que conoce el banco: "tu reclamo está en la cola de un asesor", "un asesor lo está atendiendo" o "tu reclamo figura como resuelto".                                                                     |
-| 5    | Si el cliente necesita algo más sobre ese reclamo (por ejemplo, un plazo o una respuesta), deriva con motivo `case_status` y los datos del reclamo identificado. Si no, pasa a la etapa 5.                                           |
+Ficha para la etapa 4:
+
+| Dato | Pregunta de David | Cómo lo valida |
+| --- | --- | --- |
+| Reclamo | ¿De qué reclamo se trata? (tarjeta, fecha aproximada y comercio o monto) | Si coincide con un reclamo que le pasó el back, lo toma de ahí. Si no, el cargo tiene que estar en los movimientos de esa tarjeta. |
+| Qué necesita | ¿Qué necesitas saber de tu reclamo? | Texto libre del cliente. |
 
 Como el agente no guarda estado, "lo que el banco ya sabe" se lo manda el back
 en cada request, según [`limites-agente-back.md`](limites-agente-back.md).
 
-#### Reglas de la recolección (3.C y 3.D)
+### Etapa 4 · Recolección de información (nuevo)
+
+**Cuándo:** el cliente eligió una operación que requiere una persona (C o D), por
+letra o con sus palabras.
+
+```mermaid
+flowchart TD
+    I["1 · Identificar la operación y su ficha"] --> L["2 · Leer la conversación y marcar los datos ya dados"]
+    L --> V["3 · Verificar esos datos con el banco"]
+    V --> Q{"¿Falta algún dato?"}
+    Q -->|sí| P["4 · Preguntar el dato que falta"]
+    P --> R["5 · Verificar la respuesta"]
+    R -->|no coincide| P
+    R -->|ok| Q
+    Q -->|no| C["6 · Mostrar el resumen y pedir confirmación"]
+    C -->|corrige un dato| P
+    C -->|confirma| D["Etapa 5 · Derivación"]
+```
+
+1. **Identificar la operación** y su ficha de datos (3.C, D1 o D2).
+2. **Leer toda la conversación** y marcar los datos de la ficha que el cliente
+   ya dio. Por ejemplo, en "no reconozco un cargo de Uber en la 1070" ya están
+   la tarjeta, el comercio y el tipo.
+3. **Verificar** esos datos con los datos del banco (`get_products`,
+   `list_transactions`).
+4. **Preguntar el primer dato que falta**, uno por vez. Cuando hay opciones
+   reales, las muestra: sus tarjetas activas o sus últimos movimientos.
+5. **Verificar la respuesta.** Si no coincide (la tarjeta no es suya, el cargo
+   no aparece), David lo dice y vuelve a preguntar. Si coincide, sigue con el
+   próximo dato.
+6. Con la ficha completa, **muestra el resumen** y pide confirmación. Si el
+   cliente corrige un dato, vuelve al paso 4 con ese dato. Si confirma, pasa a
+   la etapa 5.
+
+Reglas de la etapa:
 
 - El agente no guarda estado: en cada turno relee la conversación para saber qué
   operación está en curso y qué datos ya tiene.
 - Si en el medio el cliente pregunta algo que David resuelve (por ejemplo, su
   saldo), David responde y retoma la pregunta pendiente.
-- Si un dato no se puede verificar (la tarjeta no es suya, el cargo no aparece),
-  David lo dice y vuelve a preguntar.
 - Si el cliente dice "cancelar" u "olvídalo", David responde "Listo, lo dejamos
   ahí…", descarta la recolección y no deriva.
 
-### Etapa 4 · Derivación a un asesor (nuevo)
+### Etapa 5 · Derivación a un asesor (nuevo)
 
 1. David le dice al cliente, en su idioma: "Te comunico con un asesor, que ya
    tiene los datos de tu caso".
@@ -173,20 +205,20 @@ en cada request, según [`limites-agente-back.md`](limites-agente-back.md).
    - `summary`: 2-3 líneas para el asesor con qué pide el cliente y qué quedó
      verificado. Puede venir vacío si falla la generación; el caso igual se
      deriva.
-   - `facts.verified_data`: los datos recolectados en 3.C o 3.D. Las tarjetas
-     van solo con los últimos 4 dígitos y nunca se incluyen datos sensibles.
+   - `facts.verified_data`: la ficha confirmada en la etapa 4. Las tarjetas van
+     solo con los últimos 4 dígitos y nunca se incluyen datos sensibles.
 3. El back pasa la conversación a la cola humana (`human_queue`). Aparece en la
    Bandeja como **Sin atender**, agrupada por su caso de uso.
 4. Desde ese momento David no responde. El cliente ve "Te pasamos con un
    asesor…", y sus mensajes le llegan al asesor (§4).
 
-### Etapa 5 · ¿Algo más?
+### Etapa 6 · ¿Algo más?
 
 1. Después de resolver una consulta, David ofrece seguir.
 2. Si el cliente pide otra cosa, vuelve a la etapa 3.
-3. Si dice que no, pasa a la etapa 6.
+3. Si dice que no, pasa a la etapa 7.
 
-### Etapa 6 · Cierre
+### Etapa 7 · Cierre
 
 **Cuándo:** el cliente se despide ("gracias, eso es todo", "adiós", "tchau").
 
@@ -199,14 +231,14 @@ en cada request, según [`limites-agente-back.md`](limites-agente-back.md).
 
 Se revisan en este orden, antes de la etapa en la que esté la conversación.
 
-| #   | Regla                                                                                                          | Qué pasa                                                                                                                                           |
-| --- | -------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | La conversación la atiende una persona                                                                         | El back guarda el mensaje y **no llama a David**. Lo responde el asesor.                                                                           |
-| 2   | La sesión del cliente es inválida o venció                                                                     | Respuesta fija: "Para ayudarte necesito que inicies sesión…" / "No pude verificar tu sesión…" / "Tu sesión expiró…". El turno termina.             |
-| 3   | El mensaje trae datos sensibles (número de tarjeta, CVV o contraseña)                                          | Respuesta fija: "Por tu seguridad, no compartas el número completo de tu tarjeta…". El dato se enmascara y el turno no se vuelve a mandar a David. |
-| 4   | Intento de manipular a David ("ignora tus instrucciones"), datos de otra persona, insultos o señales de estafa | Respuesta fija para cada caso. El turno no se vuelve a mandar a David.                                                                             |
-| 5   | El cliente dice "cancelar" u "olvídalo"                                                                        | "Listo, lo dejamos ahí…". Se descarta lo que estaba en curso.                                                                                      |
-| 6 | El mensaje no corresponde a ninguna opción del menú: pide "una persona" o "un asesor" sin una operación concreta, un tema que no es del banco (el clima, un chiste), una operación que el chat no ofrece (transferencias, préstamos) o algo que David no entiende | David dice brevemente que no puede ayudar con eso por aquí y vuelve a mostrar el menú (etapa 2). **Nunca deriva por esto.** Si el cliente elige una opción, sigue con esa opción. |
+| #   | Regla                                                                                                                                                                                                                                                             | Qué pasa                                                                                                                                                                          |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | La conversación la atiende una persona                                                                                                                                                                                                                            | El back guarda el mensaje y **no llama a David**. Lo responde el asesor.                                                                                                          |
+| 2   | La sesión del cliente es inválida o venció                                                                                                                                                                                                                        | Respuesta fija: "Para ayudarte necesito que inicies sesión…" / "No pude verificar tu sesión…" / "Tu sesión expiró…". El turno termina.                                            |
+| 3   | El mensaje trae datos sensibles (número de tarjeta, CVV o contraseña)                                                                                                                                                                                             | Respuesta fija: "Por tu seguridad, no compartas el número completo de tu tarjeta…". El dato se enmascara y el turno no se vuelve a mandar a David.                                |
+| 4   | Intento de manipular a David ("ignora tus instrucciones"), datos de otra persona, insultos o señales de estafa                                                                                                                                                    | Respuesta fija para cada caso. El turno no se vuelve a mandar a David.                                                                                                            |
+| 5   | El cliente dice "cancelar" u "olvídalo"                                                                                                                                                                                                                           | "Listo, lo dejamos ahí…". Se descarta lo que estaba en curso.                                                                                                                     |
+| 6   | El mensaje no corresponde a ninguna opción del menú: pide "una persona" o "un asesor" sin una operación concreta, un tema que no es del banco (el clima, un chiste), una operación que el chat no ofrece (transferencias, préstamos) o algo que David no entiende | David dice brevemente que no puede ayudar con eso por aquí y vuelve a mostrar el menú (etapa 2). **Nunca deriva por esto.** Si el cliente elige una opción, sigue con esa opción. |
 
 Además, siempre:
 
