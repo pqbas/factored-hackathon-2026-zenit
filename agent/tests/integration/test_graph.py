@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 
 from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
-from langchain_core.messages import AIMessage, ToolMessage
+from langchain_core.messages import AIMessage, SystemMessage, ToolMessage
 
 from src.graph.build import build_graph
 from src.llm.jev import JevUnavailable
@@ -491,6 +491,28 @@ def test_the_first_round_of_a_use_case_requires_a_tool_call():
     _run(graph, "E limite?")
 
     assert llm.calls == ["required", None]
+
+
+def test_a_portuguese_tool_reply_gets_the_language_line_after_the_tool_results():
+    get_products = FakeMCPTool("get_products", GET_PRODUCTS_SCHEMA, result=[{"product_type": "Cuenta Ahorros"}])
+    list_transactions = FakeMCPTool("list_transactions", LIST_TRANSACTIONS_SCHEMA, result=[])
+    llm = ScriptedToolLLM([
+        AIMessage(content="", tool_calls=[{"name": "get_products", "args": {}, "id": "call_1"}]),
+        AIMessage(content="Você tem uma conta poupança"),
+    ])
+    jev = FakeJev(_classification(language="pt", intent="GENERAL_INQUIRY"))
+    graph = _build_graph(llm, jev, tools_for=_fake_tools_for(get_products, list_transactions))
+    history = [
+        {"role": "user", "content": "olá"},
+        {"role": "assistant", "content": "Hola, soy David, tu asistente virtual del banco."},
+    ]
+
+    _run(graph, "qual é o saldo da minha conta poupança?", history=history)
+
+    last = llm.received[-1]
+    assert isinstance(last, SystemMessage)
+    assert "Responda em português" in last.content
+    assert isinstance(llm.received[-2], ToolMessage)
 
 
 def test_a_reply_that_copies_the_advisor_prefix_is_stripped_and_the_prompt_has_the_rule():
