@@ -20,8 +20,6 @@ import {
   customerConversationsUrl,
   customerKeyOf,
   customerLabel,
-  maskedCustomerId,
-  secondaryEmail,
   type Bubble,
   mergeMessages,
   statusOf,
@@ -46,7 +44,6 @@ function chat(overrides: Partial<AdvisorChat> = {}): AdvisorChat {
     closedAt: null,
     useCase: 'UC-01',
     customerName: null,
-    customerId: null,
     ...overrides,
   };
 }
@@ -330,18 +327,16 @@ describe('isDavidReplying', () => {
   });
 });
 
-describe('customerLabel and secondaryEmail', () => {
-  it('names the bank customer and keeps the email as secondary', () => {
+describe('customerLabel', () => {
+  it('names the bank customer', () => {
     const named = chat({ customerName: 'Javier Molina Morales' });
     expect(customerLabel(named)).toBe('Javier Molina Morales');
-    expect(secondaryEmail(named)).toBe('curie@example.com');
   });
 
   it('falls back to the email when there is no customer name', () => {
     for (const customerName of [undefined, null, '  ']) {
       const c = chat({ customerName });
       expect(customerLabel(c)).toBe('curie@example.com');
-      expect(secondaryEmail(c)).toBeNull();
     }
     expect(customerLabel(chat({ userEmail: null }))).toBe('Cliente sin email');
   });
@@ -438,12 +433,5 @@ describe('shortSummary and rowPreview', () => {
     expect(rowPreview({ ...chat({ ...taken, handoff: { ...handoff, summary: null } }), lastMessage: last })).toBe('');
     // Back with David: the last message.
     expect(rowPreview({ ...chat({ handoff, hasHandoff: false }), lastMessage: last })).toBe('sí, confirmo');
-  });
-});
-
-describe('maskedCustomerId', () => {
-  it("shows only the tail of the bank's customer id", () => {
-    expect(maskedCustomerId(chat({ customerId: 'CLI-FLEUCGTW5M0D' }))).toBe('•• 5M0D');
-    expect(maskedCustomerId(chat())).toBeNull();
   });
 });

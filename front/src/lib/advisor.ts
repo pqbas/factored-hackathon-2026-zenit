@@ -30,8 +30,6 @@ export type AdvisorChat = OverJson<
     // The bank customer behind the chat (e.g. "Javier Molina Morales"); null
     // without a customer session or until the warehouse answers.
     | 'customerName'
-    // The bank's customer id (null without a demo customer session).
-    | 'customerId'
   >
 > & {
   // The latest case David handed off in this conversation (null: none), and
@@ -221,15 +219,7 @@ export function customerLabel(chat: AdvisorChat): string {
   return chat.customerName?.trim() || chat.userEmail || 'Cliente sin email';
 }
 
-// Only the tail of the bank's customer id, like the rest of the masked data.
-export function maskedCustomerId(chat: AdvisorChat): string | null {
-  return chat.customerId ? `•• ${chat.customerId.slice(-4)}` : null;
-}
 
-// The app user's email, shown small under a bank customer's name.
-export function secondaryEmail(chat: AdvisorChat): string | null {
-  return chat.customerName?.trim() && chat.userEmail ? chat.userEmail : null;
-}
 
 // The agent's intents (agent/configs/routing.yaml) that segment a
 // conversation, in the order the inbox lists them. Small talk and out-of-scope

@@ -535,8 +535,8 @@ test.describe('Advisor console', () => {
     await page.getByTestId('customer-context').getByRole('button', { name: 'Reintentar' }).click();
 
     const panel = page.getByTestId('customer-context');
-    // The customer's id goes in the chat header, not repeated in the panel.
-    await expect(page.getByTestId('customer-id')).toHaveText('Cliente •• 0123');
+    // Neither the header nor the panel repeats the customer's id or name.
+    await expect(page.getByTestId('customer-id')).toHaveCount(0);
     await expect(page.getByTestId('context-customer')).toHaveCount(0);
 
     // "Datos del cliente" opens the panel, above the handed-off case, without
@@ -630,7 +630,10 @@ test.describe('Advisor console', () => {
     await expect(rows(page)).toHaveCount(1);
     await row.click();
     await expect(page.getByTestId('customer-name')).toHaveText('Daniela Sosa Ruiz');
-    await expect(page.getByTestId('customer-email')).toHaveText('daniela@banco.test');
+    // The header's second line is only the reason: no email, no customer id.
+    await expect(page.getByTestId('customer-email')).toHaveCount(0);
+    await expect(page.getByTestId('customer-id')).toHaveCount(0);
+    await expect(page.getByTestId('customer-meta')).toHaveText('Reclamo');
   });
 
   test('a customer is one row; opening it shows all their conversations in order', async ({ page }) => {

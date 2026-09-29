@@ -40,7 +40,7 @@ And it changes in these ways:
     - Si el panel Contexto está abierto y la pantalla mide menos de 1600 px, el panel empieza más a la izquierda y tapa la lista, porque no hay lugar para chat y contexto.
     Reemplaza a la lista angosta (cambio de enfoque del usuario).
 10j. En el panel flotante cada dato aparece una sola vez (pedido del usuario):
-    - Nombre: va solo en el encabezado del chat. "Cliente •• XXXX" pasa al encabezado, junto al email, y sale de "Contexto del cliente".
+    - Nombre: va solo en el encabezado del chat. La segunda línea del encabezado lleva solo el chip del motivo: ni email ni "Cliente •• XXXX" (decisión final del usuario). Quién es el cliente se ve en "Datos del cliente" del panel Contexto.
     - Motivo: va solo en el chip del encabezado. Sale de la tarjeta "Caso derivado por David".
     - Estado y quién atiende: van solo en la zona del input, en una sola línea, y salen del encabezado. El encabezado queda con nombre, email, "Cliente •• XXXX" y el chip del motivo. El placeholder dice:
       - tomada por otro: "La atiende asesor1 (asesor1@example.com)", con ícono de persona;

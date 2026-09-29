@@ -6,8 +6,6 @@ import { Button } from '@/components/ui/button';
 import {
   type AdvisorChat,
   customerLabel,
-  secondaryEmail,
-  maskedCustomerId,
   isMine,
   statusOf,
   reasonTagOf,
@@ -79,8 +77,6 @@ export function ConversationHeader({
   const mine = isMine(chat, me);
   const tag = reasonTagOf(chat);
   const name = customerLabel(chat);
-  const email = secondaryEmail(chat);
-  const customerId = maskedCustomerId(chat);
 
   return (
     <header className="flex items-center gap-3 border-border border-b px-4 py-3">
@@ -105,35 +101,20 @@ export function ConversationHeader({
         <span data-testid="customer-name" className="truncate font-semibold text-[15px]">
           {name}
         </span>
-        {/* Second line: who the customer is and why they're here. The state
-            and who has the chat live in the input's placeholder. */}
-        {(email || customerId || tag) && (
-          <span
-            data-testid="customer-meta"
-            className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-muted-foreground text-xs"
-          >
-            {/* The email never gets cut: the line wraps instead. */}
-            {email && (
-              <span data-testid="customer-email" className="whitespace-nowrap">
-                {email}
-              </span>
-            )}
-            {customerId && (
-              <span data-testid="customer-id" className="shrink-0">
-                Cliente {customerId}
-              </span>
-            )}
-            {tag && (
-              <span
-                data-testid="use-case-tag"
-                className={cn(
-                  'shrink-0 rounded-md px-2 py-0.5 font-medium text-[11px]',
-                  handoffReasonStyle(tag).chip,
-                )}
-              >
-                {sectionLabel(tag)}
-              </span>
-            )}
+        {/* Second line: only why the customer is here. The state and who has
+            the chat live in the input's placeholder; who the customer is, in
+            the context panel. */}
+        {tag && (
+          <span data-testid="customer-meta" className="flex min-w-0 items-center text-xs">
+            <span
+              data-testid="use-case-tag"
+              className={cn(
+                'shrink-0 rounded-md px-2 py-0.5 font-medium text-[11px]',
+                handoffReasonStyle(tag).chip,
+              )}
+            >
+              {sectionLabel(tag)}
+            </span>
           </span>
         )}
       </div>
