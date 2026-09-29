@@ -98,6 +98,10 @@ export const QUICK_REPLIES = [
 
 const BASE = '/api/advisor/conversations';
 
+// The view of the chats David handles on his own. The rows' state keeps its
+// flow name ("Con AI", STATUS_LABEL.assistant).
+export const DAVID_VIEW_LABEL = 'Agente AI';
+
 // What the inbox shows: the open cases that need a person, one handoff reason,
 // the chats David handles on his own, or a state.
 export type InboxView =

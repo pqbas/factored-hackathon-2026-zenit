@@ -25,6 +25,7 @@ import {
   type InboxView,
   sameView,
   type ViewCounts,
+  DAVID_VIEW_LABEL,
 } from '@/lib/advisor';
 import { HANDOFF_REASONS } from '@/lib/handoff-case';
 import { cn } from '@/lib/utils';
@@ -178,7 +179,7 @@ export function InboxViews({
               {item(
                 { kind: 'david' },
                 <Bot className={muted} strokeWidth={1.8} />,
-                STATUS_LABEL.assistant,
+                DAVID_VIEW_LABEL,
                 'view-david',
               )}
             </SidebarMenu>

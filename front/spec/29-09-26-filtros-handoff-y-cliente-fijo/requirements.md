@@ -26,6 +26,7 @@ And it changes in these ways:
 8. Cada filtro muestra su contador, también cuando es 0. El contador cuenta clientes según el motivo de su conversación en curso.
 9. En Estado, "Mías" pasa a "Con asesor" y filtra por `handledBy=human_agent`, las atienda quien las atienda. Su contador cuenta esas conversaciones.
 10a. La etiqueta de la fila muestra solo el detalle del handoff, si hay: el tipo de reclamo (No reconoce el cargo / Cobro duplicado / Monto distinto) o el producto a cancelar (Tarjeta Crédito ••6262). Nunca repite el motivo ni muestra la intención del clasificador. Sin detalle, no hay etiqueta (ajuste de la revisión de w1:p4).
+10b. La vista de las conversaciones que atiende David (`handledBy=ai_agent`) pasa a llamarse "Agente AI", en el item del sidebar y en el título de la vista. El estado de la fila ("Con AI", uno de los cuatro estados del flujo) no cambia (pedido del usuario).
 10. La Bandeja agrupa por motivo del handoff (Reclamo / Cancelación de producto / Estado de un reclamo). Las conversaciones sin handoff van en "Otros".
 11. El cliente elegido en el selector, en el chat o en Mis productos, es el de la sesión. Cambiar de conversación o crear una nueva no lo cambia.
 12. Al abrir un chat existente, el selector muestra el cliente que guardó el back para ese chat, no el que recuerda el navegador. Si el back no lo tiene, cae al valor que guardó el navegador y, si tampoco hay, al de la sesión.

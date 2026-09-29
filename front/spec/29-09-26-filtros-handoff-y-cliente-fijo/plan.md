@@ -39,6 +39,8 @@
 
 5b. In `src/lib/handoff-case.ts` add `handoffDetail(handoff)`: the `complaint_type` label, or `product_type ••product_last4`, else null. In `src/components/conversations/inbox-list.tsx` the row chip (`row-handoff`) shows `handoffDetail`, and doesn't render without it.
 
+5c. Rename the ai_agent view to "Agente AI": add `DAVID_VIEW_LABEL = 'Agente AI'` in `src/lib/advisor.ts` and use it in `inbox-views.tsx` (sidebar item) and `ConversationsPage.tsx` (`VIEW_TITLE.david`) instead of `STATUS_LABEL.assistant`. The row and header state keeps `STATUS_LABEL.assistant` ("Con AI"). Update e2e assertions that look for the view title or item text.
+
 6. In `src/pages/ConversationsPage.tsx`, `viewTitle`: `reason` → its label; `advisor` → `STATUS_LABEL.advisor` ("Con asesor").
 
 ---

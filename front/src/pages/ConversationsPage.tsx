@@ -30,6 +30,7 @@ import {
   replyToConversation,
   takeConversation,
   toBubble,
+  DAVID_VIEW_LABEL,
 } from '@/lib/advisor';
 import { ASSISTANT_NAME } from '@/lib/assistant';
 import { matchesQuery, STATUS_LABEL } from '@/lib/conversations';
@@ -87,7 +88,7 @@ function readContextOpen(): boolean {
 
 const VIEW_TITLE = {
   inbox: 'Bandeja',
-  david: STATUS_LABEL.assistant,
+  david: DAVID_VIEW_LABEL,
   waiting: STATUS_LABEL.waiting,
   advisor: STATUS_LABEL.advisor,
   resolved: 'Resueltas',

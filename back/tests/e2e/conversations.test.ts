@@ -289,8 +289,8 @@ test.describe('Advisor console', () => {
     await expect(page.getByTestId('view-mine')).toHaveCount(0);
 
     await page.getByTestId('view-david').click();
-    await expect(page.getByTestId('inbox-title')).toHaveText('Con AI');
-    await expect(page.getByTestId('view-david')).toContainText('Con AI');
+    await expect(page.getByTestId('inbox-title')).toHaveText('Agente AI');
+    await expect(page.getByTestId('view-david')).toContainText('Agente AI');
     await expect(page.getByTestId('view-waiting')).toContainText('En espera');
     await expect(rows(page)).toHaveCount(1);
     await expect(page.getByTestId('conversation-row-c-assistant')).toBeVisible();
@@ -471,7 +471,7 @@ test.describe('Advisor console', () => {
     await page.getByTestId('user-option-c-assistant-user').click();
     await expect(page.getByTestId('inbox-empty-david')).toContainText('No hay casos para atender.');
     await page.getByTestId('inbox-empty-david-link').click();
-    await expect(page.getByTestId('inbox-title')).toHaveText('Con AI');
+    await expect(page.getByTestId('inbox-title')).toHaveText('Agente AI');
     await expect(page.getByTestId('conversation-row-c-assistant')).toBeVisible();
   });
 
