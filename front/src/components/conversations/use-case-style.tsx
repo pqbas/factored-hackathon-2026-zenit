@@ -10,8 +10,7 @@ import {
   XCircle,
 } from 'lucide-react';
 
-import { OTHER_GROUP, useCaseLabelOf } from '@/lib/advisor';
-import { handoffReasonGroupLabel, NO_HANDOFF_GROUP } from '@/lib/handoff-case';
+import { OTHER_GROUP, sectionLabel, useCaseLabelOf } from '@/lib/advisor';
 import { cn } from '@/lib/utils';
 
 // Soft label colors per use case, readable in both themes.
@@ -77,6 +76,8 @@ const REASON_STYLE: Record<string, keyof typeof STYLE> = {
   complaint: 'COMPLAINT',
   retention: 'CANCEL',
   case_status: 'CASE_STATUS',
+  // Agente AI's "Consultas generales" section.
+  general: 'GENERAL_INQUIRY',
 };
 
 export function handoffReasonStyle(id: string) {
@@ -98,7 +99,7 @@ export function HandoffReasonChip({ id }: { id: string }) {
         handoffReasonStyle(id).chip,
       )}
     >
-      {id === NO_HANDOFF_GROUP ? 'Otros' : handoffReasonGroupLabel(id)}
+      {sectionLabel(id)}
     </span>
   );
 }

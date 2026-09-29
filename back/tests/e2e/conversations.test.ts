@@ -671,6 +671,17 @@ test.describe('Advisor console', () => {
     );
   });
 
+  test('Agente AI is split in sections by what David is working on', async ({ page }) => {
+    await openConsole(page);
+    await page.getByTestId('view-david').click();
+    const section = page.getByTestId('inbox-section-general');
+    await expect(section.getByTestId('reason-chip-general')).toHaveText('Consultas generales');
+    await expect(section.getByTestId('conversation-row-c-assistant')).toBeVisible();
+    // Other views stay flat.
+    await page.getByTestId('view-waiting').click();
+    await expect(page.locator('[data-testid^="inbox-section-"]')).toHaveCount(0);
+  });
+
   test('/admin now leads to Chats', async ({ page }) => {
     await mockSessionRole(page, 'admin', 'root@example.com');
     await mockAdvisorApi(page, 'root@example.com', 'admin');

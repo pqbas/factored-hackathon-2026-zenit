@@ -56,6 +56,12 @@
    - In `src/components/conversations/inbox-list.tsx`, the middle column (fixed `6rem`, content aligned left so every badge starts and lines up the same in every row, like the robot) renders `advisor-badge` (UserRound + holder) for `human_agent`, the robot for `ai_agent`, and nothing otherwise.
    - Update unit and e2e tests that expected "Con asesor · …" in the rows.
 
+5h. Sections in Agente AI:
+   - In `src/lib/advisor.ts`, `davidSectionOf(chat)` maps the use case to the section id: complaint / retention (RETENTION, CANCEL) / case_status / general / NONE.
+   - `groupByDavidSection(items)` returns the sections in that order.
+   - `HandoffReasonChip` (`use-case-style.tsx`) also knows `general` ("Consultas generales", sky).
+   - `InboxList` takes `grouping: 'reason' | 'david' | null`; `ConversationsPage` passes `reason` for the Bandeja, `david` for Agente AI, null otherwise.
+
 6. In `src/pages/ConversationsPage.tsx`, `viewTitle`: `reason` → its label; `advisor` → `STATUS_LABEL.advisor` ("Con asesor").
 
 ---

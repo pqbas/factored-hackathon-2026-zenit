@@ -31,6 +31,14 @@ And it changes in these ways:
 10d. El separador de cada conversación en la línea de tiempo muestra el motivo del handoff si esa conversación se derivó, y ningún chip si no. Nunca muestra la intención del clasificador (revisión de w1:p4).
 10e. En la lista angosta (con un chat abierto), todas las filas muestran su estado, también "Con asesor" (revisión de w1:p4).
 10f. En las filas de la consola, cuando un asesor tomó la conversación (`human_agent`), la columna del medio (la del robot de David, entre el nombre y la etiqueta de detalle) muestra un badge con ícono de persona y el usuario del asesor (la parte del email antes de la @, o "tú" si es quien mira). El estado de la derecha queda solo "Con asesor". En espera no lleva nada en esa columna. Vale para la lista ancha y la angosta; el encabezado de la conversación sigue diciendo quién la atiende (pedido del usuario).
+10g. La vista "Agente AI" también se separa en secciones, con el mismo estilo de chips que la Bandeja. Como ahí no hay handoff, las secciones salen del `useCase` de la conversación en curso:
+    - Reclamo: COMPLAINT.
+    - Cancelación de producto: RETENTION y CANCEL.
+    - Estado de un reclamo: CASE_STATUS.
+    - Consultas generales: GENERAL_INQUIRY.
+    - Otros, al final: saludo, despedida, fuera de alcance y sin `useCase`.
+    No hay filtros nuevos en el sidebar (pedido del usuario).
+    Cada fila de Agente AI muestra en la columna del medio un badge con el robot y "David", con el mismo estilo que el del asesor en la Bandeja.
 10. La Bandeja agrupa por motivo del handoff (Reclamo / Cancelación de producto / Estado de un reclamo). Las conversaciones sin handoff van en "Otros".
 11. El cliente elegido en el selector, en el chat o en Mis productos, es el de la sesión. Cambiar de conversación o crear una nueva no lo cambia.
 12. Al abrir un chat existente, el selector muestra el cliente que guardó el back para ese chat, no el que recuerda el navegador. Si el back no lo tiene, cae al valor que guardó el navegador y, si tampoco hay, al de la sesión.

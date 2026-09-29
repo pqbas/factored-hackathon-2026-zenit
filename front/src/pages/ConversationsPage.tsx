@@ -324,7 +324,7 @@ export default function ConversationsPage() {
             <InboxList
               title={viewTitle(view)}
               chats={chats}
-              grouped={view.kind === 'inbox'}
+              grouping={view.kind === 'inbox' ? 'reason' : view.kind === 'david' ? 'david' : null}
               me={me}
               selectedKey={selectedKey}
               onOpen={(key) => setSelected(chats.find((chat) => customerKeyOf(chat) === key) ?? null)}

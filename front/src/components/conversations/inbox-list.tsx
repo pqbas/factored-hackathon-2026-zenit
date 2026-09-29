@@ -9,6 +9,7 @@ import {
   attentionOf,
   customerKeyOf,
   customerLabel,
+  groupByDavidSection,
   groupByHandoffReason,
   holderLabel,
   type InboxItem,
@@ -93,9 +94,10 @@ function Row({
             data-testid="david-icon"
             title={`${STATUS_LABEL.assistant}: lo atiende ${ASSISTANT_NAME}`}
             aria-label={`${STATUS_LABEL.assistant}: lo atiende ${ASSISTANT_NAME}`}
-            className="flex text-muted-foreground"
+            className="flex min-w-0 max-w-full items-center gap-1 rounded-md bg-secondary px-1.5 py-0.5 text-[11px] text-muted-foreground"
           >
-            <Bot className="size-4" strokeWidth={1.8} />
+            <Bot className="size-3 shrink-0" strokeWidth={2} />
+            <span className="truncate">{ASSISTANT_NAME}</span>
           </span>
         )}
       </span>
@@ -136,11 +138,12 @@ function Row({
   );
 }
 
-// The inbox list: grouped by use case in "Bandeja", flat in any other view.
+// The inbox list: grouped by handoff reason in Bandeja, by what David is
+// working on in Agente AI, flat in any other view.
 export function InboxList({
   title,
   chats,
-  grouped,
+  grouping,
   me,
   selectedKey,
   onOpen,
@@ -154,7 +157,7 @@ export function InboxList({
   title: string;
   // One per customer, with their latest conversation.
   chats: InboxItem[];
-  grouped: boolean;
+  grouping: 'reason' | 'david' | null;
   me: string | undefined;
   selectedKey: string | null;
   onOpen: (customerKey: string) => void;
@@ -166,9 +169,13 @@ export function InboxList({
   // Replaces the generic empty message.
   empty?: ReactNode;
 }) {
-  const groups = grouped
-    ? groupByHandoffReason(chats)
-    : [{ id: 'all', label: '', chats }];
+  const grouped = grouping !== null;
+  const groups =
+    grouping === 'reason'
+      ? groupByHandoffReason(chats)
+      : grouping === 'david'
+        ? groupByDavidSection(chats)
+        : [{ id: 'all', label: '', chats }];
   const row = (chat: InboxItem) => (
     <Row
       key={customerKeyOf(chat)}

@@ -16,6 +16,7 @@ import {
   viewUrl,
   isHeldByOther,
   isDavidReplying,
+  groupByDavidSection,
   holderLabel,
   customerConversationsUrl,
   customerKeyOf,
@@ -389,5 +390,26 @@ describe('holderLabel', () => {
     expect(
       holderLabel(chat({ handledBy: 'human_agent', assignedTo: ME, closedAt: '2026-09-29T10:00:00.000Z' }), ME),
     ).toBeNull();
+  });
+});
+
+describe('groupByDavidSection', () => {
+  it('sections Agente AI by what David is working on, Otros last', () => {
+    const groups = groupByDavidSection([
+      chat({ id: 'a', useCase: 'GREETING' }),
+      chat({ id: 'b', useCase: 'CANCEL' }),
+      chat({ id: 'c', useCase: 'GENERAL_INQUIRY' }),
+      chat({ id: 'd', useCase: 'COMPLAINT' }),
+      chat({ id: 'e', useCase: 'RETENTION' }),
+      chat({ id: 'f', useCase: null }),
+      chat({ id: 'g', useCase: 'CASE_STATUS' }),
+    ]);
+    expect(groups.map((g) => [g.id, g.label, g.chats.map((c) => c.id)])).toEqual([
+      ['complaint', 'Reclamo', ['d']],
+      ['retention', 'Cancelación de producto', ['b', 'e']],
+      ['case_status', 'Estado de un reclamo', ['g']],
+      ['general', 'Consultas generales', ['c']],
+      ['NONE', 'Otros', ['a', 'f']],
+    ]);
   });
 });

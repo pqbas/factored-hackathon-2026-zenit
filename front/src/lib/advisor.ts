@@ -260,6 +260,43 @@ export function useCaseTag(chat: AdvisorChat): string | null {
 // Inbox sections: the three handoff reasons in HANDOFF_REASONS order, then
 // unknown ones, then "Otros" (no handoff). Chats keep their order (newest
 // first) inside each section.
+// Agente AI has no handoff yet: its sections follow what David is working on
+// (the ongoing conversation's use case), named like the Bandeja's reasons.
+export const GENERAL_SECTION = 'general';
+const DAVID_SECTION_OF: Record<string, string> = {
+  COMPLAINT: 'complaint',
+  RETENTION: 'retention',
+  CANCEL: 'retention',
+  CASE_STATUS: 'case_status',
+  GENERAL_INQUIRY: GENERAL_SECTION,
+};
+const DAVID_SECTIONS = ['complaint', 'retention', 'case_status', GENERAL_SECTION, NO_HANDOFF_GROUP];
+
+export function davidSectionOf(chat: AdvisorChat): string {
+  return (chat.useCase && DAVID_SECTION_OF[chat.useCase]) || NO_HANDOFF_GROUP;
+}
+
+export function groupByDavidSection<T extends AdvisorChat>(
+  chats: T[],
+): { id: string; label: string; chats: T[] }[] {
+  const groups = new Map<string, T[]>();
+  for (const chat of chats) {
+    const id = davidSectionOf(chat);
+    groups.set(id, [...(groups.get(id) ?? []), chat]);
+  }
+  return DAVID_SECTIONS.filter((id) => groups.has(id)).map((id) => ({
+    id,
+    label: sectionLabel(id),
+    chats: groups.get(id) ?? [],
+  }));
+}
+
+export function sectionLabel(id: string): string {
+  if (id === NO_HANDOFF_GROUP) return 'Otros';
+  if (id === GENERAL_SECTION) return 'Consultas generales';
+  return handoffReasonGroupLabel(id);
+}
+
 export function groupByHandoffReason<T extends AdvisorChat>(
   chats: T[],
 ): { id: string; label: string; chats: T[] }[] {
