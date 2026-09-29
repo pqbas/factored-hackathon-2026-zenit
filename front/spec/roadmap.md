@@ -378,4 +378,4 @@ Shipped en PR #50.
 - [x] Sin customerName (sin sesión de cliente o mientras el banco responde) se
       muestra el email; la búsqueda también encuentra por nombre.
 
-Shipped en PR #<n>.
+Shipped en PR #54.
