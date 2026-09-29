@@ -174,7 +174,11 @@ def _verify_case_status(case: "CaseStatusCase", rows_by_tool: dict[str, list[dic
             return "Antes de derivar, llama a get_cases en este turno para verificar el reclamo."
         row = next((c for c in cases if c["complaint_id"] == case.complaint_id), None)
         if row is None:
-            return f"El cliente no tiene un reclamo {case.complaint_id}. Usa un complaint_id de get_cases."
+            # The LLM never saw the rows when it went straight to the handoff, so the error lists them.
+            known = "; ".join(
+                f"{c['complaint_id']} ({str(c['creation_date'])[:10]}, {c['subcategory']})" for c in cases
+            )
+            return f"El cliente no tiene un reclamo {case.complaint_id}. Usa uno de get_cases: {known}."
         return {
             "complaint_id": row["complaint_id"],
             "creation_date": str(row["creation_date"])[:10],

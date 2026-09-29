@@ -752,6 +752,38 @@ def test_a_yes_after_the_case_status_confirmation_question_skips_the_classifier_
     assert result["handoff"]["facts"]["case_id"] == "CMP-1"
 
 
+def test_a_made_up_complaint_id_on_the_yes_gets_the_real_ones_and_the_forced_retry_hands_off():
+    cases_result = [{"type": "text", "text": json.dumps({
+        "columns": ["complaint_id", "creation_date", "subcategory", "claimed_amount", "currency", "status", "resolution"],
+        "rows": [["CMP-1", "2025-10-09T00:18:40.000+0000", "Cargo no reconocido", None, None, "In Process", None]],
+    })}]
+    get_cases = FakeMCPTool("get_cases", GET_PRODUCTS_SCHEMA, result=cases_result)
+
+    async def tools_for(schema):
+        return [get_cases]
+
+    need = {"need": "saber cuándo lo resuelven"}
+    llm = _SummarizingToolLLM([
+        AIMessage(content="", tool_calls=[{"name": "hand_off_to_advisor", "id": "c1",
+                                           "args": {"complaint_id": "c-123456789", **need}}]),
+        AIMessage(content="", tool_calls=[{"name": "hand_off_to_advisor", "id": "c2",
+                                           "args": {"complaint_id": "CMP-1", **need}}]),
+    ])
+    history = [
+        {"role": "user", "content": "quiero saber cuándo lo van a resolver"},
+        {"role": "assistant", "content": "Tu reclamo del 09/10/2025 sigue en revisión.\n\n"
+                                         "¿Confirmas estos datos para pasar tu consulta a un asesor?"},
+    ]
+    result = _run(_build_graph(llm, FakeJev(_classification(intent="GOODBYE")), tools_for=tools_for),
+                  "sí, confirmo", history=history)
+
+    assert llm.calls[:2] == ["hand_off_to_advisor", "hand_off_to_advisor"]
+    errors = [m.content for m in llm.received if isinstance(m, ToolMessage)]
+    assert "CMP-1 (2025-10-09, Cargo no reconocido)" in errors[0]
+    assert result["handoff"]["facts"]["case_id"] == "CMP-1"
+    assert result["messages"][-1].content == HANDOFF_REPLY["es"]
+
+
 _CONFIRMATION_HISTORY = [
     {"role": "user", "content": "no lo reconozco"},
     {"role": "assistant", "content": "Tarjeta 4930, cargo de Internet Plus.\n\n"
@@ -771,13 +803,12 @@ def test_a_confirmation_turn_forces_the_handoff_tool_and_hands_off():
 
 
 def test_a_forced_handoff_that_does_not_verify_says_what_does_not_match():
-    llm = _SummarizingToolLLM([
-        AIMessage(content="", tool_calls=[{"name": "hand_off_to_advisor", "args": {**_CASE, "amount": 1.0}, "id": "c1"}]),
-        AIMessage(content="Ese cargo no aparece, ¿cuál es?"),
-    ])
+    wrong = AIMessage(content="", tool_calls=[{"name": "hand_off_to_advisor", "args": {**_CASE, "amount": 1.0}, "id": "c1"}])
+    llm = _SummarizingToolLLM([wrong, wrong, AIMessage(content="Ese cargo no aparece, ¿cuál es?")])
     result = _run(_complaint_graph(llm), "sí", history=_CONFIRMATION_HISTORY)
 
-    assert llm.calls[0] == "hand_off_to_advisor"
+    # Forced on the first round and once more after the failed check, then the LLM answers.
+    assert llm.calls[:2] == ["hand_off_to_advisor", "hand_off_to_advisor"]
     assert result.get("handoff") is None
     assert result["messages"][-1].content == "Ese cargo no aparece, ¿cuál es?"
 

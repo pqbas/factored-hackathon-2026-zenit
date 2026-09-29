@@ -93,9 +93,14 @@ async def _respond_with_tools(
 
     messages = [SystemMessage(content=system_prompt), *state["messages"]]
     rounds = 0
+    # On the yes, the LLM calls the handoff before any UC tool and once made up the complaint_id;
+    # after the error it wrote text instead of retrying, so the round after a failed check is
+    # forced once more.
+    forced_retries = 1 if forced == HANDOFF_TOOL_NAME else 0
     reply = await first_llm.ainvoke(messages)
     while reply.tool_calls and rounds < _MAX_TOOL_ROUNDS:
         messages.append(reply)
+        handoff_failed = False
         for tool_call in reply.tool_calls:
             if tool_call["name"] == HANDOFF_TOOL_NAME and route.handoff_reason:
                 await _fetch_missing_rows(route.handoff_reason, tool_call["args"], tools_by_name, rows_by_tool)
@@ -105,6 +110,7 @@ async def _respond_with_tools(
                 # The error names only product digits and field names, never the customer's text.
                 logger.warning("Handoff not verified: %s", verified)
                 messages.append(ToolMessage(content=verified, tool_call_id=tool_call["id"]))
+                handoff_failed = True
                 continue
             tool = tools_by_name.get(tool_call["name"])
             try:
@@ -117,7 +123,11 @@ async def _respond_with_tools(
                 content = str(exc)
             messages.append(ToolMessage(content=content, tool_call_id=tool_call["id"]))
         rounds += 1
-        reply = await bound_llm.ainvoke(messages + reminder)
+        if handoff_failed and forced_retries:
+            forced_retries -= 1
+            reply = await first_llm.ainvoke(messages + reminder)
+        else:
+            reply = await bound_llm.ainvoke(messages + reminder)
     if reply.tool_calls:
         # Out of rounds: answer from the tool results so far instead of ending on a tool call.
         reply = await llm.ainvoke(messages + reminder)
