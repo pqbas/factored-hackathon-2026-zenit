@@ -381,6 +381,10 @@ chatRouter.post('/', requireAuth, async (req: Request, res: Response) => {
               intent: agentOutputs.intent,
               language: agentOutputs.language,
               handledBy: agentOutputs.handoff ? 'human_queue' : undefined,
+              // The agent said goodbye ("no gracias, eso es todo"): resolved.
+              // A new customer message reopens it.
+              resolved:
+                agentOutputs.intent === 'GOODBYE' && !agentOutputs.handoff,
             });
           } catch (err) {
             console.warn('Unable to persist agent state for chat', id, err);

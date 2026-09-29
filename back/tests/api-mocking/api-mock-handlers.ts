@@ -202,6 +202,14 @@ export const AGENT_OUTPUTS = {
     blocked: false,
     handoff: null,
   },
+  goodbye: {
+    thread_id: 'mock',
+    use_case: null,
+    intent: 'GOODBYE',
+    language: 'es',
+    blocked: false,
+    handoff: null,
+  },
   blocked: {
     thread_id: 'mock',
     use_case: null,

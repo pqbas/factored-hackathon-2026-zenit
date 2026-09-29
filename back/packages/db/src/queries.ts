@@ -774,12 +774,16 @@ export async function updateChatAgentState({
   intent,
   language,
   handledBy,
+  resolved,
 }: {
   chatId: string;
   useCase?: string | null;
   intent?: string | null;
   language?: string | null;
   handledBy?: Chat['handledBy'];
+  // The agent closed the conversation: closedAt = now, only while the agent
+  // still handles it. handledBy stays as is, like release resolved.
+  resolved?: boolean;
 }) {
   if (!isDatabaseAvailable()) {
     console.log('[updateChatAgentState] Database not available, skipping update');
@@ -792,11 +796,15 @@ export async function updateChatAgentState({
       intent: string | null;
       language: string | null;
       handledBy: Chat['handledBy'];
+      closedAt: SQL;
     }> = {};
     if (useCase !== undefined) updates.useCase = useCase;
     if (intent !== undefined) updates.intent = intent;
     if (language !== undefined) updates.language = language;
     if (handledBy !== undefined) updates.handledBy = handledBy;
+    if (resolved) {
+      updates.closedAt = sql`CASE WHEN ${chat.handledBy} = 'ai_agent' THEN now() ELSE ${chat.closedAt} END`;
+    }
 
     if (Object.keys(updates).length === 0) return;
 
