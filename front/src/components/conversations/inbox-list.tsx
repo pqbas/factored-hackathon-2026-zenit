@@ -15,6 +15,7 @@ import {
   rowText,
 } from '@/lib/advisor';
 import { avatarColor, formatListTime, getInitials, STATUS_LABEL } from '@/lib/conversations';
+import { handoffReasonLabel, handoffReasonShort } from '@/lib/handoff-case';
 import { cn } from '@/lib/utils';
 
 function Row({
@@ -90,12 +91,24 @@ function Row({
       </span>
       {/* The customer's last message; the subject (chat title) stays as the
           tooltip. */}
-      <span
-        data-testid="row-text"
-        title={chat.title}
-        className="min-w-0 truncate text-muted-foreground text-sm"
-      >
-        {rowText(chat)}
+      <span className="flex min-w-0 items-center gap-2">
+        {/* An open case David handed off, by reason. */}
+        {chat.hasHandoff && chat.handoff && (
+          <span
+            data-testid="row-handoff"
+            title={handoffReasonLabel(chat.handoff.reason)}
+            className="shrink-0 rounded-md bg-primary/15 px-1.5 py-0.5 font-medium text-[11px] text-primary"
+          >
+            {handoffReasonShort(chat.handoff.reason)}
+          </span>
+        )}
+        <span
+          data-testid="row-text"
+          title={chat.title}
+          className="min-w-0 truncate text-muted-foreground text-sm"
+        >
+          {rowText(chat)}
+        </span>
       </span>
       <span
         data-testid={attention ? 'attention' : undefined}

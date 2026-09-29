@@ -20,6 +20,8 @@ type Chat = {
   useCase: string | null;
   customerName?: string | null;
   customerKey?: string;
+  hasHandoff?: boolean;
+  handoff?: Record<string, unknown> | null;
   lastMessage?: { text: string; senderType: string; createdAt: string } | null;
 };
 type Message = {
@@ -61,6 +63,25 @@ async function mockAdvisorApi(page: Page, me: string, role: Role = 'advisor') {
     chat('c-assistant', 'javier@banco.test', {}),
     chat('c-waiting', 'daniela@banco.test', {
       customerName: 'Daniela Sosa Ruiz',
+      // David handed off a verified complaint.
+      hasHandoff: true,
+      handoff: {
+        reason: 'complaint',
+        summary: 'La clienta reclama un cobro duplicado de 84,20 USD en SUPERMERCADO LÍDER.',
+        verifiedData: {
+          card_last4: '1070',
+          transaction_date: '2026-09-24',
+          merchant: 'SUPERMERCADO LÍDER',
+          amount: 84.2,
+          currency: 'USD',
+          transaction_status: 'Approved',
+          complaint_type: 'duplicate_charge',
+          description: 'Me cobraron dos veces',
+        },
+        facts: null,
+        at: '2026-09-28T10:00:00.000Z',
+        resolvedAt: null,
+      },
       handledBy: 'human_queue',
       lastMessage: { text: 'Es urgente, por favor', senderType: 'customer', createdAt: now() },
     }),
@@ -543,6 +564,30 @@ test.describe('Advisor console', () => {
     expect(requested.some((u) => u.includes('/c-waiting/take'))).toBe(true);
     expect(requested.some((u) => u.includes('/c-old/take'))).toBe(false);
     await expect(dividers.last().getByTestId('divider-status')).toHaveText('Con asesor');
+  });
+
+  test('a case David handed off shows its reason in the row and its record above the chat', async ({
+    page,
+  }) => {
+    await openConsole(page);
+    const row = page.getByTestId('conversation-row-c-waiting');
+    await expect(row.getByTestId('row-handoff')).toHaveText('Reclamo por cargo');
+    await expect(page.getByTestId('conversation-row-c-race').getByTestId('row-handoff')).toHaveCount(0);
+
+    await row.click();
+    const card = page.getByTestId('handoff-card').first();
+    await expect(card.getByTestId('handoff-reason')).toHaveText('Reclamo por un cargo');
+    await expect(card.getByTestId('handoff-summary')).toContainText('cobro duplicado');
+    await expect(card.getByTestId('handoff-fact-card_last4')).toHaveText('••1070');
+    await expect(card.getByTestId('handoff-fact-merchant')).toHaveText('SUPERMERCADO LÍDER');
+    await expect(card.getByTestId('handoff-fact-transaction_date')).toHaveText('24 sep 2026');
+    await expect(card.getByTestId('handoff-fact-amount')).toContainText('USD');
+    await expect(card.getByTestId('handoff-fact-complaint_type')).toHaveText('Cobro duplicado');
+    await expect(card.getByTestId('handoff-fact-description')).toHaveText('Me cobraron dos veces');
+
+    // Folds away to leave room for the chat.
+    await card.getByRole('button', { name: /Caso derivado por David/ }).click();
+    await expect(card.getByTestId('handoff-facts')).toHaveCount(0);
   });
 
   test('/admin now leads to Chats', async ({ page }) => {

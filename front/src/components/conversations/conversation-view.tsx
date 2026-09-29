@@ -20,6 +20,7 @@ import {
   statusOf,
 } from '@/lib/advisor';
 import { TypingIndicator } from '@/components/typing-indicator';
+import { HandoffCard } from '@/components/conversations/handoff-card';
 import { groupByDay, STATUS_LABEL } from '@/lib/conversations';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -193,15 +194,26 @@ export function ConversationView({
         onClose={onClose}
       />
 
+      {/* The active conversation's case stays in view above the messages. */}
+      {chat.handoff && (
+        <div className="border-border border-b px-4 py-2.5 sm:px-8">
+          <HandoffCard key={chat.id} handoff={chat.handoff} defaultOpen={!!chat.hasHandoff} />
+        </div>
+      )}
+
       <div className="relative min-h-0 flex-1">
         <div
           ref={scrollRef}
           onScroll={handleScroll}
           className="h-full overflow-y-auto bg-wa-chat-bg px-4 py-4 sm:px-8"
         >
-          {segments.map((segment) => (
+          {segments.map((segment, index) => (
             <section key={segment.chat.id} data-testid="timeline-segment">
               {withDividers && <ConversationDivider chat={segment.chat} />}
+              {/* Earlier conversations keep their case, folded. */}
+              {index < segments.length - 1 && segment.chat.handoff && (
+                <HandoffCard handoff={segment.chat.handoff} defaultOpen={false} className="mb-3" />
+              )}
               <DayGroups bubbles={segment.bubbles} now={now} skipFirstLabel={withDividers} />
             </section>
           ))}
