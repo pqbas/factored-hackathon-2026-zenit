@@ -101,32 +101,31 @@ export function ConversationHeader({
         {getInitials(name)}
       </div>
       <div className="flex min-w-0 flex-col gap-0.5">
-        <span className="flex min-w-0 items-baseline gap-2">
-          <span data-testid="customer-name" className="truncate font-semibold text-[15px]">
-            {name}
-          </span>
-          {email && (
-            <span data-testid="customer-email" className="truncate text-muted-foreground text-xs">
-              {email}
-            </span>
-          )}
-          {customerId && (
-            <span data-testid="customer-id" className="shrink-0 text-muted-foreground text-xs">
-              Cliente {customerId}
-            </span>
-          )}
+        <span data-testid="customer-name" className="truncate font-semibold text-[15px]">
+          {name}
         </span>
-        {/* The state and who has the chat live in the input's placeholder. */}
-        {tag && (
+        {/* Second line: who the customer is and why they're here. The state
+            and who has the chat live in the input's placeholder. */}
+        {(email || customerId || tag) && (
           <span
             data-testid="customer-meta"
             className="flex min-w-0 items-center gap-2 text-muted-foreground text-xs"
           >
+            {email && (
+              <span data-testid="customer-email" className="truncate">
+                {email}
+              </span>
+            )}
+            {customerId && (
+              <span data-testid="customer-id" className="shrink-0">
+                Cliente {customerId}
+              </span>
+            )}
             {tag && (
               <span
                 data-testid="use-case-tag"
                 className={cn(
-                  'truncate rounded-md px-2 py-0.5 font-medium text-[11px]',
+                  'shrink-0 rounded-md px-2 py-0.5 font-medium text-[11px]',
                   handoffReasonStyle(tag).chip,
                 )}
               >
