@@ -2,6 +2,8 @@ import { senderOf } from '@/lib/handoff';
 import { getTextFromMessage } from '@/lib/utils';
 import { PreviewMessage, AwaitingResponseMessage } from './message';
 import { Greeting } from './greeting';
+import { AgentUnavailable } from './agent-unavailable';
+import { BrandMark } from './brand-mark';
 import { memo, useEffect } from 'react';
 import equal from 'fast-deep-equal';
 import type { UseChatHelpers } from '@ai-sdk/react';
@@ -101,6 +103,14 @@ function PureMessages({
               }
             />
             ),
+          )}
+
+          {/* The request failed before David started answering. */}
+          {status === 'error' && messages.at(-1)?.role === 'user' && !isReadonly && (
+            <div className="flex items-start gap-3">
+              <BrandMark size={26} className="mt-0.5" />
+              <AgentUnavailable />
+            </div>
           )}
 
           {status === 'submitted' &&

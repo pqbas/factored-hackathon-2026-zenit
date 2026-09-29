@@ -21,7 +21,7 @@ type Row = {
 
 async function mockHandoffChat(page: Page, initialHandledBy = 'human_queue') {
   let seq = 0;
-  const state = { handledBy: initialHandledBy };
+  const state = { handledBy: initialHandledBy, agentPending: false };
   const rows: Row[] = [];
   const add = (role: string, text: string, senderType: string | null, id?: string) => {
     seq += 1;
@@ -55,6 +55,7 @@ async function mockHandoffChat(page: Page, initialHandledBy = 'human_queue') {
         lastContext: null,
         handledBy: state.handledBy,
         assignedTo: null,
+        agentPending: state.agentPending,
       },
     }),
   );
@@ -70,11 +71,17 @@ async function mockHandoffChat(page: Page, initialHandledBy = 'human_queue') {
     const body = route.request().postDataJSON();
     const text = body.message?.parts?.find((p: { type: string }) => p.type === 'text')?.text ?? '';
     add('user', text, 'customer', body.message?.id);
-    const events = [
-      { type: 'start' },
-      { type: 'data-conversation-state', data: { handledBy: state.handledBy } },
-      { type: 'finish' },
-    ];
+    const events = state.agentPending
+      ? [
+          { type: 'start' },
+          { type: 'data-agent-pending', data: { messageId: body.message?.id } },
+          { type: 'finish' },
+        ]
+      : [
+          { type: 'start' },
+          { type: 'data-conversation-state', data: { handledBy: state.handledBy } },
+          { type: 'finish' },
+        ];
     return route.fulfill({
       status: 200,
       headers: {
@@ -94,6 +101,15 @@ async function mockHandoffChat(page: Page, initialHandledBy = 'human_queue') {
     backToAgent() {
       state.handledBy = 'ai_agent';
       add('system', 'Volviste con el asistente.', 'system');
+    },
+    // The agent is down: the back queues the customer's turn.
+    queueNextTurn() {
+      state.agentPending = true;
+    },
+    // The worker got through: David's answer is saved.
+    agentAnswers(text: string) {
+      state.agentPending = false;
+      add('assistant', text, 'ai_agent');
     },
   };
 }
@@ -184,6 +200,30 @@ test.describe('Customer chat during a handoff', () => {
     );
     await expect(page.getByText('Tu saldo es $1.000.')).toBeVisible({ timeout: 10_000 });
     await expect(page.getByTestId('typing-indicator')).toHaveCount(0);
+    await page.close();
+  });
+
+  test('with the agent down, the turn waits and David answers on his own', async ({ adaContext }) => {
+    const page = await adaContext.context.newPage();
+    const chat = new ChatPage(page);
+    const server = await mockHandoffChat(page, 'ai_agent');
+    server.queueNextTurn();
+
+    await page.goto(`/chat/${CHAT_ID}`);
+    await expect(page.getByTestId('chat-peer-status')).toHaveText(/No disponible/);
+    await chat.sendUserMessage('¿Cuál es mi saldo?');
+    await expect(page.getByTestId('message-user')).toHaveCount(2);
+    // No waiting bubble, no error: just David shown as unavailable.
+    await page.waitForTimeout(500);
+    await expect(page.getByTestId('message-assistant')).toHaveCount(1);
+    await expect(page.getByTestId('agent-unavailable')).toHaveCount(0);
+    await expect(page.locator('body')).not.toContainText('Bad Gateway');
+    await expect(page.getByTestId('chat-peer-status')).toHaveText('Asistente virtual · No disponible');
+
+    // The worker answers: it shows up by polling and David is back online.
+    server.agentAnswers('Tu saldo es $1.000.');
+    await expect(page.getByText('Tu saldo es $1.000.')).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByTestId('chat-peer-status')).toHaveText('Asistente virtual · En línea');
     await page.close();
   });
 });

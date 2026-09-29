@@ -23,7 +23,10 @@ export function handledByOf(value: unknown): HandledBy {
 export function isStateOnlyMessage(message: ChatMessage | undefined): boolean {
   if (!message || message.role !== 'assistant') return false;
   const visible = message.parts.filter(
-    (part) => part.type !== 'data-conversation-state' && part.type !== 'step-start',
+    (part) =>
+      part.type !== 'data-conversation-state' &&
+      (part.type as string) !== AGENT_PENDING_EVENT &&
+      part.type !== 'step-start',
   );
   return visible.length === 0;
 }
@@ -60,9 +63,31 @@ export function handoffNotice(handledBy: HandledBy): string | null {
 }
 
 export async function fetchHandledBy(chatId: string): Promise<HandledBy | null> {
+  return (await fetchChatState(chatId))?.handledBy ?? null;
+}
+
+// Who handles the chat, and whether a customer turn waits in the queue for
+// the agent (agentPending; null when the back doesn't say).
+export async function fetchChatState(
+  chatId: string,
+): Promise<{ handledBy: HandledBy; agentPending: boolean | null } | null> {
   const res = await fetch(`/api/chat/${chatId}`, { credentials: 'include' });
   if (!res.ok) return null;
-  return handledByOf((await res.json()).handledBy);
+  const body = await res.json();
+  return {
+    handledBy: handledByOf(body.handledBy),
+    agentPending: typeof body.agentPending === 'boolean' ? body.agentPending : null,
+  };
+}
+
+// The agent was unavailable: the back queued the customer's turn and David
+// answers when it's back (the answer arrives through GET /api/messages).
+export const AGENT_PENDING_EVENT = 'data-agent-pending';
+
+// A queued turn is over once anything but the customer shows up after it:
+// David's answer, or a system notice (expired, taken by an advisor).
+export function endsAgentPending(incoming: ChatMessage[]): boolean {
+  return incoming.some((m) => senderOf(m) !== 'customer');
 }
 
 // Messages after `after`, or all of them (`full`) when there is no `after` or

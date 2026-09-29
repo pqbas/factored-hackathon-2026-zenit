@@ -29,6 +29,7 @@ import { useHandoff } from '@/hooks/use-handoff';
 import {
   type HandledBy,
   handledByOf,
+  AGENT_PENDING_EVENT,
   handoffNotice,
   isStateOnlyMessage,
 } from '@/lib/handoff';
@@ -49,6 +50,7 @@ export function Chat({
   isReadonly,
   initialLastContext,
   initialHandledBy = 'ai_agent',
+  initialAgentPending = false,
 }: {
   id: string;
   initialMessages: ChatMessage[];
@@ -58,6 +60,7 @@ export function Chat({
   session: ClientSession;
   initialLastContext?: LanguageModelUsage;
   initialHandledBy?: HandledBy;
+  initialAgentPending?: boolean;
 }) {
   const { visibilityType } = useChatVisibility({
     chatId: id,
@@ -226,6 +229,8 @@ export function Chat({
           handledByOf((dataPart.data as { handledBy?: string }).handledBy),
         );
       }
+      // The agent is unavailable: the back queued this turn.
+      if (dataPart.type === AGENT_PENDING_EVENT) setAgentPending(true);
     },
     onFinish: ({
       isAbort,
@@ -302,14 +307,20 @@ export function Chat({
 
       // Only show toast for explicit ChatSDKError (backend validation errors)
       // Other errors (network, schema validation) are handled silently or in message parts
-      if (error instanceof ChatSDKError) {
+      // Failures on David's side (unavailable, offline, gateway) show inline
+      // as a friendly note; only the customer's own problems (validation,
+      // permissions, limits) get a toast.
+      const inline =
+        !(error instanceof ChatSDKError) ||
+        !['bad_request', 'unauthorized', 'forbidden', 'not_found', 'rate_limit', 'conflict'].includes(
+          error.type,
+        );
+      if (!inline) {
         toast({
           type: 'error',
           description: error.message,
         });
       } else {
-        // Non-ChatSDKError: Could be network error or in-stream error
-        // Log but don't toast - errors during streaming may be informational
         console.warn('[Chat onError] Error during streaming:', error.message);
       }
       // Note: We don't call resumeStream here because onError can be called
@@ -318,9 +329,10 @@ export function Chat({
     },
   });
 
-  const { handledBy, setHandledBy, refreshState } = useHandoff({
+  const { handledBy, setHandledBy, agentPending, setAgentPending, refreshState } = useHandoff({
     chatId: id,
     initialHandledBy,
+    initialAgentPending,
     messages,
     setMessages,
     enabled: chatHistoryEnabled,
@@ -356,6 +368,7 @@ export function Chat({
           onCustomerChange={setCustomerToken}
           isCustomerLocked={isCustomerLocked}
           handledBy={handledBy}
+          agentPending={agentPending}
         />
 
         <Messages

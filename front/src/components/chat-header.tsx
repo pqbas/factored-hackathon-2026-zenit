@@ -24,6 +24,7 @@ export function ChatHeader({
   onCustomerChange = () => {},
   isCustomerLocked = false,
   handledBy = 'ai_agent',
+  agentPending = false,
 }: {
   chatId?: string;
   customers?: DemoCustomer[];
@@ -31,6 +32,8 @@ export function ChatHeader({
   onCustomerChange?: (token: string) => void;
   isCustomerLocked?: boolean;
   handledBy?: 'ai_agent' | 'human_queue' | 'human_agent';
+  // The agent is unavailable and the customer's turn waits in the queue.
+  agentPending?: boolean;
 }) {
   // Who is on the other side of the chat right now.
   const peer =
@@ -38,7 +41,11 @@ export function ChatHeader({
       ? { name: 'Asesor', status: 'Te atiende una persona' }
       : handledBy === 'human_queue'
         ? { name: 'Asesor', status: 'Esperando a un asesor' }
-        : { name: ASSISTANT_NAME, status: `${ASSISTANT_KIND} · En línea` };
+        : {
+            name: ASSISTANT_NAME,
+            status: `${ASSISTANT_KIND} · ${agentPending ? 'No disponible' : 'En línea'}`,
+          };
+  const unavailable = handledBy === 'ai_agent' && agentPending;
   const navigate = useNavigate();
   const { open } = useSidebar();
   const { chatHistoryEnabled } = useConfig();
@@ -67,11 +74,15 @@ export function ChatHeader({
         <span data-testid="chat-peer" className="font-semibold text-[13px]">
           {peer.name}
         </span>
-        <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+        <span
+          data-testid="chat-peer-status"
+          className="flex items-center gap-1.5 text-[11px] text-muted-foreground"
+        >
           <span
+            data-testid="chat-peer-dot"
             className={cn(
               'size-1.5 rounded-full',
-              handledBy === 'human_queue' ? 'bg-tint-amber-foreground' : 'bg-online',
+              handledBy === 'human_queue' || unavailable ? 'bg-tint-amber-foreground' : 'bg-online',
             )}
           />
           {peer.status}
