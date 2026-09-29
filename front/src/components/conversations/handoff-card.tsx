@@ -29,23 +29,28 @@ export function HandoffCard({
         type="button"
         aria-expanded={open}
         onClick={() => setOpen(!open)}
-        className="flex w-full items-center gap-2 px-3.5 py-2.5 text-left"
+        className="flex w-full items-start gap-2 px-3.5 py-2.5 text-left"
       >
-        <ShieldCheck className="size-4 shrink-0 text-primary" strokeWidth={1.9} />
-        <span className="font-semibold text-[13px]">Caso derivado por {ASSISTANT_NAME}</span>
-        <span
-          data-testid="handoff-reason"
-          className="truncate rounded-md bg-primary/15 px-2 py-0.5 font-medium text-[11px] text-primary"
-        >
-          {handoffReasonLabel(handoff.reason)}
-        </span>
-        {closed && (
-          <span className="shrink-0 rounded-md bg-secondary px-2 py-0.5 text-[11px] text-muted-foreground">
-            Cerrado
+        <ShieldCheck className="mt-0.5 size-4 shrink-0 text-primary" strokeWidth={1.9} />
+        {/* Title on its own line and the tags below, so it fits the side panel. */}
+        <span className="flex min-w-0 flex-1 flex-col items-start gap-1.5">
+          <span className="font-semibold text-[13px]">Caso derivado por {ASSISTANT_NAME}</span>
+          <span className="flex flex-wrap items-center gap-1.5">
+            <span
+              data-testid="handoff-reason"
+              className="rounded-md bg-primary/15 px-2 py-0.5 font-medium text-[11px] text-primary"
+            >
+              {handoffReasonLabel(handoff.reason)}
+            </span>
+            {closed && (
+              <span className="rounded-md bg-secondary px-2 py-0.5 text-[11px] text-muted-foreground">
+                Cerrado
+              </span>
+            )}
           </span>
-        )}
+        </span>
         <ChevronDown
-          className={cn('ml-auto size-4 shrink-0 text-muted-foreground transition-transform', open && 'rotate-180')}
+          className={cn('mt-0.5 size-4 shrink-0 text-muted-foreground transition-transform', open && 'rotate-180')}
         />
       </button>
       {open && (

@@ -92,10 +92,11 @@ function Row({
       </span>
       {/* The customer's last message; the subject (chat title) stays as the
           tooltip. */}
-      <span className="flex min-w-0 items-center gap-2">
+      <span className="flex min-w-0 items-center gap-2 overflow-hidden">
         {/* The detail of an open case David handed off (the reason is the
-            section's or the view's); nothing when there is no detail. */}
-        {chat.hasHandoff && detail && (
+            section's or the view's); nothing when there is no detail. The
+            narrow list (a chat is open) leaves it to the context panel. */}
+        {chat.hasHandoff && detail && !compact && (
           <span
             data-testid="row-handoff"
             title={handoffReasonLabel(chat.handoff?.reason)}
