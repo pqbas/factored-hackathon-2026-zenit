@@ -178,6 +178,17 @@ def _confirmed_operation(previous: str) -> str | None:
     return None
 
 
+def _confirmed_by(normalized_text: str, previous_reply: str | None) -> str | None:
+    if previous_reply is not None and _AFFIRMATIVE.fullmatch(normalized_text):
+        return _confirmed_operation(normalize(previous_reply))
+    return None
+
+
+def is_confirmation(text: str, previous_reply: str | None) -> bool:
+    """Whether the text is a yes to David's confirmation question in the previous reply."""
+    return _confirmed_by(normalize(text).strip(" .!?)"), previous_reply) is not None
+
+
 _LETTER_INTENTS = {"a": "CARD_OPTIONS", "b": "SAVINGS_OPTIONS", "c": "COMPLAINT", "d": "MORE_OPTIONS"}
 
 
@@ -189,9 +200,8 @@ def menu_rule_intent(text: str, previous_reply: str | None, submenus: dict[str, 
         return "MENU"
     if m := _MENU_LETTER.fullmatch(t):
         return _LETTER_INTENTS[m.group(1)]
-    if previous_reply is not None and _AFFIRMATIVE.fullmatch(t):
-        if operation := _confirmed_operation(normalize(previous_reply)):
-            return operation
+    if operation := _confirmed_by(t, previous_reply):
+        return operation
     digit = _SUBMENU_DIGIT.fullmatch(t)
     if previous_reply is None or digit is None:
         return None

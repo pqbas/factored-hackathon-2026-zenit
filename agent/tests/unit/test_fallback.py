@@ -172,3 +172,29 @@ def test_a_yes_to_a_confirmation_question_keeps_its_operation(previous, intent):
 
 def test_a_yes_to_any_other_question_is_not_a_rule():
     assert menu_rule_intent("sí", "¿Quieres ver tus movimientos?", SUBMENUS) is None
+
+
+@pytest.mark.parametrize(
+    "previous",
+    [
+        "Tarjeta 0279, motivo: comisión. ¿Confirmas estos datos para pasar tu solicitud a un asesor?",
+        "…¿Confirmas estos datos para pasar tu reclamo a un asesor?",
+        "…¿Confirmas estos datos para pasar tu consulta a un asesor?",
+        "…Você confirma estes dados para passar sua solicitação a um atendente?",
+        "Está en revisión.\n¿Necesitas que te ayude a pasar esta consulta a un asesor?",
+    ],
+)
+def test_is_confirmation_is_true_for_a_yes_to_a_confirmation_question(previous):
+    from src.llm.fallback import is_confirmation
+
+    assert is_confirmation("sí, confirmo", previous)
+    assert is_confirmation("Sim!", previous)
+
+
+def test_is_confirmation_is_false_for_another_question_or_text():
+    from src.llm.fallback import is_confirmation
+
+    assert not is_confirmation("sí", "¿Quieres ver tus movimientos?")
+    assert not is_confirmation("sí", None)
+    assert not is_confirmation("no, la 4930", "¿Confirmas estos datos para pasar tu reclamo a un asesor?")
+    assert not is_confirmation("C", "¿Confirmas estos datos para pasar tu reclamo a un asesor?")

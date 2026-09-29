@@ -82,7 +82,10 @@ async def _respond_with_tools(
     bound_llm = llm.bind_tools(tools)
     # The first round must call a tool: without it the LLM answered a follow-up ("E limite?")
     # with made-up figures, since the history only holds earlier replies, never tool results.
-    first_llm = llm.bind_tools(tools, tool_choice="required")
+    # On the customer's yes to the confirmation question the LLM once rewrote the summary
+    # instead of handing off, so that turn forces the handoff tool.
+    forced = HANDOFF_TOOL_NAME if state.get("confirmation") and route.handoff_reason else "required"
+    first_llm = llm.bind_tools(tools, tool_choice=forced)
 
     messages = [SystemMessage(content=system_prompt), *state["messages"]]
     rounds = 0

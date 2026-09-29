@@ -10,3 +10,4 @@ class AgentState(TypedDict):
     classification: dict | None
     use_case: str | None
     handoff: dict | None
+    confirmation: bool

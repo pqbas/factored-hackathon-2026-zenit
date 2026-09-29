@@ -746,3 +746,41 @@ def test_a_yes_after_the_case_status_confirmation_question_skips_the_classifier_
     assert result["messages"][-1].content == HANDOFF_REPLY["es"]
     assert result["handoff"]["reason"] == "case_status"
     assert result["handoff"]["facts"]["case_id"] == "CMP-1"
+
+
+_CONFIRMATION_HISTORY = [
+    {"role": "user", "content": "no lo reconozco"},
+    {"role": "assistant", "content": "Tarjeta 4930, cargo de Internet Plus.\n\n"
+                                     "¿Confirmas estos datos para pasar tu reclamo a un asesor?"},
+]
+
+
+def test_a_confirmation_turn_forces_the_handoff_tool_and_hands_off():
+    llm = _SummarizingToolLLM([
+        AIMessage(content="", tool_calls=[{"name": "hand_off_to_advisor", "args": _CASE, "id": "c1"}]),
+    ])
+    result = _run(_complaint_graph(llm), "sí, confirmo", history=_CONFIRMATION_HISTORY)
+
+    assert llm.calls[0] == "hand_off_to_advisor"
+    assert result["handoff"]["reason"] == "complaint"
+    assert result["messages"][-1].content == HANDOFF_REPLY["es"]
+
+
+def test_a_forced_handoff_that_does_not_verify_says_what_does_not_match():
+    llm = _SummarizingToolLLM([
+        AIMessage(content="", tool_calls=[{"name": "hand_off_to_advisor", "args": {**_CASE, "amount": 1.0}, "id": "c1"}]),
+        AIMessage(content="Ese cargo no aparece, ¿cuál es?"),
+    ])
+    result = _run(_complaint_graph(llm), "sí", history=_CONFIRMATION_HISTORY)
+
+    assert llm.calls[0] == "hand_off_to_advisor"
+    assert result.get("handoff") is None
+    assert result["messages"][-1].content == "Ese cargo no aparece, ¿cuál es?"
+
+
+def test_a_turn_that_is_not_a_confirmation_keeps_the_required_tool_choice():
+    llm = ScriptedToolLLM([AIMessage(content="¿De qué tarjeta es el cargo?")])
+    _run(_complaint_graph(llm), "sí", history=[
+        {"role": "user", "content": "C"}, {"role": "assistant", "content": "¿Quieres ver tus movimientos?"},
+    ])
+    assert llm.calls == ["required"]
