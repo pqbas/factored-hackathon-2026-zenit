@@ -84,3 +84,9 @@ def test_the_summary_is_the_llm_text_and_names_the_request_in_words():
 
 def test_a_failing_summary_is_none():
     assert asyncio.run(case_summary(_SummaryLLM(raises=True), "complaint", {})) is None
+
+
+def test_movements_without_a_merchant_dont_break_the_check():
+    transactions = [{**TRANSACTIONS[0], "merchant_name": None, "amount": 10.0}, *TRANSACTIONS]
+    verified = verify_case("complaint", COMPLAINT, {"get_products": PRODUCTS, "list_transactions": transactions})
+    assert verified["merchant"] == "Internet Plus"

@@ -106,7 +106,8 @@ def verify_case(reason: str, args: dict, rows_by_tool: dict[str, list[dict]]) ->
          if t["product_number_last4"] == case.card_last4
          and str(t["transaction_date"]).startswith(case.transaction_date)
          and abs(float(t["amount"]) - case.amount) < 0.01
-         and t["merchant_name"].strip().lower() == case.merchant.strip().lower()),
+         # Payments and withdrawals have no merchant.
+         and (t["merchant_name"] or "").strip().lower() == case.merchant.strip().lower()),
         None,
     )
     if charge is None:
