@@ -327,6 +327,24 @@ export const handlers = [
         manifest: { schema: { columns: columns.map((name) => ({ name })) } },
         result: { data_array: rows },
       });
+    if (statement.includes('interaction_history')) {
+      return table(
+        ['interaction_date', 'channel', 'contact_reason', 'was_resolved', 'was_escalated', 'detected_sentiment'],
+        [['2026-04-23T06:01:09.000Z', 'Phone', 'Transaccional', 'true', 'false', 'Neutral']],
+      );
+    }
+    if (statement.includes('call_transcripts')) {
+      return table(
+        ['process_date', 'customer_text', 'agent_text'],
+        [['2026-04-22', 'Mi tarjeta es 4111 1111 1111 1111 y el cvv 123', 'Gracias, ya lo reviso.']],
+      );
+    }
+    if (statement.includes('customer_cases')) {
+      return table(
+        ['case_type', 'category', 'creation_date', 'claimed_amount', 'currency', 'priority', 'status', 'resolution'],
+        [['Reclamo', 'Cobro indebido', '2026-03-01T10:00:00.000Z', '120.50', 'USD', 'Alta', 'Cerrado', 'Reembolso']],
+      );
+    }
     if (statement.includes('customer_360')) {
       return table(['first_name', 'last_name'], [['Santiago', 'Contreras López']]);
     }

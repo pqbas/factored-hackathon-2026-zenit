@@ -30,6 +30,7 @@ import { generateUUID } from '@chat-template/core';
 import { ChatSDKError } from '@chat-template/core/errors';
 import { normalizeEmail } from '../roles';
 import { toLastMessagePreview } from '../inbox';
+import { getCustomerContext } from '../bank-data';
 
 export const advisorRouter: RouterType = Router();
 
@@ -181,6 +182,42 @@ advisorRouter.get(
         error,
       );
       res.status(500).json({ error: 'Failed to fetch messages' });
+    }
+  },
+);
+
+/**
+ * GET /api/advisor/conversations/:id/customer-context - The chat's bank
+ * customer as seen from the warehouse (past contacts, call transcripts,
+ * cases). 204 when the chat has no customer.
+ */
+advisorRouter.get(
+  '/conversations/:id/customer-context',
+  async (req: Request, res: Response) => {
+    if (!isDatabaseAvailable()) {
+      return res.status(204).end();
+    }
+
+    const id = getIdFromRequest(req);
+    if (!id) return;
+
+    try {
+      const chat = await getChatById({ id });
+      if (!chat) {
+        const response = new ChatSDKError('not_found:chat').toResponse();
+        return res.status(response.status).json(response.json);
+      }
+      if (!chat.customerId) {
+        return res.status(204).end();
+      }
+
+      res.json(await getCustomerContext(chat.customerId));
+    } catch (error) {
+      console.error(
+        '[/api/advisor/conversations/:id/customer-context] Error:',
+        error,
+      );
+      res.status(502).json({ error: 'Failed to read bank data' });
     }
   },
 );
