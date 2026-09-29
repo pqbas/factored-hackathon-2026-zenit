@@ -30,6 +30,11 @@ export const HANDOFF_REASONS = [
   { id: 'case_status', label: 'Estado de un reclamo' },
 ] as const;
 
+// The short name filters and inbox sections show for a reason.
+export function handoffReasonGroupLabel(id: string): string {
+  return HANDOFF_REASONS.find((r) => r.id === id)?.label ?? handoffReasonLabel(id);
+}
+
 // Section id for conversations without a handoff.
 export const NO_HANDOFF_GROUP = 'NONE';
 

@@ -4,7 +4,7 @@
 import type { Chat, DBMessage } from '@chat-template/db';
 
 import { ASSISTANT_NAME } from '@/lib/assistant';
-import { type AgentHandoff, HANDOFF_REASONS, handoffReasonLabel, NO_HANDOFF_GROUP } from '@/lib/handoff-case';
+import { type AgentHandoff, HANDOFF_REASONS, handoffReasonGroupLabel, NO_HANDOFF_GROUP } from '@/lib/handoff-case';
 import { type ConversationStatus, STATUS_LABEL } from '@/lib/conversations';
 
 // Row types from @chat-template/db as they arrive over JSON: dates are strings.
@@ -274,7 +274,7 @@ export function groupByHandoffReason<T extends AdvisorChat>(
     .filter((id) => groups.has(id))
     .map((id) => ({
       id,
-      label: id === NO_HANDOFF_GROUP ? 'Otros' : handoffReasonLabel(id),
+      label: id === NO_HANDOFF_GROUP ? 'Otros' : handoffReasonGroupLabel(id),
       chats: groups.get(id) ?? [],
     }));
 }

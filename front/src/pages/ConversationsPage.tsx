@@ -33,7 +33,7 @@ import {
 } from '@/lib/advisor';
 import { ASSISTANT_NAME } from '@/lib/assistant';
 import { matchesQuery, STATUS_LABEL } from '@/lib/conversations';
-import { handoffReasonLabel } from '@/lib/handoff-case';
+import { handoffReasonGroupLabel } from '@/lib/handoff-case';
 import { cn } from '@/lib/utils';
 
 // Messages of the open conversation: full list on open, then only the new
@@ -94,7 +94,7 @@ const VIEW_TITLE = {
 };
 
 function viewTitle(view: InboxView): string {
-  return view.kind === 'reason' ? handoffReasonLabel(view.reason) : VIEW_TITLE[view.kind];
+  return view.kind === 'reason' ? handoffReasonGroupLabel(view.reason) : VIEW_TITLE[view.kind];
 }
 
 export default function ConversationsPage() {

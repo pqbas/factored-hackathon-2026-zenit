@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 
 import { OTHER_GROUP, useCaseLabelOf } from '@/lib/advisor';
-import { handoffReasonLabel, NO_HANDOFF_GROUP } from '@/lib/handoff-case';
+import { handoffReasonGroupLabel, NO_HANDOFF_GROUP } from '@/lib/handoff-case';
 import { cn } from '@/lib/utils';
 
 // Soft label colors per use case, readable in both themes.
@@ -98,7 +98,7 @@ export function HandoffReasonChip({ id }: { id: string }) {
         handoffReasonStyle(id).chip,
       )}
     >
-      {id === NO_HANDOFF_GROUP ? 'Otros' : handoffReasonLabel(id)}
+      {id === NO_HANDOFF_GROUP ? 'Otros' : handoffReasonGroupLabel(id)}
     </span>
   );
 }
