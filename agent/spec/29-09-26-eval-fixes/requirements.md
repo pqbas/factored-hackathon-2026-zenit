@@ -63,7 +63,7 @@ The user rejected building the movements in code: David shouldn't become ever mo
 14. Check. After the tool loop, if the reply shows account data of a kind and that kind's tool wasn't called successfully in the turn, the reply is ungrounded and doesn't reach the customer.
     - Account data means figures with 3 or more digits or decimals, or dates, next to an amount.
     - Turns without account data aren't checked: questions, menus, the fixed texts.
-15. What happens when the guard fires. The options are below; the user chooses.
+15. What happens when the guard fires: option A, chosen by the user. One retry forcing the missing tool with `tool_choice`; if the reply still doesn't pass the check, or the tool fails, "Ahora no puedo consultar esa información." (pt: "Agora não consigo consultar essa informação.").
 16. Signal. Every use-case turn carries `custom_outputs.guard`:
     - `null` when the guard didn't fire;
     - otherwise `{fired: true, missing_tool, action}`, with `action` one of `retried_ok`, `safe_reply`.

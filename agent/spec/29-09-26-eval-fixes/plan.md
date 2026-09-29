@@ -91,7 +91,7 @@
 
 ---
 
-## Group 7 (annex, pending approval of the option): grounding guard
+## Group 7 (annex, option A approved): grounding guard
 
 20. `configs/routing.yaml` and `src/schemas/routing.py`: `IntentRoute.grounding: list[GroundingKind] = []`, where `GroundingKind = {kind, tool, asks: [regex], shows: regex}`.
     - GENERAL_INQUIRY: `movements` → `list_transactions` (asks `movimient|movimentac|compras|transaccion`; shows a line with a date and an amount), and `balance` → `get_products` (asks `saldo|limite|cupo|disponible|debo|devo`; shows an amount).
