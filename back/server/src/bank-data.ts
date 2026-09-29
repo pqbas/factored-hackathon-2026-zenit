@@ -60,6 +60,10 @@ async function runStatement(
 const toNumber = (value: string | null) =>
   value === null ? null : Number(value);
 
+// A blank value from the bank ('' or whitespace) is no value.
+const blankToNull = (value: string | null) =>
+  value === null || value.trim() === '' ? null : value;
+
 export async function getCustomerProfile(customerId: string) {
   const [row] = await runStatement(
     `SELECT first_name, last_name FROM ${catalog()}.bank_gold.customer_360 WHERE customer_id = :customer_id`,
@@ -68,6 +72,21 @@ export async function getCustomerProfile(customerId: string) {
   return row
     ? { firstName: row.first_name, lastName: row.last_name }
     : { firstName: null, lastName: null };
+}
+
+// The console's "Datos del cliente": customer_360 plus the contact data, which
+// only bank_silver.customers has. Kept apart from getCustomerProfile so the
+// customer's own routes never depend on bank_silver.customers.
+async function getCustomerRecord(customerId: string) {
+  const [row] = await runStatement(
+    `SELECT c.first_name, c.last_name, c.country, c.city, c.segment, c.customer_status,
+       c.registration_date, c.preferred_channel, s.email, s.mobile_phone
+     FROM ${catalog()}.bank_gold.customer_360 c
+     LEFT JOIN ${catalog()}.bank_silver.customers s ON s.customer_id = c.customer_id
+     WHERE c.customer_id = :customer_id`,
+    [{ name: 'customer_id', value: customerId }],
+  );
+  return row ?? {};
 }
 
 export async function getProducts(customerId: string) {
@@ -110,8 +129,9 @@ const toBoolean = (value: string | null) =>
 // joined by interaction_id), masked: they're free text from past calls.
 export async function getCustomerContext(customerId: string) {
   const parameters = [{ name: 'customer_id', value: customerId }];
-  const [profile, interactions, cases] = await Promise.all([
-    getCustomerProfile(customerId),
+  const [record, products, interactions, cases] = await Promise.all([
+    getCustomerRecord(customerId) as Promise<Row>,
+    getProducts(customerId),
     runStatement(
       `WITH recent AS (
          SELECT interaction_id, interaction_date, interaction_type, channel, contact_reason, was_resolved, was_escalated, detected_sentiment
@@ -136,7 +156,28 @@ export async function getCustomerContext(customerId: string) {
   ]);
 
   return {
-    customer: { customerId, ...profile },
+    customer: {
+      customerId,
+      firstName: record.first_name ?? null,
+      lastName: record.last_name ?? null,
+    },
+    profile: {
+      customerId,
+      country: blankToNull(record.country ?? null),
+      city: blankToNull(record.city ?? null),
+      segment: blankToNull(record.segment ?? null),
+      status: blankToNull(record.customer_status ?? null),
+      customerSince: blankToNull(record.registration_date ?? null),
+      products: products.map(({ productType, last4 }) => ({
+        productType,
+        last4,
+      })),
+      contact: {
+        email: blankToNull(record.email ?? null),
+        mobilePhone: blankToNull(record.mobile_phone ?? null),
+      },
+      preferredChannel: blankToNull(record.preferred_channel ?? null),
+    },
     interactions: interactions.map((row) => ({
       interactionId: row.interaction_id,
       hasTranscript: row.transcript_id !== null,

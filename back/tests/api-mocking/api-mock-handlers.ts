@@ -438,7 +438,10 @@ export const handlers = [
       );
     }
     if (statement.includes('customer_360')) {
-      return table(['first_name', 'last_name'], [['Santiago', 'Contreras López']]);
+      return table(
+        ['first_name', 'last_name', 'country', 'city', 'segment', 'customer_status', 'registration_date', 'preferred_channel', 'email', 'mobile_phone'],
+        [['Santiago', 'Contreras López', 'México', 'Tijuana', 'Plus', 'Active', '2022-07-03T18:46:46.000Z', 'Phone', 'santiago.contreras357@gmail.com', '']],
+      );
     }
     if (statement.includes('get_products')) {
       return table(
