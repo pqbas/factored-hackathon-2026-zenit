@@ -19,6 +19,7 @@ import { sessionRouter } from './routes/session';
 import { messagesRouter } from './routes/messages';
 import { configRouter } from './routes/config';
 import { demoCustomersRouter } from './routes/demo-customers';
+import { productsRouter } from './routes/products';
 import { ChatSDKError } from '@chat-template/core/errors';
 
 // ESM-compatible __dirname
@@ -59,6 +60,7 @@ app.use('/api/session', sessionRouter);
 app.use('/api/messages', messagesRouter);
 app.use('/api/config', configRouter);
 app.use('/api/demo-customers', demoCustomersRouter);
+app.use('/api/products', productsRouter);
 
 // Serve static files in production
 if (!isDevelopment) {
