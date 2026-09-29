@@ -54,7 +54,7 @@
     menú. Esa pregunta va después de los movimientos, nunca en lugar de ellos.
 
 - intent: COMPLAINT
-  description: El cliente reclama por un cargo de su tarjeta que no reconoce, que le cobraron dos veces o con un monto distinto, o responde las preguntas de ese reclamo.
+  description: El cliente reclama por un cargo de su tarjeta que no reconoce, que le cobraron dos veces o con un monto distinto, o responde las preguntas de ese reclamo. Tiene que mencionar un cargo; un problema con la tarjeta sin decir de qué cargo es OUT_OF_SCOPE.
   examples:
     - "no reconozco un cargo"
     - "me cobraron dos veces"
@@ -260,4 +260,5 @@
     - "cuéntame un chiste"
     - "qual é a capital do brasil?"
     - "¿cuál es el tipo de cambio hoy?"
+    - "tengo un problema con mi tarjeta"
   destination: respond
