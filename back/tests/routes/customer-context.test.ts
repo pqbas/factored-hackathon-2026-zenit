@@ -77,6 +77,21 @@ test.describe('Customer context in the console (with database)', () => {
         firstName: 'Santiago',
         lastName: 'Contreras López',
       });
+      // Blank columns from the bank come as null (the mock's mobile_phone is '').
+      expect(body.profile).toEqual({
+        customerId: 'CLI-FLEUCGTWGAHL',
+        country: 'México',
+        city: 'Tijuana',
+        segment: 'Plus',
+        status: 'Active',
+        customerSince: '2022-07-03T18:46:46.000Z',
+        products: [{ productType: 'Tarjeta Crédito', last4: '1070' }],
+        contact: {
+          email: 'santiago.contreras357@gmail.com',
+          mobilePhone: null,
+        },
+        preferredChannel: 'Phone',
+      });
       expect(body.interactions).toEqual([
         {
           interactionId: 'INT-1',
@@ -275,5 +290,48 @@ test.describe('Customer context in the console (with database)', () => {
 
     expect(await ids('&sessionToken=demo-expired')).toEqual([]);
     expect(await ids('&sessionToken=no-existe')).toEqual([]);
+  });
+
+  test("the customer's own routes never carry the profile", async ({
+    adaContext,
+  }) => {
+    const chatId = generateUUID();
+    await postChatMessage(adaContext, chatId, 'demo-mx-1');
+
+    const responses = [
+      await adaContext.request.get(`/api/chat/${chatId}`),
+      await adaContext.request.get('/api/history?limit=100&sessionToken=demo-mx-1'),
+      await adaContext.request.get('/api/products?sessionToken=demo-mx-1'),
+    ];
+    for (const response of responses) {
+      expect(response.status()).toBe(200);
+      const text = await response.text();
+      expect(text).not.toContain('"profile"');
+      expect(text).not.toContain('santiago.contreras357@gmail.com');
+    }
+  });
+
+  test('a failing profile query gives profile null and keeps the rest', async ({
+    babbageContext,
+  }) => {
+    const chatId = generateUUID();
+    await saveChat({
+      id: chatId,
+      userId: `${babbageContext.name}-id`,
+      title: 'Profile fails',
+      visibility: 'private',
+      customerId: 'CLI-PROFILE-FAILS',
+    });
+
+    const response = await babbageContext.request.get(
+      `/api/advisor/conversations/${chatId}/customer-context`,
+    );
+    expect(response.status()).toBe(200);
+    const body = await response.json();
+    expect(body.profile).toBeNull();
+    expect(body.customer.customerId).toBe('CLI-PROFILE-FAILS');
+    expect(body.customer.firstName).toBe('Santiago');
+    expect(body.interactions.length).toBeGreaterThan(0);
+    expect(body.cases.length).toBeGreaterThan(0);
   });
 });
