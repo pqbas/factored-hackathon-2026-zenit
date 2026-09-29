@@ -18,7 +18,7 @@ demás describe cómo funciona hoy.
 3. Se deriva **por la operación**, nunca por el ánimo del cliente ni porque pida
    hablar con alguien.
 4. La **Bandeja** del asesor tiene solo casos humanos. Las conversaciones de
-   David están en **Atendidas por David**, por si alguien quiere intervenir.
+   David están en la vista **Con AI**, por si alguien quiere intervenir.
 
 ## 2. Etapas de la conversación
 
@@ -301,7 +301,7 @@ Mientras dura la etapa:
    - `facts.verified_data`: la ficha confirmada. Las tarjetas van solo con los
      últimos 4 dígitos y nunca se incluyen datos sensibles.
 3. El back pasa la conversación a la cola humana (`human_queue`). Aparece en la
-   Bandeja como **Sin atender**, agrupada por su caso de uso.
+   Bandeja como **En espera**, agrupada por su caso de uso.
 4. David deja de responder. Los mensajes del cliente le llegan al asesor y el
    chat del cliente muestra:
 
@@ -377,7 +377,7 @@ locales.
    - **Resolver**: la conversación pasa a Resueltas.
    - **Devolver a David**: David retoma en el siguiente mensaje del cliente.
 
-También puede entrar a **Atendidas por David** y tomar una conversación para
+También puede entrar a la vista **Con AI** y tomar una conversación para
 intervenir, aunque David no la haya derivado.
 
 | Rol     | Qué puede hacer en Chats                                                             |
@@ -388,25 +388,30 @@ intervenir, aunque David no la haya derivado.
 
 ## 5. Estados de una conversación
 
+Toda conversación está siempre en uno de estos cuatro estados. Son los que ve
+el asesor en la consola.
+
 ```mermaid
 stateDiagram-v2
-    [*] --> David: el cliente escribe
-    David --> David: saludo, consulta o recolección
-    David --> Resuelta: cierre
-    David --> SinAtender: derivación
-    David --> ConAsesor: un asesor interviene
-    SinAtender --> ConAsesor: un asesor la toma
-    ConAsesor --> David: devolver
-    ConAsesor --> Resuelta: resolver
-    Resuelta --> David: el cliente vuelve a escribir
+    [*] --> ConAI: el cliente escribe
+    ConAI --> ConAI: saludo, consulta o recolección
+    ConAI --> EnEspera: David deriva
+    ConAI --> ConAsesor: un asesor interviene
+    ConAI --> Resuelta: el cliente se despide
+    EnEspera --> ConAsesor: un asesor la toma
+    ConAsesor --> ConAI: el asesor la devuelve
+    ConAsesor --> Resuelta: el asesor la resuelve
+    Resuelta --> ConAI: el cliente vuelve a escribir
 ```
 
-| Estado        | `handledBy`                | Dónde se ve en la consola           |
-| ------------- | -------------------------- | ----------------------------------- |
-| David         | `ai_agent`                 | Atendidas por David                 |
-| Sin atender   | `human_queue`              | Bandeja y Sin atender               |
-| Con un asesor | `human_agent`              | Bandeja, y Mías para quien la tiene |
-| Resuelta      | cualquiera, con `closedAt` | Resueltas                           |
+| Estado | Qué significa | En el back | Dónde se ve en la consola |
+| --- | --- | --- | --- |
+| **Con AI** | David la atiende solo | `handledBy = ai_agent` | Vista **Con AI** |
+| **En espera** | David la derivó y espera a un asesor | `handledBy = human_queue` | Bandeja y **En espera** |
+| **Con asesor** | Un asesor la tomó y la atiende | `handledBy = human_agent` | Bandeja, y **Mías** para quien la tiene |
+| **Resuelta** | Terminó, la haya resuelto David (despedida) o un asesor | `closedAt` con fecha | **Resueltas** |
+
+La **Bandeja** del asesor muestra solo **En espera** y **Con asesor**.
 
 ## 6. Fuera de alcance (futuro)
 
