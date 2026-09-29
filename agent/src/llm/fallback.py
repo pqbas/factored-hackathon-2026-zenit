@@ -99,12 +99,20 @@ _COMPLAINT = re.compile(
     r"me descontaron|fraude|disputa|reclamo|nao reconheco|nao fiz|nao autorizei|cobranca|"
     r"cobraram|contestar|contestacao|estorno|golpe|clonad)"
 )
+_INQUIRY = re.compile(
+    r"(saldo|limite|cupo|disponible|disponivel|movimient|movimentac|extrato|"
+    r"cuanto tengo|quanto tenho|mis tarjetas|meus cartoes)"
+)
+_GOODBYE = re.compile(r"(eso es todo|adios|chau|hasta luego|isso e tudo|tchau|ate logo)")
 _GREETING = re.compile(r"^\s*(hola|buen[oa]s|ola|oi|bom dia|boa tarde|boa noite)\b[\s!.,]*$")
 
 _KEYWORD_INTENTS = (
     (_CANCEL, "CANCEL"),
     (_HUMAN, "HUMAN_AGENT"),
     (_COMPLAINT, "COMPLAINT"),
+    # When Jev is unreachable (e.g. an App without internet egress) UC-01 must still route.
+    (_INQUIRY, "GENERAL_INQUIRY"),
+    (_GOODBYE, "GOODBYE"),
     (_GREETING, "GREETING"),
 )
 
