@@ -897,14 +897,16 @@ export interface ResolutionMetrics extends ResolutionTotals {
 export const NO_USE_CASE = 'NONE';
 
 // Resolution metrics from ResolutionEvent (docs/flujo-atencion.md §6), one
-// aggregate query grouped by day (UTC) and use case. from/to are inclusive
-// YYYY-MM-DD dates.
+// aggregate query grouped by local day and use case. from/to are inclusive
+// YYYY-MM-DD days in `tz`, an IANA zone the caller has already validated.
 export async function getResolutionMetrics({
   from,
   to,
+  tz = 'UTC',
 }: {
   from?: string;
   to?: string;
+  tz?: string;
 }): Promise<ResolutionMetrics> {
   const metrics: ResolutionMetrics = {
     total: 0,
@@ -918,14 +920,14 @@ export async function getResolutionMetrics({
 
   const countWhere = (condition: SQL) =>
     sql<number>`count(*) filter (where ${condition})`.mapWith(Number);
-  const day = sql<string>`to_char(${resolutionEvent.resolvedAt}, 'YYYY-MM-DD')`;
+  // resolvedAt is stored as UTC wall-clock time. The zone goes in as a
+  // literal, not a bound parameter, so the select and GROUP BY render the
+  // same expression; the route only lets through valid IANA names.
+  const local = sql`((${resolutionEvent.resolvedAt} at time zone 'UTC') at time zone ${sql.raw(`'${tz.replaceAll("'", "''")}'`)})`;
+  const day = sql<string>`to_char(${local}, 'YYYY-MM-DD')`;
   const conditions: SQL[] = [];
-  if (from) conditions.push(sql`${resolutionEvent.resolvedAt} >= ${from}::date`);
-  if (to) {
-    conditions.push(
-      sql`${resolutionEvent.resolvedAt} < ${to}::date + interval '1 day'`,
-    );
-  }
+  if (from) conditions.push(sql`${local} >= ${from}::date`);
+  if (to) conditions.push(sql`${local} < ${to}::date + interval '1 day'`);
 
   try {
     const rows = await (await ensureDb())

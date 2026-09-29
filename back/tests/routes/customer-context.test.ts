@@ -79,6 +79,8 @@ test.describe('Customer context in the console (with database)', () => {
       });
       expect(body.interactions).toEqual([
         {
+          interactionId: 'INT-1',
+          hasTranscript: true,
           date: '2026-04-23T06:01:09.000Z',
           interactionType: 'Inbound Call',
           channel: 'Phone',
@@ -87,9 +89,22 @@ test.describe('Customer context in the console (with database)', () => {
           escalated: false,
           sentiment: 'Neutral',
         },
+        {
+          interactionId: 'INT-2',
+          hasTranscript: false,
+          date: '2026-04-04T04:02:46.000Z',
+          interactionType: 'Outbound Call',
+          channel: 'Phone',
+          reason: 'Transaccional',
+          resolved: true,
+          escalated: false,
+          sentiment: 'Neutral',
+        },
       ]);
+      // Only the listed interactions' transcripts, linked by interactionId.
       expect(body.transcripts).toEqual([
         {
+          interactionId: 'INT-1',
           date: '2026-04-22',
           customerText: 'Mi tarjeta es [NÚMERO OCULTO] y el [DATO OCULTO]',
           agentText: 'Gracias, ya lo reviso.',

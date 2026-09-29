@@ -1,6 +1,7 @@
 import { expect, test } from '../fixtures';
 import { generateUUID } from '@chat-template/core';
-import { getChatById, updateChatAgentState } from '@chat-template/db';
+import postgres from 'postgres';
+import { getChatById, saveChat, updateChatAgentState } from '@chat-template/db';
 import { skipInEphemeralMode, skipInWithDatabaseMode } from '../helpers';
 
 function textMessage(text: string) {
@@ -173,6 +174,54 @@ test.describe('/api/advisor/metrics (with database)', () => {
     ).toBeUndefined();
   });
 
+  test('tz makes from/to and byDay local days', async ({ adaContext }) => {
+    // 22:30 on 2026-01-10 in Lima (UTC-5) is 03:30 on 2026-01-11 in UTC.
+    const useCase = `M_TZ_${generateUUID()}`;
+    const chatId = generateUUID();
+    await saveChat({
+      id: chatId,
+      userId: `${adaContext.name}-id`,
+      title: 'Metrics tz',
+      visibility: 'private',
+    });
+    const db = postgres(process.env.POSTGRES_URL as string, { max: 1 });
+    try {
+      await db`
+        insert into ai_chatbot."ResolutionEvent"
+          ("chatId", "resolvedBy", "hadHuman", "useCase", "resolvedAt")
+        values (${chatId}, 'ai', false, ${useCase}, '2026-01-11 03:30:00')
+      `;
+    } finally {
+      await db.end();
+    }
+
+    const lima = await metricsFor(
+      adaContext,
+      useCase,
+      '?from=2026-01-10&to=2026-01-10&tz=America/Lima',
+    );
+    expect(lima.row?.total).toBe(1);
+    expect(
+      lima.body.byDay.find((d: { day: string }) => d.day === '2026-01-10')
+        ?.total,
+    ).toBeGreaterThanOrEqual(1);
+    expect(
+      (
+        await metricsFor(
+          adaContext,
+          useCase,
+          '?from=2026-01-11&to=2026-01-11&tz=America/Lima',
+        )
+      ).row,
+    ).toBeUndefined();
+
+    // Without tz, days are UTC, as before.
+    expect(
+      (await metricsFor(adaContext, useCase, '?from=2026-01-11&to=2026-01-11'))
+        .row?.total,
+    ).toBe(1);
+  });
+
   test('bad dates get 400; advisors and customers get 403', async ({
     adaContext,
     babbageContext,
@@ -180,6 +229,11 @@ test.describe('/api/advisor/metrics (with database)', () => {
   }) => {
     expect(
       (await adaContext.request.get('/api/advisor/metrics?from=ayer')).status(),
+    ).toBe(400);
+    expect(
+      (
+        await adaContext.request.get('/api/advisor/metrics?tz=Mars/Olympus')
+      ).status(),
     ).toBe(400);
     expect(
       (await babbageContext.request.get('/api/advisor/metrics')).status(),
