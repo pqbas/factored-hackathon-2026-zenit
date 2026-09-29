@@ -18,6 +18,7 @@ type Chat = {
   assignedAt: string | null;
   closedAt: string | null;
   useCase: string | null;
+  customerName?: string | null;
   lastMessage?: { text: string; senderType: string; createdAt: string } | null;
 };
 type Message = {
@@ -52,6 +53,7 @@ async function mockAdvisorApi(page: Page, me: string, role: Role = 'advisor') {
   const chats: Chat[] = [
     chat('c-assistant', 'javier@banco.test', {}),
     chat('c-waiting', 'daniela@banco.test', {
+      customerName: 'Daniela Sosa Ruiz',
       handledBy: 'human_queue',
       lastMessage: { text: 'Es urgente, por favor', senderType: 'customer', createdAt: now() },
     }),
@@ -435,6 +437,24 @@ test.describe('Advisor console', () => {
     await openConsole(page);
     await page.getByTestId('conversation-row-c-other').click();
     await expect(page.getByTestId('context-none')).toContainText('no tiene un cliente del banco');
+  });
+
+  test('shows the bank customer by name, with the email as secondary', async ({ page }) => {
+    await openConsole(page);
+    const row = page.getByTestId('conversation-row-c-waiting');
+    await expect(row.getByTestId('row-name')).toHaveText('Daniela Sosa Ruiz');
+    await expect(row.getByTestId('row-name')).toHaveAttribute('title', 'daniela@banco.test');
+    await expect(row).toContainText('DR');
+    // Without a customer name the email stays the name.
+    await expect(page.getByTestId('conversation-row-c-race').getByTestId('row-name')).toHaveText(
+      'santiago@banco.test',
+    );
+
+    await page.getByLabel('Buscar cliente').fill('sosa');
+    await expect(rows(page)).toHaveCount(1);
+    await row.click();
+    await expect(page.getByTestId('customer-name')).toHaveText('Daniela Sosa Ruiz');
+    await expect(page.getByTestId('customer-email')).toHaveText('daniela@banco.test');
   });
 
   test('/admin now leads to Chats', async ({ page }) => {

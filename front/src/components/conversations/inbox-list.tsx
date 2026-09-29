@@ -66,6 +66,8 @@ function Row({
         {getInitials(customerLabel(chat))}
       </span>
       <span
+        data-testid="row-name"
+        title={chat.userEmail ?? undefined}
         className="min-w-0 truncate font-semibold text-sm"
       >
         {customerLabel(chat)}

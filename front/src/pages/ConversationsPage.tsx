@@ -142,7 +142,9 @@ export default function ConversationsPage() {
     () =>
       (pages ?? [])
         .flatMap((page) => page.chats)
-        .filter((chat) => matchesQuery(query, chat.userEmail, chat.title)),
+        .filter((chat) =>
+          matchesQuery(query, chat.customerName ?? null, chat.userEmail, chat.title),
+        ),
     [pages, query],
   );
   const hasMore = pages?.at(-1)?.hasMore ?? false;

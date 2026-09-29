@@ -28,6 +28,9 @@ export type AdvisorChat = OverJson<
     | 'useCase'
   >
 > & {
+  // The bank customer behind the chat (e.g. "Javier Molina Morales"); null
+  // for chats without a demo customer.
+  customerName?: string | null;
   // Preview of the customer's last message (plain text, ≤140 chars).
   lastMessage?: {
     text: string;
@@ -173,8 +176,14 @@ export function toBubble(message: AdvisorMessage, me: string | undefined): Bubbl
   }
 }
 
+// The bank customer's name, else the app user's email as before.
 export function customerLabel(chat: AdvisorChat): string {
-  return chat.userEmail || 'Cliente sin email';
+  return chat.customerName?.trim() || chat.userEmail || 'Cliente sin email';
+}
+
+// The app user's email, shown small under a bank customer's name.
+export function secondaryEmail(chat: AdvisorChat): string | null {
+  return chat.customerName?.trim() && chat.userEmail ? chat.userEmail : null;
 }
 
 // The agent's intents (agent/configs/routing.yaml) that segment a
