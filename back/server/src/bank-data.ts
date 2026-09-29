@@ -112,14 +112,14 @@ export async function getCustomerContext(customerId: string) {
   const [profile, interactions, transcripts, cases] = await Promise.all([
     getCustomerProfile(customerId),
     runStatement(
-      `SELECT interaction_date, channel, contact_reason, was_resolved, was_escalated, detected_sentiment
+      `SELECT interaction_date, interaction_type, channel, contact_reason, was_resolved, was_escalated, detected_sentiment
        FROM ${catalog()}.bank_gold.interaction_history
        WHERE customer_id = :customer_id
        ORDER BY interaction_date DESC LIMIT 10`,
       parameters,
     ),
     runStatement(
-      `SELECT process_date, customer_text, agent_text
+      `SELECT process_date, customer_text, agent_text, detected_language, detected_intents, main_topics
        FROM ${catalog()}.bank_silver.call_transcripts
        WHERE customer_id = :customer_id
        ORDER BY process_date DESC LIMIT 5`,
@@ -138,6 +138,7 @@ export async function getCustomerContext(customerId: string) {
     customer: { customerId, ...profile },
     interactions: interactions.map((row) => ({
       date: row.interaction_date,
+      interactionType: row.interaction_type,
       channel: row.channel,
       reason: row.contact_reason,
       resolved: toBoolean(row.was_resolved),
@@ -148,6 +149,9 @@ export async function getCustomerContext(customerId: string) {
       date: row.process_date,
       customerText: row.customer_text && maskSensitive(row.customer_text),
       agentText: row.agent_text && maskSensitive(row.agent_text),
+      language: row.detected_language,
+      intents: row.detected_intents,
+      topics: row.main_topics,
     })),
     cases: cases.map((row) => ({
       type: row.case_type,

@@ -329,14 +329,14 @@ export const handlers = [
       });
     if (statement.includes('interaction_history')) {
       return table(
-        ['interaction_date', 'channel', 'contact_reason', 'was_resolved', 'was_escalated', 'detected_sentiment'],
-        [['2026-04-23T06:01:09.000Z', 'Phone', 'Transaccional', 'true', 'false', 'Neutral']],
+        ['interaction_date', 'interaction_type', 'channel', 'contact_reason', 'was_resolved', 'was_escalated', 'detected_sentiment'],
+        [['2026-04-23T06:01:09.000Z', 'Inbound Call', 'Phone', 'Transaccional', 'true', 'false', 'Neutral']],
       );
     }
     if (statement.includes('call_transcripts')) {
       return table(
-        ['process_date', 'customer_text', 'agent_text'],
-        [['2026-04-22', 'Mi tarjeta es 4111 1111 1111 1111 y el cvv 123', 'Gracias, ya lo reviso.']],
+        ['process_date', 'customer_text', 'agent_text', 'detected_language', 'detected_intents', 'main_topics'],
+        [['2026-04-22', 'Mi tarjeta es 4111 1111 1111 1111 y el cvv 123', 'Gracias, ya lo reviso.', 'es', 'consulta_general', 'Queja']],
       );
     }
     if (statement.includes('customer_cases')) {
