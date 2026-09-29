@@ -413,7 +413,31 @@ stateDiagram-v2
 
 La **Bandeja** del asesor muestra solo **En espera** y **Con asesor**.
 
-## 6. Fuera de alcance (futuro)
+## 6. Métricas de resolución (nuevo)
+
+Cada vez que una conversación pasa a **Resuelta**, el back registra un **evento
+de resolución**. Una conversación puede resolverse varias veces, porque se
+reabre si el cliente vuelve a escribir: cada cierre es un evento aparte.
+
+| Campo | Valor |
+| --- | --- |
+| `chatId` | La conversación |
+| `resolvedBy` | `ai` si se cerró por la despedida del cliente con David atendiendo; `human` si el asesor apretó **Resolver** |
+| `hadHuman` | `true` si desde que se abrió (o se reabrió) hubo derivación o un asesor la tomó |
+| `useCase` | El caso de uso de la conversación al cerrarse |
+| `resolvedAt` | Fecha y hora del cierre |
+
+Con esos eventos se calculan:
+
+| Métrica | Cálculo |
+| --- | --- |
+| Resueltas por la IA de punta a punta (contención) | `resolvedBy = ai` y `hadHuman = false`, sobre el total de eventos |
+| Resueltas por un asesor | `resolvedBy = human` |
+| Asistidas (un asesor intervino y después cerró David) | `resolvedBy = ai` y `hadHuman = true` |
+
+Todas se pueden ver en total, por caso de uso y por día.
+
+## 7. Fuera de alcance (futuro)
 
 - Derivar por frustración, insistencia o riesgo de estafa.
 - Operaciones comerciales y otras operaciones humanas que no están en la
