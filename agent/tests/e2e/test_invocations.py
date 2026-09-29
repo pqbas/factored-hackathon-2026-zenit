@@ -542,6 +542,11 @@ class StreamingScriptedChatModel(BaseChatModel):
     async def _astream(self, messages, stop=None, run_manager=None, **kwargs):
         reply = self._next(messages)
         if reply.tool_calls:
+            for token in reply.content.split(" ") if reply.content else []:
+                text_chunk = ChatGenerationChunk(message=AIMessageChunk(content=token + " "))
+                if run_manager:
+                    await run_manager.on_llm_new_token(token + " ", chunk=text_chunk)
+                yield text_chunk
             chunk = AIMessageChunk(content="", tool_call_chunks=[
                 {"name": c["name"], "args": json.dumps(c["args"]), "id": c["id"], "index": i}
                 for i, c in enumerate(reply.tool_calls)
@@ -739,3 +744,58 @@ def test_a_whole_complaint_conversation_is_asked_in_order_and_ends_in_the_handof
     assert handoff["summary"] == "El cliente no reconoce un cargo de Internet Plus."
     assert handoff["facts"]["verified_data"]["merchant"] == "Internet Plus"
     assert llm._answers == []
+
+
+def _streaming_handoff_setup(monkeypatch, first_reply_text: str):
+    products = [{"type": "text", "text": json.dumps({
+        "columns": ["product_type", "product_number_last4", "currency"],
+        "rows": [["Tarjeta Crédito", "1070", "USD"]],
+    })}]
+
+    async def fake_get_products(**kwargs):
+        return products
+
+    get_products_tool = StructuredTool.from_function(
+        coroutine=fake_get_products, name="get_products", description="d",
+        args_schema={"type": "object", "properties": {"customer_id": {"type": "string"}}, "required": ["customer_id"]},
+        infer_schema=False,
+    )
+
+    async def fake_tools_for(schema):
+        return [get_products_tool]
+
+    llm = StreamingScriptedChatModel(replies=[
+        AIMessage(content="", tool_calls=[{"name": "get_products", "args": {}, "id": "c0"}]),
+        AIMessage(content=first_reply_text, tool_calls=[{"name": "hand_off_to_advisor", "id": "c1",
+                                                         "args": {"product_last4": "1070", "reason": "comisión alta"}}]),
+    ])
+    monkeypatch.setattr(main, "tools_for", fake_tools_for)
+    monkeypatch.setattr(main, "get_chat_model", lambda: llm)
+    monkeypatch.setattr(
+        main, "jev_client",
+        JevClient(api_key="test-key", url="https://api.typesafe.ai/v1/systemone", timeout=2.0,
+                  transport=httpx.MockTransport(lambda request: _jev_response_for("RETENTION"))),
+    )
+
+
+def test_a_use_case_turn_streams_no_text_deltas_and_its_reply_is_one_item(client, monkeypatch):
+    monkeypatch.setattr(
+        main, "get_chat_model",
+        lambda: StreamingScriptedChatModel(replies=[AIMessage(content=FAKE_LLM_TEXT)]),
+    )
+
+    events = _stream_events(client, "¿cuál es el saldo de mi tarjeta?")
+
+    assert not [e for e in events if e.get("type") == "response.output_text.delta"]
+    done = [e for e in events if e.get("type") == "response.output_item.done"]
+    assert [e["item"]["content"][0]["text"].strip() for e in done] == [FAKE_LLM_TEXT]
+
+
+def test_a_handoff_turn_whose_llm_writes_text_next_to_the_call_only_carries_the_fixed_reply(client, monkeypatch):
+    _streaming_handoff_setup(monkeypatch, "Perfecto, ya te derivo con un asesor que te ayudará")
+
+    events = _stream_events(client, "sí, confirmo")
+
+    assert not [e for e in events if e.get("type") == "response.output_text.delta"]
+    done = [e for e in events if e.get("type") == "response.output_item.done"]
+    assert [e["item"]["content"][0]["text"] for e in done] == [HANDOFF_REPLY["es"]]

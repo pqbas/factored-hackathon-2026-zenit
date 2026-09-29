@@ -1030,3 +1030,25 @@ def test_a_retention_turn_asks_the_reason_after_the_product_and_summarizes_when_
     assert first == "¿Por qué quieres cancelarlo?"
     assert second.splitlines()[-1] == "¿Confirmas estos datos para pasar tu solicitud a un asesor?"
     assert "comisión alta" in second
+
+
+def test_a_verified_handoff_ends_the_round_without_running_the_other_tool_calls_or_calling_the_llm_again():
+    get_products = FakeMCPTool("get_products", GET_PRODUCTS_SCHEMA, result=_PRODUCTS_RESULT)
+    list_transactions = FakeMCPTool("list_transactions", LIST_TRANSACTIONS_SCHEMA, result=_TRANSACTIONS_RESULT)
+    llm = _SummarizingToolLLM([
+        AIMessage(content="Listo, te derivo", tool_calls=[
+            {"name": "hand_off_to_advisor", "args": _CASE, "id": "c1"},
+            {"name": "get_products", "args": {}, "id": "c2"},
+        ]),
+        AIMessage(content="texto que nunca debe salir"),
+    ])
+    graph = _build_graph(
+        llm, FakeJev(_classification(intent="COMPLAINT")), tools_for=_fake_tools_for(get_products, list_transactions)
+    )
+    result = _run(graph, "sí, confirmo")
+
+    assert result["messages"][-1].content == HANDOFF_REPLY["es"]
+    assert result["handoff"]["reason"] == "complaint"
+    # Only the bank rows the handoff check fetched itself; the call after it in the round never ran.
+    assert len(get_products.calls) == 1
+    assert llm.calls == ["required"]  # the round's reply only, never a follow-up round

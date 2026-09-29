@@ -113,6 +113,10 @@ async def _process_agent_astream_events(
                 metadata = event[1][1] if len(event[1]) > 1 else {}
                 if metadata.get("langgraph_node") not in _STREAMING_NODES:
                     continue
+                # A use-case turn goes out whole: the LLM may write text next to a
+                # hand_off_to_advisor call, and none of it may reach the customer.
+                if turn.get("use_case"):
+                    continue
                 if isinstance(chunk, AIMessageChunk) and (content := chunk.content):
                     if delta := prefix_filter.feed(chunk.id, content):
                         yield ResponsesAgentStreamEvent(
