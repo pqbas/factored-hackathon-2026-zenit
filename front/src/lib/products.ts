@@ -1,51 +1,90 @@
-import type {
-  MockProduct,
-  MockTransaction,
-  ProductStatus,
-  ProductType,
-} from '@/mocks/products';
+// "Mis productos" from GET /api/products?sessionToken=<demo customer token>:
+// the customer, their active products and their 10 latest movements, from the
+// bank's warehouse (the same UC functions the agent uses).
 
-export type ProductGroup = 'accounts' | 'cards' | 'loans' | 'investments';
+export interface ProductsCustomer {
+  customerId: string;
+  firstName: string;
+  lastName: string;
+}
 
-export const PRODUCT_GROUPS: { id: ProductGroup; label: string }[] = [
-  { id: 'accounts', label: 'Cuentas' },
-  { id: 'cards', label: 'Tarjetas' },
-  { id: 'loans', label: 'Créditos' },
-  { id: 'investments', label: 'Inversiones' },
+export interface Product {
+  productType: string; // 'Tarjeta Crédito' | 'Cuenta Ahorro' today
+  last4: string;
+  currency: string;
+  currentBalance: number;
+  creditLimit: number | null;
+  availableCredit: number | null; // null for savings
+}
+
+export interface Transaction {
+  date: string; // ISO
+  productType: string;
+  last4: string;
+  type: string; // e.g. 'Purchase'
+  merchant: string | null;
+  amount: number;
+  currency: string;
+  status: string; // e.g. 'Approved'
+}
+
+export interface ProductsData {
+  customer: ProductsCustomer;
+  products: Product[];
+  transactions: Transaction[];
+}
+
+export type ProductsError = 'no-customer' | 'expired' | 'invalid' | 'failed';
+
+export class ProductsRequestError extends Error {
+  constructor(public kind: ProductsError) {
+    super(kind);
+  }
+}
+
+export async function fetchProducts(sessionToken: string): Promise<ProductsData> {
+  const res = await fetch(
+    `/api/products?sessionToken=${encodeURIComponent(sessionToken)}`,
+    { credentials: 'include' },
+  );
+  if (res.status === 401) {
+    const body = await res.json().catch(() => ({}));
+    throw new ProductsRequestError(body.reason === 'expired' ? 'expired' : 'invalid');
+  }
+  if (!res.ok) throw new ProductsRequestError('failed');
+  return res.json();
+}
+
+export type ProductKind = 'credit' | 'savings' | 'other';
+
+// A credit product has a limit; savings have neither limit nor available credit.
+export function productKind(product: Product): ProductKind {
+  if (product.creditLimit !== null || /cr[eé]dito/i.test(product.productType)) return 'credit';
+  if (/ahorro|cuenta/i.test(product.productType)) return 'savings';
+  return 'other';
+}
+
+export function productId(product: { productType: string; last4: string }): string {
+  return `${product.productType}-${product.last4}`;
+}
+
+export function productName(product: { productType: string; last4: string }): string {
+  return `${product.productType} •• ${product.last4}`;
+}
+
+export const PRODUCT_GROUPS: { kind: ProductKind; label: string }[] = [
+  { kind: 'savings', label: 'Cuentas' },
+  { kind: 'credit', label: 'Tarjetas' },
+  { kind: 'other', label: 'Otros' },
 ];
 
-const TYPE_INFO: Record<ProductType, { label: string; group: ProductGroup }> = {
-  'Checking Account': { label: 'Cuenta corriente', group: 'accounts' },
-  'Savings Account': { label: 'Cuenta de ahorro', group: 'accounts' },
-  'Debit Card': { label: 'Tarjeta de débito', group: 'cards' },
-  'Credit Card': { label: 'Tarjeta de crédito', group: 'cards' },
-  'Personal Loan': { label: 'Préstamo personal', group: 'loans' },
-  Mortgage: { label: 'Crédito hipotecario', group: 'loans' },
-  Investment: { label: 'Inversión a plazo', group: 'investments' },
-};
-
-const STATUS_LABEL: Record<ProductStatus, string> = {
-  Active: 'Activo',
-  Blocked: 'Bloqueado',
-  Suspended: 'Suspendido',
-  Closed: 'Cerrado',
-};
-
-export function productLabel(type: ProductType): string {
-  return TYPE_INFO[type].label;
-}
-
-export function productGroup(type: ProductType): ProductGroup {
-  return TYPE_INFO[type].group;
-}
-
-export function statusLabel(status: ProductStatus): string {
-  return STATUS_LABEL[status];
-}
-
-// "0123456789014821" -> "•• 4821"
-export function maskNumber(productNumber: string): string {
-  return `•• ${productNumber.slice(-4)}`;
+export function groupProducts(
+  products: Product[],
+): { kind: ProductKind; label: string; products: Product[] }[] {
+  return PRODUCT_GROUPS.map((group) => ({
+    ...group,
+    products: products.filter((p) => productKind(p) === group.kind),
+  })).filter((group) => group.products.length > 0);
 }
 
 const CURRENCY_LOCALE: Record<string, string> = {
@@ -63,73 +102,68 @@ export function formatMoney(amount: number, currency: string): string {
   }).format(amount);
 }
 
-export function groupProducts(
-  products: MockProduct[],
-): { id: ProductGroup; label: string; products: MockProduct[] }[] {
-  return PRODUCT_GROUPS.map((group) => ({
-    ...group,
-    products: products.filter(
-      (product) => productGroup(product.productType) === group.id,
-    ),
-  })).filter((group) => group.products.length > 0);
-}
-
-// Credit and loan balances are money owed; the rest is money the customer has.
-export function isDebt(type: ProductType): boolean {
-  const group = productGroup(type);
-  return group === 'loans' || type === 'Credit Card';
-}
-
 export interface ProductTotals {
+  currency: string;
+  // Money in savings accounts.
   available: number;
+  // What the cards owe.
   debt: number;
-  invested: number;
+  // Credit still available on the cards.
+  creditAvailable: number;
 }
 
-export function summarizeProducts(products: MockProduct[]): ProductTotals {
-  const open = products.filter((p) => p.productStatus !== 'Closed');
-  const sum = (items: MockProduct[]) =>
-    items.reduce((total, p) => total + p.currentBalance, 0);
+// Totals in the first product's currency; products in other currencies are
+// left out of the sums (mixed currencies: fuera de alcance / futuro).
+export function summarizeProducts(products: Product[]): ProductTotals {
+  const currency = products[0]?.currency ?? 'USD';
+  const same = products.filter((p) => p.currency === currency);
+  const sum = (items: Product[], pick: (p: Product) => number) =>
+    items.reduce((total, p) => total + pick(p), 0);
   return {
-    // Debit cards draw on the checking account, so they are not added again.
-    available: sum(open.filter((p) => productGroup(p.productType) === 'accounts')),
-    debt: sum(open.filter((p) => isDebt(p.productType))),
-    invested: sum(open.filter((p) => productGroup(p.productType) === 'investments')),
+    currency,
+    available: sum(same.filter((p) => productKind(p) === 'savings'), (p) => p.currentBalance),
+    debt: sum(same.filter((p) => productKind(p) === 'credit'), (p) => p.currentBalance),
+    creditAvailable: sum(same, (p) => p.availableCredit ?? 0),
   };
 }
 
-export function creditUsage(product: MockProduct): number | null {
-  if (product.productType !== 'Credit Card' || !product.creditLimit) return null;
-  return Math.min(1, product.currentBalance / product.creditLimit);
+// Share of the credit limit in use, 0..1; null without a limit.
+export function creditUsage(product: Product): number | null {
+  if (!product.creditLimit) return null;
+  return Math.min(1, Math.max(0, product.currentBalance / product.creditLimit));
 }
 
-export function transactionsFor(
-  transactions: MockTransaction[],
-  productId?: string,
-): MockTransaction[] {
-  return transactions
-    .filter((tx) => !productId || tx.productId === productId)
-    .sort((a, b) => b.transactionDate.localeCompare(a.transactionDate));
+export function transactionsFor(transactions: Transaction[], product?: Product): Transaction[] {
+  return transactions.filter(
+    (tx) => !product || (tx.productType === product.productType && tx.last4 === product.last4),
+  );
 }
 
-const TX_TYPE_LABEL: Record<MockTransaction['transactionType'], string> = {
+// Money coming in: deposits, payments to a card, refunds and adjustments.
+const INCOMING = new Set(['Deposit', 'Payment', 'Refund', 'Adjustment', 'Credit']);
+
+export function signedAmount(tx: Transaction): number {
+  const amount = Math.abs(tx.amount);
+  return INCOMING.has(tx.type) ? amount : -amount;
+}
+
+const TX_TYPE_LABEL: Record<string, string> = {
   Purchase: 'Compra',
   Transfer: 'Transferencia',
   Deposit: 'Depósito',
   Withdrawal: 'Retiro',
   Payment: 'Pago',
+  Refund: 'Devolución',
   Adjustment: 'Ajuste',
+  Fee: 'Comisión',
 };
 
-export function transactionLabel(tx: MockTransaction): string {
-  return tx.merchantName ?? TX_TYPE_LABEL[tx.transactionType];
+export function transactionTypeLabel(type: string): string {
+  return TX_TYPE_LABEL[type] ?? type;
 }
 
-// Deposits and adjustments add money; every other type takes it out.
-export function signedAmount(tx: MockTransaction): number {
-  const incoming =
-    tx.transactionType === 'Deposit' || tx.transactionType === 'Adjustment';
-  return incoming ? tx.amount : -tx.amount;
+export function transactionLabel(tx: Transaction): string {
+  return tx.merchant || transactionTypeLabel(tx.type);
 }
 
 const TX_STATUS_LABEL: Record<string, string> = {
@@ -141,17 +175,4 @@ const TX_STATUS_LABEL: Record<string, string> = {
 // null for approved movements, which need no badge.
 export function transactionStatusLabel(status: string): string | null {
   return TX_STATUS_LABEL[status] ?? null;
-}
-
-// Dataset values are local: "2026-06-14 15:47:29" or a bare "2026-06-14".
-// A bare date would parse as UTC midnight and show the previous day.
-export function parseDate(value: string): Date {
-  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return new Date(`${value}T00:00:00`);
-  return new Date(value.replace(' ', 'T'));
-}
-
-export function transactionTypeLabel(
-  type: MockTransaction['transactionType'],
-): string {
-  return TX_TYPE_LABEL[type];
 }

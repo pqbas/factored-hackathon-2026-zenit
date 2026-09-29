@@ -28,7 +28,6 @@ import {
 import type { Chat } from '@chat-template/db';
 import { fetcher } from '@/lib/utils';
 import { ChatItem } from './sidebar-history-item';
-import { MOCK_AGENT_CHATS } from '@/mocks/agent-history';
 import useSWRInfinite from 'swr/infinite';
 import { LoaderIcon } from 'lucide-react';
 
@@ -240,14 +239,19 @@ export function SidebarHistory({ user }: { user?: ClientUser | null }) {
               <SidebarMenu>
                 {paginatedChatHistories &&
                   (() => {
-                    // Demo chats always show under the real ones, so the
-                    // sidebar has example conversations to open.
-                    const chatsFromHistory = [
-                      ...paginatedChatHistories.flatMap(
-                        (paginatedChatHistory) => paginatedChatHistory.chats,
-                      ),
-                      ...MOCK_AGENT_CHATS.map((mock) => mock.chat),
-                    ];
+                    const chatsFromHistory = paginatedChatHistories.flatMap(
+                      (paginatedChatHistory) => paginatedChatHistory.chats,
+                    );
+                    if (chatsFromHistory.length === 0 && !isLoading) {
+                      return (
+                        <p
+                          data-testid="chat-history-empty"
+                          className="px-2 py-4 text-muted-foreground text-xs"
+                        >
+                          Todavía no hay conversaciones.
+                        </p>
+                      );
+                    }
 
                     const groupedChats = groupChatsByDate(chatsFromHistory);
 
