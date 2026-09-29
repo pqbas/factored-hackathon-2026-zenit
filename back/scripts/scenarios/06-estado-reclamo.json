@@ -2,7 +2,7 @@
   "name": "06-estado-reclamo",
   "description": "Estado de un reclamo: David lista los reclamos, da el estado real y, si el cliente necesita algo más (un plazo), confirma los datos y deriva (3.D2)",
   "sessionToken": "demo-mx-2",
-  "customer": 2,
+  "customer": 3,
   "messages": [
     "hola",
     "D",
