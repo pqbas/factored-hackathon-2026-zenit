@@ -1,0 +1,10 @@
+{
+  "name": "09-sesion-vencida",
+  "description": "Sesión vencida",
+  "sessionToken": "demo-expired",
+  "customer": 4,
+  "messages": [
+    "hola",
+    "¿cuál es mi saldo?"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "name": "08-dato-sensible",
+  "description": "El cliente escribe un número de tarjeta",
+  "sessionToken": "demo-co-1",
+  "customer": 5,
+  "messages": [
+    "hola",
+    "mi tarjeta es 4111 1111 1111 1111",
+    "¿cuál es mi saldo?"
+  ]
+}
