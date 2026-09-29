@@ -2,6 +2,7 @@ import type { ChatMessage } from '@chat-template/core';
 import { describe, expect, it } from 'vitest';
 
 import {
+  endsAgentPending,
   handledByOf,
   handoffNotice,
   isStateOnlyMessage,
@@ -68,5 +69,22 @@ describe('handoffNotice', () => {
     expect(handoffNotice('human_queue')).toContain('Te pasamos con un asesor');
     expect(handoffNotice('human_agent')).toBe('Te atiende un asesor.');
     expect(handoffNotice('ai_agent')).toBeNull();
+  });
+});
+
+describe('agent pending', () => {
+  it('drops the empty message a queued turn leaves behind', () => {
+    const pending = msg('p', 'assistant', [
+      { type: 'step-start' },
+      { type: 'data-agent-pending', data: { messageId: 'm1' } },
+    ] as unknown as ChatMessage['parts']);
+    expect(isStateOnlyMessage(pending)).toBe(true);
+  });
+
+  it('ends once David or a notice answers, not with the customer', () => {
+    expect(endsAgentPending([msg('u', 'user', undefined, 'customer')])).toBe(false);
+    expect(endsAgentPending([msg('a', 'assistant', undefined, 'ai_agent')])).toBe(true);
+    expect(endsAgentPending([msg('s', 'system', undefined, 'system')])).toBe(true);
+    expect(endsAgentPending([])).toBe(false);
   });
 });

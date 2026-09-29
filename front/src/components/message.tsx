@@ -36,7 +36,7 @@ import {
   isNamePart,
   joinMessagePartSegments,
 } from './databricks-message-part-transformers';
-import { MessageError } from './message-error';
+import { AgentUnavailable } from './agent-unavailable';
 import { MessageOAuthError } from './message-oauth-error';
 import { isCredentialErrorMessage } from '@/lib/oauth-error-utils';
 import { Streamdown } from 'streamdown';
@@ -400,22 +400,14 @@ const PurePreviewMessage = ({
               message={message}
               isLoading={isLoading}
               setMode={setMode}
-              errorCount={errorParts.length}
+              errorCount={0}
               showErrors={showErrors}
               onToggleErrors={() => setShowErrors(!showErrors)}
             />
           )}
 
-          {errorParts.length > 0 && (hasOnlyErrors || showErrors) && (
-            <div className="flex flex-col gap-2">
-              {errorParts.map((part, index) => (
-                <MessageError
-                  key={`error-${message.id}-${index}`}
-                  error={part.data}
-                />
-              ))}
-            </div>
-          )}
+          {/* David couldn't answer: a friendly note, never the technical error. */}
+          {errorParts.length > 0 && !isLoading && <AgentUnavailable />}
         </div>
       </div>
     </div>

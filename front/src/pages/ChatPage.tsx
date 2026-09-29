@@ -84,6 +84,7 @@ export default function ChatPage() {
       session={session}
       initialLastContext={fromV3Usage(chat.lastContext)}
       initialHandledBy={handledByOf(chat.handledBy)}
+      initialAgentPending={(chat as { agentPending?: unknown }).agentPending === true}
     />
   );
 }
