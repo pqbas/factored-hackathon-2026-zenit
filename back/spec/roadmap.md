@@ -355,7 +355,7 @@ Shipped en PR #81. Desplegado a prod con `scripts/uc-grants.sh` el 29-09-26
 
 ---
 
-## Phase 14: Runner de evaluación (In progress)
+## Phase 14: Runner de evaluación (Complete)
 
 **Goal:** medir con muestra y denominador cuánto resuelve David de forma
 segura, a qué latencia y a qué costo (bloques 1, 2 y 3 de
@@ -364,10 +364,13 @@ segura, a qué latencia y a qué costo (bloques 1, 2 y 3 de
 <!-- Pedido del usuario vía w1:p4, 29-09-26. Spec en
      spec/29-09-26-runner-evaluacion/. -->
 
-- [ ] Los 40 casos de `docs/flujo-atencion.md` §7 como archivos en
+- [x] Los 40 casos de `docs/flujo-atencion.md` §7 como archivos en
       `scripts/eval/cases/`.
-- [ ] `npm run eval` corre cada caso 3 veces por el back local, marca
+- [x] `npm run eval` corre cada caso 3 veces por el back local, marca
       pasa/falla y escribe el reporte `.json` y `.md` con las métricas del
       hackathon.
-- [ ] Cada turno del agente queda en `TurnMetric`, y `/api/advisor/metrics`
+- [x] Cada turno del agente queda en `TurnMetric`, y `/api/advisor/metrics`
       expone la latencia p50/p95 y el costo estimado.
+
+Línea base 40×3 (clasificador llm, prompt 68747d24cacf) en
+`scripts/eval/results/2026-09-29-llm.md`: 86/120 pasan, 0 inseguros.
