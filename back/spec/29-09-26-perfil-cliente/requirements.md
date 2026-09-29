@@ -30,7 +30,11 @@ And it changes in these ways:
    - `contact`: `{ email, mobilePhone }` (`bank_silver.customers.email`,
      `.mobile_phone`)
    - `preferredChannel` (`customer_360.preferred_channel`, por ejemplo "Phone")
-4. Los datos del perfil se leen en paralelo con las demás consultas del
+4. Un campo que viene vacío del banco (por ejemplo, un email en blanco) va
+   como `null`, nunca como string vacío.
+5. Las rutas del cliente (`/api/chat/:id`, `/api/history`, `/api/products`)
+   nunca devuelven `profile`.
+6. Los datos del perfil se leen en paralelo con las demás consultas del
    contexto, todas filtradas por el `customer_id` del chat.
 
 ## 2. Decisions
@@ -49,7 +53,9 @@ And it changes in these ways:
   `LEFT JOIN`, y reemplazan a la consulta actual del nombre. `get_products`
   va en paralelo. Así el contexto no suma viajes al warehouse en serie.
 - El SP de la App necesita `SELECT` sobre `workspace.bank_silver.customers`.
-  El grant se aplica y se documenta en el README, como los anteriores.
+  Queda escrito en un script de grants nuevo (`back/scripts/uc-grants.sh`),
+  junto con los grants que hoy solo están en el README, y se aplica recién en
+  el despliegue de back+front, no antes contra prod (revisión de w1:p4).
 
 ## 3. Context
 

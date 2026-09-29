@@ -25,6 +25,8 @@ La fase está lista para mergear cuando se cumple todo lo que sigue.
       `segment`, `status`, `customerSince`, `products` (`productType`,
       `last4`), `contact` (`email`, `mobilePhone`) y `preferredChannel`
 - [ ] `customer`, `interactions`, `transcripts` y `cases` no cambian
+- [ ] Un campo vacío del banco llega como `null`, no como string vacío
+- [ ] `/api/chat/:id`, `/api/history` y `/api/products` no traen `profile`
 - [ ] Un cliente sigue recibiendo 403
 
 ## Manual Checks
@@ -36,7 +38,8 @@ La fase está lista para mergear cuando se cumple todo lo que sigue.
 
 ## Post-deploy Checks
 
-- [ ] Después del grant y el redeploy, `customer-context` en la App trae
+- [ ] En el despliegue se corre `back/scripts/uc-grants.sh` con el SP de la
+      App; después del redeploy, `customer-context` en la App trae
       `profile` sin 502 en los logs
 
 ## Definition of Done
