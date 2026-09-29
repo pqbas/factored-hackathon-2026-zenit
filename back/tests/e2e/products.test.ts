@@ -72,6 +72,7 @@ test.describe('Mis productos', () => {
         : { status: 200, json: PRODUCTS },
     );
     await page.goto('/products');
+    await expect(page.getByTestId('demo-customer-selector')).toContainText('Cliente demo:');
     await page.getByTestId('demo-customer-selector').click();
     await page.getByTestId('demo-customer-option-demo-expired').click();
     await expect(page.getByTestId('products-session-error')).toContainText('venció');

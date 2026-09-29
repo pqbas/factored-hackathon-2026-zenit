@@ -412,3 +412,15 @@ export async function fetchCounts(url: string): Promise<ViewCounts | undefined> 
   if (res.status === 204 || !res.ok) return undefined;
   return parseCounts(await res.json());
 }
+
+// How long after the customer's message the console assumes David is still
+// answering; past this, a missing reply means it failed, not that it's slow.
+export const DAVID_REPLY_WINDOW_MS = 60_000;
+
+// David handles the chat and the customer's last message has no reply yet.
+export function isDavidReplying(chat: AdvisorChat, bubbles: Bubble[], now: Date): boolean {
+  if (statusOf(chat) !== 'assistant') return false;
+  const last = [...bubbles].reverse().find((bubble) => bubble.from !== 'system');
+  if (!last || last.from !== 'customer') return false;
+  return now.getTime() - new Date(last.sentAt).getTime() < DAVID_REPLY_WINDOW_MS;
+}

@@ -48,7 +48,11 @@ test.describe('Demo customer selector', () => {
     await page.evaluate(() => localStorage.clear());
     await page.reload();
 
-    await expect(chat.demoCustomerSelector).toContainText('Santiago · México');
+    await expect(chat.demoCustomerSelector).toContainText('Cliente demo: Santiago · México');
+    await chat.demoCustomerSelector.hover();
+    await expect(page.getByTestId('demo-customer-hint').first()).toContainText(
+      'Elige qué cliente del banco simular en esta demo',
+    );
     await chat.selectDemoCustomer('demo-co-1');
     await expect(chat.demoCustomerSelector).toContainText('Javier · Colombia');
 

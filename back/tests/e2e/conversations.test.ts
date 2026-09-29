@@ -308,6 +308,39 @@ test.describe('Advisor console', () => {
     await expect(input(page)).toBeDisabled();
   });
 
+  test('shows David typing while a customer message has no reply', async ({ page }) => {
+    await openConsole(page);
+    // The customer just wrote to David and he hasn't answered yet.
+    await page.route('**/api/advisor/conversations/c-assistant/messages**', (route) => {
+      if (route.request().method() !== 'GET') return route.fallback();
+      const after = new URL(route.request().url()).searchParams.get('after');
+      return route.fulfill({
+        json: after
+          ? []
+          : [
+              {
+                id: 'm-pending',
+                chatId: 'c-assistant',
+                role: 'user',
+                parts: [{ type: 'text', text: '¿Cuál es mi saldo?' }],
+                createdAt: new Date().toISOString(),
+                senderType: 'customer',
+                senderId: null,
+              },
+            ],
+      });
+    });
+    await page.getByTestId('conversation-row-c-assistant').click();
+    await expect(page.getByTestId('bubble-customer').last()).toContainText('¿Cuál es mi saldo?');
+    await expect(page.getByTestId('typing-indicator')).toBeVisible();
+
+    // A resolved chat shows no indicator, even with the customer last.
+    await page.getByTestId('view-resolved').click();
+    await page.getByTestId('conversation-row-c-closed').click();
+    await expect(page.getByTestId('bubble-customer').first()).toBeVisible();
+    await expect(page.getByTestId('typing-indicator')).toHaveCount(0);
+  });
+
   test('/admin now leads to Chats', async ({ page }) => {
     await mockSessionRole(page, 'admin', 'root@example.com');
     await mockAdvisorApi(page, 'root@example.com', 'admin');

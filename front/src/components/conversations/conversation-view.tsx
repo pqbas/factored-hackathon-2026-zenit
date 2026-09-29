@@ -12,9 +12,11 @@ import {
   type AdvisorChat,
   type Bubble,
   canReply,
+  isDavidReplying,
   isHeldByOther,
   statusOf,
 } from '@/lib/advisor';
+import { TypingIndicator } from '@/components/typing-indicator';
 import { groupByDay } from '@/lib/conversations';
 import { cn } from '@/lib/utils';
 
@@ -88,10 +90,11 @@ export function ConversationView({
   const [awayFromBottom, setAwayFromBottom] = useState(false);
   const now = new Date();
   const banner = hint(chat, me);
+  const davidReplying = isDavidReplying(chat, bubbles, now);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: 'end' });
-  }, [chat.id, bubbles.length]);
+  }, [chat.id, bubbles.length, davidReplying]);
 
   function handleScroll() {
     const el = scrollRef.current;
@@ -134,6 +137,13 @@ export function ConversationView({
               )}
             </div>
           ))}
+          {davidReplying && (
+            <div className="mb-2 flex justify-end">
+              <div className="rounded-[18px] bg-wa-agent-bubble px-3.5 py-2 text-primary-foreground">
+                <TypingIndicator />
+              </div>
+            </div>
+          )}
           <div ref={bottomRef} />
         </div>
         {awayFromBottom && (
