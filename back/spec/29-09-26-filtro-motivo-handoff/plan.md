@@ -27,22 +27,27 @@
 2. `getChats`: nuevo parámetro `handoffReason?: string`, que agrega
    `LATEST_REASON = handoffReason` a `filterConditions`.
 
-3. `getCustomerInbox`: nuevo parámetro `handoffReason?: string`.
-   - Con `handoffReason`, el CTE `latest` toma por cliente la conversación en curso:
-     `where closedAt is null` antes del `distinct on`. Se agrega la columna
-     `"reason"` (`LATEST_REASON`) y el filtro `r."reason" = ${handoffReason}`.
-   - `conversationCount` sigue contando todas las conversaciones del cliente
-     (ventana sobre `scoped`, no sobre las abiertas).
-   - Sin `handoffReason`, el CTE no cambia.
+3. `getCustomerInbox`: nuevo parámetro `handoffReason?: string`, y el CTE
+   `latest` elige la conversación según la vista:
+   - `status=closed`: `where closedAt is not null` antes del `distinct on`
+     (la cerrada más reciente).
+   - Cualquier otra vista (abierta o bandeja por defecto): `where closedAt is
+     null` antes del `distinct on` (la conversación en curso).
+   - Se agrega la columna `"reason"` (`LATEST_REASON`) y, con
+     `handoffReason`, el filtro `r."reason" = ${handoffReason}`.
+   - `conversationCount` sigue contando todas las conversaciones del cliente:
+     se calcula en un CTE aparte sobre todas y se une por `customerKey`.
 
 4. `getConversationCounts`: suma `byHandoffReason` a `ConversationCounts` (con
    `complaint`, `retention` y `case_status` inicializados en 0).
    - Sin `byCustomer`, una query agregada sobre `chat` con `closedAt is null`
      y `handledBy in HUMAN_HANDLED_BY`, agrupada por `LATEST_REASON`.
-   - Con `byCustomer`, subquery `DISTINCT ON (CUSTOMER_KEY)` sobre las
-     conversaciones con `closedAt is null`, ordenada por `createdAt desc`.
-     Después se filtra `handledBy in HUMAN_HANDLED_BY` y se agrupa por
-     `LATEST_REASON`.
+   - Con `byCustomer`, dos subqueries `DISTINCT ON (CUSTOMER_KEY)`: una sobre
+     las conversaciones con `closedAt is null` (en curso), de la que salen
+     `total`, `byUseCase`, `withoutUseCase`, `unattended`, `mine`, `aiAgent`,
+     `withAdvisor` y `byHandoffReason` (este con `handledBy in
+     HUMAN_HANDLED_BY`, agrupado por `LATEST_REASON`); otra sobre las cerradas,
+     de la que sale `resolved`.
    - En la misma query, `withAdvisor`: el conteo de filas con
      `handledBy = 'human_agent'` sobre la misma base (abiertas; o la
      conversación en curso por cliente con `byCustomer`).
@@ -107,6 +112,9 @@
       retention, con la conversación en curso como fila.
     - `counts` sin y con `groupBy`: `byHandoffReason` cuenta según la base de
       `total`, con las tres claves presentes.
+    - Un cliente con una conversación abierta en `human_queue` y otra más
+      nueva ya resuelta aparece en la Bandeja agrupada con la abierta, y cuenta
+      en `total` y `unattended`.
     - `GET /api/chat/:id` trae `demoCustomerToken` para un chat creado con
       `demo-mx-2`, y `null` para un chat sin cliente.
     - Sin `handoffReason`, las respuestas no cambian: los tests existentes siguen en

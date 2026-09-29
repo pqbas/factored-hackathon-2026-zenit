@@ -36,11 +36,12 @@ And it changes in these ways:
    resuelta (`closedAt` nulo).
 6. `GET /api/advisor/conversations?handoffReason=<motivo>`, sin `groupBy`, trae solo
    las conversaciones cuyo motivo es ese. Se combina con los demás filtros.
-7. Con `groupBy=customer&handoffReason=<motivo>`, trae los clientes cuya
-   conversación en curso tiene ese motivo. La fila de cada cliente es esa
-   conversación en curso. Las conversaciones anteriores o ya resueltas no
-   cuentan, y los demás filtros (`handledBy`, `assignedTo`, `userId`) se
-   aplican a esa misma conversación.
+7. Con `groupBy=customer` y una vista abierta (`status=open` o la bandeja
+   por defecto), la fila de cada cliente es su conversación en curso, y todos
+   los filtros (`handoffReason`, `handledBy`, `assignedTo`, `useCase`) se
+   aplican a esa conversación. Un cliente con una conversación abierta y otra
+   más nueva ya resuelta aparece con la abierta. Con `status=closed`, la
+   fila es su conversación cerrada más reciente.
 8. `/conversations/counts` suma `byHandoffReason: { complaint, retention,
    case_status }` y `withAdvisor`.
    - Siempre trae esas tres claves, en 0 si no hay casos. Otro motivo que
@@ -48,7 +49,10 @@ And it changes in these ways:
    - Sin `groupBy`, cuenta conversaciones abiertas atendidas por un humano
      (la misma base que `total`) según su motivo.
    - Con `groupBy=customer`, cuenta clientes según el motivo de su
-     conversación en curso, cuando esa conversación la atiende un humano.
+     conversación en curso, cuando esa conversación la atiende un humano. Los
+     demás contadores de vistas abiertas (`total`, `byUseCase`, `unattended`,
+     `mine`, `aiAgent`) también cuentan por la conversación en curso, y
+     `resolved` por la cerrada más reciente.
    - `withAdvisor` cuenta lo que muestra la vista "Con asesor"
      (`handledBy=human_agent`): conversaciones abiertas en `human_agent`, o
      clientes cuya conversación en curso lo está con `groupBy=customer`.
@@ -75,12 +79,16 @@ And it changes in these ways:
   cliente (la más reciente con `closedAt` nulo), no sobre la más reciente a
   secas. Es la regla del usuario (vía w1:p4): un cliente está en "Reclamo"
   por lo que le pasa ahora, no por un reclamo anterior ya resuelto.
-- Con `handoffReason`, la fila agrupada muestra la conversación en curso, porque es
-  la que explica por qué el cliente está en ese filtro.
-- Sin `handoffReason`, la fila agrupada sigue siendo la conversación más reciente,
-  como hoy. Extender "conversación en curso" a todas las vistas abiertas sería
-  más coherente, pero cambia listas que hoy funcionan; queda como propuesta
-  para que el usuario decida.
+- En la vista agrupada, toda vista abierta (`status=open`: Bandeja, Con AI,
+  En espera, Con asesor) toma por cliente su conversación en curso, y
+  Resueltas (`status=closed`) toma su conversación cerrada más reciente.
+  Es la regla del usuario (revisión de w1:p4): quien atiende solo quiere ver
+  lo que pasa ahora. Además cierra un hueco: antes se tomaba la más reciente a
+  secas y se filtraba después, así que un cliente con una conversación
+  resuelta más nueva que una abierta desaparecía de la Bandeja.
+- La fila, las secciones por motivo, los filtros y los contadores (`total`,
+  `byHandoffReason`, `withAdvisor` y los demás de vistas abiertas) salen de
+  esa misma conversación.
 - `counts.byHandoffReason` usa la misma base que `total` (en curso y atendida por un
   humano), porque así cada contador coincide con lo que muestra la bandeja
   con ese filtro.

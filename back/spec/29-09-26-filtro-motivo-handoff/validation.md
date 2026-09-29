@@ -29,7 +29,10 @@ La fase está lista para mergear cuando se cumple todo lo que sigue.
       reciente es complaint
 - [ ] `groupBy=customer&handoffReason=X` evalúa la conversación en curso: un
       reclamo anterior ya resuelto no pone al cliente en complaint
-- [ ] Con `handoffReason`, la fila agrupada es la conversación en curso
+- [ ] En toda vista abierta agrupada, la fila es la conversación en curso:
+      un cliente con una conversación abierta en `human_queue` y otra más
+      nueva ya resuelta aparece en la Bandeja con la abierta
+- [ ] Resueltas agrupada muestra la conversación cerrada más reciente
 - [ ] `counts.withAdvisor` cuenta las conversaciones (o los clientes, con
       `groupBy=customer`) en curso en `human_agent`
 - [ ] `counts.byHandoffReason` trae las tres claves y coincide con la base de
