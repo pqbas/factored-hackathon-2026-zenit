@@ -399,4 +399,4 @@ Shipped en PR #54.
 - [x] Las tarjetas sugeridas son las opciones reales del menú de David: saldo y
       movimientos de tarjeta, cuentas de ahorro, reclamo y más opciones.
 
-Shipped en PR #<n>.
+Shipped en PR #64.
