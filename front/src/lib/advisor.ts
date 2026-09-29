@@ -26,11 +26,11 @@ export type AdvisorChat = OverJson<
     | 'assignedAt'
     | 'closedAt'
     | 'useCase'
+    // The bank customer behind the chat (e.g. "Javier Molina Morales"); null
+    // without a customer session or until the warehouse answers.
+    | 'customerName'
   >
 > & {
-  // The bank customer behind the chat (e.g. "Javier Molina Morales"); null
-  // for chats without a demo customer.
-  customerName?: string | null;
   // Preview of the customer's last message (plain text, ≤140 chars).
   lastMessage?: {
     text: string;

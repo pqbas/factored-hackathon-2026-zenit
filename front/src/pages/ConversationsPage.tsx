@@ -143,7 +143,7 @@ export default function ConversationsPage() {
       (pages ?? [])
         .flatMap((page) => page.chats)
         .filter((chat) =>
-          matchesQuery(query, chat.customerName ?? null, chat.userEmail, chat.title),
+          matchesQuery(query, chat.customerName, chat.userEmail, chat.title),
         ),
     [pages, query],
   );

@@ -39,6 +39,7 @@ function chat(overrides: Partial<AdvisorChat> = {}): AdvisorChat {
     assignedAt: null,
     closedAt: null,
     useCase: 'UC-01',
+    customerName: null,
     ...overrides,
   };
 }
