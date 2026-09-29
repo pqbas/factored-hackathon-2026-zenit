@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import {
   type AdvisorChat,
   customerLabel,
+  secondaryEmail,
   isMine,
   statusOf,
   useCaseOf,
@@ -78,6 +79,7 @@ export function ConversationHeader({
   const attention = attentionOf(chat, me, { long: true });
   const tag = useCaseTag(chat);
   const name = customerLabel(chat);
+  const email = secondaryEmail(chat);
 
   return (
     <header className="flex items-center gap-3 border-border border-b px-4 py-3">
@@ -99,7 +101,16 @@ export function ConversationHeader({
         {getInitials(name)}
       </div>
       <div className="flex min-w-0 flex-col gap-0.5">
-        <span className="truncate font-semibold text-[15px]">{name}</span>
+        <span className="flex min-w-0 items-baseline gap-2">
+          <span data-testid="customer-name" className="truncate font-semibold text-[15px]">
+            {name}
+          </span>
+          {email && (
+            <span data-testid="customer-email" className="truncate text-muted-foreground text-xs">
+              {email}
+            </span>
+          )}
+        </span>
         {(attention || tag) && (
           <span
             data-testid="customer-meta"

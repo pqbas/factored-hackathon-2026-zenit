@@ -16,6 +16,8 @@ import {
   viewUrl,
   isHeldByOther,
   isDavidReplying,
+  customerLabel,
+  secondaryEmail,
   type Bubble,
   mergeMessages,
   statusOf,
@@ -37,6 +39,7 @@ function chat(overrides: Partial<AdvisorChat> = {}): AdvisorChat {
     assignedAt: null,
     closedAt: null,
     useCase: 'UC-01',
+    customerName: null,
     ...overrides,
   };
 }
@@ -296,5 +299,22 @@ describe('isDavidReplying', () => {
     expect(isDavidReplying(chat(), [bubble('customer', '2026-09-28T09:58:00.000Z')], now)).toBe(
       false,
     );
+  });
+});
+
+describe('customerLabel and secondaryEmail', () => {
+  it('names the bank customer and keeps the email as secondary', () => {
+    const named = chat({ customerName: 'Javier Molina Morales' });
+    expect(customerLabel(named)).toBe('Javier Molina Morales');
+    expect(secondaryEmail(named)).toBe('curie@example.com');
+  });
+
+  it('falls back to the email when there is no customer name', () => {
+    for (const customerName of [undefined, null, '  ']) {
+      const c = chat({ customerName });
+      expect(customerLabel(c)).toBe('curie@example.com');
+      expect(secondaryEmail(c)).toBeNull();
+    }
+    expect(customerLabel(chat({ userEmail: null }))).toBe('Cliente sin email');
   });
 });

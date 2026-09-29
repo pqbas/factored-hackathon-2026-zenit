@@ -366,3 +366,16 @@ Shipped en PR #49.
 - [x] En pantallas de menos de 1600 px el panel ocupa el lugar de la lista.
 
 Shipped en PR #50.
+
+---
+
+## Phase 16: Nombre del cliente del banco en la consola (Complete)
+
+**Goal:** que el asesor vea a quién atiende por su nombre, no por el email de la app.
+
+- [x] Fila y encabezado muestran customerName, con avatar e iniciales de ese nombre;
+      el email queda chico en el encabezado y como tooltip en la fila.
+- [x] Sin customerName (sin sesión de cliente o mientras el banco responde) se
+      muestra el email; la búsqueda también encuentra por nombre.
+
+Shipped en PR #54.
