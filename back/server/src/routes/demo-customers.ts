@@ -18,6 +18,9 @@ demoCustomersRouter.get(
   '/',
   requireAuth,
   (_req: Request, res: Response) => {
-    res.json({ customers: getDemoCustomers() });
+    // Only what the selector needs: the customer id stays on the server.
+    res.json({
+      customers: getDemoCustomers().map(({ token, label }) => ({ token, label })),
+    });
   },
 );

@@ -33,7 +33,7 @@ async function getProviderToken(): Promise<string> {
 let cachedWorkspaceHostname: string | null = null;
 
 // Get workspace hostname with one-time resolution and caching
-async function getWorkspaceHostname(): Promise<string> {
+export async function getWorkspaceHostname(): Promise<string> {
   if (cachedWorkspaceHostname) {
     return cachedWorkspaceHostname;
   }
