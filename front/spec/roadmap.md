@@ -317,4 +317,4 @@ Shipped en PR #37.
 - [x] El chip del cliente demo dice "Cliente demo: …" con un tooltip que
       explica que elige qué cliente del banco simular (chat y Mis productos).
 
-Shipped en PR #<n>.
+Shipped en PR #42.
