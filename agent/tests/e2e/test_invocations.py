@@ -34,6 +34,14 @@ importlib.reload(_session_repo)
 FAKE_LLM_TEXT = "Hola, ¿en qué más te ayudo?"
 
 
+def _signals(usage=None, classifier="jev"):
+    # The fixed signals of every turn; a turn with no LLM call reports zero tokens.
+    return {
+        "usage": usage or {"input_tokens": 0, "output_tokens": 0}, "model": main.settings.llm_endpoint,
+        "prompt_version": main.prompt_version(), "classifier": classifier,
+    }
+
+
 
 
 class BindableChatModel:
@@ -384,7 +392,7 @@ def test_a_greeting_returns_its_intent_and_language_in_custom_outputs(client, mo
 
     assert body["custom_outputs"] == {
         "thread_id": "e2e-signals-greeting", "use_case": None, "intent": "GREETING",
-        "language": "es", "blocked": False, "handoff": None, "paused": False,
+        "language": "es", "blocked": False, "handoff": None, "paused": False, **_signals(),
     }
 
 
@@ -416,7 +424,7 @@ def test_a_request_without_session_has_null_labels(client):
 
     assert response.json()["custom_outputs"] == {
         "thread_id": "e2e-signals-nosession", "use_case": None, "intent": None, "language": None,
-        "blocked": False, "handoff": None, "paused": False,
+        "blocked": False, "handoff": None, "paused": False, **_signals(),
     }
 
 
@@ -808,7 +816,7 @@ _AFTER_HANDOFF = [
 ]
 _PAUSED_OUTPUTS = {
     "thread_id": "e2e-paused", "use_case": None, "intent": None, "language": None,
-    "blocked": False, "handoff": None, "paused": True,
+    "blocked": False, "handoff": None, "paused": True, **_signals(),
 }
 
 
