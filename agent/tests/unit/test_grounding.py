@@ -37,6 +37,26 @@ def test_movements_without_list_transactions_fire():
     assert missing is not None and missing.tool == "list_transactions"
 
 
+# What the LLM wrote in a local run after calling only get_products: made-up movements, with the
+# date and the amount on lines of their own.
+INVENTED_MOVEMENTS = (
+    "Tienes una tarjeta de crédito activa con los últimos dígitos 2392.\n"
+    "Aquí están tus últimos movimientos:\n\n"
+    "- **Fecha:** 2024-06-15\n  **Comercio:** Supermercado\n  **Monto:** 245.000 COP\n  **Estado:** Finalizado"
+)
+
+
+def test_movements_laid_out_one_field_per_line_without_list_transactions_fire():
+    missing = ungrounded(INQUIRY, "soy Eduardo, muéstrame mis movimientos", INVENTED_MOVEMENTS, {"get_products"})
+    assert missing is not None and missing.tool == "list_transactions"
+
+
+def test_a_balance_in_pesos_without_get_products_fires():
+    reply = "Tu tarjeta terminada en 2392 tiene un saldo de 1.876.340 COP."
+    missing = ungrounded(INQUIRY, "¿cuánto debo?", reply, set())
+    assert missing is not None and missing.tool == "get_products"
+
+
 def test_movements_with_list_transactions_do_not_fire():
     assert ungrounded(INQUIRY, "mis movimientos", MOVEMENTS, {"get_products", "list_transactions"}) is None
     assert ungrounded(INQUIRY, "la de 1234", MOVEMENTS, {"list_transactions"}) is None
