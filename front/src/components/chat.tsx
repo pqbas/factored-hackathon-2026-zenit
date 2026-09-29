@@ -88,7 +88,7 @@ export function Chat({
     chatCustomerToken(id, initialCustomerToken),
   );
   const [isCustomerLocked, setIsCustomerLocked] = useState(
-    () => chatCustomerToken(id, initialCustomerToken) !== null,
+    () => initialMessages.length > 0 && chatCustomerToken(id, initialCustomerToken) !== null,
   );
   const customerTokenRef = useRef(customerToken);
   customerTokenRef.current = customerToken;
