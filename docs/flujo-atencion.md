@@ -10,8 +10,10 @@ demás describe cómo funciona hoy.
 ## 1. Principio
 
 1. David resuelve solo lo que tiene herramientas para resolver.
-2. A una persona le llega **solo una operación que requiere una persona**, y le
-   llega **con los datos ya recolectados y verificados**.
+2. Lo que requiere una persona, David **no lo resuelve ni lo negocia**: primero
+   **recolecta proactivamente** la información del caso, la verifica con los
+   datos del banco y recién entonces lo deriva. El asesor recibe el caso listo
+   para actuar, sin tener que volver a preguntar.
 3. Se deriva **por la operación**, nunca por el ánimo del cliente ni porque
    pida hablar con alguien.
 4. La **Bandeja** del asesor tiene solo casos humanos. Las conversaciones de
@@ -21,27 +23,30 @@ demás describe cómo funciona hoy.
 
 ```mermaid
 flowchart TD
-    S["Etapa 1 · Saludo"] --> P["Etapa 2 · Presentación de opciones"]
+    S["Etapa 1 · Saludo"] --> P["Etapa 2 · Menú de opciones"]
     P --> A{"Etapa 3 · El cliente elige"}
-    A -->|Consultar mis productos| C["3.1 Consulta de productos"]
-    A -->|Reclamo por un cargo| R["3.2 Reclamo"]
-    A -->|Cancelar un producto| X["3.3 Cancelación"]
-    A -->|Estado de un reclamo| E["3.4 Estado de un reclamo"]
-    A -->|Hablar con una persona| H["3.5 Pedido de una persona"]
-    A -->|Otra cosa| O["3.6 Fuera de alcance"]
-    C --> M["Etapa 5 · ¿Algo más?"]
-    E --> M
+    A -->|A · Tarjeta de crédito| TC["3.A Tarjeta de crédito"]
+    A -->|B · Cuentas de ahorro| CA["3.B Cuentas de ahorro"]
+    A -->|C · Reclamos| R["3.C Reclamo por un cargo"]
+    A -->|D · Más opciones| D{"3.D Más opciones"}
+    D -->|D1| X["Cancelar un producto"]
+    D -->|D2| E["Estado de un reclamo"]
+    A -->|Pide una persona| H["3.E Pedido de una persona"]
+    A -->|Otra cosa| O["3.F Fuera de alcance"]
+    TC --> M["Etapa 5 · ¿Algo más?"]
+    CA --> M
     O --> M
     H --> A
-    R --> D["Etapa 4 · Derivación a un asesor"]
-    X --> D
+    R --> DV["Etapa 4 · Derivación a un asesor"]
+    X --> DV
+    E --> DV
     M -->|sí| A
     M -->|no| F["Etapa 6 · Cierre"]
 ```
 
 El cliente puede saltar etapas: si su primer mensaje ya dice qué quiere (por
 ejemplo, "¿cuál es mi saldo?"), David va directo a esa opción, sin saludo ni
-presentación.
+menú.
 
 ### Etapa 1 · Saludo
 
@@ -55,51 +60,57 @@ David responde en el idioma del cliente: español o portugués. Si no se puede
 saber por el mensaje, usa el del país del cliente: Brasil, portugués; el resto,
 español.
 
-### Etapa 2 · Presentación de opciones
+### Etapa 2 · Menú de opciones (nuevo formato)
 
-1. David lista lo que puede hacer, como opciones numeradas:
-   1. Consultar el saldo, el límite o los movimientos de tus tarjetas y cuentas.
-   2. Presentar un reclamo, por ejemplo por un cargo que no reconoces.
-   3. Cancelar un producto (nuevo).
-   4. Ver el estado de un reclamo.
-2. Pregunta en qué puede ayudar y espera la respuesta.
+David muestra el menú organizado por producto:
 
-El cliente puede elegir por número o con sus palabras.
+> Tengo estas opciones para ayudarte:
+>
+> **A) Tarjeta de crédito**: saldo, límite, cupo disponible y movimientos
+> **B) Cuentas de ahorro**: saldo y movimientos
+> **C) Reclamos**: un cargo que no reconoces, un cobro duplicado o un monto
+> distinto
+> **D) Más opciones**: cancelar un producto, estado de un reclamo
+>
+> Escribe la **letra** de tu elección o cuéntame tu consulta.
+
+- El cliente puede elegir por letra o con sus palabras.
+- Si escribe "menú" en cualquier momento, David vuelve a mostrarlo.
 
 ### Etapa 3 · Atención de la opción elegida
 
-#### 3.1 Consulta de productos
+#### 3.A Tarjeta de crédito
 
 David resuelve solo, con los datos reales del banco. No deriva.
 
-**Paso 1: identificar qué quiere consultar.**
-
-| El cliente pide… | Herramienta |
+| Paso | Qué hace David |
 | --- | --- |
-| Saldo, límite o cupo | `get_products` |
-| Movimientos | `list_transactions`, filtrando por los últimos 4 dígitos si nombra un producto |
+| 1 | Consulta las tarjetas activas del cliente (`get_products`). Si no tiene ninguna: "no tienes una tarjeta de crédito activa". |
+| 2 | Si el cliente no dijo qué quiere, le ofrece: 1) saldo, límite y cupo, 2) movimientos. |
+| 3a | **Saldo, límite y cupo:** por cada tarjeta, los últimos 4 dígitos, el saldo, el límite y el cupo disponible, aunque pregunte solo por uno de ellos. |
+| 3b | **Movimientos:** si tiene más de una tarjeta y no dijo cuál, pregunta cuál. Consulta `list_transactions` con esos últimos 4 dígitos y lista los últimos 10: fecha, comercio, monto con su moneda y estado. |
+| 4 | Ofrece seguir (etapa 5). |
 
-**Paso 2: responder según el tipo de producto.**
+#### 3.B Cuentas de ahorro
 
-| Producto | Qué dice David, por cada producto de ese tipo |
+| Paso | Qué hace David |
 | --- | --- |
-| Tarjeta de crédito | Últimos 4 dígitos, saldo, límite y cupo disponible, aunque el cliente pregunte solo por uno de ellos |
-| Cuenta de ahorro | Últimos 4 dígitos y saldo |
-| Movimientos | Los últimos 10: fecha, producto con sus últimos 4, comercio, monto con su moneda y estado |
-| Tarjeta de débito, préstamo, fecha de pago, pago mínimo o transferencias | "Esa consulta todavía no está disponible en este chat" |
+| 1 | Consulta las cuentas activas del cliente (`get_products`). Si no tiene ninguna: "no tienes una cuenta de ahorro activa". |
+| 2 | Si el cliente no dijo qué quiere, le ofrece: 1) saldo, 2) movimientos. |
+| 3a | **Saldo:** por cada cuenta, los últimos 4 dígitos y el saldo. |
+| 3b | **Movimientos:** igual que en 3.A, paso 3b. |
+| 4 | Ofrece seguir (etapa 5). |
 
-**Reglas del paso 2:**
+**Reglas de 3.A y 3.B:**
 
 - Solo dice cifras que la herramienta devolvió en ese mismo turno, en la moneda
-  del producto, sin convertirlas.
-- Si el cliente no tiene productos del tipo que pide: "no tienes una
-  [tarjeta/cuenta] activa".
+  del producto y sin convertirlas.
 - Si la herramienta falla: "ahora no puedo consultar esa información".
+- Tarjeta de débito, préstamo, fecha de pago, pago mínimo, deuda total o
+  transferencias: "esa consulta todavía no está disponible en este chat". Los
+  datos del banco no incluyen esa información.
 
-**Paso 3:** ofrece seguir, por ejemplo, ver los movimientos de una tarjeta.
-Pasa a la etapa 5.
-
-#### 3.2 Reclamo por un cargo (nuevo)
+#### 3.C Reclamo por un cargo (nuevo)
 
 David recolecta y verifica los datos, y recién entonces deriva. Pregunta **un
 dato a la vez**. Si el cliente ya dio un dato, no lo vuelve a preguntar.
@@ -112,9 +123,15 @@ dato a la vez**. Si el cliente ya dio un dato, no lo vuelve a preguntar.
 | 4 | Cuéntame brevemente lo que pasó | Texto libre del cliente. |
 | 5 | Confirma el resumen del caso | Si el cliente corrige algo, vuelve al paso correspondiente. |
 
-Con la confirmación, pasa a la etapa 4.
+Con la confirmación, pasa a la etapa 4 con motivo `complaint`.
 
-#### 3.3 Cancelación de un producto (nuevo)
+#### 3.D Más opciones
+
+##### D1 · Cancelar un producto (nuevo)
+
+David solo recolecta y deriva. **No intenta retener al cliente ni ofrece nada
+a cambio**: aplicar las políticas de retención (beneficios, cambio de producto,
+etc.) le corresponde al asesor.
 
 | Paso | David pregunta | Cómo lo valida |
 | --- | --- | --- |
@@ -122,9 +139,43 @@ Con la confirmación, pasa a la etapa 4.
 | 2 | ¿Por qué quieres cancelarlo? | Texto libre del cliente. |
 | 3 | Confirma el resumen | Si corrige algo, vuelve al paso correspondiente. |
 
-Con la confirmación, pasa a la etapa 4.
+Con la confirmación, pasa a la etapa 4 con motivo `retention`. El resumen para
+el asesor incluye el producto y el motivo, para que prepare su propuesta.
 
-#### Reglas de la recolección (3.2 y 3.3)
+##### D2 · Estado de un reclamo (nuevo)
+
+David identifica de qué reclamo se trata antes de derivar.
+
+| Paso | Qué hace David |
+| --- | --- |
+| 1 | **Usa lo que el banco ya sabe.** El back le pasa los reclamos anteriores del cliente, es decir, las conversaciones derivadas con motivo `complaint`: fecha, tarjeta, comercio, monto y estado (sin atender, en atención o resuelto). |
+| 2 | Si hay un solo reclamo, lo propone: "¿Es el reclamo por el cargo de Uber de $12.90 del 27/09?". Si hay varios, los lista para que elija. |
+| 3 | Si no hay reclamos registrados, o el cliente habla de otro, pregunta los datos para identificarlo: tarjeta, fecha aproximada y comercio o monto. |
+| 4 | Le dice al cliente el estado que conoce el banco: "tu reclamo está en la cola de un asesor", "un asesor lo está atendiendo" o "tu reclamo figura como resuelto". |
+| 5 | Si el cliente necesita algo más sobre ese reclamo (por ejemplo, un plazo o una respuesta), deriva con motivo `case_status` y los datos del reclamo identificado. Si no, pasa a la etapa 5. |
+
+Como el agente no guarda estado, "lo que el banco ya sabe" se lo manda el back
+en cada request, según [`limites-agente-back.md`](limites-agente-back.md).
+
+#### 3.E Pedido de una persona (nuevo)
+
+1. Si el cliente pide "un asesor" o "una persona" sin decir para qué, David
+   pregunta qué necesita. No deriva.
+2. Con la respuesta, vuelve a la etapa 3 con la opción que corresponda: si es
+   algo que David resuelve, lo resuelve; si es algo de C o D, empieza la
+   recolección.
+
+#### 3.F Fuera de alcance
+
+1. Si el cliente pide algo que no es del banco (el clima, un chiste) o una
+   operación que no existe en el chat (una transferencia), David dice que no
+   puede ayudar con eso. Nunca ofrece hacerlo ni manda a otro canal.
+2. Vuelve a la etapa 2.
+
+Si David no entiende el mensaje (confianza menor a 0,5), pide que lo aclare y
+vuelve a la etapa 2.
+
+#### Reglas de la recolección (3.C y 3.D)
 
 - El agente no guarda estado: en cada turno relee la conversación para saber
   qué operación está en curso y qué datos ya tiene.
@@ -135,40 +186,17 @@ Con la confirmación, pasa a la etapa 4.
 - Si el cliente dice "cancelar" u "olvídalo", David responde "Listo, lo dejamos
   ahí…", descarta la recolección y no deriva.
 
-#### 3.4 Estado de un reclamo
-
-1. David responde: "Esa opción todavía no está disponible en este chat".
-2. Vuelve a la etapa 2.
-
-#### 3.5 Pedido de una persona (nuevo)
-
-1. Si el cliente pide "un asesor" o "una persona" sin decir para qué, David
-   pregunta qué necesita. No deriva.
-2. Con la respuesta, vuelve a la etapa 3 con la opción que corresponda: si es
-   algo que David resuelve, lo resuelve; si es un reclamo o una cancelación,
-   empieza la recolección.
-
-#### 3.6 Fuera de alcance
-
-1. Si el cliente pide algo que no es del banco (el clima, un chiste) o una
-   operación que no existe en el chat (una transferencia), David dice que no
-   puede ayudar con eso. Nunca ofrece hacerlo ni manda a otro canal.
-2. Vuelve a la etapa 2.
-
-Si David no entiende el mensaje (confianza menor a 0,5), pide que lo aclare y
-vuelve a la etapa 2.
-
 ### Etapa 4 · Derivación a un asesor (nuevo)
 
 1. David le dice al cliente, en su idioma: "Te comunico con un asesor, que ya
    tiene los datos de tu caso".
 2. David manda al back `custom_outputs.handoff`:
-   - `reason`: `complaint` o `retention`.
+   - `reason`: `complaint`, `retention` o `case_status`.
    - `summary`: 2-3 líneas para el asesor con qué pide el cliente y qué quedó
      verificado. Puede venir vacío si falla la generación; el caso igual se
      deriva.
-   - `facts.verified_data`: los datos de 3.2 o 3.3. Las tarjetas van solo con
-     los últimos 4 dígitos y nunca se incluyen datos sensibles.
+   - `facts.verified_data`: los datos recolectados en 3.C o 3.D. Las tarjetas
+     van solo con los últimos 4 dígitos y nunca se incluyen datos sensibles.
 3. El back pasa la conversación a la cola humana (`human_queue`). Aparece en la
    Bandeja como **Sin atender**, agrupada por su caso de uso.
 4. Desde ese momento David no responde. El cliente ve "Te pasamos con un
@@ -223,8 +251,9 @@ locales.
 1. Ve el caso en la Bandeja, con el motivo, el resumen y los datos verificados.
 2. Lo **toma**: queda asignado a su nombre y nadie más puede responder. Si
    otra persona lo tiene, ve "La atiende…" y no puede tomarlo.
-3. **Responde** al cliente desde la consola. El cliente ve "Asesor", nunca el
-   email del empleado.
+3. **Responde** al cliente desde la consola y ejecuta lo que corresponde. Por
+   ejemplo, en una cancelación aplica las políticas de retención del banco. El
+   cliente ve "Asesor", nunca el email del empleado.
 4. Termina de una de dos formas:
    - **Resolver**: la conversación pasa a Resueltas.
    - **Devolver a David**: David retoma en el siguiente mensaje del cliente.
@@ -263,8 +292,9 @@ stateDiagram-v2
 ## 6. Fuera de alcance (futuro)
 
 - Derivar por frustración, insistencia o riesgo de estafa.
-- Estado de un reclamo existente, operaciones comerciales y otras operaciones
-  humanas que no están en la etapa 3.
+- Operaciones comerciales y otras operaciones humanas que no están en la
+  etapa 3.
+- Retención hecha por David: siempre la hace el asesor.
 - Derivar cuando fallan los datos: David avisa que ahora no puede consultar.
 - Rescatar conversaciones abandonadas, asignarlas automáticamente y priorizar
   la bandeja.
