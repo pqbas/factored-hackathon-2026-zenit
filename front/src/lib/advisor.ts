@@ -4,7 +4,7 @@
 import type { Chat, DBMessage } from '@chat-template/db';
 
 import { ASSISTANT_NAME } from '@/lib/assistant';
-import type { AgentHandoff } from '@/lib/handoff-case';
+import { type AgentHandoff, HANDOFF_REASONS, handoffReasonLabel, NO_HANDOFF_GROUP } from '@/lib/handoff-case';
 import { type ConversationStatus, STATUS_LABEL } from '@/lib/conversations';
 
 // Row types from @chat-template/db as they arrive over JSON: dates are strings.
@@ -98,14 +98,14 @@ export const QUICK_REPLIES = [
 
 const BASE = '/api/advisor/conversations';
 
-// What the inbox shows: the open cases that need a person, one use case, the
-// chats David handles on his own, or a state.
+// What the inbox shows: the open cases that need a person, one handoff reason,
+// the chats David handles on his own, or a state.
 export type InboxView =
   | { kind: 'inbox' }
   | { kind: 'david' }
-  | { kind: 'useCase'; useCase: string }
+  | { kind: 'reason'; reason: string }
   | { kind: 'waiting' }
-  | { kind: 'mine' }
+  | { kind: 'advisor' }
   | { kind: 'resolved' };
 
 export function viewUrl(
@@ -115,10 +115,10 @@ export function viewUrl(
   // One row per customer: views filter on each customer's latest conversation.
   const params = new URLSearchParams({ limit: String(INBOX_PAGE_SIZE), groupBy: 'customer' });
   params.set('status', view.kind === 'resolved' ? 'closed' : 'open');
-  if (view.kind === 'useCase') params.set('useCase', view.useCase);
+  if (view.kind === 'reason') params.set('handoffReason', view.reason);
   if (view.kind === 'waiting') params.set('handledBy', 'human_queue');
   if (view.kind === 'david') params.set('handledBy', 'ai_agent');
-  if (view.kind === 'mine') params.set('assignedTo', 'me');
+  if (view.kind === 'advisor') params.set('handledBy', 'human_agent');
   if (userId) params.set('userId', userId);
   if (startingAfter) params.set('starting_after', startingAfter);
   return `${BASE}?${params.toString()}`;
@@ -127,7 +127,7 @@ export function viewUrl(
 export function sameView(a: InboxView, b: InboxView): boolean {
   return (
     a.kind === b.kind &&
-    (a.kind !== 'useCase' || a.useCase === (b as { useCase: string }).useCase)
+    (a.kind !== 'reason' || a.reason === (b as { reason: string }).reason)
   );
 }
 
@@ -253,25 +253,30 @@ export function useCaseTag(chat: AdvisorChat): string | null {
   return id === OTHER_GROUP ? null : useCaseLabelOf(id);
 }
 
-// Inbox sections: known use cases in USE_CASES order, then unknown ones, then
-// "Otras". Chats keep their order (newest first) inside each section.
-export function groupByUseCase<T extends AdvisorChat>(
+// Inbox sections: the three handoff reasons in HANDOFF_REASONS order, then
+// unknown ones, then "Otros" (no handoff). Chats keep their order (newest
+// first) inside each section.
+export function groupByHandoffReason<T extends AdvisorChat>(
   chats: T[],
 ): { id: string; label: string; chats: T[] }[] {
   const groups = new Map<string, T[]>();
   for (const chat of chats) {
-    const id = useCaseOf(chat);
+    const id = chat.handoff?.reason || NO_HANDOFF_GROUP;
     groups.set(id, [...(groups.get(id) ?? []), chat]);
   }
-  const known: string[] = USE_CASES.map((u) => u.id);
+  const known: string[] = HANDOFF_REASONS.map((r) => r.id);
   const order = [
     ...known,
-    ...[...groups.keys()].filter((id) => !known.includes(id) && id !== OTHER_GROUP),
-    OTHER_GROUP,
+    ...[...groups.keys()].filter((id) => !known.includes(id) && id !== NO_HANDOFF_GROUP),
+    NO_HANDOFF_GROUP,
   ];
   return order
     .filter((id) => groups.has(id))
-    .map((id) => ({ id, label: useCaseLabelOf(id), chats: groups.get(id) ?? [] }));
+    .map((id) => ({
+      id,
+      label: id === NO_HANDOFF_GROUP ? 'Otros' : handoffReasonLabel(id),
+      chats: groups.get(id) ?? [],
+    }));
 }
 
 export type AttentionTone = 'assistant' | 'waiting' | 'mine' | 'other' | 'resolved';
@@ -414,9 +419,9 @@ export interface ViewCounts {
   inbox: number;
   david: number;
   waiting: number;
-  mine: number;
+  advisor: number;
   resolved: number;
-  useCases: Record<string, number>;
+  reasons: Record<string, number>;
 }
 
 // Counters count customers, like the rows.
@@ -428,34 +433,35 @@ export function countsUrl(userId?: string | null): string {
 }
 
 // The one place that knows the shape of GET /api/advisor/conversations/counts:
-// { total, byUseCase, withoutUseCase, unattended, mine, resolved, aiAgent }.
+// { total, byHandoffReason, withAdvisor, unattended, resolved, aiAgent }.
 // total is the open cases that need a person (the inbox); aiAgent the open
-// chats David handles alone. Missing or bad numbers read as 0.
+// chats David handles alone; withAdvisor the customers whose ongoing
+// conversation is in human_agent. Missing or bad numbers read as 0.
 export function parseCounts(body: unknown): ViewCounts {
   const raw = (body ?? {}) as {
     total?: unknown;
     aiAgent?: unknown;
-    byUseCase?: Record<string, unknown>;
+    byHandoffReason?: Record<string, unknown>;
     unattended?: unknown;
-    mine?: unknown;
+    withAdvisor?: unknown;
     resolved?: unknown;
   };
   const n = (value: unknown) => (typeof value === 'number' && value > 0 ? value : 0);
-  const useCases: Record<string, number> = {};
-  for (const [id, value] of Object.entries(raw.byUseCase ?? {})) useCases[id] = n(value);
+  const reasons: Record<string, number> = {};
+  for (const [id, value] of Object.entries(raw.byHandoffReason ?? {})) reasons[id] = n(value);
   return {
     inbox: n(raw.total),
     david: n(raw.aiAgent),
     waiting: n(raw.unattended),
-    mine: n(raw.mine),
+    advisor: n(raw.withAdvisor),
     resolved: n(raw.resolved),
-    useCases,
+    reasons,
   };
 }
 
 export function countFor(view: InboxView, counts: ViewCounts | undefined): number {
   if (!counts) return 0;
-  if (view.kind === 'useCase') return counts.useCases[view.useCase] ?? 0;
+  if (view.kind === 'reason') return counts.reasons[view.reason] ?? 0;
   return counts[view.kind];
 }
 

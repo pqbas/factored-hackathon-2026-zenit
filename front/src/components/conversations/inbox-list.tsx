@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Bot, Search } from 'lucide-react';
 
-import { UseCaseChip } from '@/components/conversations/use-case-style';
+import { HandoffReasonChip } from '@/components/conversations/use-case-style';
 import { ASSISTANT_NAME } from '@/lib/assistant';
 import { SidebarToggle } from '@/components/sidebar-toggle';
 import {
@@ -9,7 +9,7 @@ import {
   attentionOf,
   customerKeyOf,
   customerLabel,
-  groupByUseCase,
+  groupByHandoffReason,
   type InboxItem,
   lastActivityAt,
   rowText,
@@ -155,7 +155,7 @@ export function InboxList({
   empty?: ReactNode;
 }) {
   const groups = grouped
-    ? groupByUseCase(chats)
+    ? groupByHandoffReason(chats)
     : [{ id: 'all', label: '', chats }];
   const row = (chat: InboxItem) => (
     <Row
@@ -222,7 +222,7 @@ export function InboxList({
             >
               {grouped && (
                 <div className="col-span-full px-3 pb-1.5">
-                  <UseCaseChip id={group.id} />
+                  <HandoffReasonChip id={group.id} />
                 </div>
               )}
               {group.chats.map(row)}

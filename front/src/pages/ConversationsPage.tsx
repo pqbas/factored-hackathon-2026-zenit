@@ -23,7 +23,6 @@ import {
   countsUrl,
   fetchCounts,
   fetchUsers,
-  useCaseLabelOf,
   viewUrl,
   mergeMessages,
   POLL_MS,
@@ -34,6 +33,7 @@ import {
 } from '@/lib/advisor';
 import { ASSISTANT_NAME } from '@/lib/assistant';
 import { matchesQuery, STATUS_LABEL } from '@/lib/conversations';
+import { handoffReasonLabel } from '@/lib/handoff-case';
 import { cn } from '@/lib/utils';
 
 // Messages of the open conversation: full list on open, then only the new
@@ -89,12 +89,12 @@ const VIEW_TITLE = {
   inbox: 'Bandeja',
   david: STATUS_LABEL.assistant,
   waiting: STATUS_LABEL.waiting,
-  mine: 'Mías',
+  advisor: STATUS_LABEL.advisor,
   resolved: 'Resueltas',
 };
 
 function viewTitle(view: InboxView): string {
-  return view.kind === 'useCase' ? useCaseLabelOf(view.useCase) : VIEW_TITLE[view.kind];
+  return view.kind === 'reason' ? handoffReasonLabel(view.reason) : VIEW_TITLE[view.kind];
 }
 
 export default function ConversationsPage() {

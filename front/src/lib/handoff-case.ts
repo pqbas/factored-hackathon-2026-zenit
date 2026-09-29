@@ -22,6 +22,17 @@ const REASON: Record<string, { label: string; short: string }> = {
   case_status: { label: 'Estado de un reclamo', short: 'Estado de reclamo' },
 };
 
+// The three reasons David hands a case to the inbox, in filter order
+// (docs/flujo-atencion.md). Filters and inbox sections use these.
+export const HANDOFF_REASONS = [
+  { id: 'complaint', label: 'Reclamo' },
+  { id: 'retention', label: 'Cancelación de producto' },
+  { id: 'case_status', label: 'Estado de un reclamo' },
+] as const;
+
+// Section id for conversations without a handoff.
+export const NO_HANDOFF_GROUP = 'NONE';
+
 export function handoffReasonLabel(reason: string | null | undefined): string {
   if (!reason) return 'Caso derivado';
   return REASON[reason]?.label ?? reason;

@@ -8,7 +8,7 @@ import {
   countFor,
   countsUrl,
   parseCounts,
-  groupByUseCase,
+  groupByHandoffReason,
   lastActivityAt,
   rowText,
   sameView,
@@ -99,15 +99,15 @@ describe('viewUrl', () => {
     const params = (url: string) => Object.fromEntries(new URL(url, 'http://x').searchParams);
     // One row per customer in every view.
     expect(params(viewUrl({ kind: 'inbox' }))).toEqual({ limit: '20', groupBy: 'customer', status: 'open' });
-    expect(params(viewUrl({ kind: 'useCase', useCase: 'COMPLAINT' }))).toEqual({
+    expect(params(viewUrl({ kind: 'reason', reason: 'complaint' }))).toEqual({
       limit: '20',
       groupBy: 'customer',
       status: 'open',
-      useCase: 'COMPLAINT',
+      handoffReason: 'complaint',
     });
     expect(params(viewUrl({ kind: 'waiting' }))).toMatchObject({ status: 'open', handledBy: 'human_queue' });
     expect(params(viewUrl({ kind: 'david' }))).toMatchObject({ status: 'open', handledBy: 'ai_agent' });
-    expect(params(viewUrl({ kind: 'mine' }))).toMatchObject({ assignedTo: 'me' });
+    expect(params(viewUrl({ kind: 'advisor' }))).toMatchObject({ status: 'open', handledBy: 'human_agent' });
     expect(params(viewUrl({ kind: 'resolved' }))).toMatchObject({ status: 'closed' });
     expect(params(viewUrl({ kind: 'inbox' }, { startingAfter: 'c9', userId: 'u7' }))).toMatchObject({
       starting_after: 'c9',
@@ -115,31 +115,47 @@ describe('viewUrl', () => {
     });
   });
 
-  it('compares views, including the use case', () => {
+  it('compares views, including the reason', () => {
     expect(sameView({ kind: 'inbox' }, { kind: 'inbox' })).toBe(true);
-    expect(sameView({ kind: 'useCase', useCase: 'A' }, { kind: 'useCase', useCase: 'B' })).toBe(false);
+    expect(sameView({ kind: 'reason', reason: 'complaint' }, { kind: 'reason', reason: 'retention' })).toBe(false);
   });
 });
 
-describe('groupByUseCase', () => {
-  it('orders sections by use case, unknown ones next, and "Otras" last', () => {
-    const groups = groupByUseCase([
-      chat({ id: 'a', useCase: null }),
-      chat({ id: 'b', useCase: 'GENERAL_INQUIRY' }),
-      chat({ id: 'c', useCase: 'NEW_ONE' }),
-      chat({ id: 'd', useCase: 'COMPLAINT' }),
-      chat({ id: 'e', useCase: 'GREETING' }),
-      chat({ id: 'f', useCase: 'COMPLAINT' }),
+function withReason(id: string, reason: string | null): AdvisorChat {
+  return chat({
+    id,
+    handoff: reason
+      ? { reason, summary: null, verifiedData: null, facts: null, at: '2026-09-28T10:00:00.000Z', resolvedAt: null }
+      : null,
+  });
+}
+
+describe('groupByHandoffReason', () => {
+  it('orders sections by reason, unknown ones next, and "Otros" last', () => {
+    const groups = groupByHandoffReason([
+      withReason('a', null),
+      withReason('b', 'case_status'),
+      withReason('c', 'new_one'),
+      withReason('d', 'complaint'),
+      withReason('e', 'retention'),
+      withReason('f', 'complaint'),
     ]);
     expect(groups.map((g) => [g.id, g.chats.map((c) => c.id)])).toEqual([
-      ['COMPLAINT', ['d', 'f']],
-      ['GENERAL_INQUIRY', ['b']],
-      ['NEW_ONE', ['c']],
-      ['OTHER', ['a', 'e']],
+      ['complaint', ['d', 'f']],
+      ['retention', ['e']],
+      ['case_status', ['b']],
+      ['new_one', ['c']],
+      ['NONE', ['a']],
     ]);
-    expect(groups.at(-1)?.label).toBe('Otras');
+    expect(groups.at(-1)?.label).toBe('Otros');
   });
 
+  it('returns only the sections that have chats', () => {
+    expect(groupByHandoffReason([withReason('a', 'retention')]).map((g) => g.id)).toEqual(['retention']);
+  });
+});
+
+describe('useCaseOf', () => {
   it('files small talk and chats without a use case under OTHER', () => {
     expect(useCaseOf(chat({ useCase: 'GOODBYE' }))).toBe('OTHER');
     expect(useCaseOf(chat({ useCase: null }))).toBe('OTHER');
@@ -228,24 +244,24 @@ describe('view counts', () => {
       parseCounts({
         total: 7,
         unattended: 2,
-        byUseCase: { COMPLAINT: 3, CANCEL: -1 },
-        withoutUseCase: 1,
+        byHandoffReason: { complaint: 3, retention: -1 },
+        withAdvisor: 4,
       }),
     ).toEqual({
       inbox: 7,
       david: 0,
       waiting: 2,
-      mine: 0,
+      advisor: 4,
       resolved: 0,
-      useCases: { COMPLAINT: 3, CANCEL: 0 },
+      reasons: { complaint: 3, retention: 0 },
     });
     expect(parseCounts(null)).toEqual({
       inbox: 0,
       david: 0,
       waiting: 0,
-      mine: 0,
+      advisor: 0,
       resolved: 0,
-      useCases: {},
+      reasons: {},
     });
   });
 
@@ -253,18 +269,18 @@ describe('view counts', () => {
     const counts = parseCounts({
       total: 7,
       unattended: 2,
-      mine: 1,
+      withAdvisor: 1,
       resolved: 4,
       aiAgent: 12,
-      byUseCase: { COMPLAINT: 3 },
-      withoutUseCase: 4,
+      byHandoffReason: { complaint: 3 },
     });
     expect(countFor({ kind: 'inbox' }, counts)).toBe(7);
     expect(countFor({ kind: 'david' }, counts)).toBe(12);
     expect(countFor({ kind: 'waiting' }, counts)).toBe(2);
-    expect(countFor({ kind: 'useCase', useCase: 'COMPLAINT' }, counts)).toBe(3);
-    expect(countFor({ kind: 'useCase', useCase: 'CANCEL' }, counts)).toBe(0);
-    expect(countFor({ kind: 'mine' }, undefined)).toBe(0);
+    expect(countFor({ kind: 'reason', reason: 'complaint' }, counts)).toBe(3);
+    expect(countFor({ kind: 'reason', reason: 'retention' }, counts)).toBe(0);
+    expect(countFor({ kind: 'advisor' }, counts)).toBe(1);
+    expect(countFor({ kind: 'advisor' }, undefined)).toBe(0);
   });
 
   it('asks for the counts of one user when filtered', () => {
