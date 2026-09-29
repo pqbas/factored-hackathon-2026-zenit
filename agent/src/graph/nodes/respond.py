@@ -10,7 +10,7 @@ from src.schemas.routing import IntentRoute
 from src.prompts.messages import HANDOFF_REPLY
 from src.schemas.classification import reply_language
 from src.tools.bind_customer import bind_customer
-from src.tools.handoff import HANDOFF_TOOL_NAME, case_summary, handoff_tool, tool_rows, verify_case
+from src.tools.handoff import HANDOFF_TOOL_NAME, handoff_tool, tool_rows, verify_case
 
 logger = logging.getLogger(__name__)
 
@@ -93,7 +93,7 @@ async def _respond_with_tools(
             if tool_call["name"] == HANDOFF_TOOL_NAME and route.handoff_reason:
                 verified = verify_case(route.handoff_reason, tool_call["args"], rows_by_tool)
                 if isinstance(verified, dict):
-                    return await _hand_off(state, llm, route, verified, rows_by_tool)
+                    return _hand_off(state, route, verified, rows_by_tool)
                 # The error names only product digits and field names, never the customer's text.
                 logger.warning("Handoff not verified: %s", verified)
                 messages.append(ToolMessage(content=verified, tool_call_id=tool_call["id"]))
@@ -119,13 +119,14 @@ async def _respond_with_tools(
     return {"messages": [_without_advisor_prefix(reply)]}
 
 
-async def _hand_off(state: AgentState, llm, route: IntentRoute, verified_data: dict, rows_by_tool: dict) -> dict:
+def _hand_off(state: AgentState, route: IntentRoute, verified_data: dict, rows_by_tool: dict) -> dict:
     """Etapa 5: the fixed reply for the customer and custom_outputs.handoff for the back."""
     classification = state.get("classification") or {}
     language = classification.get("language")
     handoff = {
         "reason": route.handoff_reason,
-        "summary": await case_summary(llm, route.handoff_reason, verified_data),
+        # Written by the summarize_handoff node, which doesn't stream to the customer.
+        "summary": None,
         "facts": {
             "condition": None,
             "use_case": route.intent,

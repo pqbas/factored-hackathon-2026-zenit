@@ -8,11 +8,13 @@ from src.graph.nodes.classify import classify
 from src.graph.nodes.gate import gate
 from src.graph.nodes.load_context import load_context
 from src.graph.nodes.respond import respond
+from src.graph.nodes.summarize_handoff import summarize_handoff
 from src.graph.state import AgentState
 
 _RESPOND = "respond"
 _CANCEL = "cancel"
 _LOAD_CONTEXT = "load_context"
+_SUMMARIZE_HANDOFF = "summarize_handoff"
 
 # The nodes a routing.yaml destination may point at; load_routing validates against this.
 # Kept as the single source _RESPOND/_CANCEL/_LOAD_CONTEXT feed into build_graph's
@@ -30,6 +32,7 @@ def build_graph(llm, classifier, routes, threshold, intent_threshold, tools_for)
         partial(respond, llm=llm, routes=routes, intent_threshold=intent_threshold, tools_for=tools_for),
     )
     graph.add_node(_CANCEL, cancel)
+    graph.add_node(_SUMMARIZE_HANDOFF, partial(summarize_handoff, llm=llm))
 
     graph.add_edge(START, "gate")
     graph.add_conditional_edges("gate", after_gate, {"classify": "classify", END: END})
@@ -39,7 +42,12 @@ def build_graph(llm, classifier, routes, threshold, intent_threshold, tools_for)
         {_RESPOND: _RESPOND, _CANCEL: _CANCEL, _LOAD_CONTEXT: _LOAD_CONTEXT, END: END},
     )
     graph.add_edge(_LOAD_CONTEXT, _RESPOND)
-    graph.add_edge(_RESPOND, END)
+    graph.add_conditional_edges(
+        _RESPOND,
+        lambda state: _SUMMARIZE_HANDOFF if state.get("handoff") else END,
+        {_SUMMARIZE_HANDOFF: _SUMMARIZE_HANDOFF, END: END},
+    )
+    graph.add_edge(_SUMMARIZE_HANDOFF, END)
     graph.add_edge(_CANCEL, END)
 
     return graph.compile()
