@@ -37,7 +37,10 @@
 
 5. In `src/components/conversations/inbox-list.tsx` group with `groupByHandoffReason` and render sections with `HandoffReasonChip` (`inbox-section-<reason>`).
 
-5b. In `src/lib/handoff-case.ts` add `handoffDetail(handoff)`: the `complaint_type` label, or `product_type ••product_last4`, else null. In `src/components/conversations/inbox-list.tsx` the row chip (`row-handoff`) shows `handoffDetail`, and doesn't render without it.
+5b. In `src/components/conversations/inbox-list.tsx`:
+   - The row chip (`row-handoff`) is `reasonTagOf(chat)` (the handoff reason, or the Agente AI section), with `handoffReasonStyle` and `sectionLabel`; no chip for "Otros" or closed conversations.
+   - The preview is `rowPreview(chat)` (`src/lib/advisor.ts`): `shortSummary(handoff.summary)` while `hasHandoff`, else `rowText`. `shortSummary` cuts to at most 60 characters at a whole word and adds "...". The full summary is the tooltip.
+   - It shows in the wide and the narrow list (narrow grid: name `fit-content(7rem)`, preview `minmax(0,1fr)`). `handoffDetail` goes (the card uses `caseFields`).
 
 5c. Rename the ai_agent view to "Agente AI": add `DAVID_VIEW_LABEL = 'Agente AI'` in `src/lib/advisor.ts` and use it in `inbox-views.tsx` (sidebar item) and `ConversationsPage.tsx` (`VIEW_TITLE.david`) instead of `STATUS_LABEL.assistant`. The row and header state keeps `STATUS_LABEL.assistant` ("Con AI"). Update e2e assertions that look for the view title or item text.
 
@@ -61,6 +64,12 @@
    - `groupByDavidSection(items)` returns the sections in that order.
    - `HandoffReasonChip` (`use-case-style.tsx`) also knows `general` ("Consultas generales", sky).
    - `InboxList` takes `grouping: 'reason' | 'david' | null`; `ConversationsPage` passes `reason` for the Bandeja, `david` for Agente AI, null otherwise.
+
+5i. One name per reason:
+   - In `src/lib/handoff-case.ts`, drop `REASON` (label and short); `handoffReasonLabel` reads `HANDOFF_REASONS`.
+   - In `src/lib/advisor.ts`, `USE_CASES` uses the same names (CASE_STATUS 'Estado de un reclamo', RETENTION and CANCEL 'Cancelación de producto'), and `useCaseTag` returns the handoff reason or the Agente AI section.
+   - In `src/lib/metrics.ts`, `useCaseRows` folds RETENTION into CANCEL.
+   - Update the unit and e2e tests that expected the old texts.
 
 6. In `src/pages/ConversationsPage.tsx`, `viewTitle`: `reason` → its label; `advisor` → `STATUS_LABEL.advisor` ("Con asesor").
 

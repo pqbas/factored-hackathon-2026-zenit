@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Bot, Search, UserRound } from 'lucide-react';
 
-import { HandoffReasonChip } from '@/components/conversations/use-case-style';
+import { HandoffReasonChip, handoffReasonStyle } from '@/components/conversations/use-case-style';
 import { ASSISTANT_NAME } from '@/lib/assistant';
 import { SidebarToggle } from '@/components/sidebar-toggle';
 import {
@@ -12,12 +12,13 @@ import {
   groupByDavidSection,
   groupByHandoffReason,
   holderLabel,
+  reasonTagOf,
+  sectionLabel,
   type InboxItem,
   lastActivityAt,
-  rowText,
+  rowPreview,
 } from '@/lib/advisor';
 import { avatarColor, formatListTime, getInitials, STATUS_LABEL } from '@/lib/conversations';
-import { handoffDetail, handoffReasonLabel } from '@/lib/handoff-case';
 import { cn } from '@/lib/utils';
 
 function Row({
@@ -38,7 +39,7 @@ function Row({
   const waiting = !chat.closedAt && chat.handledBy === 'human_queue';
   const withDavid = !chat.closedAt && chat.handledBy === 'ai_agent';
   const holder = holderLabel(chat, me);
-  const detail = handoffDetail(chat.handoff);
+  const reason = chat.closedAt ? null : reasonTagOf(chat);
 
   return (
     <button
@@ -101,27 +102,28 @@ function Row({
           </span>
         )}
       </span>
-      {/* The customer's last message; the subject (chat title) stays as the
-          tooltip. */}
+      {/* Why the customer is here (the reason of the unresolved case, or what
+          David is working on), in its color; then the context: the handoff
+          summary, short, with the full one as tooltip, else the customer's
+          last message with the subject as tooltip. */}
       <span className="flex min-w-0 items-center gap-2 overflow-hidden">
-        {/* The detail of an open case David handed off (the reason is the
-            section's or the view's); nothing when there is no detail. The
-            narrow list (a chat is open) leaves it to the context panel. */}
-        {chat.hasHandoff && detail && !compact && (
+        {reason && (
           <span
             data-testid="row-handoff"
-            title={handoffReasonLabel(chat.handoff?.reason)}
-            className="shrink-0 rounded-md bg-primary/15 px-1.5 py-0.5 font-medium text-[11px] text-primary"
+            className={cn(
+              'shrink-0 rounded-md px-1.5 py-0.5 font-medium text-[11px]',
+              handoffReasonStyle(reason).chip,
+            )}
           >
-            {detail}
+            {sectionLabel(reason)}
           </span>
         )}
         <span
           data-testid="row-text"
-          title={chat.title}
+          title={(chat.hasHandoff && chat.handoff?.summary) || chat.title}
           className="min-w-0 truncate text-muted-foreground text-sm"
         >
-          {rowText(chat)}
+          {rowPreview(chat)}
         </span>
       </span>
       <span
@@ -226,7 +228,9 @@ export function InboxList({
           className={cn(
             'grid gap-x-3',
             compact
-              ? 'grid-cols-[0_0.5rem_1.75rem_fit-content(8rem)_6rem_minmax(0,1fr)_auto_auto_0]'
+              ? // Narrow list (a chat is open): a shorter name, the advisor badge
+                // and the preview gets what's left.
+                'grid-cols-[0_0.5rem_1.75rem_fit-content(7rem)_4rem_minmax(0,1fr)_auto_auto_0]'
               : 'grid-cols-[0_0.5rem_1.75rem_fit-content(15rem)_6rem_minmax(0,1fr)_auto_auto_0]',
           )}
         >

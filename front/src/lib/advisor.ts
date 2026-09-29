@@ -4,7 +4,7 @@
 import type { Chat, DBMessage } from '@chat-template/db';
 
 import { ASSISTANT_NAME } from '@/lib/assistant';
-import { type AgentHandoff, HANDOFF_REASONS, handoffReasonGroupLabel, NO_HANDOFF_GROUP } from '@/lib/handoff-case';
+import { type AgentHandoff, HANDOFF_REASONS, handoffReasonLabel, NO_HANDOFF_GROUP } from '@/lib/handoff-case';
 import { type ConversationStatus, STATUS_LABEL } from '@/lib/conversations';
 
 // Row types from @chat-template/db as they arrive over JSON: dates are strings.
@@ -230,31 +230,27 @@ export function secondaryEmail(chat: AdvisorChat): string | null {
 export const USE_CASES = [
   { id: 'COMPLAINT', label: 'Reclamo' },
   { id: 'GENERAL_INQUIRY', label: 'Consultas generales' },
-  { id: 'CASE_STATUS', label: 'Estado de un caso' },
+  { id: 'CASE_STATUS', label: 'Estado de un reclamo' },
   { id: 'HUMAN_AGENT', label: 'Pidió un asesor' },
   { id: 'COMMERCIAL', label: 'Comercial' },
-  { id: 'RETENTION', label: 'Retención' },
-  { id: 'CANCEL', label: 'Cancelación' },
+  // Both are "Cancelación de producto", like the handoff reason.
+  { id: 'RETENTION', label: 'Cancelación de producto' },
+  { id: 'CANCEL', label: 'Cancelación de producto' },
 ] as const;
 
-const NOT_A_USE_CASE = new Set(['GREETING', 'GOODBYE', 'OUT_OF_SCOPE']);
 export const OTHER_GROUP = 'OTHER';
 
-// The use case a chat is filed under: a known id, an unknown one as-is, or
-// OTHER_GROUP when there is none.
-export function useCaseOf(chat: AdvisorChat): string {
-  if (!chat.useCase || NOT_A_USE_CASE.has(chat.useCase)) return OTHER_GROUP;
-  return chat.useCase;
-}
 
 export function useCaseLabelOf(id: string): string {
   if (id === OTHER_GROUP) return 'Otras';
   return USE_CASES.find((u) => u.id === id)?.label ?? id;
 }
 
-export function useCaseTag(chat: AdvisorChat): string | null {
-  const id = useCaseOf(chat);
-  return id === OTHER_GROUP ? null : useCaseLabelOf(id);
+// The header chip: the handoff reason if the conversation was handed off,
+// else the Agente AI section of its use case; nothing for "Otros".
+export function reasonTagOf(chat: AdvisorChat): string | null {
+  const id = chat.handoff?.reason || davidSectionOf(chat);
+  return id === NO_HANDOFF_GROUP ? null : id;
 }
 
 // Inbox sections: the three handoff reasons in HANDOFF_REASONS order, then
@@ -294,7 +290,7 @@ export function groupByDavidSection<T extends AdvisorChat>(
 export function sectionLabel(id: string): string {
   if (id === NO_HANDOFF_GROUP) return 'Otros';
   if (id === GENERAL_SECTION) return 'Consultas generales';
-  return handoffReasonGroupLabel(id);
+  return handoffReasonLabel(id);
 }
 
 export function groupByHandoffReason<T extends AdvisorChat>(
@@ -315,7 +311,7 @@ export function groupByHandoffReason<T extends AdvisorChat>(
     .filter((id) => groups.has(id))
     .map((id) => ({
       id,
-      label: id === NO_HANDOFF_GROUP ? 'Otros' : handoffReasonGroupLabel(id),
+      label: id === NO_HANDOFF_GROUP ? 'Otros' : handoffReasonLabel(id),
       chats: groups.get(id) ?? [],
     }));
 }
@@ -452,6 +448,24 @@ export function rowText(chat: AdvisorChat): string {
 }
 
 // When the row last moved: the customer's last message, else the chat start.
+// A handoff summary cut for a row: at most `max` characters, at a whole word,
+// ending in "...". The full text stays in the tooltip and the context panel.
+export function shortSummary(text: string, max = 60): string {
+  const clean = text.replace(/\s+/g, ' ').trim();
+  if (clean.length <= max) return clean;
+  const cut = clean.slice(0, max + 1);
+  const end = cut.lastIndexOf(' ');
+  const words = (end > 0 ? cut.slice(0, end) : clean.slice(0, max)).replace(/[\s.,;:·-]+$/, '');
+  return `${words}...`;
+}
+
+// The row's preview: the handoff summary, short, while the case is open (it
+// says why the customer is here), else the customer's last message.
+export function rowPreview(chat: AdvisorChat): string {
+  const summary = chat.hasHandoff ? chat.handoff?.summary : null;
+  return summary ? shortSummary(summary) : rowText(chat);
+}
+
 export function lastActivityAt(chat: InboxItem): string {
   return chat.updatedAt ?? chat.lastMessage?.createdAt ?? chat.createdAt;
 }

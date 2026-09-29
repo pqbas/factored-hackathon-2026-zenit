@@ -12,7 +12,6 @@ import {
   lastActivityAt,
   rowText,
   sameView,
-  useCaseOf,
   viewUrl,
   isHeldByOther,
   isDavidReplying,
@@ -26,7 +25,9 @@ import {
   mergeMessages,
   statusOf,
   toBubble,
-  useCaseTag,
+  reasonTagOf,
+  rowPreview,
+  shortSummary,
 } from '@/lib/advisor';
 
 const ME = 'babbage@example.com';
@@ -157,14 +158,6 @@ describe('groupByHandoffReason', () => {
   });
 });
 
-describe('useCaseOf', () => {
-  it('files small talk and chats without a use case under OTHER', () => {
-    expect(useCaseOf(chat({ useCase: 'GOODBYE' }))).toBe('OTHER');
-    expect(useCaseOf(chat({ useCase: null }))).toBe('OTHER');
-    expect(useCaseOf(chat({ useCase: 'CANCEL' }))).toBe('CANCEL');
-  });
-});
-
 describe('mergeMessages', () => {
   it('appends new messages in order and skips repeats', () => {
     const merged = mergeMessages([message('a'), message('b')], [message('b'), message('c')]);
@@ -193,13 +186,14 @@ describe('toBubble', () => {
 });
 
 
-describe('useCaseTag', () => {
-  it('labels the use case, and shows nothing without one or for small talk', () => {
-    expect(useCaseTag(chat({ useCase: 'GENERAL_INQUIRY' }))).toBe('Consultas generales');
-    expect(useCaseTag(chat({ useCase: 'COMPLAINT' }))).toBe('Reclamo');
-    expect(useCaseTag(chat({ useCase: null }))).toBeNull();
-    expect(useCaseTag(chat({ useCase: 'GREETING' }))).toBeNull();
-    expect(useCaseTag(chat({ useCase: 'NEW_ONE' }))).toBe('NEW_ONE');
+describe('reasonTagOf', () => {
+  it('is the handoff reason, else the Agente AI section, never for Otros', () => {
+    const complaint = { reason: 'complaint', summary: null, verifiedData: null, facts: null, at: '', resolvedAt: null };
+    expect(reasonTagOf(chat({ useCase: 'GENERAL_INQUIRY', handoff: complaint }))).toBe('complaint');
+    expect(reasonTagOf(chat({ useCase: 'GENERAL_INQUIRY' }))).toBe('general');
+    expect(reasonTagOf(chat({ useCase: 'CANCEL' }))).toBe('retention');
+    expect(reasonTagOf(chat({ useCase: 'GREETING' }))).toBeNull();
+    expect(reasonTagOf(chat({ useCase: null }))).toBeNull();
   });
 });
 
@@ -411,5 +405,23 @@ describe('groupByDavidSection', () => {
       ['general', 'Consultas generales', ['c']],
       ['NONE', 'Otros', ['a', 'f']],
     ]);
+  });
+});
+
+describe('shortSummary and rowPreview', () => {
+  it('cuts the summary at a whole word within 60 characters', () => {
+    expect(
+      shortSummary(
+        'El cliente consulta el estado de su reclamo CMP-G43865 presentado el 9 de octubre y pide plazo.',
+      ),
+    ).toBe('El cliente consulta el estado de su reclamo CMP-G43865...');
+    expect(shortSummary('Corto y claro.')).toBe('Corto y claro.');
+  });
+
+  it('previews the summary only while the handoff is open', () => {
+    const handoff = { reason: 'complaint', summary: 'Resumen del caso', verifiedData: null, facts: null, at: '', resolvedAt: null };
+    const last = { text: 'sí, confirmo', senderType: 'customer' as const, createdAt: '2026-09-29T10:00:00.000Z' };
+    expect(rowPreview({ ...chat({ handoff, hasHandoff: true }), lastMessage: last })).toBe('Resumen del caso');
+    expect(rowPreview({ ...chat({ handoff, hasHandoff: false }), lastMessage: last })).toBe('sí, confirmo');
   });
 });

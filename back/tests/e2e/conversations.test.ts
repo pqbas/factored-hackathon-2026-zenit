@@ -627,7 +627,14 @@ test.describe('Advisor console', () => {
     await openConsole(page);
     const row = page.getByTestId('conversation-row-c-waiting');
     // The row shows the case's detail, not the reason again.
-    await expect(row.getByTestId('row-handoff')).toHaveText('Cobro duplicado');
+    // The row says why she's here (the reason) and previews the case's
+    // summary, cut short at a word, with the full one as tooltip.
+    await expect(row.getByTestId('row-handoff')).toHaveText('Reclamo');
+    await expect(row.getByTestId('row-text')).toHaveText('La clienta reclama un cobro duplicado de 84,20 USD en...');
+    await expect(row.getByTestId('row-text')).toHaveAttribute(
+      'title',
+      'La clienta reclama un cobro duplicado de 84,20 USD en SUPERMERCADO LÍDER.',
+    );
     await expect(page.getByTestId('conversation-row-c-race').getByTestId('row-handoff')).toHaveCount(0);
 
     await row.click();
@@ -636,7 +643,10 @@ test.describe('Advisor console', () => {
     await expect(panel).toBeVisible();
     await expect(page.getByTestId('handoff-card')).toHaveCount(1);
     const card = panel.getByTestId('handoff-card');
-    await expect(card.getByTestId('handoff-reason')).toHaveText('Reclamo por un cargo');
+    await expect(card.getByTestId('handoff-reason')).toHaveText('Reclamo');
+    // Row and card name the case's detail with the same text.
+    await expect(card.getByTestId('handoff-fact-complaint_type')).toHaveText('Cobro duplicado');
+    await expect(page.getByTestId('use-case-tag')).toHaveText('Reclamo');
     await expect(card.getByTestId('handoff-summary')).toContainText('cobro duplicado');
     await expect(card.getByTestId('handoff-fact-card_last4')).toHaveText('••1070');
     await expect(card.getByTestId('handoff-fact-merchant')).toHaveText('SUPERMERCADO LÍDER');
@@ -711,8 +721,12 @@ test.describe('Advisor console', () => {
     const waitingRow = page.getByTestId('conversation-row-c-waiting');
     await expect(waitingRow.getByTestId('attention')).toHaveText('En espera');
     await expect(waitingRow.getByTestId('waiting-dot')).toBeVisible();
-    await expect(waitingRow.getByTestId('row-text')).toHaveText('Es urgente, por favor');
-    await expect(waitingRow.getByTestId('row-text')).toHaveAttribute('title', 'Consulta de daniela');
+    // An open handoff previews its summary; without one, the last message.
+    await expect(waitingRow.getByTestId('row-text')).toContainText('La clienta reclama un cobro duplicado');
+    await expect(waitingRow.getByTestId('row-text')).toHaveAttribute(
+      'title',
+      'La clienta reclama un cobro duplicado de 84,20 USD en SUPERMERCADO LÍDER.',
+    );
     await expect(waitingRow.getByTestId('david-icon')).toHaveCount(0);
     // The advisor who took it has their own column; the state stays short.
     const otherRow = page.getByTestId('conversation-row-c-other');

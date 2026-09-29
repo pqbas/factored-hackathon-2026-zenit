@@ -25,7 +25,12 @@ And it changes in these ways:
 7. Cada filtro se evalúa solo sobre la conversación en curso del cliente: su última conversación no resuelta (`closedAt` nulo). Un cliente aparece en "Reclamo" si el handoff de esa conversación es complaint; sus conversaciones anteriores o ya resueltas no cuentan. El filtro lo aplica el back, con su parámetro.
 8. Cada filtro muestra su contador, también cuando es 0. El contador cuenta clientes según el motivo de su conversación en curso.
 9. En Estado, "Mías" pasa a "Con asesor" y filtra por `handledBy=human_agent`, las atienda quien las atienda. Su contador cuenta esas conversaciones.
-10a. La etiqueta de la fila muestra solo el detalle del handoff, si hay: el tipo de reclamo (No reconoce el cargo / Cobro duplicado / Monto distinto) o el producto a cancelar (Tarjeta Crédito ••6262). Nunca repite el motivo ni muestra la intención del clasificador. Sin detalle, no hay etiqueta (ajuste de la revisión de w1:p4).
+10a. La fila lleva el chip del motivo: Reclamo, Cancelación de producto o Estado de un reclamo, con su color. En Agente AI es el caso que David está atendiendo. Al lado va el contexto:
+    - En una fila derivada (handoff abierto), el resumen del handoff recortado a unos 60 caracteres en palabra completa y terminado en "...". Por ejemplo: "El cliente consulta el estado de su reclamo CMP-G43865...".
+    - El resumen completo va como tooltip de la fila y en la tarjeta "Caso derivado por David" del panel Contexto.
+    - Las filas sin handoff abierto (Agente AI) siguen con el último mensaje del cliente.
+    - Vale en la lista ancha y en la angosta.
+    Es la versión final de la revisión del usuario: descarta el contexto armado desde facts y la fila sin chip.
 10b. La vista de las conversaciones que atiende David (`handledBy=ai_agent`) pasa a llamarse "Agente AI", en el item del sidebar y en el título de la vista. El estado de la fila ("Con AI", uno de los cuatro estados del flujo) no cambia (pedido del usuario).
 10c. La tarjeta "Caso derivado por David" (resumen y ficha de datos verificados) sale de arriba del chat y pasa al panel "Contexto del cliente", como primera sección, arriba de las pestañas Casos, Interacciones y Transcripciones. El chat queda solo con los mensajes. El chip del motivo en el encabezado se queda. Si la conversación abierta tiene handoff, el panel Contexto se abre por defecto (pedido del usuario).
 10d. El separador de cada conversación en la línea de tiempo muestra el motivo del handoff si esa conversación se derivó, y ningún chip si no. Nunca muestra la intención del clasificador (revisión de w1:p4).
@@ -39,6 +44,7 @@ And it changes in these ways:
     - Otros, al final: saludo, despedida, fuera de alcance y sin `useCase`.
     No hay filtros nuevos en el sidebar (pedido del usuario).
     Cada fila de Agente AI muestra en la columna del medio un badge con el robot y "David", con el mismo estilo que el del asesor en la Bandeja.
+10h. Cada motivo tiene un solo nombre en todas partes, el de los filtros: Reclamo, Cancelación de producto, Estado de un reclamo. Rige para filtros, secciones, chip del encabezado, tarjeta "Caso derivado por David", separadores de conversación y panel de métricas (donde RETENTION y CANCEL se suman en "Cancelación de producto"). El segundo nivel es solo el detalle: el tipo de reclamo (No reconoce el cargo, Cobro duplicado, Monto distinto al esperado) o el producto (Tarjeta Crédito ••6262), con el mismo texto en la fila y en la tarjeta. El chip del encabezado muestra el motivo del handoff si la conversación se derivó; si no, la sección de Agente AI que corresponda al caso de uso, y nada para "Otros" (pedido del usuario).
 10. La Bandeja agrupa por motivo del handoff (Reclamo / Cancelación de producto / Estado de un reclamo). Las conversaciones sin handoff van en "Otros".
 11. El cliente elegido en el selector, en el chat o en Mis productos, es el de la sesión. Cambiar de conversación o crear una nueva no lo cambia.
 12. Al abrir un chat existente, el selector muestra el cliente que guardó el back para ese chat, no el que recuerda el navegador. Si el back no lo tiene, cae al valor que guardó el navegador y, si tampoco hay, al de la sesión.

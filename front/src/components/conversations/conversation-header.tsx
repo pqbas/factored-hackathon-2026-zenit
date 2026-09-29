@@ -1,7 +1,7 @@
 import { ASSISTANT_KIND, ASSISTANT_NAME } from '@/lib/assistant';
 import { Bot, PanelRight, X } from 'lucide-react';
 
-import { useCaseStyle } from '@/components/conversations/use-case-style';
+import { handoffReasonStyle } from '@/components/conversations/use-case-style';
 import { Button } from '@/components/ui/button';
 import {
   type AdvisorChat,
@@ -9,8 +9,8 @@ import {
   secondaryEmail,
   isMine,
   statusOf,
-  useCaseOf,
-  useCaseTag,
+  reasonTagOf,
+  sectionLabel,
   attentionOf,
 } from '@/lib/advisor';
 import { avatarColor, getInitials } from '@/lib/conversations';
@@ -77,7 +77,7 @@ export function ConversationHeader({
   const status = statusOf(chat);
   const mine = isMine(chat, me);
   const attention = attentionOf(chat, me, { long: true });
-  const tag = useCaseTag(chat);
+  const tag = reasonTagOf(chat);
   const name = customerLabel(chat);
   const email = secondaryEmail(chat);
 
@@ -126,10 +126,10 @@ export function ConversationHeader({
                 data-testid="use-case-tag"
                 className={cn(
                   'truncate rounded-md px-2 py-0.5 font-medium text-[11px]',
-                  useCaseStyle(useCaseOf(chat)).chip,
+                  handoffReasonStyle(tag).chip,
                 )}
               >
-                {tag}
+                {sectionLabel(tag)}
               </span>
             )}
           </span>

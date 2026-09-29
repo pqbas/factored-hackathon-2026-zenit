@@ -142,7 +142,8 @@ export interface UseCaseRow extends Resolutions {
 export function useCaseRows(metrics: Metrics): UseCaseRow[] {
   const rows = new Map<string, UseCaseRow>();
   for (const [raw, r] of Object.entries(metrics.byUseCase)) {
-    const id = KNOWN.has(raw) ? raw : OTHER_GROUP;
+    // RETENTION and CANCEL are one reason: "Cancelación de producto".
+    const id = raw === 'RETENTION' ? 'CANCEL' : KNOWN.has(raw) ? raw : OTHER_GROUP;
     const row = rows.get(id) ?? { id, total: 0, aiContained: 0, human: 0, assisted: 0 };
     row.total += r.total;
     row.aiContained += r.aiContained;

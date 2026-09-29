@@ -16,31 +16,21 @@ export interface AgentHandoff {
   resolvedAt: string | null;
 }
 
-const REASON: Record<string, { label: string; short: string }> = {
-  complaint: { label: 'Reclamo por un cargo', short: 'Reclamo por cargo' },
-  retention: { label: 'Cancelación de un producto', short: 'Cancelación' },
-  case_status: { label: 'Estado de un reclamo', short: 'Estado de reclamo' },
-};
-
 // The three reasons David hands a case to the inbox, in filter order
-// (docs/flujo-atencion.md). Filters and inbox sections use these.
+// (docs/flujo-atencion.md). One name per reason, used everywhere: filters,
+// sections, header chip, handoff card, dividers.
 export const HANDOFF_REASONS = [
   { id: 'complaint', label: 'Reclamo' },
   { id: 'retention', label: 'Cancelación de producto' },
   { id: 'case_status', label: 'Estado de un reclamo' },
 ] as const;
 
-// The short name filters and inbox sections show for a reason.
-export function handoffReasonGroupLabel(id: string): string {
-  return HANDOFF_REASONS.find((r) => r.id === id)?.label ?? handoffReasonLabel(id);
-}
-
 // Section id for conversations without a handoff.
 export const NO_HANDOFF_GROUP = 'NONE';
 
 export function handoffReasonLabel(reason: string | null | undefined): string {
   if (!reason) return 'Caso derivado';
-  return REASON[reason]?.label ?? reason;
+  return HANDOFF_REASONS.find((r) => r.id === reason)?.label ?? reason;
 }
 
 const COMPLAINT_TYPE: Record<string, string> = {
@@ -137,17 +127,4 @@ export function caseFields(handoff: AgentHandoff | null | undefined): CaseField[
     push(key, typeof value === 'object' ? JSON.stringify(value) : text(value));
   }
   return fields;
-}
-
-// What sets this case apart within its reason, for the inbox row: the kind of
-// complaint, or the product to cancel. null when the agent sent neither.
-export function handoffDetail(handoff: AgentHandoff | null | undefined): string | null {
-  const data = handoff?.verifiedData;
-  if (!data) return null;
-  const type = text(data.complaint_type);
-  if (type) return COMPLAINT_TYPE[type] ?? type;
-  const product = text(data.product_type);
-  const last4 = text(data.product_last4);
-  if (product || last4) return [product, last4 && `••${last4}`].filter(Boolean).join(' ');
-  return null;
 }
