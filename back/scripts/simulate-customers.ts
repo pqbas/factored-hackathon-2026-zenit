@@ -17,12 +17,12 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const TARGETS = {
+export const TARGETS = {
   local: 'http://localhost:3200',
   prod: 'https://dev-bank-assistant-ui-7474647867986650.aws.databricksapps.com',
 } as const;
 
-type Scenario = {
+export type Scenario = {
   name: string;
   description: string;
   sessionToken: string;
@@ -30,7 +30,7 @@ type Scenario = {
   messages: string[];
 };
 
-type ChatState = {
+export type ChatState = {
   handledBy?: string;
   useCase?: string | null;
   intent?: string | null;
@@ -87,7 +87,7 @@ function prodToken(): string {
   return (JSON.parse(out) as { access_token: string }).access_token;
 }
 
-function headersFor(
+export function headersFor(
   target: keyof typeof TARGETS,
   customer: number,
   token?: string,
@@ -126,7 +126,7 @@ async function readReply(response: Response): Promise<string> {
   return text.trim() || '[sin respuesta]';
 }
 
-function statusOf(chat: ChatState | null): string {
+export function statusOf(chat: ChatState | null): string {
   if (!chat) return '?';
   if (chat.closedAt) return 'Resuelta';
   if (chat.handledBy === 'human_queue') return 'En espera';
@@ -136,13 +136,13 @@ function statusOf(chat: ChatState | null): string {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-async function runScenario(
+export async function runScenario(
   base: string,
   headers: Record<string, string>,
   scenario: Scenario,
   delay: number,
+  chatId: string = randomUUID(),
 ) {
-  const chatId = randomUUID();
   console.log(`\n=== ${scenario.name}: ${scenario.description}`);
   console.log(`    chat ${chatId} · sessionToken ${scenario.sessionToken}`);
 
@@ -176,6 +176,8 @@ async function runScenario(
     : null;
   return {
     scenario: scenario.name,
+    chatId,
+    handledBy: chat?.handledBy ?? null,
     intent: chat?.intent ?? null,
     useCase: chat?.useCase ?? null,
     status: statusOf(chat),
@@ -207,7 +209,10 @@ async function main() {
   console.table(results);
 }
 
-main().catch((error) => {
-  console.error(error instanceof Error ? error.message : error);
-  process.exit(1);
-});
+// Only when run as a script: seed-console.ts imports the helpers above.
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+  main().catch((error) => {
+    console.error(error instanceof Error ? error.message : error);
+    process.exit(1);
+  });
+}

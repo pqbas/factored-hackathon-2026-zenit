@@ -177,6 +177,17 @@ export function chatScopeCondition(scope: ChatScope): SQL | undefined {
   return eq(chat.userId, scope.userId);
 }
 
+// Qualified by hand: a select list renders a bare column name, which the
+// subquery below would read as its own.
+const CHAT_ID = sql`${chat}."id"`;
+
+// The reason of a chat's most recent handoff (open or closed), or null.
+const latestReason = (chatId: SQL) => sql<string | null>`(
+  select h."reason" from ${handoff} h
+  where h."chatId" = ${chatId}
+  order by h."createdAt" desc limit 1
+)`;
+
 export async function getChats({
   scope,
   limit,
@@ -188,6 +199,7 @@ export async function getChats({
   assignedTo,
   status,
   customerId,
+  handoffReason,
 }: {
   scope: ChatScope;
   limit: number;
@@ -199,6 +211,7 @@ export async function getChats({
   assignedTo?: string;
   status?: 'open' | 'closed';
   customerId?: string;
+  handoffReason?: string;
 }) {
   const scopeCondition = chatScopeCondition(scope);
 
@@ -232,6 +245,10 @@ export async function getChats({
 
     if (customerId) {
       filterConditions.push(eq(chat.customerId, customerId));
+    }
+
+    if (handoffReason) {
+      filterConditions.push(sql`${latestReason(CHAT_ID)} = ${handoffReason}`);
     }
 
     if (status === 'open') {
@@ -381,8 +398,9 @@ export type CustomerInboxRow = {
   updatedAt: string;
 };
 
-// The advisor inbox grouped by customer: each customer's most recent chat
-// (by createdAt), filtered like getChats, ordered by its last message.
+// The advisor inbox grouped by customer: each customer's in-progress chat
+// (the most recent unresolved one), or with status=closed the most recent
+// resolved one, filtered like getChats, ordered by its last message.
 // starting_after is the customerKey of the previous page's last row. Three
 // queries whatever the page size: the rows, their chats, nothing per row.
 export async function getCustomerInbox({
@@ -390,6 +408,7 @@ export async function getCustomerInbox({
   handledBy,
   useCase,
   assignedTo,
+  handoffReason,
   status,
   limit,
   startingAfter,
@@ -398,6 +417,7 @@ export async function getCustomerInbox({
   handledBy?: string | Chat['handledBy'][];
   useCase?: string;
   assignedTo?: string;
+  handoffReason?: string;
   status?: 'open' | 'closed';
   limit: number;
   startingAfter?: string | null;
@@ -417,8 +437,7 @@ export async function getCustomerInbox({
   }
   if (useCase) filters.push(sql`r."useCase" = ${useCase}`);
   if (assignedTo) filters.push(sql`r."assignedTo" = ${assignedTo}`);
-  if (status === 'open') filters.push(sql`r."closedAt" is null`);
-  if (status === 'closed') filters.push(sql`r."closedAt" is not null`);
+  if (handoffReason) filters.push(sql`r."reason" = ${handoffReason}`);
   if (startingAfter) {
     filters.push(sql`(r."updatedAt", r."customerKey") < (
       select c."updatedAt", c."customerKey" from ranked c
@@ -434,18 +453,26 @@ export async function getCustomerInbox({
           ${chat.id} as "id", ${CUSTOMER_KEY} as "customerKey",
           ${chat.handledBy} as "handledBy", ${chat.useCase} as "useCase",
           ${chat.assignedTo} as "assignedTo", ${chat.closedAt} as "closedAt",
-          ${chat.createdAt} as "createdAt",
-          count(*) over (partition by ${CUSTOMER_KEY}) as "conversationCount"
+          ${chat.createdAt} as "createdAt"
         from ${chat}
-        ${userId ? sql`where ${chat.userId} = ${userId}` : sql``}
+        where ${chat.closedAt} is ${status === 'closed' ? sql`not null` : sql`null`}
+          ${userId ? sql`and ${chat.userId} = ${userId}` : sql``}
         order by ${CUSTOMER_KEY}, ${chat.createdAt} desc, ${chat.id} desc
       ),
+      totals as (
+        select ${CUSTOMER_KEY} as "customerKey", count(*) as "conversationCount"
+        from ${chat}
+        ${userId ? sql`where ${chat.userId} = ${userId}` : sql``}
+        group by 1
+      ),
       ranked as (
-        select l.*, coalesce(
-          (select max(m."createdAt") from ${message} m where m."chatId" = l."id"),
-          l."createdAt"
-        ) as "updatedAt"
+        select l.*, t."conversationCount", ${latestReason(sql`l."id"`)} as "reason",
+          coalesce(
+            (select max(m."createdAt") from ${message} m where m."chatId" = l."id"),
+            l."createdAt"
+          ) as "updatedAt"
         from latest l
+        join totals t on t."customerKey" = l."customerKey"
       )
       select r."id", r."customerKey", r."conversationCount"::int as "conversationCount",
         to_char(r."updatedAt", 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as "updatedAt"
@@ -532,6 +559,8 @@ export interface ConversationCounts {
   mine: number;
   resolved: number;
   aiAgent: number;
+  withAdvisor: number;
+  byHandoffReason: Record<string, number>;
 }
 
 // The human inbox: chats a person has to handle. David's own chats stay out.
@@ -545,7 +574,9 @@ export const HUMAN_HANDLED_BY: Chat['handledBy'][] = [
 // David handles, unattended = human_queue,
 // mine = open and assigned to advisorEmail, resolved = closed. One aggregate
 // query (a row per use case), no chat rows.
-// byCustomer counts customers instead: each one by its most recent chat.
+// byCustomer counts customers instead: each one by its in-progress chat, and
+// resolved by customers with a resolved chat. byHandoffReason and withAdvisor
+// count the same base as total (human_agent only for withAdvisor).
 export async function getConversationCounts({
   userId,
   advisorEmail,
@@ -563,6 +594,8 @@ export async function getConversationCounts({
     mine: 0,
     resolved: 0,
     aiAgent: 0,
+    withAdvisor: 0,
+    byHandoffReason: { complaint: 0, retention: 0, case_status: 0 },
   };
   if (!isDatabaseAvailable()) return counts;
 
@@ -578,9 +611,10 @@ export async function getConversationCounts({
         handledBy: chat.handledBy,
         assignedTo: chat.assignedTo,
         closedAt: chat.closedAt,
+        reason: latestReason(CHAT_ID).as('reason'),
       })
       .from(chat)
-      .where(userCondition)
+      .where(and(userCondition, isNull(chat.closedAt)))
       .orderBy(CUSTOMER_KEY, desc(chat.createdAt), desc(chat.id))
       .as('latest');
     // The subquery exposes the same column names, so the counts below read
@@ -599,6 +633,9 @@ export async function getConversationCounts({
         aiAgent: countWhere(
           and(isNull(c.closedAt), eq(c.handledBy, 'ai_agent')) as SQL,
         ),
+        withAdvisor: countWhere(
+          and(isNull(c.closedAt), eq(c.handledBy, 'human_agent')) as SQL,
+        ),
         unattended: countWhere(eq(c.handledBy, 'human_queue')),
         mine: advisorEmail
           ? countWhere(
@@ -611,14 +648,43 @@ export async function getConversationCounts({
       .where(byCustomer ? undefined : userCondition)
       .groupBy(c.useCase);
 
+    const reason = byCustomer
+      ? sql<string | null>`${latest.reason}`
+      : latestReason(CHAT_ID);
+    const reasonRows = await database
+      .select({ reason, n: sql<number>`count(*)`.mapWith(Number) })
+      .from(byCustomer ? latest : chat)
+      .where(
+        and(
+          byCustomer ? undefined : userCondition,
+          isNull(c.closedAt),
+          inArray(c.handledBy, HUMAN_HANDLED_BY),
+        ),
+      )
+      .groupBy(reason);
+    for (const row of reasonRows) {
+      if (row.reason) counts.byHandoffReason[row.reason] = row.n;
+    }
+
+    if (byCustomer) {
+      const [closed] = await database
+        .select({
+          n: sql<number>`count(distinct ${CUSTOMER_KEY})`.mapWith(Number),
+        })
+        .from(chat)
+        .where(and(userCondition, isNotNull(chat.closedAt)));
+      counts.resolved = closed?.n ?? 0;
+    }
+
     for (const row of rows) {
       counts.total += row.open;
       if (!row.useCase) counts.withoutUseCase += row.open;
       else if (row.open > 0) counts.byUseCase[row.useCase] = row.open;
       counts.unattended += row.unattended;
       counts.mine += row.mine;
-      counts.resolved += row.resolved;
+      if (!byCustomer) counts.resolved += row.resolved;
       counts.aiAgent += row.aiAgent;
+      counts.withAdvisor += row.withAdvisor;
     }
     return counts;
   } catch (error) {
