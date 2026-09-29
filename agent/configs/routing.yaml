@@ -10,38 +10,47 @@
     - "quiero ver mis últimos movimientos"
   destination: load_context
   schemas: [bank_uc_consultas]
-  option:
-    es: "Consultar el saldo, el límite o los movimientos de tu tarjeta o cuenta"
-    pt: "Consultar o saldo, o limite ou as movimentações do seu cartão ou conta"
   instructions: |
-    Usa get_products para el saldo y el límite, y list_transactions para los
-    movimientos. Nunca digas una cifra que una herramienta no te haya
-    devuelto en este turno.
+    Atiendes las opciones A (tarjeta de crédito) y B (cuentas de ahorro) del
+    menú. Usa get_products para saldos y límites, y list_transactions para los
+    movimientos. Nunca digas una cifra que una herramienta no te haya devuelto
+    en este turno.
+
+    Si nombró el producto sin decir qué quiere, ofrécele: 1) saldo, límite y
+    cupo (en ahorro: 1) saldo), 2) movimientos. Si respondió con un número a
+    esa pregunta (tuya o del menú), atiende esa opción.
 
     Tarjeta de crédito: por cada tarjeta, da siempre los últimos 4 dígitos, el
     saldo, el límite y el cupo disponible, aunque el cliente solo pregunte por
-    uno de ellos. Cuenta de ahorros: por cada cuenta, los últimos 4 dígitos y
-    el saldo.
+    uno de ellos. Si no tiene ninguna activa, responde: "No tienes una tarjeta
+    de crédito activa." en el idioma de la respuesta.
 
-    Si el cliente tiene varios productos del tipo que pide, lístalos todos.
-    Si no tiene ninguno, dile que no tiene un producto activo de ese tipo.
+    Cuenta de ahorros: por cada cuenta, los últimos 4 dígitos y el saldo. Si no
+    tiene ninguna activa, responde: "No tienes una cuenta de ahorro activa." en
+    el idioma de la respuesta.
+
+    Movimientos: llama primero a get_products. Si tiene más de un producto de
+    ese tipo y el cliente no dijo cuál, no llames a list_transactions:
+    pregúntale cuál, mostrando los últimos 4 dígitos de cada uno. Cuando sepas
+    cuál, llama a list_transactions con esos últimos 4 dígitos en
+    product_last4 y lista los últimos 10: fecha, comercio, monto con su moneda
+    y estado.
 
     Los montos van en la moneda del producto, tal como los devuelve la
     herramienta; nunca los conviertas.
 
-    Movimientos: lista la fecha, el producto y sus últimos 4 dígitos, el
-    comercio, el monto con su moneda y el estado. Si el cliente nombra una
-    tarjeta o cuenta por sus últimos 4 dígitos, pásalos como product_last4.
+    Tarjeta de débito, préstamo, fecha de pago, pago mínimo, deuda total o una
+    operación como una transferencia: ninguna herramienta devuelve esos datos,
+    así que no digas que el cliente no los tiene. Responde solo que esa
+    consulta todavía no está disponible en este chat, en el idioma de la
+    respuesta.
 
-    Tarjeta de débito, préstamo, fecha de pago, pago mínimo o una operación
-    como una transferencia: ninguna herramienta devuelve esos datos, así que
-    no digas que el cliente no los tiene. Tu respuesta es una sola oración
-    que dice que esa consulta todavía no está disponible en este chat, en el
-    idioma de la respuesta. No recomiendes un asesor, la app, una sucursal ni
-    otro canal.
-
-    Si una herramienta falla, dile que ahora mismo no puedes consultar esa
+    Si una herramienta falla, responde solo que ahora no puedes consultar esa
     información.
+
+    Después de dar saldos o movimientos, cierra con una pregunta corta que
+    ofrezca seguir, por ejemplo ver los movimientos de una tarjeta o volver al
+    menú.
 
 - intent: COMPLAINT
   description: El cliente reclama por un cobro, la app o la atención.
@@ -50,9 +59,6 @@
     - "me cobraron dos veces"
     - "não reconheço uma cobrança"
   destination: respond
-  option:
-    es: "Presentar un reclamo, por ejemplo un cargo que no reconoces"
-    pt: "Registrar uma reclamação, por exemplo uma cobrança que você não reconhece"
 
 - intent: CASE_STATUS
   description: El cliente pregunta por el estado de un reclamo o caso ya abierto.
@@ -61,9 +67,6 @@
     - "qual o status do meu caso?"
     - "quiero saber si ya resolvieron mi caso"
   destination: respond
-  option:
-    es: "Ver el estado de un reclamo"
-    pt: "Ver o status de uma reclamação"
 
 - intent: HUMAN_AGENT
   description: El cliente pide hablar con una persona, un asesor o un agente humano.
@@ -82,15 +85,16 @@
   destination: respond
 
 - intent: RETENTION
-  description: El cliente quiere cerrar su cuenta o cancelar un producto y el banco busca retenerlo.
+  description: El cliente quiere cancelar o cerrar una tarjeta, una cuenta u otro producto del banco.
   examples:
+    - "quiero cancelar mi tarjeta"
     - "quiero cerrar mi cuenta"
     - "quero cancelar meu cartão"
     - "ya no quiero seguir siendo cliente"
   destination: respond
 
 - intent: CANCEL
-  description: El cliente quiere detener la solicitud o el flujo actual.
+  description: El cliente quiere detener la solicitud o el flujo actual, sin nombrar un producto. "Cancelar mi tarjeta" o "cancelar mi cuenta" es RETENTION.
   examples:
     - "cancelar"
     - "olvídalo"

@@ -13,7 +13,7 @@ from langchain_core.tools import StructuredTool
 
 import src.main as main
 from src.llm.jev import JevClient
-from src.prompts.messages import CANCEL_REPLY, SESSION_REJECTED
+from src.prompts.messages import CANCEL_REPLY, GREETING_REPLY, MENU, SESSION_REJECTED
 
 # src.main loads the real .env with override=True at import time, which writes
 # into the shared process environment for the rest of the pytest session, and
@@ -236,7 +236,7 @@ def test_cancel_message_returns_the_fixed_reply(client, monkeypatch):
     assert _output_text(body) == CANCEL_REPLY["es"]
 
 
-def test_greeting_message_returns_llm_text_with_options_in_the_system_prompt(client, monkeypatch):
+def test_greeting_message_returns_the_fixed_presentation_and_menu(client, monkeypatch):
     monkeypatch.setattr(
         main,
         "jev_client",
@@ -248,13 +248,8 @@ def test_greeting_message_returns_llm_text_with_options_in_the_system_prompt(cli
 
     response = _invoke(client, "hola", thread_id="e2e-greeting")
     assert response.status_code == 200
-    body = response.json()
-    assert _output_text(body) == FAKE_LLM_TEXT
-
-    system_prompt = llm.received[0].content
-    for intent in ("GENERAL_INQUIRY", "COMPLAINT", "CASE_STATUS"):
-        route = next(r for r in main.routes if r.intent == intent)
-        assert route.option["es"] in system_prompt
+    assert _output_text(response.json()) == GREETING_REPLY["es"] + "\n\n" + MENU["es"]
+    assert llm.received is None
 
 
 def test_general_inquiry_calls_the_tool_with_the_sessions_customer_id(client, monkeypatch):
@@ -302,6 +297,12 @@ def _greeting_jev():
                      transport=httpx.MockTransport(lambda request: _jev_response_for("GREETING")))
 
 
+def _goodbye_jev():
+    # A goodbye is the turn without a use case the LLM still writes, so the LLM sees the history.
+    return JevClient(api_key="test-key", url="https://api.typesafe.ai/v1/systemone", timeout=2.0,
+                     transport=httpx.MockTransport(lambda request: _jev_response_for("GOODBYE")))
+
+
 def _invoke_history(client, messages, session_token="demo-mx-1"):
     return client.post(
         "/invocations",
@@ -312,7 +313,7 @@ def _invoke_history(client, messages, session_token="demo-mx-1"):
 def test_the_llm_receives_the_whole_history_sent_in_the_request(client, monkeypatch):
     llm = RecordingChatModel(FAKE_LLM_TEXT)
     monkeypatch.setattr(main, "get_chat_model", lambda: llm)
-    monkeypatch.setattr(main, "jev_client", _greeting_jev())
+    monkeypatch.setattr(main, "jev_client", _goodbye_jev())
     history = [
         {"role": "user", "content": "Hola, quiero saber mi saldo"},
         {"role": "assistant", "content": "Claro, ¿de qué producto?"},
@@ -328,7 +329,7 @@ def test_the_llm_receives_the_whole_history_sent_in_the_request(client, monkeypa
 def test_the_llm_receives_only_the_last_20_messages_of_a_long_history(client, monkeypatch):
     llm = RecordingChatModel(FAKE_LLM_TEXT)
     monkeypatch.setattr(main, "get_chat_model", lambda: llm)
-    monkeypatch.setattr(main, "jev_client", _greeting_jev())
+    monkeypatch.setattr(main, "jev_client", _goodbye_jev())
     history = [
         {"role": "user" if i % 2 == 0 else "assistant", "content": f"mensaje número {i}"}
         for i in range(30)
@@ -343,7 +344,7 @@ def test_the_llm_receives_only_the_last_20_messages_of_a_long_history(client, mo
 def test_advisor_turns_in_the_history_never_prefix_the_reply(client, monkeypatch):
     llm = RecordingChatModel("[Asesor] Hola de nuevo, ¿en qué te ayudo?")
     monkeypatch.setattr(main, "get_chat_model", lambda: llm)
-    monkeypatch.setattr(main, "jev_client", _greeting_jev())
+    monkeypatch.setattr(main, "jev_client", _goodbye_jev())
     history = [
         {"role": "user", "content": "Quiero hablar con un asesor"},
         {"role": "assistant", "content": "[Asesor] Hola, soy Ana. Tu reembolso se verá en 5 días hábiles."},

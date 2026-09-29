@@ -7,7 +7,16 @@ from langchain_core.messages import AIMessage, SystemMessage, ToolMessage
 
 from src.graph.build import build_graph
 from src.llm.jev import JevUnavailable
-from src.prompts.messages import CANCEL_REPLY, GUARDRAIL_REPLIES, SESSION_REJECTED
+from src.prompts.messages import (
+    CANCEL_REPLY,
+    GREETING_REPLY,
+    GUARDRAIL_REPLIES,
+    HUMAN_WITHOUT_TOPIC,
+    MENU,
+    MORE_OPTIONS,
+    OUT_OF_MENU,
+    SESSION_REJECTED,
+)
 from src.prompts.situations import SITUATIONS
 from src.schemas.classification import Classification
 from src.schemas.routing import IntentRoute
@@ -29,17 +38,14 @@ LIST_TRANSACTIONS_SCHEMA = {
 ROUTES = [
     IntentRoute(
         intent="GENERAL_INQUIRY", description="Consulta general", examples=["saldo"], destination="load_context",
-        option={"es": "Consultar el saldo y el límite", "pt": "Consultar o saldo e o limite"},
         schemas=["bank_uc_consultas"],
         instructions="Usa get_products para el saldo y el límite, y list_transactions para los movimientos.",
     ),
     IntentRoute(
         intent="COMPLAINT", description="Reclamo", examples=["no reconozco un cargo"], destination="respond",
-        option={"es": "Presentar un reclamo", "pt": "Registrar uma reclamação"},
     ),
     IntentRoute(
         intent="CASE_STATUS", description="Estado de un caso", examples=["mi reclamo"], destination="respond",
-        option={"es": "Ver el estado de un reclamo", "pt": "Ver o status de uma reclamação"},
     ),
     IntentRoute(
         intent="OUT_OF_SCOPE", description="Fuera de alcance", examples=["clima"], destination="respond"
@@ -67,7 +73,7 @@ class FakeJev:
         self._raises = raises
         self.calls = 0
 
-    async def classify(self, text, routes):
+    async def classify(self, text, routes, context=None):
         self.calls += 1
         if self._raises:
             raise JevUnavailable("Jev is down")
@@ -163,7 +169,8 @@ def _run(graph, message, session=VALID_SESSION, thread_id="t", history=None):
 
 def _classification(**overrides) -> Classification:
     base = dict(
-        guardrail="OK", guardrail_probability=0.0, language="es", intent="COMPLAINT",
+        # GOODBYE is the one turn without a use case the LLM still writes.
+        guardrail="OK", guardrail_probability=0.0, language="es", intent="GOODBYE",
         intent_confidence=0.9, sentiment="neutral", source="jev",
     )
     return Classification(**{**base, **overrides})
@@ -228,7 +235,7 @@ def test_guardrail_below_threshold_lets_the_llm_answer_and_keeps_classification(
 
 def test_card_number_blocks_masks_and_never_calls_jev():
     class RaisingJev:
-        async def classify(self, text, routes):
+        async def classify(self, text, routes, context=None):
             raise AssertionError("Jev must not be called when a rule already matched")
 
     graph = _build_graph(ExplodingLLM(), RaisingJev())
@@ -239,13 +246,12 @@ def test_card_number_blocks_masks_and_never_calls_jev():
     assert "4111" not in human_messages[0].content
 
 
-def test_jev_unavailable_falls_back_and_llm_still_answers():
-    llm = _fake_llm("respuesta de respaldo")
+def test_jev_unavailable_falls_back_to_the_rules_and_still_answers():
     jev = FakeJev(raises=True)
-    graph = _build_graph(llm, jev)
-    result = _run(graph, "hola")
+    graph = _build_graph(ExplodingLLM(), jev)
+    result = _run(graph, "cancelar")
 
-    assert result["messages"][-1].content == "respuesta de respaldo"
+    assert result["messages"][-1].content == CANCEL_REPLY["es"]
     assert result["classification"]["source"] == "fallback"
 
 
@@ -258,46 +264,74 @@ def test_portuguese_language_reaches_the_system_prompt():
     assert "português" in llm.received[0].content.lower()
 
 
-def test_greeting_introduces_the_assistant_as_david_the_virtual_assistant():
-    llm = RecordingLLM()
+def test_greeting_is_the_fixed_presentation_and_menu_without_the_llm():
     jev = FakeJev(_classification(intent="GREETING"))
-    graph = _build_graph(llm, jev)
-    _run(graph, "hola")
-
-    system_prompt = llm.received[0].content
-    assert "preséntate como David, el asistente virtual del banco" in system_prompt
-    assert "Eres un asistente virtual, no una persona" in system_prompt
+    graph = _build_graph(ExplodingLLM(), jev)
+    result = _run(graph, "hola")
+    assert result["messages"][-1].content == GREETING_REPLY["es"] + "\n\n" + MENU["es"]
 
 
-def test_greeting_system_prompt_has_the_greeting_instruction_and_the_three_options():
-    llm = RecordingLLM()
-    jev = FakeJev(_classification(intent="GREETING"))
-    graph = _build_graph(llm, jev)
-    _run(graph, "hola")
-
-    system_prompt = llm.received[0].content
-    assert SITUATIONS["greeting"] in system_prompt
-    for route in ROUTES:
-        if route.option:
-            assert route.option["es"] in system_prompt
+def test_portuguese_greeting_gets_the_portuguese_menu():
+    jev = FakeJev(_classification(language="pt", intent="GREETING"))
+    graph = _build_graph(ExplodingLLM(), jev)
+    result = _run(graph, "Olá, boa tarde")
+    assert result["messages"][-1].content.endswith(MENU["pt"])
 
 
-def test_case_status_system_prompt_has_the_unavailable_instruction():
-    llm = RecordingLLM()
-    jev = FakeJev(_classification(intent="CASE_STATUS"))
-    graph = _build_graph(llm, jev)
-    _run(graph, "¿cómo va mi reclamo?")
-
-    assert SITUATIONS["unavailable"] in llm.received[0].content
+def test_asking_for_a_person_without_an_operation_gets_the_menu_and_no_handoff():
+    jev = FakeJev(_classification(intent="HUMAN_AGENT"))
+    graph = _build_graph(ExplodingLLM(), jev)
+    result = _run(graph, "quiero hablar con un asesor")
+    assert result["messages"][-1].content == HUMAN_WITHOUT_TOPIC["es"] + "\n\n" + MENU["es"]
 
 
-def test_low_confidence_system_prompt_has_the_clarify_instruction():
-    llm = RecordingLLM()
+def test_low_confidence_gets_the_out_of_menu_line_and_the_menu():
     jev = FakeJev(_classification(intent="GENERAL_INQUIRY", intent_confidence=0.2))
-    graph = _build_graph(llm, jev)
-    _run(graph, "lo de antes")
+    graph = _build_graph(ExplodingLLM(), jev)
+    result = _run(graph, "lo de antes")
+    assert result["messages"][-1].content == OUT_OF_MENU["es"] + "\n\n" + MENU["es"]
 
-    assert SITUATIONS["clarify"] in llm.received[0].content
+
+def test_menu_letter_d_gets_the_submenu_without_calling_jev():
+    class RaisingJev:
+        async def classify(self, text, routes, context=None):
+            raise AssertionError("a menu letter never reaches the classifier")
+
+    graph = _build_graph(ExplodingLLM(), RaisingJev())
+    history = [{"role": "user", "content": "hola"}, {"role": "assistant", "content": MENU["es"]}]
+    result = _run(graph, "D", history=history)
+    assert result["messages"][-1].content == MORE_OPTIONS["es"]
+    assert result["classification"]["intent"] == "MORE_OPTIONS"
+
+
+def test_a_submenu_digit_after_more_options_is_its_option():
+    jev = FakeJev(_classification())
+    graph = _build_graph(ExplodingLLM(), jev)
+    history = [{"role": "user", "content": "D"}, {"role": "assistant", "content": MORE_OPTIONS["es"]}]
+    result = _run(graph, "2", history=history)
+    assert result["classification"]["intent"] == "CASE_STATUS"
+    assert jev.calls == 0
+
+
+def test_the_classifier_gets_the_previous_reply_as_context():
+    class ContextJev(FakeJev):
+        async def classify(self, text, routes, context=None):
+            self.context = context
+            return await super().classify(text, routes)
+
+    jev = ContextJev(_classification())
+    graph = _build_graph(_fake_llm("ok"), jev)
+    history = [{"role": "user", "content": "A"}, {"role": "assistant", "content": "¿Qué quieres ver? 1) saldo 2) movimientos"}]
+    _run(graph, "movimientos", history=history)
+    assert jev.context == "¿Qué quieres ver? 1) saldo 2) movimientos"
+
+
+def test_cancelar_mi_tarjeta_is_retention_even_if_the_classifier_says_cancel():
+    jev = FakeJev(_classification(intent="CANCEL", intent_confidence=1.0))
+    graph = _build_graph(ExplodingLLM(), jev)
+    result = _run(graph, "quiero cancelar mi tarjeta")
+    assert result["classification"]["intent"] == "RETENTION"
+    assert CANCEL_REPLY["es"] not in result["messages"][-1].content
 
 
 def test_goodbye_system_prompt_has_no_options_block():
@@ -317,18 +351,6 @@ def test_cancel_returns_the_fixed_reply_and_never_calls_the_llm():
     result = _run(graph, "cancelar")
 
     assert result["messages"][-1].content == CANCEL_REPLY["es"]
-
-
-def test_portuguese_greeting_has_options_in_portuguese():
-    llm = RecordingLLM()
-    jev = FakeJev(_classification(language="pt", intent="GREETING"))
-    graph = _build_graph(llm, jev)
-    _run(graph, "Olá, boa tarde")
-
-    system_prompt = llm.received[0].content
-    for route in ROUTES:
-        if route.option:
-            assert route.option["pt"] in system_prompt
 
 
 # --- GENERAL_INQUIRY: load_context, bound tools, and the tool loop ---------------
@@ -418,9 +440,8 @@ def test_failing_tool_gives_the_llm_a_toolmessage_with_the_error():
 def test_greeting_after_general_inquiry_in_the_same_thread_has_no_tools_and_clears_use_case():
     get_products = FakeMCPTool("get_products", GET_PRODUCTS_SCHEMA, result=[])
     list_transactions = FakeMCPTool("list_transactions", LIST_TRANSACTIONS_SCHEMA, result=[])
-    llm = ScriptedToolLLM([AIMessage(content="Hola, ¿en qué más te ayudo?")])
     jev = FakeJev(_classification(intent="GREETING"))
-    graph = _build_graph(llm, jev, tools_for=_fake_tools_for(get_products, list_transactions))
+    graph = _build_graph(ExplodingLLM(), jev, tools_for=_fake_tools_for(get_products, list_transactions))
 
     history = [
         {"role": "user", "content": "¿cuál es mi saldo?"},
@@ -428,7 +449,7 @@ def test_greeting_after_general_inquiry_in_the_same_thread_has_no_tools_and_clea
     ]
     result = _run(graph, "hola", history=history)
 
-    assert result["messages"][-1].content == "Hola, ¿en qué más te ayudo?"
+    assert result["messages"][-1].content.startswith(GREETING_REPLY["es"])
     assert result["use_case"] is None
     assert get_products.calls == []
     assert list_transactions.calls == []
@@ -450,7 +471,7 @@ def test_tool_loop_stops_after_three_rounds_and_answers_with_text():
 
 def test_a_card_number_in_an_earlier_message_reaches_the_llm_masked():
     llm = RecordingLLM("ok")
-    jev = FakeJev(_classification(intent="GREETING"))
+    jev = FakeJev(_classification(intent="GOODBYE"))
     graph = _build_graph(llm, jev)
 
     history = [
@@ -466,7 +487,7 @@ def test_a_card_number_in_an_earlier_message_reaches_the_llm_masked():
 
 def test_a_short_message_after_a_long_portuguese_one_gets_the_portuguese_language_line():
     llm = RecordingLLM("ok")
-    jev = FakeJev(_classification(intent="GREETING", language="es"))
+    jev = FakeJev(_classification(intent="GOODBYE", language="es"))
     graph = _build_graph(llm, jev)
 
     history = [
@@ -517,7 +538,7 @@ def test_a_portuguese_tool_reply_gets_the_language_line_after_the_tool_results()
 
 def test_a_reply_that_copies_the_advisor_prefix_is_stripped_and_the_prompt_has_the_rule():
     llm = RecordingLLM("[Asesor] Tu caso sigue en revisión.")
-    jev = FakeJev(_classification(intent="CASE_STATUS"))
+    jev = FakeJev(_classification(intent="GOODBYE"))
     graph = _build_graph(llm, jev)
 
     history = [

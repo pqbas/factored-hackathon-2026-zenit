@@ -6,8 +6,15 @@ import mlflow
 from langchain_core.messages import AIMessage, HumanMessage
 
 from src.graph.state import AgentState
-from src.llm.fallback import check_guardrail_rules, detect_language, fallback_classify, mask_sensitive
-from src.prompts.messages import GUARDRAIL_REPLIES
+from src.llm.fallback import (
+    check_guardrail_rules,
+    detect_language,
+    fallback_classify,
+    mask_sensitive,
+    menu_rule_intent,
+    names_a_product_to_cancel,
+)
+from src.prompts.messages import CARD_OPTIONS, GUARDRAIL_REPLIES, MORE_OPTIONS, SAVINGS_OPTIONS
 from src.schemas.classification import (
     Classification,
     ClassifierUnavailable,
@@ -44,6 +51,30 @@ def _text(message: HumanMessage) -> str:
     return message.content if isinstance(message.content, str) else str(message.content)
 
 
+_SUBMENUS = {
+    "CARD_OPTIONS": set(CARD_OPTIONS.values()),
+    "SAVINGS_OPTIONS": set(SAVINGS_OPTIONS.values()),
+    "MORE_OPTIONS": set(MORE_OPTIONS.values()),
+}
+
+# Enough for the question David closed his reply with, without resending a whole balance.
+_CONTEXT_CHARS = 300
+
+
+def _previous_reply(messages: list) -> str | None:
+    """The assistant message right before the customer's last message, if there is one."""
+    if len(messages) < 2 or not isinstance(messages[-2], AIMessage):
+        return None
+    content = messages[-2].content
+    return content if isinstance(content, str) else str(content)
+
+
+def _context(previous_reply: str | None) -> str | None:
+    if not previous_reply:
+        return None
+    return mask_sensitive(previous_reply)[-_CONTEXT_CHARS:]
+
+
 def _human_messages(messages: list) -> list[HumanMessage]:
     human_messages = [message for message in messages if isinstance(message, HumanMessage)]
     if not human_messages:
@@ -60,6 +91,7 @@ async def classify(
     human_messages = _human_messages(state["messages"])
     human_message = human_messages[-1]
     text = _text(human_message)
+    previous_reply = _previous_reply(state["messages"])
 
     rule_match = check_guardrail_rules(text)
     if rule_match is not None:
@@ -73,18 +105,33 @@ async def classify(
             sentiment="neutral",
             source="rules",
         )
+    elif menu_intent := menu_rule_intent(text, previous_reply, _SUBMENUS):
+        masked_text = None
+        classification = Classification(
+            guardrail="OK",
+            guardrail_probability=0.0,
+            language=detect_language(text),
+            intent=menu_intent,
+            intent_confidence=1.0,
+            sentiment="neutral",
+            source="rules",
+        )
     else:
         masked_text = None
         # classifier is Jev or the LLM (CLASSIFIER, see src/main.py); either one failing
-        # falls back to the keyword rules.
+        # falls back to the keyword rules. The previous reply goes along so an answer to
+        # David's question ("la de 1070", "sí") is read in its context.
         try:
             if classifier is None:
                 raise ClassifierUnavailable("classifier is None")
-            classification = await classifier.classify(text, routes)
+            classification = await classifier.classify(text, routes, context=_context(previous_reply))
         except ClassifierUnavailable as exc:
             name = type(classifier).__name__ if classifier is not None else "Classifier"
             logger.warning("%s unavailable, classifying with rules: %s", name, exc)
             classification = fallback_classify(text, [route.intent for route in routes])
+        # "Cancelar mi tarjeta" cancels a product (3.D1), never stops the flow (§3, regla 5).
+        if classification.intent == "CANCEL" and names_a_product_to_cancel(text):
+            classification = classification.model_copy(update={"intent": "RETENTION"})
     logger.info(
         "classify source=%s intent=%s language=%s guardrail=%s",
         classification.source, classification.intent, classification.language, classification.guardrail,

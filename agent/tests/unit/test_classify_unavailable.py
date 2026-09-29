@@ -12,7 +12,7 @@ TEXT = "quisiera consultar el saldo de mis tarjetas"
 
 
 class DownJev:
-    async def classify(self, text, routes):
+    async def classify(self, text, routes, context=None):
         raise JevUnavailable("HTTP 401")
 
 

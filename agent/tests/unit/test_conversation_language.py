@@ -22,7 +22,7 @@ class FakeJev:
             source="jev",
         )
 
-    async def classify(self, text, routes):
+    async def classify(self, text, routes, context=None):
         return self._classification
 
 
