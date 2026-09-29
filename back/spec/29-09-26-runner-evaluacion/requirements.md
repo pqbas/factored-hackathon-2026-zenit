@@ -81,7 +81,10 @@ And it changes in these ways:
       caso;
     - tamaño de muestra, modelo, versión de prompt, clasificador
       (`CLASSIFIER` del agente), commit del repo, supuestos de costo y la
-      nota "medición offline, en local".
+      nota "medición offline, en local";
+    - los cambios a los casos hechos después de fijarlos (antes de la
+      primera corrida), con motivo y si se hicieron después de ver
+      resultados (revisión de w1:p4).
     Los 2 casos de idioma se reportan aparte, como limitación, y no entran
     en las métricas.
 11. La evaluación se corre por defecto con `CLASSIFIER=llm`, el de prod. Una
