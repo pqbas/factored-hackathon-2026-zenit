@@ -428,3 +428,15 @@ Shipped en PR #66.
 - [x] Nunca se muestra un error técnico: cualquier otro error sale con un texto amable.
 
 Shipped en PR #69.
+
+---
+
+## Phase 20: Caso derivado por David en la consola (Complete)
+
+**Goal:** que el asesor reciba el caso que David derivó con sus datos verificados, sin volver a preguntarlos.
+
+- [x] Tarjeta "Caso derivado por David" arriba de la conversación: motivo, resumen y ficha
+      de datos verificados tal cual vienen (tarjeta, cargo, tipo y descripción; o producto y motivo).
+- [x] En la fila de la bandeja, el motivo como etiqueta corta mientras el caso está abierto.
+
+Shipped en PR #<n>.
