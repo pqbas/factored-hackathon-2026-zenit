@@ -21,6 +21,8 @@ import {
   chat,
   message,
   resolutionEvent,
+  agentTurn,
+  type AgentTurn,
   type DBMessage,
   type Chat,
 } from './schema';
@@ -142,6 +144,7 @@ export async function deleteChatById({ id }: { id: string }) {
     await (await ensureDb())
       .delete(resolutionEvent)
       .where(eq(resolutionEvent.chatId, id));
+    await (await ensureDb()).delete(agentTurn).where(eq(agentTurn.chatId, id));
 
     const [chatsDeleted] = await (await ensureDb())
       .delete(chat)
@@ -1208,6 +1211,123 @@ export async function getCustomerIdsWithoutName(): Promise<string[]> {
     .from(chat)
     .where(and(isNotNull(chat.customerId), isNull(chat.customerName)));
   return rows.map((r) => r.customerId).filter((id): id is string => !!id);
+}
+
+export async function enqueueAgentTurn({
+  chatId,
+  messageId,
+  userId,
+  sessionToken,
+}: {
+  chatId: string;
+  messageId: string;
+  userId: string;
+  sessionToken?: string | null;
+}) {
+  await (await ensureDb()).insert(agentTurn).values({
+    chatId,
+    messageId,
+    userId,
+    sessionToken: sessionToken ?? null,
+  });
+}
+
+// Claims up to `limit` due turns, the oldest pending one per chat (turns of a
+// chat go in order), and leases them for `leaseMs` by pushing nextAttemptAt:
+// another worker skips them (SKIP LOCKED now, the lease afterwards).
+export async function claimAgentTurns({
+  limit,
+  leaseMs,
+}: {
+  limit: number;
+  leaseMs: number;
+}): Promise<AgentTurn[]> {
+  if (!isDatabaseAvailable()) return [];
+
+  const rows = (await (await ensureDb()).execute(sql`
+    update ${agentTurn} set "nextAttemptAt" = now() + ${`${leaseMs} milliseconds`}::interval
+    where "id" in (
+      select t."id" from ${agentTurn} t
+      where t."status" = 'pending' and t."nextAttemptAt" <= now()
+        and not exists (
+          select 1 from ${agentTurn} o
+          where o."chatId" = t."chatId" and o."status" = 'pending'
+            and o."createdAt" < t."createdAt"
+        )
+      order by t."createdAt"
+      limit ${limit}
+      for update skip locked
+    )
+    returning "id"
+  `)) as unknown as Array<{ id: string }>;
+  if (rows.length === 0) return [];
+
+  return (await ensureDb())
+    .select()
+    .from(agentTurn)
+    .where(
+      inArray(
+        agentTurn.id,
+        rows.map((r) => r.id),
+      ),
+    )
+    .orderBy(asc(agentTurn.createdAt));
+}
+
+export async function finishAgentTurn({
+  id,
+  status,
+}: {
+  id: string;
+  status: 'done' | 'discarded' | 'expired';
+}) {
+  await (await ensureDb())
+    .update(agentTurn)
+    .set({ status })
+    .where(eq(agentTurn.id, id));
+}
+
+export async function retryAgentTurnLater({
+  id,
+  delayMs,
+}: {
+  id: string;
+  delayMs: number;
+}) {
+  await (await ensureDb())
+    .update(agentTurn)
+    .set({
+      attempts: sql`${agentTurn.attempts} + 1`,
+      nextAttemptAt: sql`now() + ${`${delayMs} milliseconds`}::interval`,
+    })
+    .where(eq(agentTurn.id, id));
+}
+
+export async function hasPendingAgentTurn({
+  chatId,
+}: {
+  chatId: string;
+}): Promise<boolean> {
+  if (!isDatabaseAvailable()) return false;
+
+  const [row] = await (await ensureDb())
+    .select({ id: agentTurn.id })
+    .from(agentTurn)
+    .where(and(eq(agentTurn.chatId, chatId), eq(agentTurn.status, 'pending')))
+    .limit(1);
+  return Boolean(row);
+}
+
+export async function getAgentTurns({
+  chatId,
+}: {
+  chatId: string;
+}): Promise<AgentTurn[]> {
+  return (await ensureDb())
+    .select()
+    .from(agentTurn)
+    .where(eq(agentTurn.chatId, chatId))
+    .orderBy(asc(agentTurn.createdAt));
 }
 
 export async function markMessagesBlocked({ ids }: { ids: string[] }) {

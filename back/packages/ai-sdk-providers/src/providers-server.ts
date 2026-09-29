@@ -167,6 +167,43 @@ function shouldInjectContext(): boolean {
   return shouldInjectContextForEndpoint(endpointTask);
 }
 
+// The agent is unreachable while its App redeploys: its proxy answers
+// 502/503/504, or the connection fails. That is reported as
+// AgentUnavailableError so the chat can queue the turn (server/src/agent-queue.ts)
+// instead of showing a technical error.
+const UNAVAILABLE_STATUS = new Set([502, 503, 504]);
+
+export class AgentUnavailableError extends Error {
+  constructor(cause?: unknown) {
+    super('The agent is unavailable', { cause });
+    this.name = 'AgentUnavailableError';
+  }
+}
+
+export function isAgentUnavailableError(error: unknown): boolean {
+  for (let e = error, depth = 0; e && depth < 5; depth++) {
+    if (e instanceof Error && e.name === 'AgentUnavailableError') return true;
+    e = (e as { cause?: unknown }).cause;
+  }
+  return false;
+}
+
+async function fetchAgent(url: string, init?: RequestInit): Promise<Response> {
+  let response: Response;
+  try {
+    response = await fetch(url, init);
+  } catch (error) {
+    if (init?.signal?.aborted) throw error;
+    throw new AgentUnavailableError(error);
+  }
+  if (UNAVAILABLE_STATUS.has(response.status)) {
+    // Not awaited: some bodies (MSW's) never settle a cancel.
+    response.body?.cancel().catch(() => {});
+    throw new AgentUnavailableError(`HTTP ${response.status}`);
+  }
+  return response;
+}
+
 // Custom fetch function to transform Databricks responses to OpenAI format
 export const databricksFetch: typeof fetch = async (input, init) => {
   const url = input.toString();
@@ -234,7 +271,7 @@ export const databricksFetch: typeof fetch = async (input, init) => {
     }
   }
 
-  const response = await fetch(url, requestInit);
+  const response = await fetchAgent(url, requestInit);
 
   const shouldWrapStream = conversationId || LOG_SSE_EVENTS;
   if (shouldWrapStream && response.body) {

@@ -134,6 +134,9 @@ export default defineConfig({
       DATABRICKS_CLIENT_SECRET: 'mock-value',
       DATABRICKS_HOST: 'mock-value',
       DATABRICKS_WAREHOUSE_ID: 'mock-warehouse',
+      // The agent queue worker, fast enough for tests.
+      AGENT_QUEUE_INTERVAL_MS: '200',
+      AGENT_QUEUE_BACKOFF_MS: '100',
       // ada-<workerIndex> is admin, babbage-<workerIndex> is advisor, and
       // curie-<workerIndex> is a plain customer. workerIndex isn't capped at
       // `workers` - a fresh worker (new project, a retry) gets the next
