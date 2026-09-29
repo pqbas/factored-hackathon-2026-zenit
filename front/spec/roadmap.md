@@ -454,7 +454,7 @@ Shipped en PR #72.
 
 Spec: `spec/29-09-26-filtros-handoff-y-cliente-fijo/`.
 
-Shipped en PR #<n>.
+Shipped en PR #82.
 
 ---
 
@@ -467,4 +467,4 @@ Shipped en PR #<n>.
 
 Spec: `spec/29-09-26-datos-del-cliente/`.
 
-Shipped en PR #<n>.
+Shipped en PR #82.
