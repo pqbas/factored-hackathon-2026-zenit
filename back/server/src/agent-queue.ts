@@ -3,6 +3,8 @@ import {
   finishAgentTurn,
   getChatById,
   getMessagesByChatId,
+  hasOpenHandoff,
+  openHandoff,
   retryAgentTurnLater,
   saveMessages,
   updateChatAgentState,
@@ -10,13 +12,15 @@ import {
 } from '@chat-template/db';
 import { convertToUIMessages, generateUUID } from '@chat-template/core';
 import { persistAgentReply, streamAgentTurn } from './agent-reply';
+import { isPaused } from './agent-turn';
 
 // Customer turns the agent couldn't take (its App was redeploying) wait in
 // AgentTurn; this worker answers them once the agent is back. Postgres is the
 // queue: claims use FOR UPDATE SKIP LOCKED plus a lease, oldest turn per chat
 // first. A turn is discarded when someone already answered after it or an
 // advisor took the chat, and expires after MAX_AGE_MS: then the chat goes to
-// the human queue with a notice, the only message the queue ever saves.
+// the human queue with a notice, the only message the queue ever saves, and
+// an open agent_unavailable handoff so it stays paused like any handoff.
 const INTERVAL_MS = Number(process.env.AGENT_QUEUE_INTERVAL_MS) || 5000;
 const BACKOFF_MS = Number(process.env.AGENT_QUEUE_BACKOFF_MS) || 5000;
 const MAX_BACKOFF_MS = 60_000;
@@ -43,6 +47,12 @@ async function expire(turn: AgentTurn) {
     ],
   });
   await updateChatAgentState({ chatId: turn.chatId, handledBy: 'human_queue' });
+  await openHandoff({
+    chatId: turn.chatId,
+    reason: 'agent_unavailable',
+    summary: null,
+    facts: null,
+  });
   await finishAgentTurn({ id: turn.id, status: 'expired' });
 }
 
@@ -50,12 +60,14 @@ async function expire(turn: AgentTurn) {
 // agent still down) throws.
 async function askAgent(
   turn: AgentTurn,
+  handledBy: string,
   messages: ReturnType<typeof convertToUIMessages>,
 ) {
   const result = await streamAgentTurn({
     chatId: turn.chatId,
     userId: turn.userId,
     sessionToken: turn.sessionToken,
+    handledBy,
     messages,
   });
   let text = '';
@@ -68,7 +80,13 @@ async function askAgent(
 
 export async function processAgentTurn(turn: AgentTurn) {
   const chat = await getChatById({ id: turn.chatId });
-  if (!chat || chat.handledBy !== 'ai_agent') {
+  if (
+    !chat ||
+    isPaused({
+      handledBy: chat.handledBy,
+      hasOpenHandoff: await hasOpenHandoff({ chatId: turn.chatId }),
+    })
+  ) {
     await finishAgentTurn({ id: turn.id, status: 'discarded' });
     return;
   }
@@ -91,7 +109,11 @@ export async function processAgentTurn(turn: AgentTurn) {
   }
 
   try {
-    const text = await askAgent(turn, convertToUIMessages(messages));
+    const text = await askAgent(
+      turn,
+      chat.handledBy,
+      convertToUIMessages(messages),
+    );
     const saved = await persistAgentReply({
       chatId: turn.chatId,
       customerMessageId: turn.messageId,

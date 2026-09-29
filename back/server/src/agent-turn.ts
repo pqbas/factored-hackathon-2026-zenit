@@ -61,10 +61,3 @@ export function trimAfterHandoff<T extends { type: string }>(parts: T[]): T[] {
   }
   return parts;
 }
-
-// An advisor may take the chat while the agent is still streaming a reply.
-// When that happens, the reply must not be saved and its custom_outputs must
-// not be applied: the conversation is no longer the agent's to answer.
-export function shouldPersistAgentReply(handledBy: Chat['handledBy']): boolean {
-  return handledBy === 'ai_agent';
-}

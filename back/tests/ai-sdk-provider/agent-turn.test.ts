@@ -3,7 +3,6 @@ import type { ChatMessage } from '@chat-template/core';
 import {
   buildAgentHistory,
   isPaused,
-  shouldPersistAgentReply,
   trimAfterHandoff,
 } from '../../server/src/agent-turn';
 
@@ -86,20 +85,6 @@ test.describe('buildAgentHistory', () => {
     buildAgentHistory([original]);
 
     expect(original.parts[0]).toMatchObject({ text: 'hola' });
-  });
-});
-
-test.describe('shouldPersistAgentReply', () => {
-  test('persists when the chat is still handled by the agent', () => {
-    expect(shouldPersistAgentReply('ai_agent')).toBe(true);
-  });
-
-  test('discards when an advisor took the chat mid-stream', () => {
-    expect(shouldPersistAgentReply('human_agent')).toBe(false);
-  });
-
-  test('discards when the chat moved to the human queue', () => {
-    expect(shouldPersistAgentReply('human_queue')).toBe(false);
   });
 });
 
