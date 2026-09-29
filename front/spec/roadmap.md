@@ -414,4 +414,4 @@ Shipped en PR #64.
       cronológico, separadas por un divisor con fecha, caso de uso y estado.
 - [x] Las acciones aplican a la conversación más reciente; las anteriores son de solo lectura.
 
-Shipped en PR #<n>.
+Shipped en PR #66.
