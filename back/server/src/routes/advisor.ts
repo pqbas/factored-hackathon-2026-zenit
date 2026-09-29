@@ -292,14 +292,25 @@ advisorRouter.get('/users', requireAdmin, async (_req: Request, res: Response) =
   }
 });
 
+const isTimeZone = (tz: string) => {
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: tz });
+    return /^[A-Za-z0-9_+\-/]+$/.test(tz);
+  } catch {
+    return false;
+  }
+};
+
 const metricsQuerySchema = z.object({
   from: z.iso.date().optional(),
   to: z.iso.date().optional(),
+  tz: z.string().refine(isTimeZone).optional(),
 });
 
 /**
- * GET /api/advisor/metrics?from=YYYY-MM-DD&to=YYYY-MM-DD - Resolution metrics
- * (docs/flujo-atencion.md §6). Admin only. Both dates inclusive, in UTC.
+ * GET /api/advisor/metrics?from=YYYY-MM-DD&to=YYYY-MM-DD&tz=America/Lima -
+ * Resolution metrics (docs/flujo-atencion.md §6). Admin only. from/to are
+ * inclusive days and byDay groups by day, both local to tz (UTC if absent).
  */
 advisorRouter.get(
   '/metrics',
@@ -313,7 +324,7 @@ advisorRouter.get(
     if (!query.success) {
       const error = new ChatSDKError(
         'bad_request:api',
-        'from and to must be YYYY-MM-DD dates.',
+        'from and to must be YYYY-MM-DD dates, and tz an IANA time zone.',
       );
       const response = error.toResponse();
       return res.status(response.status).json(response.json);
