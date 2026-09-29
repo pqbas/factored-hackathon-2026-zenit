@@ -12,7 +12,12 @@ SYSTEM_PROMPT = (Path(__file__).resolve().parents[2] / "prompts" / "system.md").
 
 _LANGUAGE_LINE = {
     "es": "\n\nResponde en español.",
-    "pt": "\n\nEl cliente escribe en portugués: toda tu respuesta va en portugués. Responda em português.",
+    # Earlier replies in the history may be in Spanish (a one-word "olá" gets the country's
+    # language); without saying so the LLM kept answering tool results in Spanish.
+    "pt": (
+        "\n\nEl cliente escribe en portugués: toda tu respuesta va en portugués, aunque tus "
+        "respuestas anteriores de esta conversación estén en español. Responda em português."
+    ),
 }
 
 # Bounds the tool-calling loop below so a misbehaving LLM can't call tools forever.
@@ -53,6 +58,9 @@ async def _respond_with_tools(
     state: AgentState, llm, route: IntentRoute, language_line: str, tools_for
 ) -> dict:
     system_prompt = SYSTEM_PROMPT + "\n\n" + route.instructions + language_line
+    # Repeated after the tool results, right before the reply is written: with it only in the
+    # first system prompt, the Spanish instructions and tool results pulled replies to Spanish.
+    reminder = [SystemMessage(content=language_line.strip())] if language_line else []
 
     customer_id = state["session"]["customer_id"]
     tools = [
@@ -81,10 +89,10 @@ async def _respond_with_tools(
                 content = str(exc)
             messages.append(ToolMessage(content=content, tool_call_id=tool_call["id"]))
         rounds += 1
-        reply = await bound_llm.ainvoke(messages)
+        reply = await bound_llm.ainvoke(messages + reminder)
     if reply.tool_calls:
         # Out of rounds: answer from the tool results so far instead of ending on a tool call.
-        reply = await llm.ainvoke(messages)
+        reply = await llm.ainvoke(messages + reminder)
 
     # Only the final AIMessage is kept in the conversation history; the tool calls and
     # results above stay in `messages` locally and are captured by the MLflow trace.
