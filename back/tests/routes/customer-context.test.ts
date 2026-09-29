@@ -245,4 +245,35 @@ test.describe('Customer context in the console (with database)', () => {
       ).status(),
     ).toBe(403);
   });
+
+  test('/api/history?sessionToken= lists only that demo customer, without its id', async ({
+    adaContext,
+  }) => {
+    const santiago = generateUUID();
+    await postChatMessage(adaContext, santiago, 'demo-mx-1');
+    const javier = generateUUID();
+    await postChatMessage(adaContext, javier, 'demo-co-1');
+
+    const ids = async (query: string) => {
+      const { chats } = await (
+        await adaContext.request.get(`/api/history?limit=100${query}`)
+      ).json();
+      for (const c of chats) expect(c).not.toHaveProperty('customerId');
+      return chats.map((c: any) => c.id);
+    };
+
+    const mx = await ids('&sessionToken=demo-mx-1');
+    expect(mx).toContain(santiago);
+    expect(mx).not.toContain(javier);
+
+    const co = await ids('&sessionToken=demo-co-1');
+    expect(co).toContain(javier);
+    expect(co).not.toContain(santiago);
+
+    const all = await ids('');
+    expect(all).toEqual(expect.arrayContaining([santiago, javier]));
+
+    expect(await ids('&sessionToken=demo-expired')).toEqual([]);
+    expect(await ids('&sessionToken=no-existe')).toEqual([]);
+  });
 });

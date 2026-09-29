@@ -181,6 +181,7 @@ export async function getChats({
   useCase,
   assignedTo,
   status,
+  customerId,
 }: {
   scope: ChatScope;
   limit: number;
@@ -191,6 +192,7 @@ export async function getChats({
   useCase?: string;
   assignedTo?: string;
   status?: 'open' | 'closed';
+  customerId?: string;
 }) {
   const scopeCondition = chatScopeCondition(scope);
 
@@ -220,6 +222,10 @@ export async function getChats({
 
     if (assignedTo) {
       filterConditions.push(eq(chat.assignedTo, assignedTo));
+    }
+
+    if (customerId) {
+      filterConditions.push(eq(chat.customerId, customerId));
     }
 
     if (status === 'open') {
