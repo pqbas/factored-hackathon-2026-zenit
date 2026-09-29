@@ -327,3 +327,24 @@ humano la devuelva.
       turno `paused` no se guarda.
 - [x] Lo guardado se recorta tras la frase de derivación, el vencimiento abre
       un handoff `agent_unavailable` y devolver a David cierra el handoff.
+
+---
+
+## Phase 13: Datos principales del cliente en el contexto (Complete)
+
+**Goal:** que el panel de contexto de la consola empiece con los datos
+principales del cliente, tal como están en el banco.
+
+<!-- Pedido del usuario vía w1:p4, 29-09-26. Spec en
+     spec/29-09-26-perfil-cliente/. -->
+
+- [x] `customer-context` trae `profile`: id, país y ciudad, segmento, estado,
+      fecha de alta, productos activos, contacto y canal preferido.
+- [x] Si el perfil no se puede leer, `profile` viene `null` y el resto del
+      contexto no cambia.
+- [x] Las rutas del cliente nunca traen `profile`.
+- [x] `scripts/uc-grants.sh` reúne los grants del SP, incluido `SELECT` sobre
+      `bank_silver.customers`.
+
+Pendiente: correr `scripts/uc-grants.sh` en el despliegue de back+front
+(espera el OK del usuario).
