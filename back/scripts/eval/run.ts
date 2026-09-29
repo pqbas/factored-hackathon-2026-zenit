@@ -6,13 +6,20 @@
  *   npm run eval                                  # 40 cases x 3 runs
  *   npm run eval -- --case 01,11,37 --runs 1
  *   npm run eval -- --base http://localhost:3300 --classifier llm
+ *   npm run eval -- --set holdout --label antes  # the held-out set
  *
  * Local only: it refuses any --base that isn't localhost or 127.0.0.1. Needs
  * the eval back (scripts/eval/start-eval-back.sh) and the agent on :8001.
  */
 import { execFileSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+} from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { headersFor, sendMessage } from '../simulate-customers';
@@ -46,7 +53,18 @@ const advisor = (name: 'asesor1' | 'asesor2') => ({
   'X-Forwarded-Email': `${name}@example.com`,
 });
 
+// dev: the 40 cases of §7, which the agent gets tuned on. holdout: cases
+// written apart and kept from the agent's team, to measure the "after"
+// without leakage. Each set has its own freeze record.
+export const SETS = {
+  dev: { dir: 'cases', changes: 'case-changes.json' },
+  holdout: { dir: 'cases-holdout', changes: 'case-changes-holdout.json' },
+} as const;
+export type EvalSet = keyof typeof SETS;
+
 export type Args = {
+  set: EvalSet;
+  label: string | null;
   cases: string[] | null;
   runs: number;
   base: string;
@@ -57,6 +75,8 @@ export type Args = {
 
 export function parseArgs(argv: string[]): Args {
   const args: Args = {
+    set: 'dev',
+    label: null,
     cases: null,
     runs: 3,
     base: DEFAULT_BASE,
@@ -76,7 +96,13 @@ export function parseArgs(argv: string[]): Args {
     else if (flag === '--classifier') args.classifier = value();
     else if (flag === '--out') args.out = value();
     else if (flag === '--delay') args.delay = Number(value());
+    else if (flag === '--set') args.set = value() as EvalSet;
+    else if (flag === '--label') args.label = value();
     else throw new Error(`Unknown flag: ${flag}`);
+  }
+  if (!(args.set in SETS)) throw new Error('--set must be dev or holdout');
+  if (args.label !== null && !/^[a-z0-9-]+$/.test(args.label)) {
+    throw new Error('--label must be lowercase letters, digits or dashes');
   }
   if (!Number.isInteger(args.runs) || args.runs < 1) {
     throw new Error('--runs must be a positive integer');
@@ -86,8 +112,26 @@ export function parseArgs(argv: string[]): Args {
   return args;
 }
 
-export function loadCases(only: string[] | null = null): EvalCase[] {
-  const dir = join(HERE, 'cases');
+// <date>[-holdout]-<classifier>[-<label>], e.g. 2026-09-29-holdout-llm-antes.
+export function reportStem(
+  args: Pick<Args, 'set' | 'classifier' | 'label'>,
+  date = new Date().toISOString().slice(0, 10),
+) {
+  return [
+    date,
+    args.set === 'dev' ? null : args.set,
+    args.classifier,
+    args.label,
+  ]
+    .filter(Boolean)
+    .join('-');
+}
+
+export function loadCases(
+  only: string[] | null = null,
+  set: EvalSet = 'dev',
+): EvalCase[] {
+  const dir = join(HERE, SETS[set].dir);
   const cases = readdirSync(dir)
     .filter((file) => file.endsWith('.json'))
     .sort()
@@ -326,9 +370,14 @@ function commit(): string {
 
 export async function main(argv: string[]) {
   const args = parseArgs(argv);
-  const cases = loadCases(args.cases);
+  const cases = loadCases(args.cases, args.set);
+  // A report is never overwritten: the "before" must survive the "after".
+  const stem = join(args.out, reportStem(args));
+  if (existsSync(`${stem}.json`)) {
+    throw new Error(`${stem}.json exists: pass another --label`);
+  }
   console.log(
-    `Base: ${args.base} · ${cases.length} cases x ${args.runs} runs · classifier ${args.classifier}`,
+    `Base: ${args.base} · set ${args.set} · ${cases.length} cases x ${args.runs} runs · classifier ${args.classifier}`,
   );
 
   const results: RunResult[] = [];
@@ -402,13 +451,14 @@ export async function main(argv: string[]) {
     classifier: first((t) => t.classifier),
     model: first((t) => t.model),
     promptVersion: first((t) => t.promptVersion),
+    set: args.set,
+    label: args.label,
     caseChanges: caseChangesSchema.parse(
-      JSON.parse(readFileSync(join(HERE, 'case-changes.json'), 'utf8')),
+      JSON.parse(readFileSync(join(HERE, SETS[args.set].changes), 'utf8')),
     ),
   });
 
   mkdirSync(args.out, { recursive: true });
-  const stem = join(args.out, `${report.meta.date}-${args.classifier}`);
   writeFileSync(`${stem}.json`, `${JSON.stringify(report, null, 2)}\n`);
   writeFileSync(`${stem}.md`, toMarkdown(report));
   console.log(`\nReport: ${stem}.json and ${stem}.md`);

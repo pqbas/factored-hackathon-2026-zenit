@@ -477,6 +477,8 @@ const META = {
   classifier: 'llm',
   model: 'm',
   promptVersion: 'v1',
+  set: 'dev' as const,
+  label: null,
   caseChanges: { frozenAt: 'abc', changes: [] },
 };
 

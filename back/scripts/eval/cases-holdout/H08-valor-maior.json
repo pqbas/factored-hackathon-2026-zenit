@@ -1,0 +1,38 @@
+{
+  "id": "H08",
+  "language": "pt",
+  "group": "reclamo-cargo",
+  "customer": {
+    "token": "demo-mx-5",
+    "user": 12,
+    "segment": "Premium",
+    "name": "Natalia"
+  },
+  "steps": [
+    {
+      "say": "cobraram um valor maior do que o combinado"
+    },
+    {
+      "say": "no cartão final 2920, o da Tienda Don José de 79.04 de 25 de março"
+    },
+    {
+      "say": "eu paguei só 39"
+    },
+    {
+      "say": "sim, confirmo"
+    }
+  ],
+  "expected": {
+    "firstIntent": "COMPLAINT",
+    "outcome": "D",
+    "reason": "complaint",
+    "handoffFacts": [
+      "card_last4",
+      "transaction_date",
+      "merchant",
+      "amount",
+      "complaint_type",
+      "description"
+    ]
+  }
+}

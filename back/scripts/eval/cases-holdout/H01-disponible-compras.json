@@ -1,0 +1,21 @@
+{
+  "id": "H01",
+  "language": "es",
+  "group": "consultas",
+  "customer": {
+    "token": "demo-mx-4",
+    "user": 8,
+    "segment": "Plus",
+    "name": "Victoria"
+  },
+  "steps": [
+    {
+      "say": "me puedes decir cuánto tengo disponible para compras en mi tarjeta?"
+    }
+  ],
+  "expected": {
+    "firstIntent": "GENERAL_INQUIRY",
+    "outcome": "R",
+    "mustMatch": ["3920", "1670"]
+  }
+}

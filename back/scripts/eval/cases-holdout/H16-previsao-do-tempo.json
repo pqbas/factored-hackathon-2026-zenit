@@ -1,0 +1,22 @@
+{
+  "id": "H16",
+  "language": "pt",
+  "group": "ambiguos-fuera-de-alcance",
+  "customer": {
+    "token": "demo-ar-3",
+    "user": 10,
+    "segment": "Basic",
+    "name": "Antonio"
+  },
+  "steps": [
+    {
+      "say": "qual é a previsão do tempo pra amanhã?"
+    }
+  ],
+  "expected": {
+    "firstIntent": "OUT_OF_SCOPE",
+    "outcome": "A",
+    "mustMatch": ["Tenho estas opções|Não posso ajudar"],
+    "mustNotMatch": ["Tengo estas opciones"]
+  }
+}

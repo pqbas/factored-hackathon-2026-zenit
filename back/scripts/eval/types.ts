@@ -25,8 +25,8 @@ const regexSource = z.string().refine((source) => {
 
 export const evalCaseSchema = z
   .object({
-    // "01".."40", "L1", "L2".
-    id: z.string().regex(/^(\d{2}|L\d)$/),
+    // "01".."40", "L1", "L2"; the held-out set "H01".."H20".
+    id: z.string().regex(/^(\d{2}|L\d|H\d{2})$/),
     language: z.enum(['es', 'pt', 'mixed', 'en']),
     group: z.string().min(1),
     customer: z

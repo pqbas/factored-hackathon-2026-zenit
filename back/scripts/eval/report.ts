@@ -66,6 +66,8 @@ export type ReportMeta = {
   classifier: string | null;
   model: string | null;
   promptVersion: string | null;
+  set: 'dev' | 'holdout';
+  label: string | null;
   caseChanges: CaseChanges;
 };
 
@@ -324,7 +326,7 @@ export function toMarkdown(report: Report): string {
   const add = (...l: string[]) => lines.push(...l);
 
   add(
-    `# Evaluación de David (${meta.date}, clasificador ${meta.classifier ?? meta.classifierRequested})`,
+    `# Evaluación de David (${meta.date}, set ${meta.set}${meta.label ? ` · ${meta.label}` : ''}, clasificador ${meta.classifier ?? meta.classifierRequested})`,
     '',
     `> ${meta.note}`,
     '',

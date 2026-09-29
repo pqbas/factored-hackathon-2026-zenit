@@ -1,0 +1,22 @@
+{
+  "id": "H04",
+  "language": "pt",
+  "group": "consultas",
+  "customer": {
+    "token": "demo-mx-5",
+    "user": 12,
+    "segment": "Premium",
+    "name": "Natalia"
+  },
+  "steps": [
+    {
+      "say": "quanto eu devo no cartão?"
+    }
+  ],
+  "expected": {
+    "firstIntent": "GENERAL_INQUIRY",
+    "outcome": "R",
+    "mustMatch": ["3788", "2920"],
+    "mustNotMatch": ["Tengo estas opciones|\\btienes\\b"]
+  }
+}

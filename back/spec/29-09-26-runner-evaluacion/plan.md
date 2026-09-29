@@ -262,3 +262,22 @@
     En `tests/api-mocking/api-mock-handlers.ts`, sumar la salida `usage` al
     marcador `[agent-outputs:X]`. Ampliar `metrics.test.ts` para que los
     campos viejos no cambien.
+
+---
+
+## Anexo: set held-out
+
+25. `back/scripts/eval/cases-holdout/H01…H20-*.json`, con datos del
+    warehouse de los 13 clientes (otras tarjetas, comercios y montos).
+26. `back/scripts/eval/run.ts`: `SETS` (`dev`, `holdout`), flags `--set` y
+    `--label`, `reportStem` (`<fecha>[-holdout]-<clasificador>[-<label>]`) y
+    rechazo si el reporte ya existe. `types.ts` acepta ids `H\d{2}`.
+27. `back/scripts/eval/compare.ts` (`npm run eval:compare`):
+    `compareToMarkdown` con las columnas dev antes/después y holdout
+    antes/después.
+28. `back/scripts/eval/case-changes-holdout.json`, con el hash del commit que
+    congela el set.
+29. Tests en `back/tests/ai-sdk-provider/eval-holdout.test.ts`: 20 casos y
+    su mezcla, ningún mensaje repetido de los 40 ni de los escenarios, el
+    registro de cambios, `--set`/`--label`/`reportStem` y
+    `compareToMarkdown`.
