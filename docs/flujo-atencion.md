@@ -22,88 +22,120 @@ demás describe cómo funciona hoy.
 
 ## 2. Etapas de la conversación
 
+Cada etapa del diagrama tiene una sección con el mismo nombre y número, y cada
+sección sigue el mismo formato: **Entra desde**, **Pasos** y **Sale a**.
+
 ```mermaid
 flowchart TD
-    S["Etapa 1 · Saludo"] --> P["Etapa 2 · Menú de opciones"]
-    P --> A{"Etapa 3 · El cliente elige"}
-    A -->|A · Tarjeta de crédito| TC["3.A Tarjeta de crédito"]
-    A -->|B · Cuentas de ahorro| CA["3.B Cuentas de ahorro"]
-    A -->|C · Reclamos| R["3.C Reclamo por un cargo"]
-    A -->|D · Más opciones| D{"3.D Más opciones"}
-    D -->|D1| X["Cancelar un producto"]
-    D -->|D2| E["Estado de un reclamo"]
-    E -->|solo consulta| M
-    TC --> M["Etapa 6 · ¿Algo más?"]
-    CA --> M
-    R --> REC["Etapa 4 · Recolección de información"]
-    X --> REC
-    E -->|necesita algo más| REC
-    REC --> DV["Etapa 5 · Derivación a un asesor"]
-    M -->|sí| A
-    M -->|no| F["Etapa 7 · Cierre"]
+    E1["Etapa 1 · Saludo"] --> E2["Etapa 2 · Menú de opciones"]
+    E2 --> E3{"Etapa 3 · Atención de la opción elegida"}
+    E3 -->|A| OA["3.A Tarjeta de crédito"]
+    E3 -->|B| OB["3.B Cuentas de ahorro"]
+    E3 -->|C| OC["3.C Reclamo por un cargo"]
+    E3 -->|D1| OD1["3.D1 Cancelar un producto"]
+    E3 -->|D2| OD2["3.D2 Estado de un reclamo"]
+    OA --> E6["Etapa 6 · ¿Algo más?"]
+    OB --> E6
+    OD2 -->|solo quería saber el estado| E6
+    OC --> E4["Etapa 4 · Recolección de información"]
+    OD1 --> E4
+    OD2 -->|necesita algo más o no se identifica| E4
+    E4 -->|el cliente confirma| E5["Etapa 5 · Derivación a un asesor"]
+    E4 -->|el cliente cancela| E6
+    E6 -->|pide otra cosa| E3
+    E6 -->|no necesita nada más| E7["Etapa 7 · Cierre"]
 ```
 
 El cliente puede saltar etapas: si su primer mensaje ya dice qué quiere (por
-ejemplo, "¿cuál es mi saldo?"), David va directo a esa opción, sin saludo ni
-menú.
+ejemplo, "¿cuál es mi saldo?"), la conversación empieza directo en la etapa 3.
+Las reglas del §3 se aplican en cualquier etapa.
 
 ### Etapa 1 · Saludo
 
-**Cuándo:** el cliente solo saluda ("hola", "buenas tardes", "olá").
+**Entra desde:** el primer mensaje del cliente, cuando solo saluda ("hola",
+"buenas tardes", "olá").
 
-1. David saluda y se presenta:
+**Pasos:**
+
+1. David elige el idioma: el del mensaje (español o portugués) o, si no se puede
+   saber, el del país del cliente (Brasil, portugués; el resto, español).
+2. Saluda y se presenta:
 
    ```text
    ¡Hola! Soy David, tu asistente virtual del banco.
    ```
 
-2. Pasa a la etapa 2.
+**Sale a:** etapa 2.
 
-David responde en el idioma del cliente: español o portugués. Si no se puede
-saber por el mensaje, usa el del país del cliente: Brasil, portugués; el resto,
-español.
+### Etapa 2 · Menú de opciones
 
-### Etapa 2 · Menú de opciones (nuevo formato)
+**Entra desde:** la etapa 1, o cuando el cliente escribe "menú" en cualquier
+momento, o cuando un mensaje no corresponde a ninguna opción (§3, regla 6).
 
-David muestra el menú organizado por producto:
+**Pasos:**
 
-```text
-Tengo estas opciones para ayudarte:
+1. David muestra el menú organizado por producto:
 
-A) Tarjeta de crédito: saldo, límite, cupo disponible y movimientos
-B) Cuentas de ahorro: saldo y movimientos
-C) Reclamos: un cargo que no reconoces, un cobro duplicado o un monto distinto
-D) Más opciones: cancelar un producto, estado de un reclamo
+   ```text
+   Tengo estas opciones para ayudarte:
 
-Escribe la letra de tu elección o cuéntame tu consulta.
-```
+   A) Tarjeta de crédito: saldo, límite, cupo disponible y movimientos
+   B) Cuentas de ahorro: saldo y movimientos
+   C) Reclamos: un cargo que no reconoces, un cobro duplicado o un monto distinto
+   D) Más opciones: cancelar un producto, estado de un reclamo
 
-- El cliente puede elegir por letra o con sus palabras.
-- Si escribe "menú" en cualquier momento, David vuelve a mostrarlo.
+   Escribe la letra de tu elección o cuéntame tu consulta.
+   ```
+
+2. Espera la elección, por letra o con sus palabras.
+
+**Sale a:** etapa 3, con la opción elegida.
 
 ### Etapa 3 · Atención de la opción elegida
 
+**Entra desde:** la etapa 2, la etapa 6, o directo desde el primer mensaje.
+
+**Pasos:** David identifica la opción y sigue los pasos de esa opción (3.A a
+3.D2).
+
+**Sale a:** etapa 6 (opciones que David resuelve) o etapa 4 (opciones que van a
+una persona).
+
 #### 3.A Tarjeta de crédito
 
-David resuelve solo, con los datos reales del banco. No deriva.
+**Entra desde:** etapa 3, opción A. David resuelve solo, con los datos reales
+del banco.
 
-| Paso | Qué hace David                                                                                                                                                                                             |
-| ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1    | Consulta las tarjetas activas del cliente (`get_products`). Si no tiene ninguna: `no tienes una tarjeta de crédito activa`.                                                                                |
-| 2    | Si el cliente no dijo qué quiere, le ofrece: 1) saldo, límite y cupo, 2) movimientos.                                                                                                                      |
-| 3a   | **Saldo, límite y cupo:** por cada tarjeta, los últimos 4 dígitos, el saldo, el límite y el cupo disponible, aunque pregunte solo por uno de ellos.                                                        |
-| 3b   | **Movimientos:** si tiene más de una tarjeta y no dijo cuál, pregunta cuál. Consulta `list_transactions` con esos últimos 4 dígitos y lista los últimos 10: fecha, comercio, monto con su moneda y estado. |
-| 4    | Ofrece seguir (etapa 6).                                                                                                                                                                                   |
+**Pasos:**
+
+1. Consulta las tarjetas activas del cliente (`get_products`). Si no tiene
+   ninguna, responde `No tienes una tarjeta de crédito activa.`
+2. Si el cliente no dijo qué quiere, le ofrece: 1) saldo, límite y cupo, 2)
+   movimientos.
+3. Según lo que pidió:
+   - **Saldo, límite y cupo:** por cada tarjeta, los últimos 4 dígitos, el
+     saldo, el límite y el cupo disponible, aunque pregunte solo por uno de
+     ellos.
+   - **Movimientos:** si tiene más de una tarjeta y no dijo cuál, pregunta cuál.
+     Consulta `list_transactions` con esos últimos 4 dígitos y lista los
+     últimos 10: fecha, comercio, monto con su moneda y estado.
+
+**Sale a:** etapa 6.
 
 #### 3.B Cuentas de ahorro
 
-| Paso | Qué hace David                                                                                                           |
-| ---- | ------------------------------------------------------------------------------------------------------------------------ |
-| 1    | Consulta las cuentas activas del cliente (`get_products`). Si no tiene ninguna: `no tienes una cuenta de ahorro activa`. |
-| 2    | Si el cliente no dijo qué quiere, le ofrece: 1) saldo, 2) movimientos.                                                   |
-| 3a   | **Saldo:** por cada cuenta, los últimos 4 dígitos y el saldo.                                                            |
-| 3b   | **Movimientos:** igual que en 3.A, paso 3b.                                                                              |
-| 4    | Ofrece seguir (etapa 6).                                                                                                 |
+**Entra desde:** etapa 3, opción B. David resuelve solo.
+
+**Pasos:**
+
+1. Consulta las cuentas activas del cliente (`get_products`). Si no tiene
+   ninguna, responde `No tienes una cuenta de ahorro activa.`
+2. Si el cliente no dijo qué quiere, le ofrece: 1) saldo, 2) movimientos.
+3. Según lo que pidió:
+   - **Saldo:** por cada cuenta, los últimos 4 dígitos y el saldo.
+   - **Movimientos:** igual que en 3.A, paso 3.
+
+**Sale a:** etapa 6.
 
 **Reglas de 3.A y 3.B:**
 
@@ -124,69 +156,98 @@ David resuelve solo, con los datos reales del banco. No deriva.
 
 #### 3.C Reclamo por un cargo (nuevo)
 
-David no resuelve el reclamo: recolecta esta ficha en la **etapa 4** y lo deriva
-con motivo `complaint`.
+**Entra desde:** etapa 3, opción C. David no resuelve el reclamo: recolecta la
+ficha y lo deriva.
 
-| Dato        | Pregunta de David                                                         | Cómo lo valida                                                                                                                                                                           |
-| ----------- | ------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Tarjeta     | ¿De qué tarjeta es el cargo?                                              | Los últimos 4 dígitos tienen que ser de una tarjeta activa del cliente (`get_products`). Si tiene una sola, la propone.                                                                  |
-| Cargo       | ¿Cuál es el cargo?                                                        | Le muestra los últimos movimientos de esa tarjeta (`list_transactions`) y el cliente elige uno, o lo describe por comercio, monto o fecha. El cargo tiene que estar en esos movimientos. |
-| Tipo        | ¿Qué pasó? No lo reconozco / me cobraron dos veces / el monto es distinto | Una de las tres opciones.                                                                                                                                                                |
-| Descripción | Cuéntame brevemente lo que pasó                                           | Texto libre del cliente.                                                                                                                                                                 |
+**Pasos:**
 
-#### 3.D Más opciones
+1. David toma esta ficha y pasa a la etapa 4 con motivo `complaint`.
 
-##### D1 · Cancelar un producto (nuevo)
+| Dato | Pregunta de David | Cómo lo valida |
+| --- | --- | --- |
+| Tarjeta | ¿De qué tarjeta es el cargo? | Los últimos 4 dígitos tienen que ser de una tarjeta activa del cliente (`get_products`). Si tiene una sola, la propone. |
+| Cargo | ¿Cuál es el cargo? | Le muestra los últimos movimientos de esa tarjeta (`list_transactions`) y el cliente elige uno, o lo describe por comercio, monto o fecha. El cargo tiene que estar en esos movimientos. |
+| Tipo | ¿Qué pasó? No lo reconozco / me cobraron dos veces / el monto es distinto | Una de las tres opciones. |
+| Descripción | Cuéntame brevemente lo que pasó | Texto libre del cliente. |
 
-David no cancela ni intenta retener al cliente, y no ofrece nada a cambio:
-aplicar las políticas de retención (beneficios, cambio de producto, etc.) le
-corresponde al asesor. David recolecta esta ficha en la **etapa 4** y deriva con
-motivo `retention`.
+**Sale a:** etapa 4.
 
-| Dato     | Pregunta de David               | Cómo lo valida                                                                                              |
-| -------- | ------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+#### 3.D1 Cancelar un producto (nuevo)
+
+**Entra desde:** etapa 3, opción D1. David no cancela ni intenta retener al
+cliente, y no ofrece nada a cambio: aplicar las políticas de retención
+(beneficios, cambio de producto, etc.) le corresponde al asesor.
+
+**Pasos:**
+
+1. David toma esta ficha y pasa a la etapa 4 con motivo `retention`.
+
+| Dato | Pregunta de David | Cómo lo valida |
+| --- | --- | --- |
 | Producto | ¿Qué producto quieres cancelar? | Tipo y últimos 4 dígitos de un producto activo del cliente (`get_products`). Si tiene uno solo, lo propone. |
-| Motivo   | ¿Por qué quieres cancelarlo?    | Texto libre del cliente.                                                                                    |
+| Motivo | ¿Por qué quieres cancelarlo? | Texto libre del cliente. |
 
-##### D2 · Estado de un reclamo (nuevo)
+**Sale a:** etapa 4.
 
-| Paso | Qué hace David                                                                                                                                                                                                                       |
-| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 1    | **Usa lo que el banco ya sabe.** El back le pasa los reclamos anteriores del cliente, es decir, las conversaciones derivadas con motivo `complaint`: fecha, tarjeta, comercio, monto y estado (sin atender, en atención o resuelto). |
-| 2    | Si hay un solo reclamo, lo propone (`¿Es el reclamo por el cargo de Uber de $12.90 del 27/09?`). Si hay varios, los lista para que elija. Si no hay ninguno, o el cliente habla de otro, pasa a la etapa 4 con la ficha de abajo.     |
-| 3    | Le dice al cliente el estado que conoce el banco: `Tu reclamo está en la cola de un asesor`, `Un asesor lo está atendiendo` o `Tu reclamo figura como resuelto`.                                                                     |
-| 4    | Si el cliente necesita algo más sobre ese reclamo (por ejemplo, un plazo o una respuesta), pasa a la etapa 4 con la ficha de abajo y deriva con motivo `case_status`. Si no, pasa a la etapa 6.                                      |
+#### 3.D2 Estado de un reclamo (nuevo)
 
-Ficha para la etapa 4:
+**Entra desde:** etapa 3, opción D2.
 
-| Dato         | Pregunta de David                                                        | Cómo lo valida                                                                                                                     |
-| ------------ | ------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
-| Reclamo      | ¿De qué reclamo se trata? (tarjeta, fecha aproximada y comercio o monto) | Si coincide con un reclamo que le pasó el back, lo toma de ahí. Si no, el cargo tiene que estar en los movimientos de esa tarjeta. |
-| Qué necesita | ¿Qué necesitas saber de tu reclamo?                                      | Texto libre del cliente.                                                                                                           |
+**Pasos:**
 
-Como el agente no guarda estado, "lo que el banco ya sabe" se lo manda el back
-en cada request, según [`limites-agente-back.md`](limites-agente-back.md).
+1. **Usa lo que el banco ya sabe.** El back le pasa los reclamos anteriores del
+   cliente, es decir, las conversaciones derivadas con motivo `complaint`:
+   fecha, tarjeta, comercio, monto y estado (sin atender, en atención o
+   resuelto). Como el agente no guarda estado, el back se los manda en cada
+   request, según [`limites-agente-back.md`](limites-agente-back.md).
+2. Si hay un solo reclamo, lo propone. Si hay varios, los lista para que elija.
+
+   ```text
+   ¿Es el reclamo por el cargo de Uber de $12.90 del 27/09?
+   ```
+
+   Si no hay ninguno, o el cliente habla de otro, pasa a la etapa 4 con la
+   ficha de abajo.
+3. Le dice al cliente el estado que conoce el banco, uno de estos:
+
+   ```text
+   Tu reclamo está en la cola de un asesor.
+   Un asesor está atendiendo tu reclamo.
+   Tu reclamo figura como resuelto.
+   ```
+
+4. Pregunta si necesita algo más sobre ese reclamo, por ejemplo un plazo o una
+   respuesta.
+
+| Dato | Pregunta de David | Cómo lo valida |
+| --- | --- | --- |
+| Reclamo | ¿De qué reclamo se trata? (tarjeta, fecha aproximada y comercio o monto) | Si coincide con un reclamo que le pasó el back, lo toma de ahí. Si no, el cargo tiene que estar en los movimientos de esa tarjeta. |
+| Qué necesita | ¿Qué necesitas saber de tu reclamo? | Texto libre del cliente. |
+
+**Sale a:** etapa 6 si solo quería saber el estado; etapa 4 con motivo
+`case_status` si necesita algo más o si el reclamo no se pudo identificar.
 
 ### Etapa 4 · Recolección de información (nuevo)
 
-**Cuándo:** el cliente eligió una operación que requiere una persona (C o D),
-por letra o con sus palabras.
+**Entra desde:** 3.C, 3.D1 o 3.D2, con la ficha de esa opción.
+
+**Pasos:** los números coinciden con el diagrama.
 
 ```mermaid
 flowchart TD
-    I["1 · Identificar la operación y su ficha"] --> L["2 · Leer la conversación y marcar los datos ya dados"]
-    L --> V["3 · Verificar esos datos con el banco"]
-    V --> Q{"¿Falta algún dato?"}
-    Q -->|sí| P["4 · Preguntar el dato que falta"]
-    P --> R["5 · Verificar la respuesta"]
-    R -->|no coincide| P
-    R -->|ok| Q
-    Q -->|no| C["6 · Mostrar el resumen y pedir confirmación"]
-    C -->|corrige un dato| P
-    C -->|confirma| D["Etapa 5 · Derivación"]
+    P1["1 · Identificar la operación y su ficha"] --> P2["2 · Leer la conversación y marcar los datos ya dados"]
+    P2 --> P3["3 · Verificar esos datos con el banco"]
+    P3 --> Q{"¿Falta algún dato?"}
+    Q -->|sí| P4["4 · Preguntar el dato que falta"]
+    P4 --> P5["5 · Verificar la respuesta"]
+    P5 -->|no coincide| P4
+    P5 -->|coincide| Q
+    Q -->|no| P6["6 · Mostrar el resumen y pedir confirmación"]
+    P6 -->|corrige un dato| P4
+    P6 -->|confirma| E5["Etapa 5 · Derivación a un asesor"]
 ```
 
-1. **Identificar la operación** y su ficha de datos (3.C, D1 o D2).
+1. **Identificar la operación** y su ficha (3.C, 3.D1 o 3.D2).
 2. **Leer toda la conversación** y marcar los datos de la ficha que el cliente
    ya dio. Por ejemplo, en este mensaje ya están la tarjeta, el comercio y el
    tipo:
@@ -200,26 +261,31 @@ flowchart TD
 4. **Preguntar el primer dato que falta**, uno por vez. Cuando hay opciones
    reales, las muestra: sus tarjetas activas o sus últimos movimientos.
 5. **Verificar la respuesta.** Si no coincide (la tarjeta no es suya, el cargo
-   no aparece), David lo dice y vuelve a preguntar. Si coincide, sigue con el
-   próximo dato.
-6. Con la ficha completa, **muestra el resumen** y pide confirmación. Si el
-   cliente corrige un dato, vuelve al paso 4 con ese dato. Si confirma, pasa a
-   la etapa 5.
+   no aparece), David lo dice y vuelve al paso 4. Si coincide, vuelve a revisar
+   si falta algún dato.
+6. **Mostrar el resumen** y pedir confirmación. Si el cliente corrige un dato,
+   vuelve al paso 4 con ese dato.
 
-Reglas de la etapa:
+Mientras dura la etapa:
 
 - El agente no guarda estado: en cada turno relee la conversación para saber qué
   operación está en curso y qué datos ya tiene.
-- Si en el medio el cliente pregunta algo que David resuelve (por ejemplo, su
-  saldo), David responde y retoma la pregunta pendiente.
-- Si el cliente dice "cancelar" u "olvídalo", David descarta la recolección, no
-  deriva y responde:
+- Si el cliente pregunta algo que David resuelve (por ejemplo, su saldo), David
+  responde y retoma la pregunta pendiente.
+- Si el cliente dice "cancelar" u "olvídalo", David descarta la recolección y no
+  deriva:
 
   ```text
   Listo, lo dejamos ahí. Si necesitas algo más, escríbeme.
   ```
 
+**Sale a:** etapa 5 si el cliente confirma; etapa 6 si cancela.
+
 ### Etapa 5 · Derivación a un asesor (nuevo)
+
+**Entra desde:** etapa 4, con la ficha confirmada.
+
+**Pasos:**
 
 1. David le dice al cliente, en su idioma:
 
@@ -232,31 +298,43 @@ Reglas de la etapa:
    - `summary`: 2-3 líneas para el asesor con qué pide el cliente y qué quedó
      verificado. Puede venir vacío si falla la generación; el caso igual se
      deriva.
-   - `facts.verified_data`: la ficha confirmada en la etapa 4. Las tarjetas van
-     solo con los últimos 4 dígitos y nunca se incluyen datos sensibles.
+   - `facts.verified_data`: la ficha confirmada. Las tarjetas van solo con los
+     últimos 4 dígitos y nunca se incluyen datos sensibles.
 3. El back pasa la conversación a la cola humana (`human_queue`). Aparece en la
    Bandeja como **Sin atender**, agrupada por su caso de uso.
-4. Desde ese momento David no responde. Sus mensajes le llegan al asesor (§4)
-   y el chat del cliente muestra:
+4. David deja de responder. Los mensajes del cliente le llegan al asesor y el
+   chat del cliente muestra:
 
    ```text
    Te pasamos con un asesor…
    ```
 
+**Sale a:** la atención del asesor (§4).
+
 ### Etapa 6 · ¿Algo más?
 
-1. Después de resolver una consulta, David ofrece seguir.
-2. Si el cliente pide otra cosa, vuelve a la etapa 3.
-3. Si dice que no, pasa a la etapa 7.
+**Entra desde:** 3.A, 3.B, 3.D2 (solo el estado) o la etapa 4 cancelada.
+
+**Pasos:**
+
+1. David ofrece seguir, por ejemplo, ver los movimientos de una tarjeta o
+   volver al menú.
+
+**Sale a:** etapa 3 si el cliente pide otra cosa; etapa 7 si no necesita nada
+más.
 
 ### Etapa 7 · Cierre
 
-**Cuándo:** el cliente se despide ("gracias, eso es todo", "adiós", "tchau").
+**Entra desde:** etapa 6, o cualquier mensaje de despedida ("gracias, eso es
+todo", "adiós", "tchau").
+
+**Pasos:**
 
 1. David se despide con cordialidad.
 2. La conversación pasa a **Resueltas**.
-3. Si el cliente vuelve a escribir, la conversación se reabre y empieza de nuevo
-   en la etapa que corresponda.
+
+**Sale a:** fin. Si el cliente vuelve a escribir, la conversación se reabre y
+empieza en la etapa que corresponda.
 
 ## 3. Reglas que se aplican en cualquier etapa
 
