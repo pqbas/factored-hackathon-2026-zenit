@@ -31,6 +31,7 @@ from src.db.session_repo import resolve_session  # noqa: E402
 from src.graph.build import GRAPH_NODES, build_graph  # noqa: E402
 from src.llm.chat import get_chat_model  # noqa: E402
 from src.llm.jev import JevClient  # noqa: E402
+from src.llm.llm_classifier import LLMClassifier  # noqa: E402
 from src.prompts.advisor import AdvisorPrefixStreamFilter  # noqa: E402
 from src.schemas.routing import load_routing  # noqa: E402
 from src.schemas.turn_outputs import turn_custom_outputs  # noqa: E402
@@ -38,19 +39,30 @@ from src.tools.mcp_client import tools_for  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
+# src/ logs at INFO (the classify source of each turn, the classifier at startup); the root
+# logger has no handler and stays at WARNING, so library INFO logs don't flood the App logs.
+_src_logger = logging.getLogger("src")
+_src_logger.setLevel(logging.INFO)
+_src_handler = logging.StreamHandler()
+_src_handler.setFormatter(logging.Formatter("%(levelname)s %(name)s: %(message)s"))
+_src_logger.addHandler(_src_handler)
+
 mlflow.langchain.autolog()
 
 # Loaded once at import so a bad routing.yaml fails at startup, not on the first request.
 routes = load_routing(settings.routing_path, GRAPH_NODES)
 
-# None when JEV_API_KEY isn't set (local dev without a key): classify then falls back to rules.
+if settings.classifier not in ("jev", "llm"):
+    raise ValueError(f"CLASSIFIER must be jev or llm, got {settings.classifier!r}")
+
+# Only built with CLASSIFIER=jev. None when JEV_API_KEY isn't set (local dev without a key):
+# classify then falls back to rules.
 jev_client = (
     JevClient(api_key=settings.jev_api_key, url=settings.jev_url, timeout=settings.jev_timeout_seconds)
-    if settings.jev_api_key
+    if settings.classifier == "jev" and settings.jev_api_key
     else None
 )
-# Warning level so it shows in the App logs, where INFO from src/ isn't printed.
-logger.warning("Jev configured: %s", jev_client is not None)
+logger.info("Classifier: %s (Jev configured: %s)", settings.classifier, jev_client is not None)
 
 # Keeps the prompt bounded on long chats; the back still stores the whole conversation.
 MAX_HISTORY_MESSAGES = 20
@@ -147,9 +159,13 @@ async def streaming(
         "thread_id": thread_id,
     }
 
+    llm = get_chat_model()
+    classifier = (
+        LLMClassifier(llm, settings.classifier_timeout_seconds) if settings.classifier == "llm" else jev_client
+    )
     graph = build_graph(
-        get_chat_model(),
-        jev_client,
+        llm,
+        classifier,
         routes,
         settings.guardrail_threshold,
         settings.intent_threshold,

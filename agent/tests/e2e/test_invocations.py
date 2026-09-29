@@ -425,3 +425,41 @@ def test_the_stream_carries_custom_outputs_on_its_last_output_item_done(client, 
     done = [event for event in events if event.get("type") == "response.output_item.done"]
     assert done[-1]["custom_outputs"]["intent"] == "GREETING"
     assert all(not event.get("custom_outputs") for event in done[:-1])
+
+
+class StructuredChatModel(BindableChatModel):
+    """The chat model with with_structured_output, for CLASSIFIER=llm: the classification
+    call gets a fixed GENERAL_INQUIRY answer, and the reply the fixed text."""
+
+    def with_structured_output(self, schema):
+        chat = self
+
+        class _Structured:
+            async def ainvoke(self, messages):
+                return schema(guardrail="OK", guardrail_probability=0.95, language="es",
+                              intent="GENERAL_INQUIRY", intent_confidence=0.9, sentiment="neutral")
+
+        return _Structured()
+
+
+def test_classifier_llm_classifies_without_calling_jev(client, monkeypatch):
+    import dataclasses
+
+    def jev_must_not_be_called(request):
+        raise AssertionError("CLASSIFIER=llm must not call Jev")
+
+    monkeypatch.setattr(main, "settings", dataclasses.replace(main.settings, classifier="llm"))
+    monkeypatch.setattr(main, "get_chat_model", lambda: StructuredChatModel(FAKE_LLM_TEXT))
+    monkeypatch.setattr(
+        main, "jev_client",
+        JevClient(api_key="test-key", url="https://api.typesafe.ai/v1/systemone", timeout=2.0,
+                  transport=httpx.MockTransport(jev_must_not_be_called)),
+    )
+
+    response = _invoke(client, "¿cuál es el saldo de mi tarjeta?", thread_id="e2e-llm-classifier")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["custom_outputs"]["intent"] == "GENERAL_INQUIRY"
+    assert body["custom_outputs"]["use_case"] == "GENERAL_INQUIRY"
+    assert _output_text(body) == FAKE_LLM_TEXT

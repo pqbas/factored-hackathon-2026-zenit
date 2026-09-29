@@ -7,9 +7,13 @@ from langchain_core.messages import AIMessage, HumanMessage
 
 from src.graph.state import AgentState
 from src.llm.fallback import check_guardrail_rules, detect_language, fallback_classify, mask_sensitive
-from src.llm.jev import JevClient, JevUnavailable
 from src.prompts.messages import GUARDRAIL_REPLIES
-from src.schemas.classification import Classification, country_language, reply_language
+from src.schemas.classification import (
+    Classification,
+    ClassifierUnavailable,
+    country_language,
+    reply_language,
+)
 from src.schemas.routing import IntentRoute
 
 logger = logging.getLogger(__name__)
@@ -49,7 +53,7 @@ def _human_messages(messages: list) -> list[HumanMessage]:
 
 async def classify(
     state: AgentState,
-    jev: JevClient | None,
+    classifier,
     routes: list[IntentRoute],
     threshold: float,
 ) -> dict:
@@ -71,18 +75,25 @@ async def classify(
         )
     else:
         masked_text = None
+        # classifier is Jev or the LLM (CLASSIFIER, see src/main.py); either one failing
+        # falls back to the keyword rules.
         try:
-            if jev is None:
-                raise JevUnavailable("jev_client is None")
-            classification = await jev.classify(text, routes)
-        except JevUnavailable as exc:
-            logger.warning("Jev unavailable, classifying with rules: %s", exc)
+            if classifier is None:
+                raise ClassifierUnavailable("classifier is None")
+            classification = await classifier.classify(text, routes)
+        except ClassifierUnavailable as exc:
+            name = type(classifier).__name__ if classifier is not None else "Classifier"
+            logger.warning("%s unavailable, classifying with rules: %s", name, exc)
             classification = fallback_classify(text, [route.intent for route in routes])
+    logger.info(
+        "classify source=%s intent=%s language=%s guardrail=%s",
+        classification.source, classification.intent, classification.language, classification.guardrail,
+    )
 
-    # Only Jev can tell another language apart; the local detector says "other" when it
-    # can't decide, so without Jev an undecided message keeps the conversation's language.
+    # Only Jev and the LLM can tell another language apart; the local detector says "other"
+    # when it can't decide, so with rules an undecided message keeps the conversation's language.
     detected = classification.language
-    if classification.source != "jev" and detected not in ("es", "pt"):
+    if classification.source not in ("jev", "llm") and detected not in ("es", "pt"):
         detected = None
     language = conversation_language(
         detected,

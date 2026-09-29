@@ -15,7 +15,11 @@ GUARDRAIL_CATEGORIES: dict[str, str] = {
 
 SENTIMENT_LEVELS = ["very_negative", "negative", "neutral", "positive"]
 
-Source = Literal["rules", "jev", "fallback"]
+Source = Literal["rules", "jev", "llm", "fallback"]
+
+
+class ClassifierUnavailable(Exception):
+    """The configured classifier (Jev or the LLM) couldn't answer; classify falls back to rules."""
 
 
 def reply_language(language: str | None) -> str:
