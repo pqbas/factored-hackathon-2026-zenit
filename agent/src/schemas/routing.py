@@ -6,6 +6,16 @@ import yaml
 from pydantic import BaseModel, model_validator
 
 
+class GroundingKind(BaseModel):
+    """A kind of account data the customer can ask for, the UC tool that returns it, the words
+    of the customer's message that ask for it, and what a reply that shows it contains."""
+
+    kind: str
+    tool: str
+    asks: list[str] = []
+    shows: str
+
+
 class IntentRoute(BaseModel):
     intent: str
     description: str
@@ -15,6 +25,8 @@ class IntentRoute(BaseModel):
     instructions: str | None = None
     # Set on a route whose operation ends with a human (docs/flujo-atencion.md, etapa 5).
     handoff_reason: str | None = None
+    # Checked after the tool loop: account data in the reply needs the kind's tool to have run.
+    grounding: list[GroundingKind] = []
 
     @model_validator(mode="after")
     def _load_context_needs_schemas_and_instructions(self) -> "IntentRoute":

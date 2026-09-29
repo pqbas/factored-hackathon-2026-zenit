@@ -10,6 +10,15 @@
     - "quiero ver mis últimos movimientos"
   destination: load_context
   schemas: [bank_uc_consultas]
+  grounding:
+    - kind: movements
+      tool: list_transactions
+      asks: ['movimient', 'movimenta', 'compras', 'transaccion', 'transaç']
+      shows: '(?:\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|\d{4}-\d{2}-\d{2}).*(?:\d[.,]\d{2}\b|\d\s?(?:USD|PEN|BRL|EUR)\b)'
+    - kind: balance
+      tool: get_products
+      asks: ['saldo', 'l[ií]mite', 'cupo', 'disponible', 'debo', 'devo']
+      shows: '\d+[.,]\d{2}\b|\b\d{1,3}(?:[.,]\d{3})+\b|(?:\$|S/|R\$)\s?\d|\d\s?(?:USD|PEN|BRL|EUR|soles|d[oó]lares|reais)\b'
   instructions: |
     Atiendes las opciones A (tarjeta de crédito) y B (cuentas de ahorro) del
     menú. Usa get_products para saldos y límites, y list_transactions para los
@@ -113,6 +122,11 @@
   destination: load_context
   schemas: [bank_uc_consultas]
   handoff_reason: case_status
+  grounding:
+    - kind: status
+      tool: get_cases
+      asks: ['reclam', 'caso', 'status', 'estado']
+      shows: '\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|\d{4}-\d{2}-\d{2}|\d[.,]\d{2}\b'
   instructions: |
     Atiendes la opción D2: el estado de un reclamo. Llama a get_cases para ver
     los reclamos reales del cliente. Nunca inventes un estado, un plazo ni una

@@ -12,3 +12,4 @@ class AgentState(TypedDict):
     handoff: dict | None
     confirmation: bool
     paused: bool
+    guard: dict | None
