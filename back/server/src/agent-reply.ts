@@ -11,6 +11,7 @@ import {
   saveMessages,
   updateChatAgentState,
   updateChatLastContextById,
+  openHandoff,
   type DBMessage,
 } from '@chat-template/db';
 import {
@@ -143,6 +144,9 @@ export async function persistAgentReply({
         language: agentOutputs.language,
         handledBy: agentOutputs.handoff ? 'human_queue' : undefined,
       });
+      if (agentOutputs.handoff) {
+        await openHandoff({ chatId, ...agentOutputs.handoff });
+      }
       // The agent said goodbye ("no gracias, eso es todo"): resolved.
       // A new customer message reopens it.
       if (agentOutputs.intent === 'GOODBYE' && !agentOutputs.handoff) {
