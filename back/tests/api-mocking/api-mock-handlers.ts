@@ -413,7 +413,26 @@ export const handlers = [
 
   // Mock the SQL warehouse (Statement Execution API) used by /api/products.
   http.post(/\/api\/2\.0\/sql\/statements$/, async (req) => {
-    const { statement } = (await req.request.json()) as { statement: string };
+    const { statement, parameters } = (await req.request.json()) as {
+      statement: string;
+      parameters?: Array<{ name: string; value: string }>;
+    };
+    // A customer whose profile query fails (e.g. the app lacks the grant on
+    // bank_silver.customers): the warehouse rejects that statement only.
+    if (
+      statement.includes('bank_silver.customers') &&
+      parameters?.some((p) => p.value === 'CLI-PROFILE-FAILS')
+    ) {
+      return HttpResponse.json(
+        {
+          status: {
+            state: 'FAILED',
+            error: { message: 'PERMISSION_DENIED: bank_silver.customers' },
+          },
+        },
+        { status: 403 },
+      );
+    }
     const table = (columns: string[], rows: string[][]) =>
       HttpResponse.json({
         status: { state: 'SUCCEEDED' },

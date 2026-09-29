@@ -51,5 +51,6 @@
    `back/tests/routes/customer-context.test.ts`, el caso de asesor y admin
    espera `profile` con los 8 campos mapeados, `products` desde el mock de
    `get_products`, `customer` sin cambios, y `mobilePhone: null` cuando el
-   mock lo devuelve vacío. Un caso nuevo verifica que `/api/chat/:id`,
+   mock lo devuelve vacío. Otro caso: con un `customerId` cuyo perfil falla
+   en el mock, la respuesta es 200 con `profile: null`. Un caso nuevo verifica que `/api/chat/:id`,
    `/api/history` y `/api/products` no traen `profile`.

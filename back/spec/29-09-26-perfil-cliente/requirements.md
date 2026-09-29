@@ -32,9 +32,12 @@ And it changes in these ways:
    - `preferredChannel` (`customer_360.preferred_channel`, por ejemplo "Phone")
 4. Un campo que viene vacío del banco (por ejemplo, un email en blanco) va
    como `null`, nunca como string vacío.
-5. Las rutas del cliente (`/api/chat/:id`, `/api/history`, `/api/products`)
+5. Si la consulta del perfil falla (falta el grant, el warehouse está caído),
+   `customer-context` responde igual, con `profile: null` y el resto del
+   contexto intacto, y el error queda en el log (revisión de w1:p4).
+6. Las rutas del cliente (`/api/chat/:id`, `/api/history`, `/api/products`)
    nunca devuelven `profile`.
-6. Los datos del perfil se leen en paralelo con las demás consultas del
+7. Los datos del perfil se leen en paralelo con las demás consultas del
    contexto, todas filtradas por el `customer_id` del chat.
 
 ## 2. Decisions
@@ -49,9 +52,10 @@ And it changes in these ways:
 - El contacto va completo, sin enmascarar, porque la ruta es solo de asesores
   y admins, y el asesor lo necesita para contactar al cliente. Los datos son
   del dataset del organizador.
-- `customer_360` y `bank_silver.customers` se leen en una sola consulta con
-  `LEFT JOIN`, y reemplazan a la consulta actual del nombre. `get_products`
-  va en paralelo. Así el contexto no suma viajes al warehouse en serie.
+- `customer_360` y `bank_silver.customers` se leen en una consulta aparte con
+  `LEFT JOIN`, en paralelo con `get_products` y con las demás consultas. El
+  nombre sigue saliendo de la consulta de siempre, así un fallo del perfil
+  (por ejemplo, sin el grant nuevo) no toca ni el nombre ni `/api/products`.
 - El SP de la App necesita `SELECT` sobre `workspace.bank_silver.customers`.
   Queda escrito en un script de grants nuevo (`back/scripts/uc-grants.sh`),
   junto con los grants que hoy solo están en el README, y se aplica recién en

@@ -79,7 +79,7 @@ export async function getCustomerProfile(customerId: string) {
 // customer's own routes never depend on bank_silver.customers.
 async function getCustomerRecord(customerId: string) {
   const [row] = await runStatement(
-    `SELECT c.first_name, c.last_name, c.country, c.city, c.segment, c.customer_status,
+    `SELECT c.country, c.city, c.segment, c.customer_status,
        c.registration_date, c.preferred_channel, s.email, s.mobile_phone
      FROM ${catalog()}.bank_gold.customer_360 c
      LEFT JOIN ${catalog()}.bank_silver.customers s ON s.customer_id = c.customer_id
@@ -87,6 +87,38 @@ async function getCustomerRecord(customerId: string) {
     [{ name: 'customer_id', value: customerId }],
   );
   return row ?? {};
+}
+
+// The profile is secondary to the rest of the context: if it can't be read
+// (a missing grant on bank_silver.customers, the warehouse down), the context
+// still answers, with profile null.
+async function getProfile(customerId: string) {
+  try {
+    const [record, products] = await Promise.all([
+      getCustomerRecord(customerId) as Promise<Row>,
+      getProducts(customerId),
+    ]);
+    return {
+      customerId,
+      country: blankToNull(record.country ?? null),
+      city: blankToNull(record.city ?? null),
+      segment: blankToNull(record.segment ?? null),
+      status: blankToNull(record.customer_status ?? null),
+      customerSince: blankToNull(record.registration_date ?? null),
+      products: products.map(({ productType, last4 }) => ({
+        productType,
+        last4,
+      })),
+      contact: {
+        email: blankToNull(record.email ?? null),
+        mobilePhone: blankToNull(record.mobile_phone ?? null),
+      },
+      preferredChannel: blankToNull(record.preferred_channel ?? null),
+    };
+  } catch (error) {
+    console.error('[customer-context] Profile unavailable for', customerId, error);
+    return null;
+  }
 }
 
 export async function getProducts(customerId: string) {
@@ -129,9 +161,9 @@ const toBoolean = (value: string | null) =>
 // joined by interaction_id), masked: they're free text from past calls.
 export async function getCustomerContext(customerId: string) {
   const parameters = [{ name: 'customer_id', value: customerId }];
-  const [record, products, interactions, cases] = await Promise.all([
-    getCustomerRecord(customerId) as Promise<Row>,
-    getProducts(customerId),
+  const [name, profile, interactions, cases] = await Promise.all([
+    getCustomerProfile(customerId),
+    getProfile(customerId),
     runStatement(
       `WITH recent AS (
          SELECT interaction_id, interaction_date, interaction_type, channel, contact_reason, was_resolved, was_escalated, detected_sentiment
@@ -156,28 +188,8 @@ export async function getCustomerContext(customerId: string) {
   ]);
 
   return {
-    customer: {
-      customerId,
-      firstName: record.first_name ?? null,
-      lastName: record.last_name ?? null,
-    },
-    profile: {
-      customerId,
-      country: blankToNull(record.country ?? null),
-      city: blankToNull(record.city ?? null),
-      segment: blankToNull(record.segment ?? null),
-      status: blankToNull(record.customer_status ?? null),
-      customerSince: blankToNull(record.registration_date ?? null),
-      products: products.map(({ productType, last4 }) => ({
-        productType,
-        last4,
-      })),
-      contact: {
-        email: blankToNull(record.email ?? null),
-        mobilePhone: blankToNull(record.mobile_phone ?? null),
-      },
-      preferredChannel: blankToNull(record.preferred_channel ?? null),
-    },
+    customer: { customerId, ...name },
+    profile,
     interactions: interactions.map((row) => ({
       interactionId: row.interaction_id,
       hasTranscript: row.transcript_id !== null,

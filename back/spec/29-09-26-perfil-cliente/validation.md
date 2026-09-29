@@ -25,6 +25,8 @@ La fase está lista para mergear cuando se cumple todo lo que sigue.
       `segment`, `status`, `customerSince`, `products` (`productType`,
       `last4`), `contact` (`email`, `mobilePhone`) y `preferredChannel`
 - [ ] `customer`, `interactions`, `transcripts` y `cases` no cambian
+- [ ] Si la consulta del perfil falla, `customer-context` responde 200 con
+      `profile: null` y el resto intacto
 - [ ] Un campo vacío del banco llega como `null`, no como string vacío
 - [ ] `/api/chat/:id`, `/api/history` y `/api/products` no traen `profile`
 - [ ] Un cliente sigue recibiendo 403

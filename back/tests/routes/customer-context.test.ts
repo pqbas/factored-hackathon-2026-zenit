@@ -310,4 +310,28 @@ test.describe('Customer context in the console (with database)', () => {
       expect(text).not.toContain('santiago.contreras357@gmail.com');
     }
   });
+
+  test('a failing profile query gives profile null and keeps the rest', async ({
+    babbageContext,
+  }) => {
+    const chatId = generateUUID();
+    await saveChat({
+      id: chatId,
+      userId: `${babbageContext.name}-id`,
+      title: 'Profile fails',
+      visibility: 'private',
+      customerId: 'CLI-PROFILE-FAILS',
+    });
+
+    const response = await babbageContext.request.get(
+      `/api/advisor/conversations/${chatId}/customer-context`,
+    );
+    expect(response.status()).toBe(200);
+    const body = await response.json();
+    expect(body.profile).toBeNull();
+    expect(body.customer.customerId).toBe('CLI-PROFILE-FAILS');
+    expect(body.customer.firstName).toBe('Santiago');
+    expect(body.interactions.length).toBeGreaterThan(0);
+    expect(body.cases.length).toBeGreaterThan(0);
+  });
 });
