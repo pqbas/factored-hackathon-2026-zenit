@@ -61,13 +61,13 @@ desde la pantalla de admin del front.
      - customer: su chat con el asistente y su cuenta (Mis productos).
      - advisor: su chat con el asistente y la consola del asesor (lee, toma,
        responde, devuelve y cierra). No ve Mis productos.
-     - admin: el asistente, Mis productos y Chats en solo lectura: supervisa
-       todas las conversaciones pero no atiende (decisión del usuario,
-       28-09-26, Fase 5b).
-     Rutas: lectura de la consola → advisor o admin; escritura de la consola
-     (take, messages, release) → solo advisor; lista de usuarios de la consola
-     → solo admin. /api/admin/* se eliminó en la Fase 5b (todo vive bajo
-     /api/advisor/*). Rutas de cuenta/productos → customer o admin. -->
+     - admin: el asistente, Mis productos y Chats con todas las acciones del
+       asesor (toma, responde, devuelve y cierra) más la supervisión: ve todas
+       las conversaciones y filtra por cliente (decisión del usuario, 28-09-26,
+       revisa la Fase 5b).
+     Rutas: consola (lectura, take, messages, release) → advisor o admin, con
+     el mismo 409 entre ellos; lista de usuarios de la consola → solo admin.
+     /api/admin/* se eliminó en la Fase 5b (todo vive bajo /api/advisor/*). Rutas de cuenta/productos → customer o admin. -->
 
 Shipped en PR #15.
 
@@ -166,6 +166,8 @@ tomarlas ni responder, y que solo los asesores atiendan.
       admin ve todas las conversaciones, incluidas las que atiende David y las
       cerradas, y filtra por cliente.
 - [x] Tomar, responder y devolver es solo para asesores; el admin recibe 403.
+      Revisado después (decisión del usuario, 28-09-26): el admin también
+      toma, responde y devuelve, con el mismo 409 que entre asesores.
 - [x] Ya no existe tomar una conversación ajena a la fuerza.
 - [x] La vista admin separada desaparece: la lista de clientes para el filtro
       sale de la consola, y las rutas /api/admin se eliminan.
