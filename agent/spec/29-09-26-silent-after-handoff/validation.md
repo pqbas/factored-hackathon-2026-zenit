@@ -32,7 +32,7 @@ This phase can merge when every path is covered by a test and the checks below p
 - [ ] Local :8001, scenario 04 up to the handoff, then another customer message ("¿ya me atienden?") sent straight to the agent → empty stream, `paused: true`
 - [ ] The same conversation with an `[Asesor] Hola, te ayudo con tu reclamo.` message after the handoff and a new customer message → David answers
 - [ ] Scenario 01 (balance) in stream → the answer arrives as one item, with the right figures
-- [ ] w1:p1 confirms that the back accepts the paused turn (no text and `paused: true`) without saving an empty message
+- [x] w1:p1 confirms that the back accepts the paused turn (no text and `paused: true`) without saving an empty message, and sends `custom_inputs.handled_by` (`ai_agent | human_queue | human_agent`) on every call
 - [ ] w1:p6 confirms that "David está escribiendo" shows during the whole wait of a tool turn (balance, ~5-8 s) with no streaming
 
 ## Definition of Done
