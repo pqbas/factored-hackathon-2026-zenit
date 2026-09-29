@@ -2,7 +2,14 @@ from __future__ import annotations
 
 import pytest
 
-from src.llm.fallback import check_guardrail_rules, detect_language, fallback_classify, mask_sensitive
+from src.llm.fallback import (
+    case_status_follow_up,
+    check_guardrail_rules,
+    detect_language,
+    fallback_classify,
+    is_confirmation,
+    mask_sensitive,
+)
 
 INTENTS = ["GENERAL_INQUIRY", "COMPLAINT", "HUMAN_AGENT", "CANCEL", "GREETING", "OUT_OF_SCOPE"]
 
@@ -198,3 +205,60 @@ def test_is_confirmation_is_false_for_another_question_or_text():
     assert not is_confirmation("sí", None)
     assert not is_confirmation("no, la 4930", "¿Confirmas estos datos para pasar tu reclamo a un asesor?")
     assert not is_confirmation("C", "¿Confirmas estos datos para pasar tu reclamo a un asesor?")
+
+
+@pytest.mark.parametrize(
+    "text", ["quanto tenho na poupança?", "quero ver as últimas compras do meu cartão"]
+)
+def test_detect_language_recognizes_the_portuguese_messages_of_the_cases(text):
+    assert detect_language(text) == "pt"
+
+
+@pytest.mark.parametrize("text", ["¿cuánto tengo en mi cuenta?", "quiero ver mis movimientos"])
+def test_detect_language_keeps_spanish_messages_spanish(text):
+    assert detect_language(text) == "es"
+
+
+@pytest.mark.parametrize(
+    "previous",
+    [
+        "Você confirma que sua solicitação sobre a reclamação vai para um atendente?",
+        "¿Tu solicitud sobre el reclamo va a un asesor?",
+        "¿Quieres que pasemos esta consulta a un asesor?",
+    ],
+)
+def test_a_yes_after_a_line_without_the_exact_phrase_is_not_a_confirmation(previous):
+    assert not is_confirmation("sim", previous)
+    assert not is_confirmation("sí, confirmo", previous)
+
+
+@pytest.mark.parametrize(
+    "previous",
+    [
+        "¿Necesitas algo más sobre este reclamo?",
+        "Tienes 3 reclamos.\n\n¿Sobre cuál reclamo quieres saber?",
+        "Não encontro reclamações registradas.\n\nSobre qual cobrança é a sua reclamação? Me diga o cartão.",
+    ],
+)
+def test_case_status_follow_up_is_true_after_a_question_about_the_complaint(previous):
+    assert case_status_follow_up("el del 9 de octubre de 2025", previous)
+    assert case_status_follow_up("necesito que me devuelvan el dinero ya", previous)
+
+
+@pytest.mark.parametrize("text", ["C", "menú", "cancelar"])
+def test_case_status_follow_up_is_false_for_a_menu_letter_menu_or_cancel(text):
+    assert not case_status_follow_up(text, "¿Necesitas algo más sobre este reclamo?")
+
+
+@pytest.mark.parametrize(
+    "previous",
+    [
+        None,
+        "",
+        "Tu reclamo está abierto y en revisión.",
+        "¿Confirmas estos datos para pasar tu consulta a un asesor?",
+        "¿De qué tarjeta es el cargo?",
+    ],
+)
+def test_case_status_follow_up_is_false_without_a_question_about_the_complaint(previous):
+    assert not case_status_follow_up("la 1070", previous)

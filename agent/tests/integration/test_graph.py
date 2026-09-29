@@ -16,6 +16,7 @@ from src.prompts.messages import (
     HUMAN_WITHOUT_TOPIC,
     MENU,
     MORE_OPTIONS,
+    NOT_AVAILABLE,
     OUT_OF_MENU,
     SESSION_REJECTED,
     TOOL_DOWN,
@@ -1115,3 +1116,117 @@ def test_an_advisor_message_after_the_handoff_gets_a_normal_answer():
 
     assert result["paused"] is False
     assert result["messages"][-1].content == "De nada."
+
+
+# --- Evaluation fixes ---------------------------------------------------------------------
+
+class _ExplodingClassifier:
+    async def classify(self, text, routes, context=None):
+        raise AssertionError("the classifier must not be called for this turn")
+
+
+def test_a_follow_up_to_a_status_question_is_case_status_and_never_calls_the_classifier():
+    llm = ScriptedToolLLM([AIMessage(content="Tu reclamo está en proceso.")])
+    get_cases = FakeMCPTool("get_cases", GET_PRODUCTS_SCHEMA, result=[])
+
+    async def tools_for(schema):
+        return [get_cases]
+
+    graph = _build_graph(llm, _ExplodingClassifier(), tools_for=tools_for)
+    history = [
+        {"role": "user", "content": "quiero saber de mi reclamo"},
+        {"role": "assistant", "content": "Tienes 3 reclamos.\n\n¿Sobre cuál reclamo quieres saber?"},
+    ]
+
+    result = _run(graph, "el del 9 de octubre de 2025", history=history)
+
+    assert result["classification"]["intent"] == "CASE_STATUS"
+    assert result["classification"]["source"] == "rules"
+    assert result["messages"][-1].content == "Tu reclamo está en proceso."
+
+
+def test_a_menu_letter_after_a_status_question_still_goes_to_the_menu_rules():
+    history = [
+        {"role": "user", "content": "cómo va mi reclamo?"},
+        {"role": "assistant", "content": "Tu reclamo está en revisión.\n\n¿Necesitas algo más sobre este reclamo?"},
+    ]
+    result = _run(_build_graph(ExplodingLLM(), _ExplodingClassifier()), "menú", history=history)
+    assert result["classification"]["intent"] == "MENU"
+
+
+def test_a_portuguese_message_classified_as_spanish_is_answered_with_the_portuguese_reminder():
+    get_products = FakeMCPTool("get_products", GET_PRODUCTS_SCHEMA, result=_PRODUCTS_RESULT)
+    list_transactions = FakeMCPTool("list_transactions", LIST_TRANSACTIONS_SCHEMA, result=[])
+    llm = ScriptedToolLLM([
+        AIMessage(content="", tool_calls=[{"name": "get_products", "args": {}, "id": "c1"}]),
+        AIMessage(content="Você tem 100."),
+    ])
+    jev = FakeJev(_classification(intent="GENERAL_INQUIRY", language="es"))
+    graph = _build_graph(llm, jev, tools_for=_fake_tools_for(get_products, list_transactions))
+
+    result = _run(graph, "quanto tenho na poupança?")
+
+    assert result["classification"]["language"] == "pt"
+    assert "português" in llm.received[-1].content
+
+
+def test_a_failing_get_products_says_the_fixed_portuguese_text_and_does_not_hand_off():
+    get_products = FakeMCPTool("get_products", GET_PRODUCTS_SCHEMA, error=RuntimeError("down"))
+    list_transactions = FakeMCPTool("list_transactions", LIST_TRANSACTIONS_SCHEMA, result=[])
+    llm = ScriptedToolLLM([AIMessage(content="", tool_calls=[{"name": "get_products", "args": {}, "id": "c1"}])])
+    jev = FakeJev(_classification(intent="GENERAL_INQUIRY", language="pt"))
+    graph = _build_graph(llm, jev, tools_for=_fake_tools_for(get_products, list_transactions))
+
+    result = _run(graph, "saldo do meu cartão, por favor")
+
+    assert result["messages"][-1].content == TOOL_DOWN["pt"]
+    assert result.get("handoff") is None
+
+
+def test_a_commercial_request_gets_not_available_and_the_menu():
+    routes = [*ROUTES, IntentRoute(
+        intent="COMMERCIAL", description="Comercial", examples=["préstamo"], destination="respond"
+    )]
+    jev = FakeJev(_classification(intent="COMMERCIAL"))
+    result = _run(_build_graph(ExplodingLLM(), jev, routes=routes), "quiero un préstamo")
+    assert result["messages"][-1].content == NOT_AVAILABLE["es"] + "\n\n" + MENU["es"]
+
+
+_CARD_AND_SAVINGS_RESULT = [{"type": "text", "text": json.dumps({
+    "columns": ["product_type", "product_number_last4", "currency"],
+    "rows": [["Cuenta Ahorros", "2948", "ARS"], ["Tarjeta Crédito", "2705", "ARS"]],
+})}]
+
+
+def test_cancelling_the_card_with_the_reason_given_summarizes_and_the_yes_hands_off():
+    from src.tools.handoff import PartialRetentionCase
+
+    llm = _CollectingLLM(
+        [PartialRetentionCase(reason="la anualidad es muy cara")],
+        replies=[AIMessage(content="", tool_calls=[{
+            "name": "hand_off_to_advisor", "id": "c1",
+            "args": {"product_last4": "2705", "reason": "la anualidad es muy cara"},
+        }])],
+    )
+    routes = [*ROUTES, IntentRoute(
+        intent="RETENTION", description="Cancelar", examples=["cancelar mi tarjeta"], destination="load_context",
+        schemas=["bank_uc_consultas"], instructions="Recolecta y deriva.", handoff_reason="retention",
+    )]
+    get_products = FakeMCPTool("get_products", GET_PRODUCTS_SCHEMA, result=_CARD_AND_SAVINGS_RESULT)
+    list_transactions = FakeMCPTool("list_transactions", LIST_TRANSACTIONS_SCHEMA, result=[])
+    jev = FakeJev(_classification(intent="RETENTION"))
+    graph = _build_graph(llm, jev, routes=routes, tools_for=_fake_tools_for(get_products, list_transactions))
+
+    text = "quiero cerrar mi tarjeta porque la anualidad es muy cara"
+    first = _run(graph, text)["messages"][-1].content
+    assert first.splitlines()[-1] == "¿Confirmas estos datos para pasar tu solicitud a un asesor?"
+    assert "2705" in first and "2948" not in first
+
+    result = _run(graph, "sí, confirmo", history=[
+        {"role": "user", "content": text}, {"role": "assistant", "content": first},
+    ])
+
+    assert result["messages"][-1].content == HANDOFF_REPLY["es"]
+    verified = result["handoff"]["facts"]["verified_data"]
+    assert result["handoff"]["reason"] == "retention"
+    assert verified["product_last4"] == "2705" and verified["reason"] == "la anualidad es muy cara"

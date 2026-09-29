@@ -284,3 +284,49 @@ def test_the_partial_schemas_have_the_cases_fields_all_optional():
     assert set(PartialRetentionCase.model_fields) == {"product_last4", "reason"}
     with pytest.raises(ValueError):
         PartialComplaintCase(complaint_type="whatever")
+
+
+CARDS_AND_SAVINGS = [
+    {"product_type": "Cuenta Ahorros", "product_number_last4": "2948", "currency": "ARS"},
+    {"product_type": "Cuenta Ahorros", "product_number_last4": "3953", "currency": "ARS"},
+    {"product_type": "Tarjeta Crédito", "product_number_last4": "2705", "currency": "ARS"},
+]
+
+
+def _closing(text, rows):
+    from src.tools.collector import next_step as step
+
+    fields = PartialRetentionCase(reason="la anualidad es muy cara")
+    return step("retention", fields, {"get_products": rows}, "es", [HumanMessage(content=text)])
+
+
+def test_retention_takes_the_only_card_when_the_customer_names_cards():
+    kind, text = _closing("quiero cerrar mi tarjeta porque la anualidad es muy cara", CARDS_AND_SAVINGS)
+    assert kind == "summary"
+    assert "2705" in text and "la anualidad es muy cara" in text
+    assert text.splitlines()[-1] == CONFIRM[("retention", "es")]
+
+
+def test_retention_takes_the_only_savings_account_when_the_customer_names_an_account():
+    rows = [CARDS_AND_SAVINGS[0], CARDS_AND_SAVINGS[2]]
+    kind, text = _closing("cerrar mi cuenta", rows)
+    assert kind == "summary" and "2948" in text
+
+
+def test_retention_lists_only_the_cards_when_there_are_several():
+    rows = [*CARDS_AND_SAVINGS, {"product_type": "Tarjeta Crédito", "product_number_last4": "7788", "currency": "ARS"}]
+    kind, text = _closing("quiero cerrar mi tarjeta", rows)
+    assert kind == "ask"
+    assert "2705" in text and "7788" in text
+    assert "2948" not in text and "3953" not in text
+
+
+def test_retention_lists_all_products_when_the_customer_names_no_kind():
+    kind, text = _closing("quiero cerrar un producto", CARDS_AND_SAVINGS)
+    assert kind == "ask"
+    assert all(last4 in text for last4 in ("2948", "3953", "2705"))
+
+
+def test_retention_lists_the_savings_accounts_for_a_portuguese_conta():
+    kind, text = _closing("quero fechar minha conta", CARDS_AND_SAVINGS)
+    assert kind == "ask" and "2948" in text and "3953" in text and "2705" not in text

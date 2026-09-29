@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from src.prompts.messages import GREETING_REPLY, MENU, MORE_OPTIONS, OUT_OF_MENU
+from src.prompts.messages import GREETING_REPLY, MENU, MORE_OPTIONS, NOT_AVAILABLE, OUT_OF_MENU
 from src.prompts.situations import fixed_reply, situation_for
 
 THRESHOLD = 0.5
@@ -56,3 +56,8 @@ def test_more_options_is_the_d_submenu():
 
 def test_goodbye_has_no_fixed_reply():
     assert fixed_reply("goodbye", "es") is None
+
+
+@pytest.mark.parametrize("language", ["es", "pt"])
+def test_not_available_is_its_line_then_the_menu(language):
+    assert fixed_reply("not_available", language) == NOT_AVAILABLE[language] + "\n\n" + MENU[language]

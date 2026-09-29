@@ -17,7 +17,15 @@ from langchain_core.tools import StructuredTool
 
 import src.main as main
 from src.llm.jev import JevClient
-from src.prompts.messages import CANCEL_REPLY, GREETING_REPLY, HANDOFF_REPLY, MENU, SESSION_REJECTED
+from src.prompts.messages import (
+    CANCEL_REPLY,
+    GREETING_REPLY,
+    HANDOFF_REPLY,
+    MENU,
+    NOT_AVAILABLE,
+    SESSION_REJECTED,
+    TOOL_DOWN,
+)
 
 # src.main loads the real .env with override=True at import time, which writes
 # into the shared process environment for the rest of the pytest session, and
@@ -963,3 +971,45 @@ def test_a_paused_turn_and_a_gate_rejected_turn_report_zero_tokens(client, monke
     assert paused["custom_outputs"]["usage"] == {"input_tokens": 0, "output_tokens": 0}
     assert rejected["custom_outputs"]["usage"] == {"input_tokens": 0, "output_tokens": 0}
     assert paused["custom_outputs"]["classifier"] == "jev"
+
+
+def test_a_failing_tool_answers_the_fixed_text_with_no_handoff(client, monkeypatch):
+    async def failing_get_products(**kwargs):
+        raise RuntimeError("warehouse down")
+
+    get_products_tool = StructuredTool.from_function(
+        coroutine=failing_get_products, name="get_products", description="d",
+        args_schema={"type": "object", "properties": {"customer_id": {"type": "string"}}, "required": ["customer_id"]},
+        infer_schema=False,
+    )
+
+    async def fake_tools_for(schema):
+        return [get_products_tool]
+
+    monkeypatch.setattr(main, "tools_for", fake_tools_for)
+    monkeypatch.setattr(
+        main, "get_chat_model",
+        lambda: ScriptedToolChatModel([
+            AIMessage(content="", tool_calls=[{"name": "get_products", "args": {}, "id": "c1"}]),
+        ]),
+    )
+
+    body = _invoke(client, "saldo de mi tarjeta", thread_id="e2e-tool-down").json()
+
+    assert _output_text(body) == TOOL_DOWN["es"] == "Ahora no puedo consultar esa información."
+    assert body["custom_outputs"]["handoff"] is None
+
+
+def test_a_commercial_request_gets_not_available_and_the_menu(client, monkeypatch):
+    monkeypatch.setattr(
+        main, "jev_client",
+        JevClient(api_key="test-key", url="https://api.typesafe.ai/v1/systemone", timeout=2.0,
+                  transport=httpx.MockTransport(lambda request: _jev_response_for("COMMERCIAL"))),
+    )
+    llm = RecordingChatModel(FAKE_LLM_TEXT)
+    monkeypatch.setattr(main, "get_chat_model", lambda: llm)
+
+    body = _invoke(client, "quiero un préstamo", thread_id="e2e-commercial").json()
+
+    assert _output_text(body) == NOT_AVAILABLE["es"] + "\n\n" + MENU["es"]
+    assert llm.received is None
