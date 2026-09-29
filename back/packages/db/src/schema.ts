@@ -48,6 +48,9 @@ export const chat = createTable('Chat', {
   assignedTo: varchar('assignedTo', { length: 256 }),
   assignedAt: timestamp('assignedAt'),
   closedAt: timestamp('closedAt'),
+  // A handoff or a take happened since the chat last opened; a customer
+  // message on a closed chat resets it. Feeds ResolutionEvent.hadHuman.
+  hadHuman: boolean('hadHuman').notNull().default(false),
 });
 
 export type Chat = InferSelectModel<typeof chat>;
@@ -69,3 +72,19 @@ export const message = createTable('Message', {
 });
 
 export type DBMessage = InferSelectModel<typeof message>;
+
+// One row per close (a chat that reopens and closes again logs another):
+// resolvedBy 'ai' = the customer said goodbye with David handling the chat,
+// 'human' = an advisor resolved it. Metrics in docs/flujo-atencion.md §6.
+export const resolutionEvent = createTable('ResolutionEvent', {
+  id: uuid('id').primaryKey().notNull().defaultRandom(),
+  chatId: uuid('chatId')
+    .notNull()
+    .references(() => chat.id),
+  resolvedBy: varchar('resolvedBy', { enum: ['ai', 'human'] }).notNull(),
+  hadHuman: boolean('hadHuman').notNull(),
+  useCase: varchar('useCase', { length: 128 }),
+  resolvedAt: timestamp('resolvedAt').notNull().defaultNow(),
+});
+
+export type ResolutionEvent = InferSelectModel<typeof resolutionEvent>;

@@ -45,6 +45,7 @@ import {
   updateChatLastContextById,
   updateChatVisiblityById,
   updateChatAgentState,
+  resolveChatByAgent,
   markMessagesBlocked,
   isDatabaseAvailable,
 } from '@chat-template/db';
@@ -381,11 +382,12 @@ chatRouter.post('/', requireAuth, async (req: Request, res: Response) => {
               intent: agentOutputs.intent,
               language: agentOutputs.language,
               handledBy: agentOutputs.handoff ? 'human_queue' : undefined,
-              // The agent said goodbye ("no gracias, eso es todo"): resolved.
-              // A new customer message reopens it.
-              resolved:
-                agentOutputs.intent === 'GOODBYE' && !agentOutputs.handoff,
             });
+            // The agent said goodbye ("no gracias, eso es todo"): resolved.
+            // A new customer message reopens it.
+            if (agentOutputs.intent === 'GOODBYE' && !agentOutputs.handoff) {
+              await resolveChatByAgent({ chatId: id });
+            }
           } catch (err) {
             console.warn('Unable to persist agent state for chat', id, err);
           }

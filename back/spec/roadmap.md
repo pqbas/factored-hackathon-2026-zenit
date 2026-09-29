@@ -237,3 +237,21 @@ Diferido: `databricksFetch` todavía registra el body completo (con
 queda para cuando haya login real.
 
 Shipped en PR #38.
+
+---
+
+## Phase 9: Métricas de resolución (Complete)
+
+**Goal:** que el admin vea cuántas conversaciones resuelve la IA de punta a
+punta, cuántas un asesor y cuántas con ayuda humana.
+
+<!-- Pedido del usuario, 28-09-26. Definición en docs/flujo-atencion.md §6. -->
+
+- [x] Cada cierre registra un evento de resolución: despedida con David
+      atendiendo → `ai`; Resolver del asesor → `human`. Cada reapertura y
+      cierre suma otro evento.
+- [x] `hadHuman` marca si hubo derivación o toma desde la última apertura;
+      se resetea cuando el cliente reabre.
+- [x] El admin consulta `GET /api/advisor/metrics?from&to`: total, contenidas
+      por la IA, resueltas por un asesor y asistidas, por caso de uso y por
+      día.
