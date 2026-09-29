@@ -1,4 +1,14 @@
 {
   "frozenAt": "90e22fce",
-  "changes": []
+  "changes": [
+    {
+      "date": "2026-09-29",
+      "caseId": "23",
+      "field": "knownFailure",
+      "before": "silent-after-handoff (w1:p3)",
+      "after": null,
+      "why": "silent-after-handoff está en main (PR #84, 3129d9a): #23 ya no es falla conocida (pedido de w1:p4). Los patrones y el resultado esperado no cambian.",
+      "afterSeeingResults": false
+    }
+  ]
 }

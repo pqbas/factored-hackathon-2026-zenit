@@ -82,11 +82,11 @@ test.describe('evaluation cases', () => {
     );
   });
 
-  test('special cases use their token, and #23 is a known failure', () => {
+  test('special cases use their token, and #23 checks silence after the handoff', () => {
     const byId = (id: string) => cases.find((c) => c.id === id) as EvalCase;
     expect(byId('37').customer.token).toBe('demo-expired');
     expect(byId('40').customer.token).toBe('demo-tool-down');
-    expect(byId('23').knownFailure).toContain('silent-after-handoff');
+    expect(byId('23').knownFailure).toBeUndefined();
     expect(byId('23').expected.silentAfter).toBe(byId('11').steps.length);
     expect(
       byId('24')

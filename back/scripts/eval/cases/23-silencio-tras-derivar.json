@@ -44,6 +44,5 @@
       "description"
     ],
     "silentAfter": 6
-  },
-  "knownFailure": "silent-after-handoff (w1:p3)"
+  }
 }
