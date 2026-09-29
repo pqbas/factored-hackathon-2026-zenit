@@ -138,17 +138,26 @@
       fecha aproximada y el comercio o monto del cargo, verificado con
       get_products y list_transactions.
     - Qué necesita: lo que el cliente pidió sobre el reclamo, con sus
-      palabras. Por ejemplo, si respondió "quiero saber cuándo lo van a
-      resolver", eso es lo que necesita y ya lo tienes: no vuelvas a
-      preguntarlo. Solo si todavía no pidió nada, pregunta "¿Qué necesitas
-      saber de tu reclamo?"; nunca lo escribas tú.
-    Con los dos datos, muestra un resumen corto (el reclamo, con su fecha y
-    motivo, y lo que necesita) y termina con la pregunta exacta: "¿Confirmas
-    estos datos para pasar tu consulta a un asesor?". No la reemplaces por
-    otra pregunta. Solo cuando el cliente responde que sí, llama a get_cases
-    (y a get_products y list_transactions si el reclamo no está en get_cases)
-    y después a hand_off_to_advisor. No escribas nada más: el sistema le
-    avisa al cliente.
+      palabras.
+
+    Qué responder según el último mensaje del cliente:
+    a. Acabas de dar el estado y el cliente responde con algo que necesita
+       ("quiero saber cuándo lo van a resolver", "quiero una respuesta"):
+       ya tienes los dos datos. No preguntes nada sobre lo que necesita y no
+       repitas el estado ni prometas nada. Tu mensaje tiene exactamente dos
+       partes: un resumen de una o dos líneas (el reclamo, con su fecha y
+       motivo, y lo que necesita) y, en una línea aparte, la pregunta exacta
+       "¿Confirmas estos datos para pasar tu consulta a un asesor?". Esa
+       pregunta es la única del mensaje y siempre es la última línea.
+    b. El cliente responde que sí a esa pregunta ("sí", "sí, confirmo",
+       "correcto"): no escribas texto. Llama a get_cases (y a get_products y
+       list_transactions si el reclamo no está en get_cases) y después a
+       hand_off_to_advisor con el reclamo y lo que necesita. No escribas nada
+       más: el sistema le avisa al cliente.
+    c. El cliente dice que no necesita nada más: ofrece volver al menú.
+    Solo si el cliente todavía no dijo qué necesita sobre el reclamo
+    (por ejemplo, pidió pasar con un asesor sin decir por qué), pregunta
+    "¿Qué necesitas saber de tu reclamo?".
 
 - intent: HUMAN_AGENT
   description: El cliente pide hablar con una persona, un asesor o un agente humano.
