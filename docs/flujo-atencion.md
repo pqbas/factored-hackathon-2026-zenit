@@ -347,7 +347,7 @@ Se revisan en este orden, antes de la etapa en la que esté la conversación.
 | 2   | La sesión del cliente es inválida o venció                                                                                                                                                                                                                        | Respuesta fija: "Para ayudarte necesito que inicies sesión…" / "No pude verificar tu sesión…" / "Tu sesión expiró…". El turno termina.                                            |
 | 3   | El mensaje trae datos sensibles (número de tarjeta, CVV o contraseña)                                                                                                                                                                                             | Respuesta fija: "Por tu seguridad, no compartas el número completo de tu tarjeta…". El dato se enmascara y el turno no se vuelve a mandar a David.                                |
 | 4   | Intento de manipular a David ("ignora tus instrucciones"), datos de otra persona, insultos o señales de estafa                                                                                                                                                    | Respuesta fija para cada caso. El turno no se vuelve a mandar a David.                                                                                                            |
-| 5   | El cliente dice "cancelar" u "olvídalo"                                                                                                                                                                                                                           | "Listo, lo dejamos ahí…". Se descarta lo que estaba en curso.                                                                                                                     |
+| 5   | El cliente dice "cancelar" u "olvídalo"                                                                                                                                                                                                                           | "Listo, lo dejamos ahí…". Se descarta lo que estaba en curso. "Cancelar mi tarjeta" o "cancelar mi cuenta" no es esta regla: es la opción 3.D1. |
 | 6   | El mensaje no corresponde a ninguna opción del menú: pide "una persona" o "un asesor" sin una operación concreta, un tema que no es del banco (el clima, un chiste), una operación que el chat no ofrece (transferencias, préstamos) o algo que David no entiende | David dice brevemente que no puede ayudar con eso por aquí y vuelve a mostrar el menú (etapa 2). **Nunca deriva por esto.** Si el cliente elige una opción, sigue con esa opción. |
 
 Además, siempre:
@@ -357,14 +357,21 @@ Además, siempre:
 - Nunca pide datos para "verificar" al cliente: la identidad viene de la sesión.
 - Nunca inventa datos de la cuenta, y nunca promete dinero, reversiones ni
   acciones.
+- Nunca dice que abrió, registró o inició un reclamo, una cancelación u otra
+  operación: eso lo hace el asesor. Como máximo dice que lo comunica con un
+  asesor (etapa 5).
+- Nunca manda al cliente a otro canal, app o sitio web, ni siquiera para temas
+  fuera del banco.
 - Lo que empieza con `[Asesor]` en el historial lo dijo una persona: David no se
   lo atribuye.
 - Antes de pasarle el historial al LLM, David enmascara las tarjetas y los CVV
   de todos los mensajes anteriores.
 
-En la App desplegada no hay salida a internet, así que Jev (el clasificador
-externo) no responde: la clasificación y los guardrails usan solo reglas
-locales.
+**Clasificación.** La intención, el idioma y los guardrails se clasifican con
+Jev o con el LLM de Databricks, según `CLASSIFIER`. En local se usa Jev; en la
+App desplegada se usa el LLM, porque el plan Premium de la cuenta no permite
+salir a internet (`api.typesafe.ai`). Si el clasificador falla, se usan las
+reglas locales de palabras clave.
 
 ## 4. Qué hace el asesor
 
