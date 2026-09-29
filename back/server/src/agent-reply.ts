@@ -12,6 +12,8 @@ import {
   updateChatAgentState,
   updateChatLastContextById,
   openHandoff,
+  hasOpenHandoff,
+  cancelAgentTurns,
   type DBMessage,
 } from '@chat-template/db';
 import {
@@ -20,10 +22,16 @@ import {
   CONTEXT_HEADER_CONVERSATION_ID,
   CONTEXT_HEADER_USER_ID,
   CONTEXT_HEADER_SESSION_TOKEN,
+  CONTEXT_HEADER_HANDLED_BY,
   getAndClearAgentOutputs,
+  StreamCache,
 } from '@chat-template/core';
 import { isAgentUnavailableError } from '@chat-template/ai-sdk-providers';
-import { buildAgentHistory, shouldPersistAgentReply } from './agent-turn';
+import { buildAgentHistory, isPaused, trimAfterHandoff } from './agent-turn';
+
+// The live streams of POST /api/chat, shared with the queue worker so it
+// doesn't answer a chat's turn while another is still streaming.
+export const streamCache = new StreamCache();
 
 // Convert ai's LanguageModelUsage to @ai-sdk/provider's LanguageModelV3Usage
 function toV3Usage(usage: LanguageModelUsage): LanguageModelV3Usage {
@@ -48,6 +56,7 @@ export async function streamAgentTurn({
   chatId,
   userId,
   sessionToken,
+  handledBy = 'ai_agent',
   messages,
   selectedChatModel = 'chat-model',
   onUsage,
@@ -55,6 +64,7 @@ export async function streamAgentTurn({
   chatId: string;
   userId: string;
   sessionToken?: string | null;
+  handledBy?: string;
   messages: ChatMessage[];
   selectedChatModel?: string;
   onUsage?: (usage: LanguageModelUsage) => void;
@@ -72,6 +82,7 @@ export async function streamAgentTurn({
       [CONTEXT_HEADER_CONVERSATION_ID]: chatId,
       [CONTEXT_HEADER_USER_ID]: userId,
       ...(sessionToken ? { [CONTEXT_HEADER_SESSION_TOKEN]: sessionToken } : {}),
+      [CONTEXT_HEADER_HANDLED_BY]: handledBy,
     },
     onFinish: ({ usage }) => onUsage?.(usage),
     // An unavailable agent is expected (the turn gets queued), not an error.
@@ -82,8 +93,9 @@ export async function streamAgentTurn({
 }
 
 // Saves the agent's reply and applies its custom_outputs. Returns false (and
-// saves nothing) when an advisor took the chat while the agent was answering:
-// it's no longer the agent's conversation to answer.
+// saves nothing) when the conversation is paused (an advisor took the chat
+// while the agent was answering, or a handoff is open) or the agent itself
+// answered `paused`: it's no longer the agent's conversation to answer.
 export async function persistAgentReply({
   chatId,
   customerMessageId,
@@ -96,21 +108,29 @@ export async function persistAgentReply({
   usage?: LanguageModelUsage;
 }): Promise<boolean> {
   const freshChat = await getChatById({ id: chatId });
-  if (freshChat && !shouldPersistAgentReply(freshChat.handledBy)) {
-    console.log(
-      `[Chat] Discarding agent reply for ${chatId}: no longer handled by the agent`,
-    );
-    getAndClearAgentOutputs(chatId);
+  const agentOutputs = getAndClearAgentOutputs(chatId);
+  if (
+    agentOutputs?.paused ||
+    (freshChat &&
+      isPaused({
+        handledBy: freshChat.handledBy,
+        hasOpenHandoff: await hasOpenHandoff({ chatId }),
+      }))
+  ) {
+    console.log(`[Chat] Discarding agent reply for ${chatId}: chat is paused`);
     return false;
   }
 
-  const agentOutputs = getAndClearAgentOutputs(chatId);
   const blocked = agentOutputs?.blocked === true;
 
   await saveMessages({
     messages: [
       {
         ...reply,
+        // Text after the handoff message isn't kept: David is paused.
+        parts: agentOutputs?.handoff
+          ? trimAfterHandoff(reply.parts as { type: string }[])
+          : reply.parts,
         createdAt: new Date(),
         attachments: [],
         chatId,
@@ -146,6 +166,7 @@ export async function persistAgentReply({
       });
       if (agentOutputs.handoff) {
         await openHandoff({ chatId, ...agentOutputs.handoff });
+        await cancelAgentTurns({ chatId });
       }
       // The agent said goodbye ("no gracias, eso es todo"): resolved.
       // A new customer message reopens it.

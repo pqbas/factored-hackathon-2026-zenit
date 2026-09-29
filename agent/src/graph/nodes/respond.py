@@ -134,7 +134,8 @@ def _hand_off(state: AgentState, route: IntentRoute, verified_data: dict, rows_b
             "intent": classification.get("intent"),
             "language": language if language in ("es", "pt") else "other",
             "sentiment": classification.get("sentiment"),
-            "case_id": None,
+            # The bank's case, when the customer asked about one that get_cases returned (3.D2).
+            "case_id": verified_data.get("complaint_id"),
             "tools_called": sorted(rows_by_tool),
             "verified_data": verified_data,
         },

@@ -9,3 +9,4 @@ GRANT EXECUTE ON SCHEMA ${catalog}.bank_uc_consultas TO `${sp}`;
 GRANT USE SCHEMA ON SCHEMA ${catalog}.bank_gold TO `${sp}`;
 GRANT SELECT ON TABLE ${catalog}.bank_gold.customer_products TO `${sp}`;
 GRANT SELECT ON TABLE ${catalog}.bank_gold.customer_transactions TO `${sp}`;
+GRANT SELECT ON TABLE ${catalog}.bank_gold.customer_cases TO `${sp}`;

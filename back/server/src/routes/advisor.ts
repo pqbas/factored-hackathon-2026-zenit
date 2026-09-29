@@ -24,6 +24,7 @@ import {
   getChatById,
   getMessagesAfter,
   takeChat,
+  cancelAgentTurns,
   releaseChat,
   saveMessages,
   isDatabaseAvailable,
@@ -451,6 +452,7 @@ advisorRouter.post(
           .json({ ...response.json, assignedTo: result.assignedTo });
       }
 
+      await cancelAgentTurns({ chatId: id });
       if (!result.alreadyMine) {
         await saveSystemMessage({ chatId: id, text: SYSTEM_MESSAGES.taken });
       }

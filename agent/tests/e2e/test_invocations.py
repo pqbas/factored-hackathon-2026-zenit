@@ -594,3 +594,57 @@ def test_the_handoff_summary_never_reaches_the_customers_text(client, monkeypatc
     assert "El cliente pide" not in customer_text
     assert done[-1]["item"]["content"][0]["text"] == HANDOFF_REPLY["es"]
     assert done[-1]["custom_outputs"]["handoff"]["summary"] == SUMMARY_TEXT
+
+
+def test_a_confirmed_case_status_carries_the_handoff_with_the_case_id(client, monkeypatch):
+    cases = [{"type": "text", "text": json.dumps({
+        "columns": ["complaint_id", "creation_date", "subcategory", "claimed_amount", "currency", "status", "resolution"],
+        "rows": [["CMP-1", "2025-10-09T00:18:40.000+0000", "Cargo no reconocido", None, None, "In Process", None]],
+    })}]
+
+    async def fake_get_cases(**kwargs):
+        return cases
+
+    get_cases_tool = StructuredTool.from_function(
+        coroutine=fake_get_cases, name="get_cases", description="d",
+        args_schema={"type": "object", "properties": {"customer_id": {"type": "string"}}, "required": ["customer_id"]},
+        infer_schema=False,
+    )
+
+    async def fake_tools_for(schema):
+        return [get_cases_tool]
+
+    class HandoffChatModel(ScriptedToolChatModel):
+        async def ainvoke(self, messages):
+            if messages[-1].content.startswith("{"):  # the case summary call
+                return AIMessage(content="El cliente pregunta cuándo se resuelve su reclamo CMP-1.")
+            return await super().ainvoke(messages)
+
+    def jev_must_not_be_called(request):
+        raise AssertionError("a yes to the confirmation question never reaches the classifier")
+
+    monkeypatch.setattr(main, "tools_for", fake_tools_for)
+    monkeypatch.setattr(main, "get_chat_model", lambda: HandoffChatModel([
+        AIMessage(content="", tool_calls=[{"name": "get_cases", "args": {}, "id": "c1"}]),
+        AIMessage(content="", tool_calls=[{"name": "hand_off_to_advisor", "id": "c2",
+                                           "args": {"complaint_id": "CMP-1", "need": "saber cuándo lo resuelven"}}]),
+    ]))
+    monkeypatch.setattr(
+        main, "jev_client",
+        JevClient(api_key="test-key", url="https://api.typesafe.ai/v1/systemone", timeout=2.0,
+                  transport=httpx.MockTransport(jev_must_not_be_called)),
+    )
+
+    body = _invoke_history(client, [
+        {"role": "user", "content": "quiero saber cuándo lo van a resolver"},
+        {"role": "assistant", "content": "Tu reclamo del 09/10/2025 sigue en revisión.\n\n"
+                                         "¿Confirmas estos datos para pasar tu consulta a un asesor?"},
+        {"role": "user", "content": "sí"},
+    ]).json()
+
+    assert _output_text(body) == HANDOFF_REPLY["es"]
+    assert body["custom_outputs"]["intent"] == "CASE_STATUS"
+    handoff = body["custom_outputs"]["handoff"]
+    assert handoff["reason"] == "case_status"
+    assert handoff["facts"]["case_id"] == "CMP-1"
+    assert handoff["facts"]["verified_data"]["status"] == "In Process"

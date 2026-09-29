@@ -66,7 +66,9 @@ One-time grants for the app's service principal (its `service_principal_client_i
 from `databricks apps get dev-bank-assistant-ui`):
 
 - `CAN_USE` on the agent app (`agent-banking-assistant`), granted from the agent side.
-- On the bank data, as a workspace admin:
+- On the bank data, as a workspace admin, run `scripts/uc-grants.sh
+  <sp-application-id>` (it applies every grant below through the SQL
+  warehouse; grants are idempotent):
 
   ```sql
   GRANT USE CATALOG ON CATALOG workspace TO `<sp-application-id>`;
@@ -74,6 +76,7 @@ from `databricks apps get dev-bank-assistant-ui`):
   GRANT USE SCHEMA, EXECUTE ON SCHEMA workspace.bank_uc_consultas TO `<sp-application-id>`;
   GRANT USE SCHEMA ON SCHEMA workspace.bank_silver TO `<sp-application-id>`;
   GRANT SELECT ON TABLE workspace.bank_silver.call_transcripts TO `<sp-application-id>`;
+  GRANT SELECT ON TABLE workspace.bank_silver.customers TO `<sp-application-id>`;
   ```
 
 ### Turn it on and off (cost)

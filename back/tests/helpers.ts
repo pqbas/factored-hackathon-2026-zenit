@@ -255,6 +255,106 @@ export function mockResponsesApiTextStream(
 }
 
 /**
+ * A Responses API stream with one message item per text (none at all for a
+ * turn where the agent stays quiet). custom_outputs ride on the last event
+ * that closes the turn, as the agent sends them.
+ */
+export function mockResponsesApiMultiTextStream(
+  texts: string[],
+  customOutputs?: Record<string, unknown>,
+): string[] {
+  const responseId = generateUUID();
+  const items = texts.map((text) => ({
+    id: generateUUID(),
+    text,
+    content: [
+      { annotations: [], text, type: 'output_text', logprobs: null },
+    ],
+  }));
+  const message = (item: (typeof items)[number], status: string) => ({
+    id: item.id,
+    content: status === 'completed' ? item.content : [],
+    role: 'assistant',
+    status,
+    type: 'message',
+  });
+  let seq = 0;
+  const response = (extra: Record<string, unknown>) => ({
+    id: responseId,
+    created_at: Date.now() / 1000,
+    error: null,
+    model: 'databricks-claude-3-7-sonnet',
+    object: 'response',
+    ...extra,
+  });
+
+  const events: string[] = [
+    mockSSE({
+      response: response({ output: [] }),
+      sequence_number: seq++,
+      type: 'response.created',
+    }),
+  ];
+  items.forEach((item, index) => {
+    const isLast = index === items.length - 1;
+    events.push(
+      mockSSE({
+        item: message(item, 'in_progress'),
+        output_index: index,
+        sequence_number: seq++,
+        type: 'response.output_item.added',
+      }),
+      mockSSE({
+        content_index: 0,
+        item_id: item.id,
+        output_index: index,
+        part: { annotations: [], text: '', type: 'output_text', logprobs: null },
+        sequence_number: seq++,
+        type: 'response.content_part.added',
+      }),
+      mockSSE({
+        content_index: 0,
+        delta: item.text,
+        item_id: item.id,
+        logprobs: [],
+        output_index: index,
+        sequence_number: seq++,
+        type: 'response.output_text.delta',
+      }),
+      mockSSE({
+        content_index: 0,
+        item_id: item.id,
+        output_index: index,
+        part: item.content[0],
+        sequence_number: seq++,
+        type: 'response.content_part.done',
+      }),
+      mockSSE({
+        item: message(item, 'completed'),
+        output_index: index,
+        sequence_number: seq++,
+        type: 'response.output_item.done',
+        ...(customOutputs && isLast ? { custom_outputs: customOutputs } : {}),
+      }),
+    );
+  });
+  events.push(
+    mockSSE({
+      response: response({
+        output: items.map((item) => message(item, 'completed')),
+        usage: { input_tokens: 100, output_tokens: 10, total_tokens: 110 },
+      }),
+      sequence_number: seq++,
+      type: 'response.completed',
+      ...(customOutputs && items.length === 0
+        ? { custom_outputs: customOutputs }
+        : {}),
+    }),
+  );
+  return events;
+}
+
+/**
  * Generate a mock Responses API stream for an MCP approval request.
  *
  * This simulates a response where the model wants to use an MCP tool

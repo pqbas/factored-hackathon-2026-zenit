@@ -26,6 +26,7 @@ import {
   updateChatCustomer,
   enqueueAgentTurn,
   hasPendingAgentTurn,
+  hasOpenHandoff,
   isDatabaseAvailable,
 } from '@chat-template/db';
 import {
@@ -36,7 +37,6 @@ import {
   myProvider,
   postRequestBodySchema,
   type PostRequestBody,
-  StreamCache,
   type VisibilityType,
   getAndClearAgentOutputs,
 } from '@chat-template/core';
@@ -46,14 +46,18 @@ import { generateTitleFromUserMessage } from '../title';
 import { toCustomerChat } from '../customer-view';
 import { findDemoCustomer, tokenForCustomerId } from '../demo-customers';
 import { resolveCustomerName } from '../customer-name';
-import { persistAgentReply, streamAgentTurn } from '../agent-reply';
+import {
+  persistAgentReply,
+  streamAgentTurn,
+  streamCache,
+} from '../agent-reply';
+import { isPaused } from '../agent-turn';
 
 const CUSTOMER_ERROR_MESSAGE =
   'David no está disponible en este momento. Intenta de nuevo en unos segundos.';
 
 export const chatRouter: RouterType = Router();
 
-const streamCache = new StreamCache();
 // Apply auth middleware to all chat routes
 chatRouter.use(authMiddleware);
 
@@ -252,10 +256,18 @@ chatRouter.post('/', requireAuth, async (req: Request, res: Response) => {
       }
     }
 
-    // A human (queue or agent) owns this conversation: the client message is
-    // saved above, but the agent never sees it. Respond with just the
-    // conversation state so useChat doesn't treat the stream as an error.
-    if (dbAvailable && chat && chat.handledBy !== 'ai_agent') {
+    // A human (queue or agent) owns this conversation, or a handoff is open:
+    // the client message is saved above, but the agent never sees it. Respond
+    // with just the conversation state so useChat doesn't treat the stream as
+    // an error.
+    if (
+      dbAvailable &&
+      chat &&
+      isPaused({
+        handledBy: chat.handledBy,
+        hasOpenHandoff: await hasOpenHandoff({ chatId: id }),
+      })
+    ) {
       streamCache.clearActiveStream(id);
       const conversationStateStream = createUIMessageStream({
         execute: async ({ writer }) => {
@@ -274,8 +286,35 @@ chatRouter.post('/', requireAuth, async (req: Request, res: Response) => {
       return;
     }
 
-    // Clear any previous active stream for this chat
-    streamCache.clearActiveStream(id);
+    // The chat's turns go one at a time: while David is still answering the
+    // previous message, or a turn is waiting in the queue, this one is queued
+    // too (the customer's message is never lost, and a handoff in the turn
+    // ahead cancels it).
+    if (
+      dbAvailable &&
+      message &&
+      (streamCache.getActiveStreamId(id) ||
+        (await hasPendingAgentTurn({ chatId: id })))
+    ) {
+      await enqueueAgentTurn({
+        chatId: id,
+        messageId: message.id,
+        userId: session.user.email ?? session.user.id,
+        sessionToken,
+      });
+      const pendingStream = createUIMessageStream({
+        execute: async ({ writer }) => {
+          writer.write({ type: 'start' });
+          writer.write({
+            type: 'data-agent-pending',
+            data: { messageId: message.id },
+          });
+          writer.write({ type: 'finish' });
+        },
+      });
+      pipeUIMessageStreamToResponse({ stream: pendingStream, response: res });
+      return;
+    }
 
     let finalUsage: LanguageModelUsage | undefined;
     const streamId = generateUUID();
@@ -287,6 +326,7 @@ chatRouter.post('/', requireAuth, async (req: Request, res: Response) => {
       chatId: id,
       userId: session.user.email ?? session.user.id,
       sessionToken,
+      handledBy: chat?.handledBy ?? 'ai_agent',
       messages: uiMessages,
       selectedChatModel,
       onUsage: (usage) => {

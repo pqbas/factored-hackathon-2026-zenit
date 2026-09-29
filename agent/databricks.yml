@@ -48,6 +48,11 @@ resources:
             securable_full_name: 'workspace.bank_uc_consultas.list_transactions'
             securable_type: 'FUNCTION'
             permission: 'EXECUTE'
+        - name: 'uc_consultas_get_cases'
+          uc_securable:
+            securable_full_name: 'workspace.bank_uc_consultas.get_cases'
+            securable_type: 'FUNCTION'
+            permission: 'EXECUTE'
         # Jev API key, from the secret scope created by hand (see docs/11).
         - name: 'jev_api_key'
           secret:
