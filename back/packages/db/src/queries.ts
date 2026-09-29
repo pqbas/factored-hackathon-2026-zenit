@@ -1388,6 +1388,17 @@ export async function hasPendingAgentTurn({
   return Boolean(row);
 }
 
+// Cancels the chat's queued turns (a handoff or an advisor take: David has
+// nothing more to say there).
+export async function cancelAgentTurns({ chatId }: { chatId: string }) {
+  if (!isDatabaseAvailable()) return;
+
+  await (await ensureDb())
+    .update(agentTurn)
+    .set({ status: 'discarded' })
+    .where(and(eq(agentTurn.chatId, chatId), eq(agentTurn.status, 'pending')));
+}
+
 export async function getAgentTurns({
   chatId,
 }: {
@@ -1419,6 +1430,21 @@ export async function openHandoff({
     .insert(handoff)
     .values({ chatId, reason, summary, facts })
     .onConflictDoNothing();
+}
+
+export async function hasOpenHandoff({
+  chatId,
+}: {
+  chatId: string;
+}): Promise<boolean> {
+  if (!isDatabaseAvailable()) return false;
+
+  const [row] = await (await ensureDb())
+    .select({ id: handoff.id })
+    .from(handoff)
+    .where(and(eq(handoff.chatId, chatId), isNull(handoff.resolvedAt)))
+    .limit(1);
+  return Boolean(row);
 }
 
 export async function closeHandoffs({ chatId }: { chatId: string }) {
