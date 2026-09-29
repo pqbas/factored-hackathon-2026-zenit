@@ -11,13 +11,15 @@ Se mantienen igual el shape del chat, el handoff y el contrato de mensajes. Lo n
 
 After this phase, the system must keep doing what it does today:
 
-1. La consola muestra un cliente por fila (groupBy=customer) y cada vista se aplica a su conversación más reciente.
+1. La consola muestra un cliente por fila (groupBy=customer), y cada cliente cuenta todas sus conversaciones (`conversationCount`).
 2. Bandeja, Con AI, En espera y Resueltas filtran y cuentan igual que hoy.
 3. La tarjeta "Caso derivado por David" y la etiqueta del motivo en la fila siguen igual.
 4. Un chat que ya tiene mensajes sigue fijo a su cliente: el selector queda bloqueado.
 5. La barra de conversaciones y el saludo siguen al cliente demo elegido.
 
 And it changes in these ways:
+
+- Cada vista abierta (Bandeja, Con AI, En espera, Con asesor, filtros por motivo) toma por cliente su conversación en curso, la más reciente con `closedAt` nulo, y no la más reciente a secas. Eso vale para la fila, los filtros y todos los contadores de esas vistas. Resueltas toma la cerrada más reciente. Así, un cliente con una conversación abierta y otra más nueva ya resuelta sigue en la Bandeja con la abierta. Lo resuelve el back; el front muestra lo que devuelve (ajuste de la revisión de w1:p4).
 
 6. La sección de filtros por motivo tiene exactamente tres: Reclamo (complaint), Cancelación de producto (retention) y Estado de un reclamo (case_status).
 7. Cada filtro se evalúa solo sobre la conversación en curso del cliente: su última conversación no resuelta (`closedAt` nulo). Un cliente aparece en "Reclamo" si el handoff de esa conversación es complaint; sus conversaciones anteriores o ya resueltas no cuentan. El filtro lo aplica el back, con su parámetro.
