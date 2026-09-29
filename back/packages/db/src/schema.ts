@@ -1,4 +1,4 @@
-import type { InferSelectModel } from 'drizzle-orm';
+import { sql, type InferSelectModel } from 'drizzle-orm';
 import {
   varchar,
   timestamp,
@@ -9,6 +9,7 @@ import {
   boolean,
   integer,
   pgSchema,
+  uniqueIndex,
 } from 'drizzle-orm/pg-core';
 import type { LanguageModelV3Usage } from '@ai-sdk/provider';
 import type { User as SharedUser } from '@chat-template/utils';
@@ -118,3 +119,28 @@ export const agentTurn = createTable('AgentTurn', {
 });
 
 export type AgentTurn = InferSelectModel<typeof agentTurn>;
+
+// The agent's handoff to a human (custom_outputs.handoff): why, its summary
+// and the facts it verified. At most one open per chat; it closes when an
+// advisor resolves the chat or hands it back to David.
+export const handoff = createTable(
+  'Handoff',
+  {
+    id: uuid('id').primaryKey().notNull().defaultRandom(),
+    chatId: uuid('chatId')
+      .notNull()
+      .references(() => chat.id),
+    reason: varchar('reason', { length: 64 }).notNull(),
+    summary: text('summary'),
+    facts: jsonb('facts').$type<Record<string, unknown> | null>(),
+    createdAt: timestamp('createdAt').notNull().defaultNow(),
+    resolvedAt: timestamp('resolvedAt'),
+  },
+  (t) => [
+    uniqueIndex('Handoff_open_chat')
+      .on(t.chatId)
+      .where(sql`"resolvedAt" is null`),
+  ],
+);
+
+export type Handoff = InferSelectModel<typeof handoff>;

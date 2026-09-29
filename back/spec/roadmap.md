@@ -186,7 +186,7 @@ Shipped en PR #27.
 
 ---
 
-## Phase 6: Handoff automático del agente
+## Phase 6: Handoff automático del agente (Complete: lo esencial)
 
 **Goal:** que una conversación que el agente decide derivar entre sola a la
 bandeja de la consola, con su resumen, sin que el cliente repita su historia.
@@ -195,12 +195,16 @@ bandeja de la consola, con su resumen, sin que el cliente repita su historia.
      summary y facts). Reutiliza la consola de la Fase 5: tomar, responder y
      devolver no cambian. Modelo de referencia: agent/docs/07-handoff.md. -->
 
-- [ ] Cuando el agente señala un handoff, el back registra el caso con su
+- [x] Cuando el agente señala un handoff, el back registra el caso con su
       motivo, resumen y datos, y la conversación entra a la bandeja.
-- [ ] La bandeja ordena por prioridad y muestra el resumen del caso.
-- [ ] El historial del chat muestra el aviso de derivación.
-- [ ] Dos señales de handoff seguidas en la misma conversación no crean dos
+- [x] La consola muestra el motivo en la fila y el resumen y los datos
+      verificados en el detalle y en la línea de tiempo del cliente.
+- [x] Al resolver o devolver, el caso se cierra.
+- [x] Dos señales de handoff seguidas en la misma conversación no crean dos
       casos abiertos.
+
+Fuera de alcance / futuro: ordenar la bandeja por prioridad y el aviso de
+derivación en el historial del chat.
 
 ---
 
