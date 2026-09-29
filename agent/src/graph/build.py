@@ -20,10 +20,10 @@ _LOAD_CONTEXT = "load_context"
 GRAPH_NODES = {_RESPOND, _CANCEL, _LOAD_CONTEXT}
 
 
-def build_graph(llm, jev, routes, threshold, intent_threshold, tools_for):
+def build_graph(llm, classifier, routes, threshold, intent_threshold, tools_for):
     graph = StateGraph(AgentState)
     graph.add_node("gate", gate)
-    graph.add_node("classify", partial(classify, jev=jev, routes=routes, threshold=threshold))
+    graph.add_node("classify", partial(classify, classifier=classifier, routes=routes, threshold=threshold))
     graph.add_node(_LOAD_CONTEXT, load_context)
     graph.add_node(
         _RESPOND,

@@ -15,5 +15,9 @@ env:
     value: "workspace"
   - name: LLM_ENDPOINT
     value: "databricks-qwen3-next-80b-a3b-instruct"
+  # The App has no egress to api.typesafe.ai (Premium plan: no serverless network policies),
+  # so it classifies with the LLM; local dev keeps the default, jev.
+  - name: CLASSIFIER
+    value: "llm"
   - name: JEV_API_KEY
     valueFrom: "jev_api_key"

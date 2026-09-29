@@ -28,11 +28,11 @@ def test_a_failing_jev_logs_its_reason_without_the_customer_text(caplog):
     with caplog.at_level(logging.WARNING, logger="src.graph.nodes.classify"):
         result = _classify(DownJev())
     assert result["classification"]["source"] == "fallback"
-    assert "Jev unavailable, classifying with rules: HTTP 401" in caplog.text
+    assert "DownJev unavailable, classifying with rules: HTTP 401" in caplog.text
     assert TEXT not in caplog.text
 
 
-def test_a_missing_jev_client_logs_that_it_is_none(caplog):
+def test_a_missing_classifier_logs_that_it_is_none(caplog):
     with caplog.at_level(logging.WARNING, logger="src.graph.nodes.classify"):
         _classify(None)
-    assert "jev_client is None" in caplog.text
+    assert "Classifier unavailable, classifying with rules: classifier is None" in caplog.text

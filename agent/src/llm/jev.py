@@ -5,13 +5,18 @@ from typing import Any
 
 import httpx
 
-from src.schemas.classification import GUARDRAIL_CATEGORIES, SENTIMENT_LEVELS, Classification
+from src.schemas.classification import (
+    GUARDRAIL_CATEGORIES,
+    SENTIMENT_LEVELS,
+    Classification,
+    ClassifierUnavailable,
+)
 from src.schemas.routing import IntentRoute
 
 logger = logging.getLogger(__name__)
 
 
-class JevUnavailable(Exception):
+class JevUnavailable(ClassifierUnavailable):
     pass
 
 

@@ -530,3 +530,54 @@ def test_a_reply_that_copies_the_advisor_prefix_is_stripped_and_the_prompt_has_t
     system_prompt = llm.received[0].content
     assert "empiezan con [Asesor]: los escribió un asesor" in system_prompt
     assert "nunca\nempieces tu respuesta con [Asesor]" in system_prompt
+
+
+# --- CLASSIFIER=llm: the LLM classifier in the graph ---------------------------------
+
+
+class _StructuredClassifierLLM:
+    def __init__(self, answer=None, raises=False):
+        self._answer, self._raises = answer, raises
+
+    def with_structured_output(self, schema):
+        self._schema = schema
+        return self
+
+    async def ainvoke(self, messages):
+        if self._raises:
+            raise RuntimeError("endpoint down")
+        return self._schema(**self._answer)
+
+
+def test_the_llm_classifier_routes_a_general_inquiry_and_keeps_its_language():
+    from src.llm.llm_classifier import LLMClassifier
+
+    classifier = LLMClassifier(_StructuredClassifierLLM({
+        "guardrail": "OK", "guardrail_probability": 0.95, "language": "pt",
+        "intent": "GENERAL_INQUIRY", "intent_confidence": 0.9, "sentiment": "neutral",
+    }), timeout=4)
+    get_products = FakeMCPTool("get_products", GET_PRODUCTS_SCHEMA, result=[])
+    list_transactions = FakeMCPTool("list_transactions", LIST_TRANSACTIONS_SCHEMA, result=[])
+    llm = ScriptedToolLLM([
+        AIMessage(content="", tool_calls=[{"name": "get_products", "args": {}, "id": "call_1"}]),
+        AIMessage(content="Você tem uma conta poupança"),
+    ])
+    graph = _build_graph(llm, classifier, tools_for=_fake_tools_for(get_products, list_transactions))
+
+    result = _run(graph, "qual é o saldo da minha conta poupança?")
+
+    assert result["classification"]["source"] == "llm"
+    assert result["classification"]["language"] == "pt"
+    assert result["use_case"] == "GENERAL_INQUIRY"
+
+
+def test_a_failing_llm_classifier_falls_back_to_the_keyword_rules():
+    from src.llm.llm_classifier import LLMClassifier
+
+    classifier = LLMClassifier(_StructuredClassifierLLM(raises=True), timeout=4)
+    graph = _build_graph(RecordingLLM(), classifier)
+
+    result = _run(graph, "cancelar")
+
+    assert result["classification"]["source"] == "fallback"
+    assert result["classification"]["intent"] == "CANCEL"
