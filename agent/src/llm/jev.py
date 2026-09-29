@@ -35,19 +35,31 @@ class JevClient:
         # transport is only set by tests, to inject httpx.MockTransport.
         self._client = httpx.AsyncClient(transport=transport, timeout=timeout)
 
-    async def classify(self, text: str, routes: list[IntentRoute]) -> Classification:
+    async def classify(
+        self, text: str, routes: list[IntentRoute], context: str | None = None
+    ) -> Classification:
+        # With David's previous reply, Jev reads the customer's answer in its context; the
+        # questions below always ask about the customer's message only.
+        state = f"Asistente: {context}\nCliente: {text}" if context else text
+        intent_instructions = "What is the customer asking for?"
+        if context:
+            intent_instructions += (
+                " If the customer's message answers the assistant's previous message (picks an"
+                " option, gives the data asked for, or confirms), the intent is the topic of"
+                " that exchange."
+            )
         body = {
             "model": "jev-latest",
-            "state": text,
+            "state": state,
             "questions": {
                 "guardrail": {
                     "type": "choice",
-                    "instructions": "Does the customer message violate any of these policies?",
+                    "instructions": "Does the customer's message violate any of these policies?",
                     "criteria": GUARDRAIL_CATEGORIES,
                 },
                 "language": {
                     "type": "choice",
-                    "instructions": "What language is the customer message written in?",
+                    "instructions": "What language is the customer's message written in?",
                     "criteria": {
                         "es": "Spanish.",
                         "pt": "Portuguese.",
@@ -56,7 +68,7 @@ class JevClient:
                 },
                 "intent": {
                     "type": "choice",
-                    "instructions": "What is the customer asking for?",
+                    "instructions": intent_instructions,
                     "criteria": {
                         route.intent: f"{route.description} Examples: {'; '.join(route.examples)}"
                         for route in routes
@@ -64,7 +76,7 @@ class JevClient:
                 },
                 "sentiment": {
                     "type": "score",
-                    "instructions": "How does the customer sound in this message?",
+                    "instructions": "How does the customer sound in their message?",
                     "criteria": SENTIMENT_LEVELS,
                 },
             },

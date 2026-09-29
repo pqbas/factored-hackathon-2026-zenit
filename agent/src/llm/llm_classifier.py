@@ -57,10 +57,19 @@ class LLMClassifier:
         self._llm = llm
         self._timeout = timeout
 
-    async def classify(self, text: str, routes: list[IntentRoute]) -> Classification:
+    async def classify(
+        self, text: str, routes: list[IntentRoute], context: str | None = None
+    ) -> Classification:
         model = _answer_model(tuple(route.intent for route in routes))
         structured = self._llm.with_structured_output(model)
-        messages = [SystemMessage(content=_system_prompt(routes)), HumanMessage(content=text)]
+        system_prompt = _system_prompt(routes)
+        if context:
+            system_prompt += (
+                "\n\nThe assistant's previous message, only as context (never classify it):\n"
+                f"{context}\n\nIf the customer's message answers it (picks an option, gives the "
+                "data asked for, or confirms), the intent is the topic of that exchange."
+            )
+        messages = [SystemMessage(content=system_prompt), HumanMessage(content=text)]
         try:
             answer = await asyncio.wait_for(structured.ainvoke(messages), timeout=self._timeout)
         except asyncio.TimeoutError as exc:

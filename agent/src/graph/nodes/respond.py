@@ -1,11 +1,11 @@
 from pathlib import Path
 
-from langchain_core.messages import SystemMessage, ToolMessage
+from langchain_core.messages import AIMessage, SystemMessage, ToolMessage
 
 from src.graph.state import AgentState
 from src.prompts.advisor import strip_advisor_prefix
-from src.prompts.situations import SITUATIONS, situation_for
-from src.schemas.routing import IntentRoute, render_options
+from src.prompts.situations import SITUATIONS, fixed_reply, situation_for
+from src.schemas.routing import IntentRoute
 from src.tools.bind_customer import bind_customer
 
 SYSTEM_PROMPT = (Path(__file__).resolve().parents[2] / "prompts" / "system.md").read_text()
@@ -36,11 +36,10 @@ async def respond(
         return await _respond_with_tools(state, llm, route, language_line, tools_for)
 
     situation = situation_for(classification, intent_threshold)
-    system_prompt = SYSTEM_PROMPT + "\n\n" + SITUATIONS[situation]
-    if situation != "goodbye":
-        options = render_options(routes, classification.get("language"))
-        system_prompt += "\n\nOpciones:\n" + options
-    system_prompt += language_line
+    fixed = fixed_reply(situation, classification.get("language"))
+    if fixed is not None:
+        return {"messages": [AIMessage(content=fixed)]}
+    system_prompt = SYSTEM_PROMPT + "\n\n" + SITUATIONS[situation] + language_line
 
     messages = [SystemMessage(content=system_prompt), *state["messages"]]
     reply = await llm.ainvoke(messages)

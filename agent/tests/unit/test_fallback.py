@@ -110,3 +110,46 @@ def test_fallback_keeps_an_unrecognized_charge_as_a_complaint():
 
 def test_fallback_recognizes_a_goodbye():
     assert fallback_classify("Gracias, eso es todo", INTENTS).intent == "GOODBYE"
+
+
+from src.llm.fallback import menu_rule_intent, names_a_product_to_cancel  # noqa: E402
+from src.prompts.messages import CARD_OPTIONS, MORE_OPTIONS, SAVINGS_OPTIONS  # noqa: E402
+
+SUBMENUS = {
+    "CARD_OPTIONS": set(CARD_OPTIONS.values()),
+    "SAVINGS_OPTIONS": set(SAVINGS_OPTIONS.values()),
+    "MORE_OPTIONS": set(MORE_OPTIONS.values()),
+}
+
+
+@pytest.mark.parametrize(
+    "text, intent",
+    [("A", "CARD_OPTIONS"), ("b", "SAVINGS_OPTIONS"), ("C)", "COMPLAINT"), ("la d", "MORE_OPTIONS"),
+     ("opción A", "CARD_OPTIONS"), ("menú", "MENU"), ("Menu", "MENU"), ("ver el menú", "MENU")],
+)
+def test_menu_rule_intent_maps_letters_and_menu(text, intent):
+    assert menu_rule_intent(text, None, SUBMENUS) == intent
+
+
+def test_submenu_digits_only_count_after_the_more_options_reply():
+    assert menu_rule_intent("1", MORE_OPTIONS["es"], SUBMENUS) == "RETENTION"
+    assert menu_rule_intent("2", MORE_OPTIONS["pt"], SUBMENUS) == "CASE_STATUS"
+    assert menu_rule_intent("2", CARD_OPTIONS["es"], SUBMENUS) == "GENERAL_INQUIRY"
+    assert menu_rule_intent("1", SAVINGS_OPTIONS["pt"], SUBMENUS) == "GENERAL_INQUIRY"
+    assert menu_rule_intent("1", "¿Qué quieres ver? 1) saldo 2) movimientos", SUBMENUS) is None
+
+
+@pytest.mark.parametrize("text", ["hola", "a mi tarjeta le cobraron", "quiero ver mi saldo"])
+def test_menu_rule_intent_ignores_regular_messages(text):
+    assert menu_rule_intent(text, None, SUBMENUS) is None
+
+
+@pytest.mark.parametrize("text", ["quiero cancelar mi tarjeta", "Cancelar la cuenta", "quero cancelar meu cartão"])
+def test_cancelling_a_product_is_retention_not_cancel(text):
+    assert names_a_product_to_cancel(text)
+    assert fallback_classify(text, INTENTS + ["RETENTION"]).intent == "RETENTION"
+
+
+def test_a_bare_cancelar_is_still_cancel():
+    assert not names_a_product_to_cancel("cancelar")
+    assert fallback_classify("cancelar", INTENTS + ["RETENTION"]).intent == "CANCEL"
