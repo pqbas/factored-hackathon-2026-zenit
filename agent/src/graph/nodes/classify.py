@@ -10,6 +10,7 @@ from src.llm.fallback import (
     check_guardrail_rules,
     detect_language,
     fallback_classify,
+    is_confirmation,
     mask_sensitive,
     menu_rule_intent,
     names_a_product_to_cancel,
@@ -154,7 +155,12 @@ async def classify(
 
     # Cleared on every turn so a use case's tools never leak into an unrelated reply
     # (e.g. a greeting right after a GENERAL_INQUIRY in the same thread).
-    update: dict = {"classification": classification.model_dump(), "use_case": None}
+    update: dict = {
+        "classification": classification.model_dump(),
+        "use_case": None,
+        # A yes to the confirmation question: respond forces the handoff tool on this turn.
+        "confirmation": is_confirmation(text, previous_reply),
+    }
     messages: list = []
 
     # The back resends the whole history, raw, on every request: mask every earlier message

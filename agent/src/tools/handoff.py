@@ -7,7 +7,7 @@ from typing import Literal
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.tools import StructuredTool
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Field, ValidationError, create_model
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +46,18 @@ class CaseStatusCase(BaseModel):
     amount: float | None = Field(default=None, description="Only if the case is not in get_cases: amount of the charge.")
     need: str = Field(description="What the customer needs about the case, in their words.")
 
+
+def _all_optional(model: type[BaseModel], name: str) -> type[BaseModel]:
+    fields = {
+        field_name: (field.annotation | None, Field(default=None, description=field.description))
+        for field_name, field in model.model_fields.items()
+    }
+    return create_model(name, **fields)
+
+
+# What the collector extracts each turn: the same fields, whatever the customer gave so far.
+PartialComplaintCase = _all_optional(ComplaintCase, "PartialComplaintCase")
+PartialRetentionCase = _all_optional(RetentionCase, "PartialRetentionCase")
 
 _CASES: dict[str, type[BaseModel]] = {
     "complaint": ComplaintCase,
@@ -162,7 +174,11 @@ def _verify_case_status(case: "CaseStatusCase", rows_by_tool: dict[str, list[dic
             return "Antes de derivar, llama a get_cases en este turno para verificar el reclamo."
         row = next((c for c in cases if c["complaint_id"] == case.complaint_id), None)
         if row is None:
-            return f"El cliente no tiene un reclamo {case.complaint_id}. Usa un complaint_id de get_cases."
+            # The LLM never saw the rows when it went straight to the handoff, so the error lists them.
+            known = "; ".join(
+                f"{c['complaint_id']} ({str(c['creation_date'])[:10]}, {c['subcategory']})" for c in cases
+            )
+            return f"El cliente no tiene un reclamo {case.complaint_id}. Usa uno de get_cases: {known}."
         return {
             "complaint_id": row["complaint_id"],
             "creation_date": str(row["creation_date"])[:10],

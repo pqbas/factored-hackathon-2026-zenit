@@ -648,3 +648,94 @@ def test_a_confirmed_case_status_carries_the_handoff_with_the_case_id(client, mo
     assert handoff["reason"] == "case_status"
     assert handoff["facts"]["case_id"] == "CMP-1"
     assert handoff["facts"]["verified_data"]["status"] == "In Process"
+
+
+def test_a_whole_complaint_conversation_is_asked_in_order_and_ends_in_the_handoff(client, monkeypatch):
+    from src.tools.handoff import PartialComplaintCase
+
+    products = [{"type": "text", "text": json.dumps({
+        "columns": ["product_type", "product_number_last4", "currency"],
+        "rows": [["Tarjeta Crédito", "4930", "USD"], ["Tarjeta Crédito", "1070", "PEN"]],
+    })}]
+    transactions = [{"type": "text", "text": json.dumps({
+        "columns": ["transaction_date", "product_number_last4", "merchant_name", "amount", "currency", "transaction_status"],
+        "rows": [["2026-06-08T15:00:51.000+0000", "4930", "Internet Plus", 329.44, "USD", "Approved"]],
+    })}]
+
+    def _tool(name, result, properties):
+        async def call(**kwargs):
+            return result
+
+        return StructuredTool.from_function(
+            coroutine=call, name=name, description="d", infer_schema=False,
+            args_schema={"type": "object", "properties": properties, "required": ["customer_id"]},
+        )
+
+    tools = [
+        _tool("get_products", products, {"customer_id": {"type": "string"}}),
+        _tool("list_transactions", transactions, {"customer_id": {"type": "string"}, "product_last4": {"type": "string"}}),
+    ]
+
+    async def fake_tools_for(schema):
+        return tools
+
+    charge = dict(transaction_date="2026-06-08", merchant="Internet Plus", amount=329.44)
+    given = [
+        PartialComplaintCase(),
+        PartialComplaintCase(card_last4="4930"),
+        PartialComplaintCase(card_last4="4930", **charge),
+        PartialComplaintCase(card_last4="4930", **charge, complaint_type="not_recognized"),
+        PartialComplaintCase(card_last4="4930", **charge, complaint_type="not_recognized",
+                             description="Nunca contraté ese servicio"),
+    ]
+
+    class CollectingChatModel(ScriptedToolChatModel):
+        def with_structured_output(self, schema):
+            answers = self._answers
+
+            class _Structured:
+                async def ainvoke(self, messages):
+                    return answers.pop(0)
+
+            return _Structured()
+
+        async def ainvoke(self, messages):
+            if messages[-1].content.startswith("{"):  # the case summary call
+                return AIMessage(content="El cliente no reconoce un cargo de Internet Plus.")
+            return await super().ainvoke(messages)
+
+    llm = CollectingChatModel([
+        AIMessage(content="", tool_calls=[{"name": "hand_off_to_advisor", "id": "c1", "args": {
+            "card_last4": "4930", **charge, "complaint_type": "not_recognized",
+            "description": "Nunca contraté ese servicio",
+        }}]),
+    ])
+    llm._answers = given
+    monkeypatch.setattr(main, "tools_for", fake_tools_for)
+    monkeypatch.setattr(main, "get_chat_model", lambda: llm)
+    monkeypatch.setattr(
+        main, "jev_client",
+        JevClient(api_key="test-key", url="https://api.typesafe.ai/v1/systemone", timeout=2.0,
+                  transport=httpx.MockTransport(lambda request: _jev_response_for("COMPLAINT"))),
+    )
+
+    messages = []
+    replies = []
+    for text in ("no reconozco un cargo", "la 4930", "el de Internet Plus de 329.44", "no lo reconozco",
+                 "nunca contraté ese servicio", "sí, confirmo"):
+        messages.append({"role": "user", "content": text})
+        body = _invoke_history(client, messages).json()
+        replies.append(_output_text(body))
+        messages.append({"role": "assistant", "content": replies[-1]})
+
+    assert replies[0].startswith("¿De qué tarjeta es el cargo?")
+    assert replies[1].startswith("¿Cuál es el cargo?")
+    assert replies[2].startswith("¿Qué pasó?")
+    assert replies[3] == "Cuéntame brevemente lo que pasó."
+    assert replies[4].endswith("¿Confirmas estos datos para pasar tu reclamo a un asesor?")
+    assert replies[5] == HANDOFF_REPLY["es"]
+    handoff = body["custom_outputs"]["handoff"]
+    assert handoff["reason"] == "complaint"
+    assert handoff["summary"] == "El cliente no reconoce un cargo de Internet Plus."
+    assert handoff["facts"]["verified_data"]["merchant"] == "Internet Plus"
+    assert llm._answers == []

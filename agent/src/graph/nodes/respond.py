@@ -10,6 +10,7 @@ from src.schemas.routing import IntentRoute
 from src.prompts.messages import HANDOFF_REPLY
 from src.schemas.classification import reply_language
 from src.tools.bind_customer import bind_customer
+from src.tools.collector import CollectorUnavailable, card_to_fetch, extract_fields, next_step
 from src.tools.handoff import HANDOFF_TOOL_NAME, handoff_tool, tool_rows, verify_case
 
 logger = logging.getLogger(__name__)
@@ -26,6 +27,9 @@ _LANGUAGE_LINE = {
     ),
 }
 
+# The cases whose fields code collects (3.C, 3.D1); 3.D2 needs the LLM to explain the status.
+_COLLECTED = ("complaint", "retention")
+
 # Bounds the tool-calling loop below so a misbehaving LLM can't call tools forever.
 _MAX_TOOL_ROUNDS = 4
 
@@ -39,6 +43,11 @@ async def respond(
 
     if use_case:
         route = next(route for route in routes if route.intent == use_case)
+        if route.handoff_reason in _COLLECTED and not state.get("confirmation"):
+            try:
+                return await _collect(state, llm, route, tools_for)
+            except CollectorUnavailable as exc:
+                logger.warning("Collector unavailable, the LLM collects the case: %s", exc)
         return await _respond_with_tools(state, llm, route, language_line, tools_for)
 
     situation = situation_for(classification, intent_threshold)
@@ -67,12 +76,7 @@ async def _respond_with_tools(
     # first system prompt, the Spanish instructions and tool results pulled replies to Spanish.
     reminder = [SystemMessage(content=language_line.strip())] if language_line else []
 
-    customer_id = state["session"]["customer_id"]
-    tools = [
-        bind_customer(tool, customer_id)
-        for schema in route.schemas
-        for tool in await tools_for(schema)
-    ]
+    tools = await _bound_tools(state, route, tools_for)
     tools_by_name = {tool.name: tool for tool in tools}
     if route.handoff_reason:
         tools.append(handoff_tool(route.handoff_reason))
@@ -82,13 +86,20 @@ async def _respond_with_tools(
     bound_llm = llm.bind_tools(tools)
     # The first round must call a tool: without it the LLM answered a follow-up ("E limite?")
     # with made-up figures, since the history only holds earlier replies, never tool results.
-    first_llm = llm.bind_tools(tools, tool_choice="required")
+    # On the customer's yes to the confirmation question the LLM once rewrote the summary
+    # instead of handing off, so that turn forces the handoff tool.
+    forced = HANDOFF_TOOL_NAME if state.get("confirmation") and route.handoff_reason else "required"
+    first_llm = llm.bind_tools(tools, tool_choice=forced)
 
     messages = [SystemMessage(content=system_prompt), *state["messages"]]
     rounds = 0
+    # The LLM calls the handoff before any UC tool and has made up the complaint_id; after the
+    # error it wrote text instead of retrying, so the round after a failed check is forced once.
+    forced_retries = 1 if route.handoff_reason else 0
     reply = await first_llm.ainvoke(messages)
     while reply.tool_calls and rounds < _MAX_TOOL_ROUNDS:
         messages.append(reply)
+        handoff_failed = False
         for tool_call in reply.tool_calls:
             if tool_call["name"] == HANDOFF_TOOL_NAME and route.handoff_reason:
                 await _fetch_missing_rows(route.handoff_reason, tool_call["args"], tools_by_name, rows_by_tool)
@@ -98,6 +109,7 @@ async def _respond_with_tools(
                 # The error names only product digits and field names, never the customer's text.
                 logger.warning("Handoff not verified: %s", verified)
                 messages.append(ToolMessage(content=verified, tool_call_id=tool_call["id"]))
+                handoff_failed = True
                 continue
             tool = tools_by_name.get(tool_call["name"])
             try:
@@ -110,7 +122,12 @@ async def _respond_with_tools(
                 content = str(exc)
             messages.append(ToolMessage(content=content, tool_call_id=tool_call["id"]))
         rounds += 1
-        reply = await bound_llm.ainvoke(messages + reminder)
+        if handoff_failed and forced_retries:
+            forced_retries -= 1
+            retry_llm = llm.bind_tools(tools, tool_choice=HANDOFF_TOOL_NAME)
+            reply = await retry_llm.ainvoke(messages + reminder)
+        else:
+            reply = await bound_llm.ainvoke(messages + reminder)
     if reply.tool_calls:
         # Out of rounds: answer from the tool results so far instead of ending on a tool call.
         reply = await llm.ainvoke(messages + reminder)
@@ -118,6 +135,31 @@ async def _respond_with_tools(
     # Only the final AIMessage is kept in the conversation history; the tool calls and
     # results above stay in `messages` locally and are captured by the MLflow trace.
     return {"messages": [_without_advisor_prefix(reply)]}
+
+
+async def _bound_tools(state: AgentState, route: IntentRoute, tools_for) -> list:
+    customer_id = state["session"]["customer_id"]
+    return [
+        bind_customer(tool, customer_id)
+        for schema in route.schemas
+        for tool in await tools_for(schema)
+    ]
+
+
+async def _collect(state: AgentState, llm, route: IntentRoute, tools_for) -> dict:
+    """Etapa 4 for 3.C and 3.D1: code decides the next question. The LLM only reads the
+    conversation for the fields already given, so a field that is there is never asked again."""
+    reason = route.handoff_reason
+    language = reply_language((state.get("classification") or {}).get("language"))
+    fields = await extract_fields(llm, reason, state["messages"])
+    tools_by_name = {tool.name: tool for tool in await _bound_tools(state, route, tools_for)}
+    rows_by_tool: dict[str, list[dict]] = {}
+    await _fetch_missing_rows(reason, {}, tools_by_name, rows_by_tool)
+    if card := card_to_fetch(reason, fields, rows_by_tool):
+        await _fetch_missing_rows(reason, {"card_last4": card}, tools_by_name, rows_by_tool)
+    kind, text = next_step(reason, fields, rows_by_tool, language)
+    logger.info("Collector %s: %s", reason, kind)
+    return {"messages": [AIMessage(content=text)]}
 
 
 def _hand_off(state: AgentState, route: IntentRoute, verified_data: dict, rows_by_tool: dict) -> dict:
@@ -151,7 +193,7 @@ async def _fetch_missing_rows(reason: str, args: dict, tools_by_name: dict, rows
     card = args.get("card_last4")
     if reason == "case_status" and args.get("complaint_id"):
         needed.append(("get_cases", {}))
-    elif reason == "retention" or card:
+    elif reason in ("retention", "complaint") or card:
         needed.append(("get_products", {}))
         if card:
             needed.append(("list_transactions", {"product_last4": card}))

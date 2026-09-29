@@ -62,6 +62,10 @@
   schemas: [bank_uc_consultas]
   handoff_reason: complaint
   instructions: |
+    Normalmente el sistema hace estas preguntas por su cuenta; estas
+    instrucciones solo se usan si esa recolección falla y en el turno en que el
+    cliente confirma.
+
     Atiendes la opción C: un reclamo por un cargo de tarjeta de crédito. No
     resuelves el reclamo: recolectas la ficha, la verificas con los datos del
     banco y la derivas a un asesor con hand_off_to_advisor. Nunca prometas
@@ -186,6 +190,10 @@
   schemas: [bank_uc_consultas]
   handoff_reason: retention
   instructions: |
+    Normalmente el sistema hace estas preguntas por su cuenta; estas
+    instrucciones solo se usan si esa recolección falla y en el turno en que el
+    cliente confirma.
+
     Atiendes la opción D1: cancelar un producto. No cancelas el producto, no
     intentas retener al cliente y no le ofreces nada a cambio (beneficios,
     otro producto): eso lo hace un asesor. Recolectas la ficha, la verificas y
