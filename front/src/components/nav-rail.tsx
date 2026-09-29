@@ -1,5 +1,6 @@
 import { ASSISTANT_NAME } from '@/lib/assistant';
 import {
+  ChartColumn,
   MessageCircle,
   MessagesSquare,
   Moon,
@@ -55,6 +56,14 @@ const NAV_ITEMS: NavItem[] = [
     section: 'chats',
     icon: MessagesSquare,
     isActive: (pathname) => pathname.startsWith('/conversations'),
+  },
+  {
+    id: 'metrics',
+    label: 'Métricas',
+    to: '/metrics',
+    section: 'metrics',
+    icon: ChartColumn,
+    isActive: (pathname) => pathname.startsWith('/metrics'),
   },
 ];
 

@@ -41,7 +41,7 @@ describe('canAccess', () => {
   const expected: Record<Role, Section[]> = {
     customer: ['agent', 'products'],
     advisor: ['agent', 'chats'],
-    admin: ['agent', 'products', 'chats'],
+    admin: ['agent', 'products', 'chats', 'metrics'],
   };
 
   it('follows the access matrix', () => {
@@ -59,5 +59,6 @@ describe('sectionForPath', () => {
     expect(sectionForPath('/chat/123')).toBe('agent');
     expect(sectionForPath('/products')).toBe('products');
     expect(sectionForPath('/conversations')).toBe('chats');
+    expect(sectionForPath('/metrics')).toBe('metrics');
   });
 });

@@ -11,6 +11,7 @@ import NewChatPage from '@/pages/NewChatPage';
 import ChatPage from '@/pages/ChatPage';
 import ConversationsPage from '@/pages/ConversationsPage';
 import ProductsPage from '@/pages/ProductsPage';
+import MetricsPage from '@/pages/MetricsPage';
 import { RequireSection } from '@/components/require-section';
 
 function App() {
@@ -44,6 +45,14 @@ function App() {
                   <Route
                     path="admin"
                     element={<Navigate to="/conversations" replace />}
+                  />
+                  <Route
+                    path="metrics"
+                    element={
+                      <RequireSection section="metrics">
+                        <MetricsPage />
+                      </RequireSection>
+                    }
                   />
                   <Route
                     path="products"
