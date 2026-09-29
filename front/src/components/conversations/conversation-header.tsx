@@ -1,4 +1,4 @@
-import { ASSISTANT_KIND, ASSISTANT_NAME } from '@/lib/assistant';
+import { ASSISTANT_NAME } from '@/lib/assistant';
 import { Bot, PanelRight, X } from 'lucide-react';
 
 import { handoffReasonStyle } from '@/components/conversations/use-case-style';
@@ -30,6 +30,8 @@ function AssistantSwitch({
       type="button"
       role="switch"
       aria-checked={on}
+      aria-label={`${ASSISTANT_NAME} (asistente)`}
+      title={`${ASSISTANT_NAME} (asistente)`}
       data-testid="assistant-switch"
       disabled={disabled}
       onClick={onToggle}
@@ -39,9 +41,8 @@ function AssistantSwitch({
         className={cn('size-4', on ? 'text-primary' : 'text-muted-foreground')}
         strokeWidth={1.8}
       />
-      <span className="hidden sm:inline" title={ASSISTANT_KIND}>
-        {ASSISTANT_NAME} (asistente)
-      </span>
+      {/* No text label: the robot says it's David (name in the tooltip), so
+          the customer's name and email keep their room. */}
       <span className="w-6 text-left">{on ? 'ON' : 'OFF'}</span>
       <span
         className={cn(
@@ -109,10 +110,11 @@ export function ConversationHeader({
         {(email || customerId || tag) && (
           <span
             data-testid="customer-meta"
-            className="flex min-w-0 items-center gap-2 text-muted-foreground text-xs"
+            className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-muted-foreground text-xs"
           >
+            {/* The email never gets cut: the line wraps instead. */}
             {email && (
-              <span data-testid="customer-email" className="truncate">
+              <span data-testid="customer-email" className="whitespace-nowrap">
                 {email}
               </span>
             )}
