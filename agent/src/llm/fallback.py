@@ -14,7 +14,7 @@ def normalize(text: str) -> str:
 
 _PT_MARKERS = re.compile(
     r"\b(nao|voce|obrigad[oa]|cobranca|reconheco|estorno|compra que nao|minha|meu|cartao|"
-    r"ontem|hoje|atendente|sim|oi|ola|valor|nenhum[a]?)\b"
+    r"ontem|hoje|atendente|sim|oi|ola|valor|nenhum[a]?|quanto|tenho|poupanca|quero)\b"
 )
 _ES_MARKERS = re.compile(
     r"\b(no reconozco|yo|mi|tarjeta|cargo|cobro|ayer|hoy|asesor|si|hola|monto|ninguno|"

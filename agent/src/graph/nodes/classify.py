@@ -141,6 +141,11 @@ async def classify(
     # Only Jev and the LLM can tell another language apart; the local detector says "other"
     # when it can't decide, so with rules an undecided message keeps the conversation's language.
     detected = classification.language
+    # The classifier once said "es" for a clear Portuguese message: when the local markers are
+    # sure of es or pt, they win.
+    local = detect_language(text)
+    if local in ("es", "pt") and local != detected:
+        detected = local
     if classification.source not in ("jev", "llm") and detected not in ("es", "pt"):
         detected = None
     language = conversation_language(

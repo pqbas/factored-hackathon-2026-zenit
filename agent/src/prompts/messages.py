@@ -107,6 +107,18 @@ OUT_OF_MENU: dict[str, str] = {
     "pt": "Não posso ajudar com isso por aqui.",
 }
 
+# A UC tool failed: code writes this, since the LLM paraphrased it.
+TOOL_DOWN: dict[str, str] = {
+    "es": "Ahora no puedo consultar esa información.",
+    "pt": "Agora não consigo consultar essa informação.",
+}
+
+# Loans, debit card, payment date, minimum payment, total debt and transfers: no tool returns them.
+NOT_AVAILABLE: dict[str, str] = {
+    "es": "Esa consulta todavía no está disponible en este chat.",
+    "pt": "Essa consulta ainda não está disponível neste chat.",
+}
+
 # A request for a person without an operation: David asks what it's about, through the menu.
 HUMAN_WITHOUT_TOPIC: dict[str, str] = {
     "es": "Cuéntame qué necesitas y te ayudo.",

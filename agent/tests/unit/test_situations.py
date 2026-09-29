@@ -28,7 +28,7 @@ def test_low_confidence_gets_the_menu_even_for_a_greeting():
         ("CARD_OPTIONS", "card_options"),
         ("SAVINGS_OPTIONS", "savings_options"),
         ("OUT_OF_SCOPE", "out_of_menu"),
-        ("COMMERCIAL", "out_of_menu"),
+        ("COMMERCIAL", "not_available"),
         ("HUMAN_AGENT", "human_without_topic"),
     ],
 )
