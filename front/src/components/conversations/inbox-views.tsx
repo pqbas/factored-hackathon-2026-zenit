@@ -1,4 +1,4 @@
-import { Check, CheckCircle2, ChevronDown, Hourglass, Inbox, UserCheck, Users } from 'lucide-react';
+import { Bot, Check, CheckCircle2, ChevronDown, Hourglass, Inbox, UserCheck, Users } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { UseCaseIcon } from '@/components/conversations/use-case-style';
@@ -28,6 +28,7 @@ import {
   type ViewCounts,
 } from '@/lib/advisor';
 import { cn } from '@/lib/utils';
+import { ASSISTANT_NAME } from '@/lib/assistant';
 
 function ViewItem({
   view,
@@ -164,6 +165,12 @@ export function InboxViews({
           <SidebarGroupContent>
             <SidebarMenu>
               {item({ kind: 'inbox' }, <Inbox className={muted} strokeWidth={1.8} />, 'Bandeja', 'view-inbox')}
+              {item(
+                { kind: 'david' },
+                <Bot className={muted} strokeWidth={1.8} />,
+                `Atendidas por ${ASSISTANT_NAME}`,
+                'view-david',
+              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
