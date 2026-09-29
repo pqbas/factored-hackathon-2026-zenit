@@ -332,4 +332,4 @@ Shipped en PR #42.
 - [x] Con la Bandeja vacía: "No hay casos para atender. David está atendiendo N
       conversaciones", con link a esa vista.
 
-Shipped en PR #<n>.
+Shipped en PR #44.
