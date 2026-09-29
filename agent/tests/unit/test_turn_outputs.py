@@ -36,3 +36,9 @@ def test_a_blocked_turn_is_marked_blocked():
 def test_a_guardrail_below_the_threshold_is_not_blocked():
     classification = _classification(guardrail="PROMPT_INJECTION", guardrail_probability=0.4)
     assert turn_custom_outputs("t1", classification, None, THRESHOLD)["blocked"] is False
+
+
+def test_a_handoff_turn_carries_the_handoff():
+    handoff = {"reason": "complaint", "summary": "s", "facts": {"verified_data": {"card_last4": "4930"}}}
+    outputs = turn_custom_outputs("t1", _classification(intent="COMPLAINT"), "COMPLAINT", THRESHOLD, handoff)
+    assert outputs["handoff"] == handoff

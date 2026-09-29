@@ -1,12 +1,15 @@
 {
   "name": "04-reclamo-cargo",
-  "description": "Reclamo por un cargo que no reconoce (línea base, sin recolección)",
+  "description": "Reclamo por un cargo: David recolecta la ficha y deriva (3.C)",
   "sessionToken": "demo-mx-1",
   "customer": 1,
   "messages": [
     "hola",
-    "tengo un cargo en mi tarjeta que no reconozco",
-    "fue una compra de 329.44 USD en Internet Plus",
-    "quiero que me lo devuelvan"
+    "C",
+    "la 4930",
+    "el de Internet Plus de 329.44",
+    "no lo reconozco",
+    "nunca contraté ese servicio de internet",
+    "sí, confirmo"
   ]
 }

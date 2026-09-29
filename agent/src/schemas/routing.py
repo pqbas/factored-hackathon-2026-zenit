@@ -13,6 +13,8 @@ class IntentRoute(BaseModel):
     destination: str
     schemas: list[str] = []
     instructions: str | None = None
+    # Set on a route whose operation ends with a human (docs/flujo-atencion.md, etapa 5).
+    handoff_reason: str | None = None
 
     @model_validator(mode="after")
     def _load_context_needs_schemas_and_instructions(self) -> "IntentRoute":
