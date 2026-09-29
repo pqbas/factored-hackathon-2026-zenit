@@ -210,7 +210,7 @@ correcto, sin tomarlo a mano.
 
 ---
 
-## Phase 8: Conexión con el agente desplegado
+## Phase 8: Conexión con el agente desplegado (Complete)
 
 **Goal:** que el chat desplegado en Databricks converse con el agente
 desplegado, no con un endpoint de ejemplo.
@@ -219,6 +219,12 @@ desplegado, no con un endpoint de ejemplo.
      decidir: App + /invocations vía API_PROXY o serving endpoint
      agent/v1/responses, y cómo se autentica una App contra la otra. -->
 
-- [ ] El chat desplegado llega al agente desplegado con el historial, el
+- [x] El chat desplegado llega al agente desplegado con el historial, el
       token y la conversación en cada turno.
 - [ ] Los logs del backend no muestran el token de sesión del cliente.
+
+Diferido: `databricksFetch` todavía registra el body completo (con
+`custom_inputs.session_token`). Con los tokens demo no expone nada real;
+queda para cuando haya login real.
+
+Shipped en PR #38.

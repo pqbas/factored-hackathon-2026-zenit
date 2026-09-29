@@ -1,18 +1,35 @@
-# Chat UI, deployed as its own Databricks App. It talks to the agent app only over HTTP (API_PROXY).
+# Chat UI + API, deployed as its own Databricks App. It talks to the agent app
+# only over HTTP (API_PROXY) and keeps its conversations in its own Lakebase.
 bundle:
   name: bank-assistant-back
 
 resources:
+  database_instances:
+    chat_lakebase:
+      name: bank-assistant-chat-db
+      capacity: CU_1
+
   apps:
     bank_assistant_ui:
       name: ${bundle.target}-bank-assistant-ui
-      description: "Chat UI for the bank-assistant dispute agent"
+      description: "Chat, advisor console and customer products for the bank assistant"
       source_code_path: .
-      # Chat history is ephemeral (no Lakebase). To persist it, add a database resource
-      # (see README.md "Database modes").
+      resources:
+        - name: database
+          description: "Lakebase database for chats, messages and the advisor console"
+          database:
+            database_name: databricks_postgres
+            instance_name: ${resources.database_instances.chat_lakebase.name}
+            permission: CAN_CONNECT_AND_CREATE
+        - name: sql-warehouse
+          description: "Warehouse that runs the bank's Unity Catalog functions (/api/products)"
+          sql_warehouse:
+            id: 07ca55766c9c5097
+            permission: CAN_USE
 
 sync:
-  # The built UI is gitignored but must be uploaded: run `npm run build` in ../front and here first.
+  # The built UI is gitignored but must be uploaded: build ../front and run
+  # `npm run copy:front` here first (see README "Deploy").
   include:
     - server/public/**
 
