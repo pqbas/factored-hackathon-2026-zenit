@@ -439,4 +439,4 @@ Shipped en PR #69.
       de datos verificados tal cual vienen (tarjeta, cargo, tipo y descripción; o producto y motivo).
 - [x] En la fila de la bandeja, el motivo como etiqueta corta mientras el caso está abierto.
 
-Shipped en PR #<n>.
+Shipped en PR #72.
