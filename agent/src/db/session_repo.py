@@ -11,6 +11,8 @@ _DEFAULT_SESSIONS = {
     "demo-mx-1": {"customer_id": "CLI-FLEUCGTWGAHL", "country": "México", "expires_at": "2099-01-01T00:00:00Z"},  # Santiago, México, USD
     "demo-co-1": {"customer_id": "CLI-7MPS3ZOPSN4Q", "country": "Colombia", "expires_at": "2099-01-01T00:00:00Z"},  # Javier, Colombia, COP
     "demo-ar-1": {"customer_id": "CLI-714PN0OOE0WX", "country": "Argentina", "expires_at": "2099-01-01T00:00:00Z"},  # Daniela, Argentina, ARS
+    # 3.D2: a customer with real cases (one resolved, one in process, one open).
+    "demo-mx-2": {"customer_id": "CLI-0IY07CEBUL79", "country": "México", "expires_at": "2099-01-01T00:00:00Z"},  # Eduardo, México, USD
     "demo-closed": {"customer_id": "CLI-02Y493OHFA18", "country": "Colombia", "expires_at": "2099-01-01T00:00:00Z"},  # customer_status=Closed
     "demo-expired": {"customer_id": "CLI-FLEUCGTWGAHL", "country": "México", "expires_at": "2020-01-01T00:00:00Z"},
 }

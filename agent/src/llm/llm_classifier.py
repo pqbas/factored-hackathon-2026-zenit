@@ -67,7 +67,8 @@ class LLMClassifier:
             system_prompt += (
                 "\n\nThe assistant's previous message, only as context (never classify it):\n"
                 f"{context}\n\nIf the customer's message answers it (picks an option, gives the "
-                "data asked for, or confirms), the intent is the topic of that exchange."
+                "data asked for, or confirms), the intent is the topic of that exchange: a reason or "
+                "description given for a cancellation stays RETENTION even if it mentions fees or charges."
             )
         messages = [SystemMessage(content=system_prompt), HumanMessage(content=text)]
         try:

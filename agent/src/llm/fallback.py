@@ -154,6 +154,30 @@ def fallback_classify(text: str, intents: Iterable[str]) -> Classification:
 _MENU_LETTER = re.compile(r"(?:(?:la |letra |opcion |opcao |a opcao )?)([abcd])")
 _MENU_WORDS = re.compile(r"(?:ver (?:el |o )?|volver al |voltar ao |mostrar (?:el |o )?)?(?:menu|opciones|opcoes)")
 _SUBMENU_DIGIT = re.compile(r"(?:opcion |opcao )?([12])")
+# Etapa 4, paso 6: a yes to David's confirmation question keeps its operation. Without this
+# rule a classifier read "sí" after "…pasar tu consulta a un asesor?" as HUMAN_AGENT.
+_AFFIRMATIVE = re.compile(r"(si|sim|confirmo|si,? confirmo|sim,? confirmo|correcto|claro|dale|ok|isso|esta bien|de acuerdo)")
+# David closes the collection with a fixed question, but the LLM sometimes words it its own
+# way ("¿…pasar esta consulta a un asesor?"), so any question that offers to pass the
+# operation to an advisor counts.
+_TO_ADVISOR = re.compile(r"(asesor|atendente)")
+_CONFIRMATIONS = (
+    (re.compile(r"(tu|sua|esta|essa) consulta"), "CASE_STATUS"),
+    (re.compile(r"(tu|sua|esta|essa) (solicitud|solicitacao)"), "RETENTION"),
+    (re.compile(r"(tu|sua|este|esta|essa) (reclamo|reclamacao)"), "COMPLAINT"),
+)
+
+
+def _confirmed_operation(previous: str) -> str | None:
+    last_line = previous.strip().splitlines()[-1] if previous.strip() else ""
+    if "?" not in last_line or not _TO_ADVISOR.search(last_line):
+        return None
+    for pattern, intent in _CONFIRMATIONS:
+        if pattern.search(last_line):
+            return intent
+    return None
+
+
 _LETTER_INTENTS = {"a": "CARD_OPTIONS", "b": "SAVINGS_OPTIONS", "c": "COMPLAINT", "d": "MORE_OPTIONS"}
 
 
@@ -165,6 +189,9 @@ def menu_rule_intent(text: str, previous_reply: str | None, submenus: dict[str, 
         return "MENU"
     if m := _MENU_LETTER.fullmatch(t):
         return _LETTER_INTENTS[m.group(1)]
+    if previous_reply is not None and _AFFIRMATIVE.fullmatch(t):
+        if operation := _confirmed_operation(normalize(previous_reply)):
+            return operation
     digit = _SUBMENU_DIGIT.fullmatch(t)
     if previous_reply is None or digit is None:
         return None

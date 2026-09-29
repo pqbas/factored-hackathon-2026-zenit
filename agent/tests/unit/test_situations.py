@@ -30,14 +30,13 @@ def test_low_confidence_gets_the_menu_even_for_a_greeting():
         ("OUT_OF_SCOPE", "out_of_menu"),
         ("COMMERCIAL", "out_of_menu"),
         ("HUMAN_AGENT", "human_without_topic"),
-        ("CASE_STATUS", "not_yet_available"),
     ],
 )
 def test_situation_for_maps_the_intent_to_its_situation(intent, situation):
     assert situation_for(_classification(intent=intent), THRESHOLD) == situation
 
 
-@pytest.mark.parametrize("situation", ["greeting", "out_of_menu", "human_without_topic", "not_yet_available", "menu"])
+@pytest.mark.parametrize("situation", ["greeting", "out_of_menu", "human_without_topic", "menu"])
 @pytest.mark.parametrize("language", ["es", "pt"])
 def test_every_fixed_reply_but_more_options_ends_with_the_menu(situation, language):
     assert fixed_reply(situation, language).endswith(MENU[language])

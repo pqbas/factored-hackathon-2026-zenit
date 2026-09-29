@@ -113,12 +113,6 @@ HUMAN_WITHOUT_TOPIC: dict[str, str] = {
     "pt": "Me conte do que você precisa e eu ajudo.",
 }
 
-# Options of the menu that aren't built yet (3.C, 3.D1, 3.D2 until their blocks ship).
-NOT_YET_AVAILABLE: dict[str, str] = {
-    "es": "Esa opción todavía no está disponible en este chat.",
-    "pt": "Essa opção ainda não está disponível neste chat.",
-}
-
 # docs/flujo-atencion.md, etapa 5.
 HANDOFF_REPLY: dict[str, str] = {
     "es": "Te comunico con un asesor, que ya tiene los datos de tu caso.",

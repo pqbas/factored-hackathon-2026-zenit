@@ -46,7 +46,8 @@ class JevClient:
             intent_instructions += (
                 " If the customer's message answers the assistant's previous message (picks an"
                 " option, gives the data asked for, or confirms), the intent is the topic of"
-                " that exchange."
+                " that exchange: a reason or description given for a cancellation stays"
+                " RETENTION even if it mentions fees or charges."
             )
         body = {
             "model": "jev-latest",
