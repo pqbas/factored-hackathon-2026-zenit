@@ -157,7 +157,7 @@ export function InboxList({
         <h1 data-testid="inbox-title" className="font-semibold text-xl tracking-tight">
           {title}
         </h1>
-        <span className="text-muted-foreground text-sm">
+        <span className="whitespace-nowrap text-muted-foreground text-sm">
           {chats.length} {chats.length === 1 ? 'conversación' : 'conversaciones'}
         </span>
         <div className={cn('relative ml-auto', compact ? 'w-32' : 'w-60')}>

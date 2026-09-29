@@ -131,6 +131,8 @@ async function mockAdvisorApi(page: Page, me: string, role: Role = 'advisor') {
       return route.fulfill({ json: { chats: list, hasMore: false } });
     }
     if (!target) return route.fulfill({ status: 404, json: { code: 'not_found:chat' } });
+    // No bank customer unless a test says otherwise.
+    if (action === 'customer-context') return route.fulfill({ status: 204 });
     if (action === 'messages' && request.method() === 'GET') {
       const all = messages.filter((m) => m.chatId === id);
       const after = url.searchParams.get('after');
@@ -237,7 +239,11 @@ test.describe('Advisor console', () => {
     await page.getByTestId('view-david').click();
     await page.getByTestId('conversation-row-c-assistant').click();
     await expect(page.getByTestId('customer-meta')).toBeVisible();
+    // On a laptop the context panel takes the list's place; closing it brings the list back.
+    await expect(rows(page).first()).toBeHidden();
+    await page.getByTestId('context-toggle').click();
     await expect(rows(page)).toHaveCount(1);
+    await expect(rows(page).first()).toBeVisible();
     await page.getByTestId('close-conversation').click();
     await expect(page.getByTestId('customer-meta')).toHaveCount(0);
   });
@@ -370,6 +376,65 @@ test.describe('Advisor console', () => {
     await page.getByTestId('inbox-empty-david-link').click();
     await expect(page.getByTestId('inbox-title')).toHaveText('Con AI');
     await expect(page.getByTestId('conversation-row-c-assistant')).toBeVisible();
+  });
+
+  test('the customer context panel shows the bank history beside the chat', async ({ page }) => {
+    await openConsole(page);
+    let fail = true;
+    await page.route('**/api/advisor/conversations/c-waiting/customer-context', (route) =>
+      fail
+        ? route.fulfill({ status: 502, json: { code: 'bad_gateway' } })
+        : route.fulfill({
+            json: {
+              customer: { customerId: 'CUS000123', firstName: 'Daniela', lastName: 'Sosa' },
+              interactions: [
+                { date: '2026-09-26T11:42:00.000Z', channel: 'Phone', reason: 'Cargo duplicado', resolved: false, escalated: true, sentiment: 'Negative' },
+                { date: '2026-09-20T18:05:00.000Z', channel: 'Web', reason: null, resolved: true, escalated: null, sentiment: null },
+              ],
+              transcripts: [
+                { date: '2026-09-26', customerText: 'Me cobraron dos veces, tarjeta [NÚMERO OCULTO].', agentText: 'Le abro un reclamo.' },
+              ],
+              cases: [],
+            },
+          }),
+    );
+
+    // Open by default; a warehouse failure offers a retry and the chat still works.
+    await page.getByTestId('conversation-row-c-waiting').click();
+    await expect(page.getByTestId('context-error')).toBeVisible();
+    await expect(page.getByTestId('take-button')).toBeEnabled();
+    fail = false;
+    await page.getByTestId('customer-context').getByRole('button', { name: 'Reintentar' }).click();
+
+    const panel = page.getByTestId('customer-context');
+    await expect(page.getByTestId('context-customer')).toHaveText('Daniela Sosa·Cliente •• 0123');
+    // No cases: it opens on the first tab with something in it.
+    await expect(page.getByTestId('context-tab-interactions')).toHaveAttribute('aria-selected', 'true');
+    await expect(panel.getByTestId('context-interaction')).toHaveCount(2);
+    await expect(panel.getByTestId('context-interaction').first()).toContainText('Llamada');
+    await expect(panel.getByTestId('context-interaction').first()).toContainText('Sin resolver');
+    await expect(panel.getByTestId('context-interaction').first()).toContainText('Negativo');
+
+    await page.getByTestId('context-tab-cases').click();
+    await expect(panel).toContainText('Sin casos ni reclamos registrados.');
+
+    await page.getByTestId('context-tab-transcripts').click();
+    await panel.getByRole('button', { name: /Ver transcripción/ }).click();
+    await expect(panel.getByTestId('context-transcript')).toContainText('Ejecutivo: Le abro un reclamo.');
+
+    // The toggle hides it and the choice sticks.
+    await page.getByTestId('context-toggle').click();
+    await expect(panel).toHaveCount(0);
+    await page.reload();
+    await page.getByTestId('conversation-row-c-waiting').click();
+    await expect(page.getByTestId('context-toggle')).toHaveAttribute('aria-pressed', 'false');
+    await expect(page.getByTestId('customer-context')).toHaveCount(0);
+  });
+
+  test('a chat without a bank customer says so', async ({ page }) => {
+    await openConsole(page);
+    await page.getByTestId('conversation-row-c-other').click();
+    await expect(page.getByTestId('context-none')).toContainText('no tiene un cliente del banco');
   });
 
   test('/admin now leads to Chats', async ({ page }) => {
