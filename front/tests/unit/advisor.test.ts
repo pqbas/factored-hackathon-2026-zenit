@@ -341,3 +341,23 @@ describe('customers', () => {
     );
   });
 });
+
+describe('toBubble text parts', () => {
+  it('keeps separate text parts as separate paragraphs', () => {
+    const message = {
+      id: 'm1',
+      chatId: 'c1',
+      role: 'assistant',
+      parts: [
+        { type: 'text', text: 'Se verificó que la transacción fue aprobada.' },
+        { type: 'text', text: 'Te comunico con un asesor.' },
+      ],
+      createdAt: '2026-09-29T00:15:00.000Z',
+      senderType: 'ai_agent',
+      senderId: null,
+    } as unknown as AdvisorMessage;
+    expect(toBubble(message, ME).text).toBe(
+      'Se verificó que la transacción fue aprobada.\n\nTe comunico con un asesor.',
+    );
+  });
+});
