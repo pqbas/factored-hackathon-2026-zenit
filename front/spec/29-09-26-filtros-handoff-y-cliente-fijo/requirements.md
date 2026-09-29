@@ -25,12 +25,31 @@ And it changes in these ways:
 7. Cada filtro se evalúa solo sobre la conversación en curso del cliente: su última conversación no resuelta (`closedAt` nulo). Un cliente aparece en "Reclamo" si el handoff de esa conversación es complaint; sus conversaciones anteriores o ya resueltas no cuentan. El filtro lo aplica el back, con su parámetro.
 8. Cada filtro muestra su contador, también cuando es 0. El contador cuenta clientes según el motivo de su conversación en curso.
 9. En Estado, "Mías" pasa a "Con asesor" y filtra por `handledBy=human_agent`, las atienda quien las atienda. Su contador cuenta esas conversaciones.
-10a. La fila lleva el chip del motivo: Reclamo, Cancelación de producto o Estado de un reclamo, con su color. En Agente AI es el caso que David está atendiendo. Al lado va el contexto:
-    - En una fila derivada (handoff abierto), el resumen del handoff recortado a unos 60 caracteres en palabra completa y terminado en "...". Por ejemplo: "El cliente consulta el estado de su reclamo CMP-G43865...".
-    - El resumen completo va como tooltip de la fila y en la tarjeta "Caso derivado por David" del panel Contexto.
-    - Las filas sin handoff abierto (Agente AI) siguen con el último mensaje del cliente.
-    - Vale en la lista ancha y en la angosta.
-    Es la versión final de la revisión del usuario: descarta el contexto armado desde facts y la fila sin chip.
+10a. El motivo y el contexto de la fila van al estilo Notion Mail, como asunto más vista previa en la misma línea:
+    - El asunto es el motivo en texto normal, con peso medio y el color de texto principal, precedido de un puntito del color del motivo (sin fondo de chip).
+    - La vista previa va a continuación, en gris y sin negrita: el resumen del handoff recortado a 60 caracteres como máximo en palabra completa y terminado en "...". El resumen completo va como tooltip y en el panel Contexto.
+    - Aplica a toda conversación derivada, esté En espera o Con asesor. Si el handoff no trae resumen, la fila muestra solo el asunto y nunca el último mensaje.
+    - En Agente AI el asunto es el caso que David atiende (sección por caso de uso) y la vista previa es el último mensaje del cliente.
+    - Una conversación humana sin handoff no muestra motivo de derivación: ni asunto ni chip, solo su último mensaje. Tampoco el encabezado.
+    Vale en la lista ancha y en la angosta.
+10i. Al abrir una conversación, el chat se abre como panel flotante sobre la lista, al estilo del side peek de Notion. La lista no cambia: sigue ancha, con todas sus columnas, debajo.
+    - El panel flota anclado a la derecha, con sombra y borde redondeado.
+    - Su borde izquierdo cae justo después de la columna del nombre, que tiene ancho fijo. Así los nombres siguen visibles y un click en otra fila cambia de chat.
+    - Dentro va lo mismo de antes: encabezado, mensajes, input y panel Contexto.
+    - Se cierra con la X, con Esc o con un click fuera de las filas.
+    - Si el panel Contexto está abierto y la pantalla mide menos de 1600 px, el panel empieza más a la izquierda y tapa la lista, porque no hay lugar para chat y contexto.
+    Reemplaza a la lista angosta (cambio de enfoque del usuario).
+10j. En el panel flotante cada dato aparece una sola vez (pedido del usuario):
+    - Nombre: va solo en el encabezado del chat. "Cliente •• XXXX" pasa al encabezado, junto al email, y sale de "Contexto del cliente".
+    - Motivo: va solo en el chip del encabezado. Sale de la tarjeta "Caso derivado por David".
+    - Estado y quién atiende: van solo en la zona del input, en una sola línea, y salen del encabezado. El encabezado queda con nombre, email, "Cliente •• XXXX" y el chip del motivo. El placeholder dice:
+      - tomada por otro: "La atiende asesor1 (asesor1@example.com)", con ícono de persona;
+      - tomada por ti: el placeholder normal para escribir;
+      - en espera: "En espera · tómala para responder";
+      - con David: "La atiende David";
+      - resuelta: "Resuelta".
+      Sale también la línea extra debajo de los mensajes (candado, "Esperando a un asesor…", "Estás atendiendo…", "David está respondiendo…").
+    - El separador de la conversación activa deja solo la fecha: su motivo y su estado ya están en el encabezado. Las conversaciones anteriores conservan los suyos.
 10b. La vista de las conversaciones que atiende David (`handledBy=ai_agent`) pasa a llamarse "Agente AI", en el item del sidebar y en el título de la vista. El estado de la fila ("Con AI", uno de los cuatro estados del flujo) no cambia (pedido del usuario).
 10c. La tarjeta "Caso derivado por David" (resumen y ficha de datos verificados) sale de arriba del chat y pasa al panel "Contexto del cliente", como primera sección, arriba de las pestañas Casos, Interacciones y Transcripciones. El chat queda solo con los mensajes. El chip del motivo en el encabezado se queda. Si la conversación abierta tiene handoff, el panel Contexto se abre por defecto (pedido del usuario).
 10d. El separador de cada conversación en la línea de tiempo muestra el motivo del handoff si esa conversación se derivó, y ningún chip si no. Nunca muestra la intención del clasificador (revisión de w1:p4).

@@ -20,6 +20,7 @@ import {
   customerConversationsUrl,
   customerKeyOf,
   customerLabel,
+  maskedCustomerId,
   secondaryEmail,
   type Bubble,
   mergeMessages,
@@ -45,6 +46,7 @@ function chat(overrides: Partial<AdvisorChat> = {}): AdvisorChat {
     closedAt: null,
     useCase: 'UC-01',
     customerName: null,
+    customerId: null,
     ...overrides,
   };
 }
@@ -187,13 +189,22 @@ describe('toBubble', () => {
 
 
 describe('reasonTagOf', () => {
-  it('is the handoff reason, else the Agente AI section, never for Otros', () => {
-    const complaint = { reason: 'complaint', summary: null, verifiedData: null, facts: null, at: '', resolvedAt: null };
-    expect(reasonTagOf(chat({ useCase: 'GENERAL_INQUIRY', handoff: complaint }))).toBe('complaint');
+  const complaint = { reason: 'complaint', summary: null, verifiedData: null, facts: null, at: '', resolvedAt: null };
+  it('is the handoff reason for a handed-off conversation, waiting or taken', () => {
+    expect(reasonTagOf(chat({ handledBy: 'human_queue', useCase: 'GENERAL_INQUIRY', handoff: complaint }))).toBe('complaint');
+    expect(reasonTagOf(chat({ handledBy: 'human_agent', handoff: complaint }))).toBe('complaint');
+  });
+
+  it("is David's case while he has it, never for Otros", () => {
     expect(reasonTagOf(chat({ useCase: 'GENERAL_INQUIRY' }))).toBe('general');
     expect(reasonTagOf(chat({ useCase: 'CANCEL' }))).toBe('retention');
     expect(reasonTagOf(chat({ useCase: 'GREETING' }))).toBeNull();
-    expect(reasonTagOf(chat({ useCase: null }))).toBeNull();
+    // Back with David after a handoff: his case again.
+    expect(reasonTagOf(chat({ useCase: 'CANCEL', handoff: complaint }))).toBe('retention');
+  });
+
+  it('is nothing for a person handling a chat without a handoff', () => {
+    expect(reasonTagOf(chat({ handledBy: 'human_agent', useCase: 'COMPLAINT' }))).toBeNull();
   });
 });
 
@@ -418,10 +429,21 @@ describe('shortSummary and rowPreview', () => {
     expect(shortSummary('Corto y claro.')).toBe('Corto y claro.');
   });
 
-  it('previews the summary only while the handoff is open', () => {
+  it('previews the summary for a handed-off conversation, the last message otherwise', () => {
     const handoff = { reason: 'complaint', summary: 'Resumen del caso', verifiedData: null, facts: null, at: '', resolvedAt: null };
     const last = { text: 'sí, confirmo', senderType: 'customer' as const, createdAt: '2026-09-29T10:00:00.000Z' };
-    expect(rowPreview({ ...chat({ handoff, hasHandoff: true }), lastMessage: last })).toBe('Resumen del caso');
+    const taken = { handoff, hasHandoff: true, handledBy: 'human_agent' as const };
+    expect(rowPreview({ ...chat(taken), lastMessage: last })).toBe('Resumen del caso');
+    // Handed off without a summary: nothing rather than the last message.
+    expect(rowPreview({ ...chat({ ...taken, handoff: { ...handoff, summary: null } }), lastMessage: last })).toBe('');
+    // Back with David: the last message.
     expect(rowPreview({ ...chat({ handoff, hasHandoff: false }), lastMessage: last })).toBe('sí, confirmo');
+  });
+});
+
+describe('maskedCustomerId', () => {
+  it("shows only the tail of the bank's customer id", () => {
+    expect(maskedCustomerId(chat({ customerId: 'CLI-FLEUCGTW5M0D' }))).toBe('•• 5M0D');
+    expect(maskedCustomerId(chat())).toBeNull();
   });
 });

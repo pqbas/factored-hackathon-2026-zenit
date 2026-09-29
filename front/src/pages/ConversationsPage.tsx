@@ -205,6 +205,17 @@ export default function ConversationsPage() {
     if (hasCase) setContextOpen(true);
   }, [current?.id, hasCase]);
 
+  // Esc closes the open chat, like a click outside it.
+  const isOpen = !!current;
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setSelected(null);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isOpen]);
+
   const { messages, append, refresh } = useConversationMessages(current?.id ?? null);
   const bubbles = useMemo(() => messages.map((m) => toBubble(m, me)), [messages, me]);
 
@@ -307,19 +318,16 @@ export default function ConversationsPage() {
         counts={counts}
       />
       <SidebarInset className="h-dvh min-h-0 overflow-hidden md:h-[calc(100dvh-1rem)]">
-        <div className="flex h-full min-h-0">
+        {/* The list stays whole; an open chat floats over it as a side peek
+            (Notion), starting right after the name column so the names stay
+            visible and clickable. A click outside a row or Esc closes it. */}
+        <div className="relative h-full min-h-0">
           <div
-            className={cn(
-              'h-full min-w-0',
-              // With the context panel open the list narrows, and on screens
-              // under 1600px it steps aside so the chat keeps room.
-              row
-                ? cn(
-                    'shrink-0 border-border border-r',
-                    contextOpen ? 'hidden w-[380px] min-[1600px]:block' : 'w-[520px]',
-                  )
-                : 'flex-1',
-            )}
+            className="h-full min-w-0"
+            onClick={(event) => {
+              const onRow = (event.target as HTMLElement).closest('[data-testid^="conversation-row-"]');
+              if (current && !onRow) setSelected(null);
+            }}
           >
             <InboxList
               title={viewTitle(view)}
@@ -330,34 +338,46 @@ export default function ConversationsPage() {
               onOpen={(key) => setSelected(chats.find((chat) => customerKeyOf(chat) === key) ?? null)}
               query={query}
               onQueryChange={setQuery}
-              compact={!!row}
               hasMore={hasMore}
               empty={pages ? inboxEmpty : undefined}
               onLoadMore={() => setSize(size + 1)}
             />
           </div>
           {current && (
-            <div className="h-full min-w-0 flex-1">
-              <ConversationView
-                chat={current}
-                segments={segments}
-                me={me}
-                busy={busy}
-                contextOpen={contextOpen}
-                onToggleContext={toggleContext}
-                onTake={handleTake}
-                onRelease={handleRelease}
-                onSend={handleSend}
-                onClose={() => setSelected(null)}
-              />
+            <div
+              data-testid="conversation-peek"
+              role="dialog"
+              aria-label="Conversación"
+              className={cn(
+                'absolute inset-y-2 right-2 z-20 flex overflow-hidden rounded-xl border border-border bg-background shadow-2xl',
+                // The list padding, dot, avatar and name columns end at
+                // 20.25rem (inbox-list.tsx grid). With the context panel open
+                // and under 1600px there's no room left: it covers the list.
+                contextOpen ? 'left-2 min-[1600px]:left-[20.75rem]' : 'left-[20.75rem]',
+              )}
+            >
+              <div className="h-full min-w-0 flex-1">
+                <ConversationView
+                  chat={current}
+                  segments={segments}
+                  me={me}
+                  busy={busy}
+                  contextOpen={contextOpen}
+                  onToggleContext={toggleContext}
+                  onTake={handleTake}
+                  onRelease={handleRelease}
+                  onSend={handleSend}
+                  onClose={() => setSelected(null)}
+                />
+              </div>
+              {contextOpen && (
+                <CustomerContextPanel
+                  key={selectedKey ?? current.id}
+                  chatId={current.id}
+                  handoff={current.handoff ?? null}
+                />
+              )}
             </div>
-          )}
-          {current && contextOpen && (
-            <CustomerContextPanel
-              key={selectedKey ?? current.id}
-              chatId={current.id}
-              handoff={current.handoff ?? null}
-            />
           )}
         </div>
       </SidebarInset>

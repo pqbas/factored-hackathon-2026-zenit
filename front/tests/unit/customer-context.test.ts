@@ -3,14 +3,12 @@ import { describe, expect, it } from 'vitest';
 import {
   caseStatus,
   channelLabel,
-  customerName,
   firstTab,
   interactionTypeLabel,
   languageLabel,
   yesNo,
   formatClaim,
   formatContextDate,
-  maskedCustomerId,
   parseCustomerContext,
   priorityLabel,
   transcriptFor,
@@ -104,9 +102,6 @@ describe('labels', () => {
   });
 
   it('formats names, ids, dates and amounts', () => {
-    expect(customerName({ customerId: null, firstName: 'Santiago', lastName: 'Contreras' })).toBe('Santiago Contreras');
-    expect(customerName(null)).toBeNull();
-    expect(maskedCustomerId({ customerId: 'CUS000123', firstName: null, lastName: null })).toBe('•• 0123');
     expect(formatContextDate('2026-09-26')).toBe('26 sep 2026');
     expect(formatContextDate('not a date')).toBe('not a date');
     expect(formatClaim(null, 'USD')).toBeNull();

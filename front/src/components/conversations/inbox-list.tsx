@@ -12,6 +12,7 @@ import {
   groupByDavidSection,
   groupByHandoffReason,
   holderLabel,
+  isHandedOff,
   reasonTagOf,
   sectionLabel,
   type InboxItem,
@@ -25,13 +26,11 @@ function Row({
   chat,
   me,
   selected,
-  compact,
   onOpen,
 }: {
   chat: InboxItem;
   me: string | undefined;
   selected: boolean;
-  compact: boolean;
   onOpen: () => void;
 }) {
   const attention = attentionOf(chat, me);
@@ -102,26 +101,20 @@ function Row({
           </span>
         )}
       </span>
-      {/* Why the customer is here (the reason of the unresolved case, or what
-          David is working on), in its color; then the context: the handoff
-          summary, short, with the full one as tooltip, else the customer's
-          last message with the subject as tooltip. */}
-      <span className="flex min-w-0 items-center gap-2 overflow-hidden">
+      {/* Subject and preview, like a mail row: why the customer is here (a
+          dot in the reason's color and its name), then the context in gray,
+          with the full summary (or the chat's subject) as tooltip. */}
+      <span className="flex min-w-0 items-center gap-2 overflow-hidden text-sm">
         {reason && (
-          <span
-            data-testid="row-handoff"
-            className={cn(
-              'shrink-0 rounded-md px-1.5 py-0.5 font-medium text-[11px]',
-              handoffReasonStyle(reason).chip,
-            )}
-          >
+          <span data-testid="row-subject" className="flex shrink-0 items-center gap-1.5 font-medium text-foreground">
+            <span className={cn('size-1.5 rounded-full bg-current', handoffReasonStyle(reason).icon_)} />
             {sectionLabel(reason)}
           </span>
         )}
         <span
           data-testid="row-text"
-          title={(chat.hasHandoff && chat.handoff?.summary) || chat.title}
-          className="min-w-0 truncate text-muted-foreground text-sm"
+          title={(isHandedOff(chat) && chat.handoff?.summary) || chat.title}
+          className="min-w-0 truncate text-muted-foreground"
         >
           {rowPreview(chat)}
         </span>
@@ -151,7 +144,6 @@ export function InboxList({
   onOpen,
   query,
   onQueryChange,
-  compact,
   hasMore,
   onLoadMore,
   empty,
@@ -165,7 +157,6 @@ export function InboxList({
   onOpen: (customerKey: string) => void;
   query: string;
   onQueryChange: (query: string) => void;
-  compact: boolean;
   hasMore: boolean;
   onLoadMore: () => void;
   // Replaces the generic empty message.
@@ -184,7 +175,6 @@ export function InboxList({
       chat={chat}
       me={me}
       selected={customerKeyOf(chat) === selectedKey}
-      compact={compact}
       onOpen={() => onOpen(customerKeyOf(chat))}
     />
   );
@@ -199,7 +189,7 @@ export function InboxList({
         <span className="whitespace-nowrap text-muted-foreground text-sm">
           {chats.length} {chats.length === 1 ? 'cliente' : 'clientes'}
         </span>
-        <div className={cn('relative ml-auto', compact ? 'w-32' : 'w-60')}>
+        <div className="relative ml-auto w-60">
           <Search className="absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
           <input
             type="text"
@@ -224,16 +214,9 @@ export function InboxList({
         {/* One grid for every row: margin | dot | avatar | name | David |
             subject | state | time | margin. Sections are subgrids too, so all
             rows align. */}
-        <div
-          className={cn(
-            'grid gap-x-3',
-            compact
-              ? // Narrow list (a chat is open): a shorter name, the advisor badge
-                // and the preview gets what's left.
-                'grid-cols-[0_0.5rem_1.75rem_fit-content(7rem)_4rem_minmax(0,1fr)_auto_auto_0]'
-              : 'grid-cols-[0_0.5rem_1.75rem_fit-content(15rem)_6rem_minmax(0,1fr)_auto_auto_0]',
-          )}
-        >
+        {/* The name column has a fixed width: an open chat floats over the
+            list starting right after it (PEEK_LEFT in ConversationsPage). */}
+        <div className="grid grid-cols-[0_0.5rem_1.75rem_15rem_6rem_minmax(0,1fr)_auto_auto_0] gap-x-3">
           {groups.map((group, index) => (
             <section
               key={group.id}

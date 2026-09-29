@@ -24,7 +24,6 @@ import {
   channelLabel,
   type ContextTab,
   customerContextUrl,
-  customerName,
   fetchCustomerContext,
   firstTab,
   formatClaim,
@@ -32,7 +31,6 @@ import {
   type Interaction,
   interactionTypeLabel,
   languageLabel,
-  maskedCustomerId,
   priorityLabel,
   sentimentLabel,
   type Transcript,
@@ -328,8 +326,6 @@ export function CustomerContextPanel({
     }
   }
 
-  const name = customerName(data?.customer ?? null);
-  const id = maskedCustomerId(data?.customer ?? null);
 
   return (
     <aside
@@ -342,13 +338,6 @@ export function CustomerContextPanel({
           <h2 className="font-semibold text-[15px]">Contexto del cliente</h2>
           <span className="ml-auto text-[11px] text-muted-foreground">Datos del banco</span>
         </div>
-        {(name || id) && (
-          <div data-testid="context-customer" className="flex flex-wrap gap-1.5 text-muted-foreground text-xs">
-            {name && <span className="font-medium text-foreground">{name}</span>}
-            {name && id && <span>·</span>}
-            {id && <span>Cliente {id}</span>}
-          </div>
-        )}
       </div>
       {/* Everything below the title scrolls together: the case can be tall. */}
       <div className="min-h-0 flex-1 overflow-y-auto">

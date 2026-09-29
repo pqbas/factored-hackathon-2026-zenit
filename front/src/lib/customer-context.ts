@@ -157,17 +157,6 @@ export function firstTab(context: CustomerContext): ContextTab {
   return 'cases';
 }
 
-export function customerName(customer: ContextCustomer | null): string | null {
-  const name = [customer?.firstName, customer?.lastName].filter(Boolean).join(' ');
-  return name || null;
-}
-
-// Only the tail of the id, like the rest of the masked data.
-export function maskedCustomerId(customer: ContextCustomer | null): string | null {
-  const id = customer?.customerId;
-  return id ? `•• ${id.slice(-4)}` : null;
-}
-
 // Warehouse values translated one to one; unknown values stay as they come.
 const INTERACTION_TYPE: Record<string, string> = {
   'inbound call': 'Llamada entrante: llamó el cliente',

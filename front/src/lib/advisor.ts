@@ -30,6 +30,8 @@ export type AdvisorChat = OverJson<
     // The bank customer behind the chat (e.g. "Javier Molina Morales"); null
     // without a customer session or until the warehouse answers.
     | 'customerName'
+    // The bank's customer id (null without a demo customer session).
+    | 'customerId'
   >
 > & {
   // The latest case David handed off in this conversation (null: none), and
@@ -219,6 +221,11 @@ export function customerLabel(chat: AdvisorChat): string {
   return chat.customerName?.trim() || chat.userEmail || 'Cliente sin email';
 }
 
+// Only the tail of the bank's customer id, like the rest of the masked data.
+export function maskedCustomerId(chat: AdvisorChat): string | null {
+  return chat.customerId ? `•• ${chat.customerId.slice(-4)}` : null;
+}
+
 // The app user's email, shown small under a bank customer's name.
 export function secondaryEmail(chat: AdvisorChat): string | null {
   return chat.customerName?.trim() && chat.userEmail ? chat.userEmail : null;
@@ -246,10 +253,19 @@ export function useCaseLabelOf(id: string): string {
   return USE_CASES.find((u) => u.id === id)?.label ?? id;
 }
 
-// The header chip: the handoff reason if the conversation was handed off,
-// else the Agente AI section of its use case; nothing for "Otros".
+// A conversation David handed off that a person handles now (waiting or
+// taken). Once it's back with David, it's his again.
+export function isHandedOff(chat: AdvisorChat): boolean {
+  return !!chat.handoff && chat.handledBy !== 'ai_agent';
+}
+
+// Why the conversation is where it is: the handoff reason if it was handed
+// off, the case David is working on if he has it, else nothing (a person
+// handles it without a handoff).
 export function reasonTagOf(chat: AdvisorChat): string | null {
-  const id = chat.handoff?.reason || davidSectionOf(chat);
+  if (isHandedOff(chat)) return chat.handoff?.reason || null;
+  if (chat.handledBy !== 'ai_agent') return null;
+  const id = davidSectionOf(chat);
   return id === NO_HANDOFF_GROUP ? null : id;
 }
 
@@ -459,11 +475,12 @@ export function shortSummary(text: string, max = 60): string {
   return `${words}...`;
 }
 
-// The row's preview: the handoff summary, short, while the case is open (it
-// says why the customer is here), else the customer's last message.
+// The row's preview: for a handed-off conversation the handoff summary,
+// short (or nothing: never the customer's last message, it says nothing about
+// the case); else the customer's last message.
 export function rowPreview(chat: AdvisorChat): string {
-  const summary = chat.hasHandoff ? chat.handoff?.summary : null;
-  return summary ? shortSummary(summary) : rowText(chat);
+  if (!isHandedOff(chat)) return rowText(chat);
+  return chat.handoff?.summary ? shortSummary(chat.handoff.summary) : '';
 }
 
 export function lastActivityAt(chat: InboxItem): string {

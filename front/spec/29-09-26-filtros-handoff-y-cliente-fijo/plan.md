@@ -37,10 +37,11 @@
 
 5. In `src/components/conversations/inbox-list.tsx` group with `groupByHandoffReason` and render sections with `HandoffReasonChip` (`inbox-section-<reason>`).
 
-5b. In `src/components/conversations/inbox-list.tsx`:
-   - The row chip (`row-handoff`) is `reasonTagOf(chat)` (the handoff reason, or the Agente AI section), with `handoffReasonStyle` and `sectionLabel`; no chip for "Otros" or closed conversations.
-   - The preview is `rowPreview(chat)` (`src/lib/advisor.ts`): `shortSummary(handoff.summary)` while `hasHandoff`, else `rowText`. `shortSummary` cuts to at most 60 characters at a whole word and adds "...". The full summary is the tooltip.
-   - It shows in the wide and the narrow list (narrow grid: name `fit-content(7rem)`, preview `minmax(0,1fr)`). `handoffDetail` goes (the card uses `caseFields`).
+5b. In `src/lib/advisor.ts` and `src/components/conversations/inbox-list.tsx`:
+   - `reasonTagOf(chat)`: the handoff reason if the conversation has a handoff and isn't back with David; the Agente AI section if `ai_agent`; else null.
+   - `rowPreview(chat)`: for a handed-off conversation, `shortSummary(handoff.summary)` or empty; else `rowText`.
+   - The row renders the reason as a subject (`row-subject`): a dot in the reason's color (`bg-current` over `useCaseStyle(...).icon_`) plus the label in `font-medium text-foreground`. Then the preview (`row-text`) in gray, truncated.
+   - `handoffDetail` goes (the card uses `caseFields`).
 
 5c. Rename the ai_agent view to "Agente AI": add `DAVID_VIEW_LABEL = 'Agente AI'` in `src/lib/advisor.ts` and use it in `inbox-views.tsx` (sidebar item) and `ConversationsPage.tsx` (`VIEW_TITLE.david`) instead of `STATUS_LABEL.assistant`. The row and header state keeps `STATUS_LABEL.assistant` ("Con AI"). Update e2e assertions that look for the view title or item text.
 
@@ -70,6 +71,18 @@
    - In `src/lib/advisor.ts`, `USE_CASES` uses the same names (CASE_STATUS 'Estado de un reclamo', RETENTION and CANCEL 'Cancelación de producto'), and `useCaseTag` returns the handoff reason or the Agente AI section.
    - In `src/lib/metrics.ts`, `useCaseRows` folds RETENTION into CANCEL.
    - Update the unit and e2e tests that expected the old texts.
+
+5j. Floating chat (side peek):
+   - In `src/components/conversations/inbox-list.tsx` the list always renders wide (no `compact`), with a fixed-width name column (`15rem`).
+   - In `src/pages/ConversationsPage.tsx`, the chat (`ConversationView` + `CustomerContextPanel`) goes in an absolute `conversation-peek` over the list: `left-[20.75rem]` (the end of the name column), or `left-2` below 1600 px with the context open.
+   - A click outside the rows or Esc closes it.
+
+5k. No repeated data in the peek:
+   - `AdvisorChat.customerId` shows in the header as "Cliente •• last4" (`customer-id`), and `context-customer` leaves the panel; `customerName` and `maskedCustomerId` go from `customer-context.ts`.
+   - `HandoffCard` drops `handoff-reason`.
+   - `ConversationView` drops `status-banner` and `hint()`. `placeholderFor` names the state and the advisor ("La atiende asesor1 (email)", "En espera · tómala para responder", "La atiende David", "Resuelta"). `AdvisorComposer` takes an optional `icon` (UserRound when another advisor has it).
+   - `ConversationHeader` drops the state text (`attention`) from `customer-meta`; the chip stays.
+   - `ConversationDivider` takes `active` and, when true, renders only the date.
 
 6. In `src/pages/ConversationsPage.tsx`, `viewTitle`: `reason` → its label; `advisor` → `STATUS_LABEL.advisor` ("Con asesor").
 

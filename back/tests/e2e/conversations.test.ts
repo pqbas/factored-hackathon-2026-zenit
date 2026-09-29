@@ -19,6 +19,7 @@ type Chat = {
   closedAt: string | null;
   useCase: string | null;
   customerName?: string | null;
+  customerId?: string | null;
   customerKey?: string;
   hasHandoff?: boolean;
   handoff?: Record<string, unknown> | null;
@@ -74,6 +75,7 @@ async function mockAdvisorApi(page: Page, me: string, role: Role = 'advisor') {
     chat('c-assistant', 'javier@banco.test', {}),
     chat('c-waiting', 'daniela@banco.test', {
       customerName: 'Daniela Sosa Ruiz',
+      customerId: 'CUS000123',
       // David handed off a verified complaint.
       hasHandoff: true,
       handoff: {
@@ -247,7 +249,8 @@ async function openConsole(page: Page, role: Role = 'advisor', email = ME) {
 
 const rows = (page: Page) => page.locator('[data-testid^="conversation-row-"]');
 // The header shows state only when the chat needs attention or changed hands.
-const headerStatus = (page: Page) => page.locator('header').getByTestId('attention');
+// The state and who has the chat are the input's placeholder (not the header).
+const stateLine = (page: Page) => page.getByLabel('Mensaje al cliente');
 const input = (page: Page) => page.getByLabel('Mensaje al cliente');
 
 test.describe('Advisor console', () => {
@@ -331,16 +334,30 @@ test.describe('Advisor console', () => {
     await expect(page.getByTestId('conversation-row-c-waiting')).toHaveCount(0);
   });
 
-  test('opening a chat shows it beside the list, and X closes it', async ({ page }) => {
+  test('a chat floats over the list; another name switches it, and X, Esc or a click outside close it', async ({
+    page,
+  }) => {
     await openConsole(page);
-    await page.getByTestId('view-david').click();
-    await page.getByTestId('conversation-row-c-assistant').click();
-    await expect(page.getByTestId('customer-meta')).toBeVisible();
-    // On a laptop the context panel takes the list's place; closing it brings the list back.
-    await expect(rows(page).first()).toBeHidden();
+    await page.getByTestId('conversation-row-c-race').click();
+    const peek = page.getByTestId('conversation-peek');
+    await expect(peek).toBeVisible();
+    await expect(peek.getByTestId('customer-name')).toHaveText('santiago@banco.test');
+    // The list stays whole underneath.
+    await expect(rows(page)).toHaveCount(3);
+
+    // Without the context panel it starts after the names: another row switches the chat.
     await page.getByTestId('context-toggle').click();
-    await expect(rows(page)).toHaveCount(1);
-    await expect(rows(page).first()).toBeVisible();
+    await page.getByTestId('conversation-row-c-other').getByTestId('row-name').click();
+    await expect(peek.getByTestId('customer-name')).toHaveText('lucia@banco.test');
+
+    await page.keyboard.press('Escape');
+    await expect(peek).toHaveCount(0);
+
+    await page.getByTestId('conversation-row-c-race').click();
+    await page.getByTestId('inbox-title').click();
+    await expect(peek).toHaveCount(0);
+
+    await page.getByTestId('conversation-row-c-race').click();
     await page.getByTestId('close-conversation').click();
     await expect(page.getByTestId('customer-meta')).toHaveCount(0);
   });
@@ -352,7 +369,7 @@ test.describe('Advisor console', () => {
     await expect(input(page)).toBeDisabled();
 
     await page.getByTestId('assistant-switch').click();
-    await expect(headerStatus(page)).toHaveText('Con asesor · la atiendes tú');
+    await expect(stateLine(page)).toHaveAttribute('placeholder', 'Escribe al cliente…');
     await expect(page.getByTestId('system-notice').last()).toContainText('Te atiende un asesor.');
     await expect(input(page)).toBeEnabled();
 
@@ -366,16 +383,16 @@ test.describe('Advisor console', () => {
     await openConsole(page);
     await page.getByTestId('conversation-row-c-waiting').click();
     await page.getByTestId('take-button').click();
-    await expect(headerStatus(page)).toHaveText('Con asesor · la atiendes tú');
+    await expect(stateLine(page)).toHaveAttribute('placeholder', 'Escribe al cliente…');
 
     await page.getByTestId('assistant-switch').click();
-    await expect(headerStatus(page)).toHaveText('Con AI');
+    await expect(stateLine(page)).toHaveAttribute('placeholder', 'La atiende David');
     await expect(input(page)).toBeDisabled();
     await expect(page.getByTestId('system-notice').last()).toContainText('Volviste con el asistente.');
 
     await page.getByTestId('assistant-switch').click();
     await page.getByTestId('resolve-button').click();
-    await expect(headerStatus(page)).toHaveText('Resuelta');
+    await expect(stateLine(page)).toHaveAttribute('placeholder', 'Resuelta');
     await expect(page.getByTestId('system-notice').last()).toContainText('La conversación se cerró.');
   });
 
@@ -390,7 +407,7 @@ test.describe('Advisor console', () => {
   test('a chat held by someone else is read-only for an advisor', async ({ page }) => {
     await openConsole(page);
     await page.getByTestId('conversation-row-c-other').click();
-    await expect(page.getByTestId('customer-meta')).toContainText(`Con asesor · ${OTHER}`);
+    await expect(stateLine(page)).toHaveAttribute('placeholder', `La atiende ada (${OTHER})`);
     await expect(input(page)).toBeDisabled();
     await expect(page.getByTestId('force-take-button')).toHaveCount(0);
   });
@@ -414,7 +431,7 @@ test.describe('Advisor console', () => {
     await expect(rows(page)).toHaveCount(2);
     await page.getByTestId('conversation-row-c-waiting').click();
     await page.getByTestId('resolve-button').click();
-    await expect(page.getByTestId('customer-meta')).toContainText('Resuelta');
+    await expect(stateLine(page)).toHaveAttribute('placeholder', 'Resuelta');
 
     // Held by another advisor: no controls, no force.
     await page.getByTestId('view-inbox').click();
@@ -423,7 +440,10 @@ test.describe('Advisor console', () => {
     await expect(rows(page)).toHaveCount(1);
     expect(requested.some((u) => u.includes('userId=c-other-user'))).toBe(true);
     await page.getByTestId('conversation-row-c-other').click();
-    await expect(page.getByTestId('status-banner')).toContainText(`La atiende ${OTHER}`);
+    // Who has it is only in the input's line; not in the header, no extra line.
+    await expect(input(page)).toHaveAttribute('placeholder', `La atiende ada (${OTHER})`);
+    await expect(page.locator('header').getByTestId('attention')).toHaveCount(0);
+    await expect(page.getByText('Solo quien la tomó puede responder')).toHaveCount(0);
     for (const id of ['assistant-switch', 'take-button', 'resolve-button', 'force-take-button']) {
       await expect(page.getByTestId(id)).toHaveCount(0);
     }
@@ -504,7 +524,9 @@ test.describe('Advisor console', () => {
     await page.getByTestId('customer-context').getByRole('button', { name: 'Reintentar' }).click();
 
     const panel = page.getByTestId('customer-context');
-    await expect(page.getByTestId('context-customer')).toHaveText('Daniela Sosa·Cliente •• 0123');
+    // The customer's id goes in the chat header, not repeated in the panel.
+    await expect(page.getByTestId('customer-id')).toHaveText('Cliente •• 0123');
+    await expect(page.getByTestId('context-customer')).toHaveCount(0);
     // No cases: it opens on the first tab with something in it.
     await expect(page.getByTestId('context-tab-interactions')).toHaveAttribute('aria-selected', 'true');
     await expect(panel.getByTestId('context-interaction')).toHaveCount(2);
@@ -602,10 +624,11 @@ test.describe('Advisor console', () => {
     // Each divider shows the handoff reason of that conversation, never the intent.
     await expect(dividers.first().getByTestId('reason-chip-retention')).toBeVisible();
     await expect(dividers.first()).not.toContainText('Estado de un caso');
-    await expect(dividers.last().getByTestId('reason-chip-complaint')).toBeVisible();
+    // The active conversation's divider keeps only the date (the header has the rest).
+    await expect(dividers.last().getByTestId('reason-chip-complaint')).toHaveCount(0);
     await expect(dividers.first().getByTestId('divider-status')).toHaveText('Resuelta');
     await expect(dividers.last()).toHaveAttribute('data-chat-id', 'c-waiting');
-    await expect(dividers.last().getByTestId('divider-status')).toHaveText('En espera');
+    await expect(dividers.last().getByTestId('divider-status')).toHaveCount(0);
     // The earlier conversation reads first, then the latest.
     const segments = page.getByTestId('timeline-segment');
     await expect(segments.first()).toContainText('Tu caso 48213 sigue en revisión.');
@@ -613,10 +636,9 @@ test.describe('Advisor console', () => {
 
     // Actions apply to the latest conversation.
     await page.getByTestId('take-button').click();
-    await expect(page.getByTestId('customer-meta')).toContainText('Con asesor · la atiendes tú');
+    await expect(stateLine(page)).toHaveAttribute('placeholder', 'Escribe al cliente…');
     expect(requested.some((u) => u.includes('/c-waiting/take'))).toBe(true);
     expect(requested.some((u) => u.includes('/c-old/take'))).toBe(false);
-    await expect(dividers.last().getByTestId('divider-status')).toHaveText('Con asesor');
   });
 
   test('a case David handed off shows its detail in the row and its record in the context panel', async ({
@@ -629,13 +651,15 @@ test.describe('Advisor console', () => {
     // The row shows the case's detail, not the reason again.
     // The row says why she's here (the reason) and previews the case's
     // summary, cut short at a word, with the full one as tooltip.
-    await expect(row.getByTestId('row-handoff')).toHaveText('Reclamo');
+    await expect(row.getByTestId('row-subject')).toHaveText('Reclamo');
     await expect(row.getByTestId('row-text')).toHaveText('La clienta reclama un cobro duplicado de 84,20 USD en...');
     await expect(row.getByTestId('row-text')).toHaveAttribute(
       'title',
       'La clienta reclama un cobro duplicado de 84,20 USD en SUPERMERCADO LÍDER.',
     );
-    await expect(page.getByTestId('conversation-row-c-race').getByTestId('row-handoff')).toHaveCount(0);
+    // Without a handoff, a person's chat shows no reason.
+    await expect(page.getByTestId('conversation-row-c-race').getByTestId('row-subject')).toHaveCount(0);
+    await expect(page.getByTestId('conversation-row-c-other').getByTestId('row-subject')).toHaveCount(0);
 
     await row.click();
     // A handed-off case opens the panel, and its card is the panel's first section.
@@ -643,7 +667,8 @@ test.describe('Advisor console', () => {
     await expect(panel).toBeVisible();
     await expect(page.getByTestId('handoff-card')).toHaveCount(1);
     const card = panel.getByTestId('handoff-card');
-    await expect(card.getByTestId('handoff-reason')).toHaveText('Reclamo');
+    // The reason is the header's chip; the card doesn't repeat it.
+    await expect(card.getByTestId('handoff-reason')).toHaveCount(0);
     // Row and card name the case's detail with the same text.
     await expect(card.getByTestId('handoff-fact-complaint_type')).toHaveText('Cobro duplicado');
     await expect(page.getByTestId('use-case-tag')).toHaveText('Reclamo');
@@ -664,21 +689,6 @@ test.describe('Advisor console', () => {
     await expect(card.getByTestId('handoff-facts')).toHaveCount(0);
     await page.getByTestId('context-toggle').click();
     await expect(panel).toHaveCount(0);
-  });
-
-  test('the narrow list shows every row\'s state', async ({ page }) => {
-    await openConsole(page);
-    // A chat without a handed-off case, with the context panel closed, so
-    // the list stays beside the chat.
-    await page.getByTestId('conversation-row-c-race').click();
-    await page.getByTestId('context-toggle').click();
-    await expect(page.getByTestId('conversation-row-c-other').getByTestId('attention')).toHaveText(
-      'Con asesor',
-    );
-    await expect(page.getByTestId('conversation-row-c-other').getByTestId('advisor-badge')).toHaveText('ada');
-    await expect(page.getByTestId('conversation-row-c-waiting').getByTestId('attention')).toHaveText(
-      'En espera',
-    );
   });
 
   test('Agente AI is split in sections by what David is working on', async ({ page }) => {

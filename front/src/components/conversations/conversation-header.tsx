@@ -7,11 +7,11 @@ import {
   type AdvisorChat,
   customerLabel,
   secondaryEmail,
+  maskedCustomerId,
   isMine,
   statusOf,
   reasonTagOf,
   sectionLabel,
-  attentionOf,
 } from '@/lib/advisor';
 import { avatarColor, getInitials } from '@/lib/conversations';
 import { cn } from '@/lib/utils';
@@ -76,10 +76,10 @@ export function ConversationHeader({
 }) {
   const status = statusOf(chat);
   const mine = isMine(chat, me);
-  const attention = attentionOf(chat, me, { long: true });
   const tag = reasonTagOf(chat);
   const name = customerLabel(chat);
   const email = secondaryEmail(chat);
+  const customerId = maskedCustomerId(chat);
 
   return (
     <header className="flex items-center gap-3 border-border border-b px-4 py-3">
@@ -110,17 +110,18 @@ export function ConversationHeader({
               {email}
             </span>
           )}
+          {customerId && (
+            <span data-testid="customer-id" className="shrink-0 text-muted-foreground text-xs">
+              Cliente {customerId}
+            </span>
+          )}
         </span>
-        {(attention || tag) && (
+        {/* The state and who has the chat live in the input's placeholder. */}
+        {tag && (
           <span
             data-testid="customer-meta"
             className="flex min-w-0 items-center gap-2 text-muted-foreground text-xs"
           >
-            {attention && (
-              <span data-testid="attention" className="whitespace-nowrap">
-                {attention.text}
-              </span>
-            )}
             {tag && (
               <span
                 data-testid="use-case-tag"
