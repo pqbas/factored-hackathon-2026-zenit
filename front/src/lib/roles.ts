@@ -10,7 +10,7 @@ const ROLES: Role[] = ['customer', 'advisor', 'admin'];
 export const SECTION_ROLES: Record<Section, Role[]> = {
   agent: ['customer', 'advisor', 'admin'],
   products: ['customer', 'admin'],
-  // The advisor attends; the admin only supervises (read-only).
+  // Both attend; the admin also sees every user's chats.
   chats: ['advisor', 'admin'],
 };
 

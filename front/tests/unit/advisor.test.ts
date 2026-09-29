@@ -15,6 +15,8 @@ import {
   useCaseOf,
   viewUrl,
   isHeldByOther,
+  isDavidReplying,
+  type Bubble,
   mergeMessages,
   statusOf,
   toBubble,
@@ -243,5 +245,38 @@ describe('view counts', () => {
   it('asks for the counts of one user when filtered', () => {
     expect(countsUrl()).toBe('/api/advisor/conversations/counts');
     expect(countsUrl('u7')).toBe('/api/advisor/conversations/counts?userId=u7');
+  });
+});
+
+describe('isDavidReplying', () => {
+  const now = new Date('2026-09-28T10:00:30.000Z');
+  const bubble = (from: Bubble['from'], sentAt = '2026-09-28T10:00:10.000Z'): Bubble => ({
+    id: `${from}-${sentAt}`,
+    from,
+    label: null,
+    text: 'hola',
+    sentAt,
+  });
+
+  it('is true while David has an unanswered customer message', () => {
+    expect(isDavidReplying(chat(), [bubble('assistant'), bubble('customer')], now)).toBe(true);
+  });
+
+  it('ignores system notices after the customer message', () => {
+    expect(isDavidReplying(chat(), [bubble('customer'), bubble('system')], now)).toBe(true);
+  });
+
+  it('is false once David answered, or when a person handles the chat', () => {
+    expect(isDavidReplying(chat(), [bubble('customer'), bubble('assistant')], now)).toBe(false);
+    expect(isDavidReplying(chat({ handledBy: 'human_queue' }), [bubble('customer')], now)).toBe(
+      false,
+    );
+    expect(isDavidReplying(chat({ closedAt: '2026-09-28T10:00:20.000Z' }), [bubble('customer')], now)).toBe(false);
+  });
+
+  it('gives up after a minute without a reply', () => {
+    expect(isDavidReplying(chat(), [bubble('customer', '2026-09-28T09:58:00.000Z')], now)).toBe(
+      false,
+    );
   });
 });

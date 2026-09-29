@@ -150,4 +150,40 @@ test.describe('Customer chat during a handoff', () => {
     await expect(page.getByTestId('advisor-label')).toBeVisible({ timeout: 10_000 });
     await page.close();
   });
+
+  test('shows David typing until the first text arrives', async ({ adaContext }) => {
+    const page = await adaContext.context.newPage();
+    const chat = new ChatPage(page);
+    await mockHandoffChat(page, 'ai_agent');
+    // A slow answer (a warehouse query): nothing arrives for 4 s.
+    await page.route('**/api/chat', async (route) => {
+      if (route.request().method() !== 'POST') return route.fallback();
+      await new Promise((resolve) => setTimeout(resolve, 4000));
+      const events = [
+        { type: 'start' },
+        { type: 'text-start', id: 't1' },
+        { type: 'text-delta', id: 't1', delta: 'Tu saldo es $1.000.' },
+        { type: 'text-end', id: 't1' },
+        { type: 'finish' },
+      ];
+      return route.fulfill({
+        status: 200,
+        headers: { 'Content-Type': 'text/event-stream', 'x-vercel-ai-ui-message-stream': 'v1' },
+        body: `${events.map((e) => `data: ${JSON.stringify(e)}\n\n`).join('')}data: [DONE]\n\n`,
+      });
+    });
+
+    await page.goto(`/chat/${CHAT_ID}`);
+    await expect(page.getByTestId('chat-peer')).toHaveText('David');
+    await chat.sendUserMessage('¿Cuál es mi saldo?');
+    await expect(page.getByTestId('typing-indicator')).toBeVisible();
+    await expect(page.getByTestId('typing-slow-text')).toHaveCount(0);
+    await expect(page.getByTestId('typing-slow-text')).toHaveText(
+      'David está consultando tus datos…',
+      { timeout: 5_000 },
+    );
+    await expect(page.getByText('Tu saldo es $1.000.')).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByTestId('typing-indicator')).toHaveCount(0);
+    await page.close();
+  });
 });

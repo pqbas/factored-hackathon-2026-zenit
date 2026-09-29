@@ -57,7 +57,6 @@ function AssistantSwitch({
 export function ConversationHeader({
   chat,
   me,
-  readOnly,
   busy,
   onTake,
   onRelease,
@@ -65,8 +64,6 @@ export function ConversationHeader({
 }: {
   chat: AdvisorChat;
   me: string | undefined;
-  // The admin supervises: sees the chat, can't act on it.
-  readOnly: boolean;
   busy: boolean;
   onTake: () => void;
   onRelease: (outcome: 'returned_to_agent' | 'resolved') => void;
@@ -123,52 +120,43 @@ export function ConversationHeader({
           </span>
         )}
       </div>
-      {readOnly ? (
-        <span
-          data-testid="read-only-badge"
-          className="ml-auto shrink-0 rounded-full bg-secondary px-3 py-1 text-muted-foreground text-xs"
-        >
-          Solo lectura
-        </span>
-      ) : (
-        <div className="ml-auto flex shrink-0 items-center gap-2">
-          {(status === 'assistant' || status === 'resolved') && (
-            <AssistantSwitch on disabled={busy} onToggle={onTake} />
-          )}
-          {status === 'waiting' && (
+      <div className="ml-auto flex shrink-0 items-center gap-2">
+        {(status === 'assistant' || status === 'resolved') && (
+          <AssistantSwitch on disabled={busy} onToggle={onTake} />
+        )}
+        {status === 'waiting' && (
+          <Button
+            type="button"
+            size="sm"
+            data-testid="take-button"
+            disabled={busy}
+            onClick={onTake}
+            className="h-8 rounded-full px-4 text-xs"
+          >
+            Tomar
+          </Button>
+        )}
+        {mine && (
+          <>
+            <AssistantSwitch
+              on={false}
+              disabled={busy}
+              onToggle={() => onRelease('returned_to_agent')}
+            />
             <Button
               type="button"
+              variant="secondary"
               size="sm"
-              data-testid="take-button"
+              data-testid="resolve-button"
               disabled={busy}
-              onClick={onTake}
-              className="h-8 rounded-full px-4 text-xs"
+              onClick={() => onRelease('resolved')}
+              className="h-8 rounded-full px-3 text-xs"
             >
-              Tomar
+              Resolver
             </Button>
-          )}
-          {mine && (
-            <>
-              <AssistantSwitch
-                on={false}
-                disabled={busy}
-                onToggle={() => onRelease('returned_to_agent')}
-              />
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                data-testid="resolve-button"
-                disabled={busy}
-                onClick={() => onRelease('resolved')}
-                className="h-8 rounded-full px-3 text-xs"
-              >
-                Resolver
-              </Button>
-            </>
-          )}
-        </div>
-      )}
+          </>
+        )}
+      </div>
     </header>
   );
 }

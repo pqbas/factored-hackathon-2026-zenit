@@ -1,4 +1,3 @@
-import { motion } from 'framer-motion';
 import { ASSISTANT_TITLE } from '@/lib/assistant';
 import React, { memo, useState } from 'react';
 import { UserRound } from 'lucide-react';
@@ -22,6 +21,7 @@ import {
   McpApprovalActions,
 } from './elements/mcp-tool';
 import { MessageActions } from './message-actions';
+import { TypingIndicator } from './typing-indicator';
 import { PreviewAttachment } from './preview-attachment';
 import equal from 'fast-deep-equal';
 import { cn, sanitizeText } from '@/lib/utils';
@@ -68,6 +68,12 @@ const PurePreviewMessage = ({
   const [showErrors, setShowErrors] = useState(false);
   // Advisor replies are role 'assistant' too; senderType tells them apart.
   const isAdvisor = senderOf(message) === 'advisor';
+  // David is streaming but no text arrived yet (e.g. a slow data query).
+  const awaitingText =
+    isLoading &&
+    message.role === 'assistant' &&
+    !isAdvisor &&
+    !message.parts.some((part) => part.type === 'text' && part.text.length > 0);
 
   // Hook for handling MCP approval requests
   const { submitApproval, isSubmitting, pendingApprovalId } = useApproval({
@@ -157,6 +163,7 @@ const PurePreviewMessage = ({
               Asesor
             </span>
           )}
+          {awaitingText && <TypingIndicator className="text-muted-foreground" />}
           {attachmentsFromMessage.length > 0 && (
             <div
               data-testid={`message-attachments`}
@@ -441,34 +448,9 @@ export const AwaitingResponseMessage = () => {
         <BrandMark size={26} pulse className="mt-0.5" />
 
         <div className="flex w-full flex-col gap-2 md:gap-4">
-          <div className="p-0 text-muted-foreground text-sm">
-            <LoadingText>Thinking...</LoadingText>
-          </div>
+          <TypingIndicator className="text-muted-foreground" />
         </div>
       </div>
     </div>
-  );
-};
-
-const LoadingText = ({ children }: { children: React.ReactNode }) => {
-  return (
-    <motion.div
-      animate={{ backgroundPosition: ['100% 50%', '-100% 50%'] }}
-      transition={{
-        duration: 1.5,
-        repeat: Number.POSITIVE_INFINITY,
-        ease: 'linear',
-      }}
-      style={{
-        background:
-          'linear-gradient(90deg, hsl(var(--muted-foreground)) 0%, hsl(var(--muted-foreground)) 35%, hsl(var(--foreground)) 50%, hsl(var(--muted-foreground)) 65%, hsl(var(--muted-foreground)) 100%)',
-        backgroundSize: '200% 100%',
-        WebkitBackgroundClip: 'text',
-        backgroundClip: 'text',
-      }}
-      className="flex items-center text-transparent"
-    >
-      {children}
-    </motion.div>
   );
 };

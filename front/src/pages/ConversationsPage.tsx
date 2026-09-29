@@ -78,11 +78,11 @@ function viewTitle(view: InboxView): string {
 export default function ConversationsPage() {
   const { session, role } = useSession();
   const me = session?.user?.email;
-  // The admin supervises (read-only, everything); the advisor attends.
-  const readOnly = role === 'admin';
+  // Both attend; the admin also supervises every user's chats.
+  const isAdmin = role === 'admin';
   const [view, setView] = useState<InboxView>({ kind: 'inbox' });
   const [userId, setUserId] = useState<string | null>(null);
-  const { data: users } = useSWR(readOnly ? '/api/advisor/users' : null, fetchUsers, {
+  const { data: users } = useSWR(isAdmin ? '/api/advisor/users' : null, fetchUsers, {
     revalidateOnFocus: false,
   });
   const [query, setQuery] = useState('');
@@ -193,7 +193,7 @@ export default function ConversationsPage() {
           setView(next);
           setSelected(null);
         }}
-        isAdmin={readOnly}
+        isAdmin={isAdmin}
         users={users ?? []}
         userId={userId}
         onUserChange={setUserId}
@@ -227,7 +227,6 @@ export default function ConversationsPage() {
                 chat={current}
                 bubbles={bubbles}
                 me={me}
-                readOnly={readOnly}
                 busy={busy}
                 onTake={handleTake}
                 onRelease={handleRelease}
