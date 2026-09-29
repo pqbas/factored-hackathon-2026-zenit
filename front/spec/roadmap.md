@@ -288,3 +288,17 @@ Shipped en PR #33.
 - [x] Los números se refrescan con el polling de la bandeja y tras cada acción.
 
 Shipped en PR #35.
+
+---
+
+## Phase 11: Datos reales (Complete)
+
+**Goal:** que la app muestre la data real del banco para el despliegue.
+
+- [x] Mis productos lee GET /api/products del cliente demo elegido, con
+      estados de carga, cliente vencido y reintento.
+- [x] La barra del chat muestra solo conversaciones reales.
+
+Fuera de alcance / futuro: el nombre real del cliente en la consola (el back
+lo deja para después del deploy) y los totales con monedas mezcladas.
+Shipped en PR #37.
