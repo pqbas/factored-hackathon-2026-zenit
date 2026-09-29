@@ -11,6 +11,8 @@
 | `back/scripts/scenarios/06-estado-reclamo.json` | existente | Modificado: Eduardo y flujo 3.D2 |
 | `back/tests/routes/reason-filter.test.ts` | — | Nuevo |
 | `back/tests/ai-sdk-provider/demo-customers.test.ts` | existente | Modificado: `demo-mx-2` y `tokenForCustomerId` |
+| `back/scripts/seed-console.ts` | — | Nuevo: siembra de todos los casos de la consola en local |
+| `back/scripts/simulate-customers.ts` | existente | Modificado: exporta sus helpers |
 
 ---
 
@@ -81,28 +83,54 @@
    - Depende de que el agente local acepte `demo-mx-2` y tenga `get_cases`
      (bloque c de w1:p3).
 
-9. Con `:3200` en la rama y el agente local, correr
-   `npm run simulate -- --scenario 04-reclamo-cargo`, `05-cancelar-tarjeta` y
-   `06-estado-reclamo`.
-   - Verificar con `GET /api/advisor/conversations/counts?groupBy=customer`
-     que `byHandoffReason` trae al menos un caso de cada motivo.
-   - Si el agente todavía no deriva `case_status`, dejarlo anotado y
-     sembrar los otros dos.
+9. Clientes demo locales (pedido de w1:p4): 7 clientes reales Active del
+   warehouse con tarjeta de crédito y movimientos, además de los 4 actuales.
+   Van en `DEMO_CUSTOMERS_JSON` del `.env` de back-runtime y en
+   `DEMO_SESSIONS_JSON` del agente local, no en los defaults.
+   - México: `demo-mx-3` Fernando (`CLI-OAZTV7GG5M0D`) y `demo-mx-4` Victoria
+     (`CLI-01OSDSMM4FX2`).
+   - Colombia: `demo-co-2` Gustavo (`CLI-TVX8Q10GJDTW`) y `demo-co-3` Pilar
+     (`CLI-JLLEM8RQT11E`).
+   - Argentina: `demo-ar-2` Adriana (`CLI-2MM9EXMOO8KD`), `demo-ar-3` Antonio
+     (`CLI-MO9NTQLU8K63`) y `demo-ar-4` Marco (`CLI-BTHO9TGJDB68`).
+
+10. Crear `back/scripts/seed-console.ts` (`npm run seed:console`, `--only`
+    para re-sembrar algunos clientes). Juega la matriz en serie contra `:3200`
+    y el agente local: las conversaciones van por el simulador (que pasa a
+    exportar sus helpers) y las acciones de asesor por la API. Al final
+    imprime la tabla cliente → vista esperada y real, y los contadores.
+    - Rechaza cualquier destino que no sea local.
+    - La matriz, un cliente por fila:
+      - Con AI y 3+ conversaciones: Daniela (resuelta por IA, asistida y una
+        en curso).
+      - En espera por motivo: Santiago (complaint), Javier (retention) y
+        Eduardo (case_status, al final, cuando el agente lo derive).
+      - Con asesor: Fernando tomado por asesor1 (complaint) y Gustavo tomado
+        por asesor2 (retention).
+      - Resuelta por IA: Adriana. Resuelta por humano: Victoria.
+      - Borde de la regla: Pilar, con un reclamo resuelto y una cancelación en
+        espera.
+      - Borde del hueco: Antonio, con una cancelación abierta y una conversación
+        más nueva resuelta.
+      - Handoff devuelto a David: Marco.
+
+11. Correr `npm run seed:console` y revisar la tabla. Re-sembrar con `--only`
+    a quien no haya terminado en su vista, porque el agente es un LLM.
 
 ---
 
 ## Group 4: Tests
 
-10. Unit: ampliar `back/tests/ai-sdk-provider/demo-customers.test.ts` con
+12. Unit: ampliar `back/tests/ai-sdk-provider/demo-customers.test.ts` con
     `demo-mx-2` en la lista por defecto y con `tokenForCustomerId`: devuelve
     el token no vencido, `undefined` para un id desconocido, y nunca devuelve
     `demo-expired` aunque comparta id con `demo-mx-1`.
 
-11. Integration: el proyecto no tiene una capa de integración separada.
+13. Integration: el proyecto no tiene una capa de integración separada.
     Las queries se prueban de punta a punta a través de las rutas, con la
     base real y handoffs sembrados con `openHandoff` y `closeHandoffs`.
 
-12. End-to-end: crear `back/tests/routes/reason-filter.test.ts`. Siembra por
+14. End-to-end: crear `back/tests/routes/reason-filter.test.ts`. Siembra por
     un `userId` único al test, con `saveChat`, `updateChatAgentState` y
     `openHandoff`, y cubre:
     - `?handoffReason=complaint` sin `groupBy`: trae solo las conversaciones con

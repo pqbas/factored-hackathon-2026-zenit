@@ -44,9 +44,8 @@ La fase está lista para mergear cuando se cumple todo lo que sigue.
 
 ## Manual Checks
 
-- [ ] `npm run simulate -- --scenario 04-reclamo-cargo`, `05-cancelar-tarjeta`
-      y `06-estado-reclamo` contra `:3200` dejan casos derivados en
-      `chatbot_dev`
+- [ ] `npm run seed:console` contra `:3200` deja cada cliente de la matriz en
+      su vista esperada (la tabla final del script lo muestra)
 - [ ] `curl` a `counts?groupBy=customer` en `:3200` muestra `byHandoffReason` con al
       menos un caso por motivo (o `case_status` en 0, anotado, si el agente
       local todavía no lo deriva)

@@ -64,10 +64,18 @@ And it changes in these ways:
     que corresponde al `customerId` guardado del chat (el primero no vencido
     con ese id), o `null` si el chat no tiene cliente o su id no es de un
     cliente demo.
-11. En `chatbot_dev` hay al menos un caso derivado por motivo: un reclamo de
-    Santiago (`complaint`), una cancelación de Javier (`retention`) y un
-    estado de reclamo de Eduardo (`case_status`). Se generan con el
-    simulador contra `:3200` y el agente local.
+11. `chatbot_dev` tiene todos los casos de la consola (pedido de w1:p4), un
+    cliente por caso:
+    - Con AI;
+    - En espera por cada motivo;
+    - Con asesor, uno de cada asesor;
+    - resuelta por IA y resuelta por humano;
+    - los dos bordes de "conversación en curso";
+    - un handoff devuelto a David;
+    - un cliente con 3+ conversaciones.
+
+    Se genera con `npm run seed:console` contra `:3200` y el agente local,
+    y se puede re-sembrar.
 
 ## 2. Decisions
 
@@ -107,6 +115,8 @@ And it changes in these ways:
 - El escenario 06 (estado de un reclamo) pasa a Eduardo (`demo-mx-2`),
   porque tiene reclamos reales en `customer_cases`. Sus mensajes se ajustan
   al flujo 3.D2 para que termine derivando con `case_status`.
+- Los clientes demo extra van en el `.env` local (back y agente), no en los
+  defaults, porque solo sirven para probar la consola en local.
 - Los casos se siembran solo en local (`chatbot_dev`). Contra prod no, sin OK
   del usuario, porque cuesta LLM y warehouse.
 - Fuera de alcance / futuro: ordenar la bandeja por prioridad y quitar
