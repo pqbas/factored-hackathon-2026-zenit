@@ -117,8 +117,8 @@ del banco.
      saldo, el límite y el cupo disponible, aunque pregunte solo por uno de
      ellos.
    - **Movimientos:** si tiene más de una tarjeta y no dijo cuál, pregunta cuál.
-     Consulta `list_transactions` con esos últimos 4 dígitos y lista los
-     últimos 10: fecha, comercio, monto con su moneda y estado.
+     Consulta `list_transactions` con esos últimos 4 dígitos y lista los últimos
+     10: fecha, comercio, monto con su moneda y estado.
 
 **Sale a:** etapa 6.
 
@@ -163,12 +163,12 @@ ficha y lo deriva.
 
 1. David toma esta ficha y pasa a la etapa 4 con motivo `complaint`.
 
-| Dato | Pregunta de David | Cómo lo valida |
-| --- | --- | --- |
-| Tarjeta | ¿De qué tarjeta es el cargo? | Los últimos 4 dígitos tienen que ser de una tarjeta activa del cliente (`get_products`). Si tiene una sola, la propone. |
-| Cargo | ¿Cuál es el cargo? | Le muestra los últimos movimientos de esa tarjeta (`list_transactions`) y el cliente elige uno, o lo describe por comercio, monto o fecha. El cargo tiene que estar en esos movimientos. |
-| Tipo | ¿Qué pasó? No lo reconozco / me cobraron dos veces / el monto es distinto | Una de las tres opciones. |
-| Descripción | Cuéntame brevemente lo que pasó | Texto libre del cliente. |
+| Dato        | Pregunta de David                                                         | Cómo lo valida                                                                                                                                                                           |
+| ----------- | ------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Tarjeta     | ¿De qué tarjeta es el cargo?                                              | Los últimos 4 dígitos tienen que ser de una tarjeta activa del cliente (`get_products`). Si tiene una sola, la propone.                                                                  |
+| Cargo       | ¿Cuál es el cargo?                                                        | Le muestra los últimos movimientos de esa tarjeta (`list_transactions`) y el cliente elige uno, o lo describe por comercio, monto o fecha. El cargo tiene que estar en esos movimientos. |
+| Tipo        | ¿Qué pasó? No lo reconozco / me cobraron dos veces / el monto es distinto | Una de las tres opciones.                                                                                                                                                                |
+| Descripción | Cuéntame brevemente lo que pasó                                           | Texto libre del cliente.                                                                                                                                                                 |
 
 **Sale a:** etapa 4.
 
@@ -182,10 +182,10 @@ cliente, y no ofrece nada a cambio: aplicar las políticas de retención
 
 1. David toma esta ficha y pasa a la etapa 4 con motivo `retention`.
 
-| Dato | Pregunta de David | Cómo lo valida |
-| --- | --- | --- |
+| Dato     | Pregunta de David               | Cómo lo valida                                                                                              |
+| -------- | ------------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | Producto | ¿Qué producto quieres cancelar? | Tipo y últimos 4 dígitos de un producto activo del cliente (`get_products`). Si tiene uno solo, lo propone. |
-| Motivo | ¿Por qué quieres cancelarlo? | Texto libre del cliente. |
+| Motivo   | ¿Por qué quieres cancelarlo?    | Texto libre del cliente.                                                                                    |
 
 **Sale a:** etapa 4.
 
@@ -195,34 +195,35 @@ cliente, y no ofrece nada a cambio: aplicar las políticas de retención
 
 **Pasos:**
 
-1. **Usa lo que el banco ya sabe.** El back le pasa los reclamos anteriores del
-   cliente, es decir, las conversaciones derivadas con motivo `complaint`:
-   fecha, tarjeta, comercio, monto y estado (sin atender, en atención o
-   resuelto). Como el agente no guarda estado, el back se los manda en cada
-   request, según [`limites-agente-back.md`](limites-agente-back.md).
+1. **Consulta los reclamos reales del cliente** en `bank_gold.customer_cases`,
+   con una función de UC nueva (`get_cases`) filtrada por el cliente de la
+   sesión: tipo, categoría, fecha, monto reclamado, prioridad, estado y
+   resolución. Si el cliente tiene una conversación derivada en la app que
+   todavía no figura ahí, el back también se la pasa.
 2. Si hay un solo reclamo, lo propone. Si hay varios, los lista para que elija.
 
    ```text
    ¿Es el reclamo por el cargo de Uber de $12.90 del 27/09?
    ```
 
-   Si no hay ninguno, o el cliente habla de otro, pasa a la etapa 4 con la
-   ficha de abajo.
+   Si no hay ninguno, o el cliente habla de otro, pasa a la etapa 4 con la ficha
+   de abajo.
+
 3. Le dice al cliente el estado que conoce el banco, uno de estos:
 
    ```text
+   Tu reclamo está abierto y en revisión.
+   Tu reclamo fue resuelto el 12/06: se te devolvieron $329.44.
    Tu reclamo está en la cola de un asesor.
-   Un asesor está atendiendo tu reclamo.
-   Tu reclamo figura como resuelto.
    ```
 
 4. Pregunta si necesita algo más sobre ese reclamo, por ejemplo un plazo o una
    respuesta.
 
-| Dato | Pregunta de David | Cómo lo valida |
-| --- | --- | --- |
-| Reclamo | ¿De qué reclamo se trata? (tarjeta, fecha aproximada y comercio o monto) | Si coincide con un reclamo que le pasó el back, lo toma de ahí. Si no, el cargo tiene que estar en los movimientos de esa tarjeta. |
-| Qué necesita | ¿Qué necesitas saber de tu reclamo? | Texto libre del cliente. |
+| Dato         | Pregunta de David                                                        | Cómo lo valida                                                                                                                     |
+| ------------ | ------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Reclamo      | ¿De qué reclamo se trata? (tarjeta, fecha aproximada y comercio o monto) | Si coincide con un reclamo que le pasó el back, lo toma de ahí. Si no, el cargo tiene que estar en los movimientos de esa tarjeta. |
+| Qué necesita | ¿Qué necesitas saber de tu reclamo?                                      | Texto libre del cliente.                                                                                                           |
 
 **Sale a:** etapa 6 si solo quería saber el estado; etapa 4 con motivo
 `case_status` si necesita algo más o si el reclamo no se pudo identificar.
@@ -317,8 +318,8 @@ Mientras dura la etapa:
 
 **Pasos:**
 
-1. David ofrece seguir, por ejemplo, ver los movimientos de una tarjeta o
-   volver al menú.
+1. David ofrece seguir, por ejemplo, ver los movimientos de una tarjeta o volver
+   al menú.
 
 **Sale a:** etapa 3 si el cliente pide otra cosa; etapa 7 si no necesita nada
 más.
@@ -377,6 +378,18 @@ locales.
    - **Resolver**: la conversación pasa a Resueltas.
    - **Devolver a David**: David retoma en el siguiente mensaje del cliente.
 
+Al abrir cualquier conversación, el asesor (o el admin) ve al costado el
+**contexto del cliente** (nuevo), leído del warehouse del banco:
+
+| Qué ve | De dónde sale |
+| --- | --- |
+| Contactos anteriores con el banco: fecha, canal, motivo, si se resolvió y si se escaló | `bank_gold.interaction_history` |
+| Transcripciones de llamadas anteriores, cliente y agente del banco | `bank_silver.call_transcripts` |
+| Reclamos y casos: tipo, estado, monto reclamado y resolución | `bank_gold.customer_cases` |
+
+Es solo lectura. Para saber qué cliente es, el back guarda en cada conversación
+el cliente de la sesión.
+
 También puede entrar a la vista **Con AI** y tomar una conversación para
 intervenir, aunque David no la haya derivado.
 
@@ -388,8 +401,8 @@ intervenir, aunque David no la haya derivado.
 
 ## 5. Estados de una conversación
 
-Toda conversación está siempre en uno de estos cuatro estados. Son los que ve
-el asesor en la consola.
+Toda conversación está siempre en uno de estos cuatro estados. Son los que ve el
+asesor en la consola.
 
 ```mermaid
 stateDiagram-v2
@@ -404,12 +417,12 @@ stateDiagram-v2
     Resuelta --> ConAI: el cliente vuelve a escribir
 ```
 
-| Estado | Qué significa | En el back | Dónde se ve en la consola |
-| --- | --- | --- | --- |
-| **Con AI** | David la atiende solo | `handledBy = ai_agent` | Vista **Con AI** |
-| **En espera** | David la derivó y espera a un asesor | `handledBy = human_queue` | Bandeja y **En espera** |
-| **Con asesor** | Un asesor la tomó y la atiende | `handledBy = human_agent` | Bandeja, y **Mías** para quien la tiene |
-| **Resuelta** | Terminó, la haya resuelto David (despedida) o un asesor | `closedAt` con fecha | **Resueltas** |
+| Estado         | Qué significa                                           | En el back                | Dónde se ve en la consola               |
+| -------------- | ------------------------------------------------------- | ------------------------- | --------------------------------------- |
+| **Con AI**     | David la atiende solo                                   | `handledBy = ai_agent`    | Vista **Con AI**                        |
+| **En espera**  | David la derivó y espera a un asesor                    | `handledBy = human_queue` | Bandeja y **En espera**                 |
+| **Con asesor** | Un asesor la tomó y la atiende                          | `handledBy = human_agent` | Bandeja, y **Mías** para quien la tiene |
+| **Resuelta**   | Terminó, la haya resuelto David (despedida) o un asesor | `closedAt` con fecha      | **Resueltas**                           |
 
 La **Bandeja** del asesor muestra solo **En espera** y **Con asesor**.
 
@@ -419,21 +432,21 @@ Cada vez que una conversación pasa a **Resuelta**, el back registra un **evento
 de resolución**. Una conversación puede resolverse varias veces, porque se
 reabre si el cliente vuelve a escribir: cada cierre es un evento aparte.
 
-| Campo | Valor |
-| --- | --- |
-| `chatId` | La conversación |
+| Campo        | Valor                                                                                                        |
+| ------------ | ------------------------------------------------------------------------------------------------------------ |
+| `chatId`     | La conversación                                                                                              |
 | `resolvedBy` | `ai` si se cerró por la despedida del cliente con David atendiendo; `human` si el asesor apretó **Resolver** |
-| `hadHuman` | `true` si desde que se abrió (o se reabrió) hubo derivación o un asesor la tomó |
-| `useCase` | El caso de uso de la conversación al cerrarse |
-| `resolvedAt` | Fecha y hora del cierre |
+| `hadHuman`   | `true` si desde que se abrió (o se reabrió) hubo derivación o un asesor la tomó                              |
+| `useCase`    | El caso de uso de la conversación al cerrarse                                                                |
+| `resolvedAt` | Fecha y hora del cierre                                                                                      |
 
 Con esos eventos se calculan:
 
-| Métrica | Cálculo |
-| --- | --- |
-| Resueltas por la IA de punta a punta (contención) | `resolvedBy = ai` y `hadHuman = false`, sobre el total de eventos |
-| Resueltas por un asesor | `resolvedBy = human` |
-| Asistidas (un asesor intervino y después cerró David) | `resolvedBy = ai` y `hadHuman = true` |
+| Métrica                                               | Cálculo                                                           |
+| ----------------------------------------------------- | ----------------------------------------------------------------- |
+| Resueltas por la IA de punta a punta (contención)     | `resolvedBy = ai` y `hadHuman = false`, sobre el total de eventos |
+| Resueltas por un asesor                               | `resolvedBy = human`                                              |
+| Asistidas (un asesor intervino y después cerró David) | `resolvedBy = ai` y `hadHuman = true`                             |
 
 Todas se pueden ver en total, por caso de uso y por día.
 
