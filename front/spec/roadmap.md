@@ -348,6 +348,8 @@ Shipped en PR #44.
 - [x] Desglose por caso de uso con los colores de la consola y tendencia diaria
       en barras apiladas (IA / asistidas / asesor).
 - [x] Estados de carga, sin resoluciones y error con reintento.
+- [x] Los días son los del navegador (zona IANA, `tz`): un cierre a las 22:30 en
+      Lima cuenta en ese día, no en el siguiente UTC.
 
 Shipped en PR #49.
 
