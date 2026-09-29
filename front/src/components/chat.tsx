@@ -13,8 +13,7 @@ import type {
   CustomUIDataTypes,
   VisibilityType,
 } from '@chat-template/core';
-import { unstable_serialize } from 'swr/infinite';
-import { getChatHistoryPaginationKey } from './sidebar-history';
+import { chatHistoryCacheKey } from './sidebar-history';
 import { toast } from './toast';
 import { useSearchParams } from 'react-router-dom';
 import { useChatVisibility } from '@/hooks/use-chat-visibility';
@@ -38,6 +37,7 @@ import {
   getLastCustomerToken,
   pickDefaultToken,
   setChatCustomerToken,
+  setActiveCustomerToken,
   setLastCustomerToken,
 } from '@/lib/demo-customer-storage';
 
@@ -89,6 +89,10 @@ export function Chat({
       setCustomerToken(pickDefaultToken(customers, getLastCustomerToken()));
     }
   }, [customers, customerToken]);
+  // The history and the greeting follow this chat's customer.
+  useEffect(() => {
+    if (customerToken) setActiveCustomerToken(customerToken);
+  }, [customerToken]);
 
   const [streamCursor, setStreamCursor] = useState(0);
   const streamCursorRef = useRef(streamCursor);
@@ -123,7 +127,7 @@ export function Chat({
   const isNewChat = initialMessages.length === 0;
   const didFetchHistoryOnNewChat = useRef(false);
   const fetchChatHistory = useCallback(() => {
-    mutate(unstable_serialize(getChatHistoryPaginationKey));
+    mutate(chatHistoryCacheKey());
   }, [mutate]);
 
   const {

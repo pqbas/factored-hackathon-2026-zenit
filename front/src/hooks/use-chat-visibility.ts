@@ -1,9 +1,8 @@
 import { useMemo } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
-import { unstable_serialize } from 'swr/infinite';
 import { updateChatVisibility } from '@/lib/actions';
 import {
-  getChatHistoryPaginationKey,
+  chatHistoryCacheKey,
   type ChatHistory,
 } from '@/components/sidebar-history';
 import type { VisibilityType } from '@chat-template/core';
@@ -35,7 +34,7 @@ export function useChatVisibility({
 
   const setVisibilityType = (updatedVisibilityType: VisibilityType) => {
     setLocalVisibility(updatedVisibilityType);
-    mutate(unstable_serialize(getChatHistoryPaginationKey));
+    mutate(chatHistoryCacheKey());
 
     updateChatVisibility({
       chatId: chatId,

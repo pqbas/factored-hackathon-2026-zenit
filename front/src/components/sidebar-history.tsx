@@ -28,7 +28,9 @@ import {
 import type { Chat } from '@chat-template/db';
 import { fetcher } from '@/lib/utils';
 import { ChatItem } from './sidebar-history-item';
-import useSWRInfinite from 'swr/infinite';
+import useSWRInfinite, { unstable_serialize } from 'swr/infinite';
+import { getActiveCustomerToken } from '@/lib/demo-customer-storage';
+import { useActiveCustomerToken } from '@/hooks/use-active-customer';
 import { LoaderIcon } from 'lucide-react';
 
 type GroupedChats = {
@@ -79,22 +81,29 @@ const groupChatsByDate = (chats: Chat[]): GroupedChats => {
   );
 };
 
-export function getChatHistoryPaginationKey(
-  pageIndex: number,
-  previousPageData: ChatHistory,
-) {
-  if (previousPageData && previousPageData.hasMore === false) {
-    return null;
-  }
+// Pages of the history, only the chats of the given demo customer (all the
+// user's chats without one).
+export function chatHistoryKey(sessionToken: string | null) {
+  const token = sessionToken ? `&sessionToken=${encodeURIComponent(sessionToken)}` : '';
+  return (pageIndex: number, previousPageData: ChatHistory) => {
+    if (previousPageData && previousPageData.hasMore === false) {
+      return null;
+    }
 
-  if (pageIndex === 0)
-    return `/api/history?limit=${PAGE_SIZE}`;
+    if (pageIndex === 0) return `/api/history?limit=${PAGE_SIZE}${token}`;
 
-  const firstChatFromPage = previousPageData.chats.at(-1);
+    const firstChatFromPage = previousPageData.chats.at(-1);
 
-  if (!firstChatFromPage) return null;
+    if (!firstChatFromPage) return null;
 
-  return `/api/history?ending_before=${firstChatFromPage.id}&limit=${PAGE_SIZE}`;
+    return `/api/history?ending_before=${firstChatFromPage.id}&limit=${PAGE_SIZE}${token}`;
+  };
+}
+
+// SWR key of the list on screen, to refetch it after a chat changes. Other
+// customers' lists refetch when shown again.
+export function chatHistoryCacheKey(): string {
+  return unstable_serialize(chatHistoryKey(getActiveCustomerToken()));
 }
 
 function ChatDateGroup({
@@ -139,7 +148,7 @@ export function SidebarHistory({ user }: { user?: ClientUser | null }) {
     isValidating,
     isLoading,
     mutate,
-  } = useSWRInfinite<ChatHistory>(getChatHistoryPaginationKey, fetcher, {
+  } = useSWRInfinite<ChatHistory>(chatHistoryKey(useActiveCustomerToken()), fetcher, {
     fallbackData: [],
   });
 

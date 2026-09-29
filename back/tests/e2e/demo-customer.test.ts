@@ -99,4 +99,52 @@ test.describe('Demo customer selector', () => {
     await chat.sendUserMessage('Hola');
     expect((await request).postDataJSON()).not.toHaveProperty('sessionToken');
   });
+
+  test('greets the picked customer, offers the menu and shows only their chats', async () => {
+    await mockCustomers(page);
+    // The sidebar lists history only with chat history on (ephemeral runs have it off).
+    await page.route('**/api/config', (route) =>
+      route.fulfill({ json: { features: { chatHistory: true } } }),
+    );
+    const historyTokens: (string | null)[] = [];
+    await page.route('**/api/history**', (route) => {
+      const token = new URL(route.request().url()).searchParams.get('sessionToken');
+      historyTokens.push(token);
+      const name = token === 'demo-co-1' ? 'Javier' : 'Santiago';
+      return route.fulfill({
+        json: {
+          chats: [
+            {
+              id: `00000000-0000-4000-8000-00000000000${token === 'demo-co-1' ? 2 : 1}`,
+              title: `Chat de ${name}`,
+              createdAt: new Date().toISOString(),
+              userId: 'ada-id',
+              visibility: 'private',
+              lastContext: null,
+            },
+          ],
+          hasMore: false,
+        },
+      });
+    });
+    await chat.createNewChat();
+    await page.evaluate(() => localStorage.clear());
+    await page.reload();
+
+    await expect(page.getByTestId('greeting')).toContainText(', Santiago');
+    await expect(page.getByTestId('greeting')).not.toContainText('Ada');
+    await expect(page.getByTestId('suggested-actions')).toContainText('Consultar saldo y movimientos de tarjeta');
+    for (const title of ['Cuentas de ahorro', 'Presentar un reclamo', 'Más opciones']) {
+      await expect(page.getByTestId('suggested-actions')).toContainText(title);
+    }
+    await expect(page.getByTestId('suggested-actions')).not.toContainText('Agregar beneficiario');
+    await expect(page.getByText('Chat de Santiago')).toBeVisible();
+    expect(historyTokens).toContain('demo-mx-1');
+
+    await chat.selectDemoCustomer('demo-co-1');
+    await expect(page.getByTestId('greeting')).toContainText(', Javier');
+    await expect(page.getByText('Chat de Javier')).toBeVisible();
+    await expect(page.getByText('Chat de Santiago')).toHaveCount(0);
+    expect(historyTokens).toContain('demo-co-1');
+  });
 });

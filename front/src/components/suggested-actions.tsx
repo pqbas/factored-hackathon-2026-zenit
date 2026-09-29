@@ -3,7 +3,7 @@ import { memo } from 'react';
 import type { UseChatHelpers } from '@ai-sdk/react';
 import type { VisibilityType } from './visibility-selector';
 import type { ChatMessage } from '@chat-template/core';
-import { CreditCard, Lock, TrendingUp, UserPlus, type LucideIcon } from 'lucide-react';
+import { CircleAlert, CreditCard, Ellipsis, PiggyBank, type LucideIcon } from 'lucide-react';
 import { softNavigateToChatId } from '@/lib/navigation';
 import { useAppConfig } from '@/contexts/AppConfigContext';
 import { cn } from '@/lib/utils';
@@ -22,34 +22,36 @@ interface SuggestedAction {
   tint: string;
 }
 
+// The options of David's menu (docs/flujo-atencion.md, etapa 2): only what he
+// actually does.
 const SUGGESTED_ACTIONS: SuggestedAction[] = [
   {
-    title: 'Consultar mi saldo',
-    description: 'Cuentas y tarjetas',
-    prompt: '¿Cuál es el saldo de mis cuentas?',
+    title: 'Consultar saldo y movimientos de tarjeta',
+    description: 'Saldo, límite y cupo disponible',
+    prompt: 'Quiero ver el saldo y los movimientos de mi tarjeta de crédito',
     icon: CreditCard,
     tint: 'bg-tint-green text-tint-green-foreground',
   },
   {
-    title: 'Agregar beneficiario',
-    description: 'Para transferir a alguien nuevo',
-    prompt: 'Quiero agregar un beneficiario',
-    icon: UserPlus,
+    title: 'Cuentas de ahorro',
+    description: 'Saldo y movimientos',
+    prompt: 'Quiero ver el saldo y los movimientos de mi cuenta de ahorro',
+    icon: PiggyBank,
     tint: 'bg-tint-blue text-tint-blue-foreground',
   },
   {
-    title: 'Aumentar mi límite',
-    description: 'Solicitud en un minuto',
-    prompt: 'Quiero aumentar el límite de mi tarjeta de crédito',
-    icon: TrendingUp,
-    tint: 'bg-tint-amber text-tint-amber-foreground',
+    title: 'Presentar un reclamo',
+    description: 'Un cargo que no reconoces o un cobro duplicado',
+    prompt: 'Quiero presentar un reclamo por un cargo',
+    icon: CircleAlert,
+    tint: 'bg-tint-red text-tint-red-foreground',
   },
   {
-    title: 'Bloquear una tarjeta',
-    description: 'Si la perdiste o te la robaron',
-    prompt: 'Perdí mi tarjeta y quiero bloquearla',
-    icon: Lock,
-    tint: 'bg-tint-red text-tint-red-foreground',
+    title: 'Más opciones',
+    description: 'Cancelar un producto o el estado de un reclamo',
+    prompt: 'Más opciones: cancelar un producto o ver el estado de un reclamo',
+    icon: Ellipsis,
+    tint: 'bg-tint-amber text-tint-amber-foreground',
   },
 ];
 
