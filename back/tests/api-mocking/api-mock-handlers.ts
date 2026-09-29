@@ -5,6 +5,7 @@ import {
   mockMcpApprovalApprovedStream,
   mockMcpApprovalDeniedStream,
   mockResponsesApiTextStream,
+  mockResponsesApiMultiTextStream,
 } from '../helpers';
 import { TEST_PROMPTS } from '../prompts/routes';
 
@@ -51,6 +52,7 @@ export interface CapturedRequest {
   hasContext: boolean;
   customInputs?: {
     session_token?: string;
+    handled_by?: string;
     [key: string]: unknown;
   };
   // Responses API request body, kept so tests can check which turns were
@@ -262,7 +264,40 @@ export const AGENT_OUTPUTS = {
       },
     },
   },
+  // The handoff turn, with more text after the handoff message.
+  complaintThenText: {
+    thread_id: 'mock',
+    use_case: 'COMPLAINT',
+    intent: 'COMPLAINT',
+    language: 'es',
+    blocked: false,
+    handoff: {
+      reason: 'complaint',
+      summary: 'Reclamo por un cargo no reconocido.',
+      facts: null,
+    },
+  },
+  // The agent was called on a conversation it doesn't own and says nothing.
+  paused: {
+    thread_id: 'mock',
+    use_case: 'GENERAL_INQUIRY',
+    intent: 'GENERAL_INQUIRY',
+    language: 'es',
+    blocked: false,
+    handoff: null,
+    paused: true,
+  },
 } as const;
+
+export const HANDOFF_TEXT =
+  'Te comunico con un asesor, que ya tiene los datos de tu caso.';
+
+// '[agent-slow:<ms>]' in the prompt: the responses endpoint waits that long
+// before answering.
+function agentDelayMs(body: unknown): number {
+  const text = JSON.stringify((body as { input?: unknown[] })?.input?.at(-1));
+  return Number(text?.match(/\[agent-slow:(\d+)\]/)?.[1] ?? 0);
+}
 
 // '[agent-down-N:<key>]' in the prompt: the agent answers 502 the first N
 // times it sees that key (its App redeploying), then normally.
@@ -341,10 +376,26 @@ export const handlers = [
       return new HttpResponse('Bad Gateway', { status: 502 });
     }
 
+    const delayMs = agentDelayMs(body);
+    if (delayMs > 0) await new Promise((r) => setTimeout(r, delayMs));
+
     // Prompts containing an AGENT_OUTPUTS key make the mock attach the
     // matching custom_outputs, as the real agent does on each turn.
     const agentOutputs = agentOutputsFor(body);
     if (isStreaming && agentOutputs) {
+      if (agentOutputs === AGENT_OUTPUTS.paused) {
+        return createMockStreamResponse(
+          mockResponsesApiMultiTextStream([], agentOutputs),
+        );
+      }
+      if (agentOutputs === AGENT_OUTPUTS.complaintThenText) {
+        return createMockStreamResponse(
+          mockResponsesApiMultiTextStream(
+            [HANDOFF_TEXT, 'Mientras tanto, cuéntame si necesitas algo más.'],
+            agentOutputs,
+          ),
+        );
+      }
       return createMockStreamResponse(
         mockResponsesApiTextStream('Mock agent reply', agentOutputs),
       );
