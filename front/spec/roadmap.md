@@ -365,4 +365,4 @@ Shipped en PR #49.
       bloquear la conversación.
 - [x] En pantallas de menos de 1600 px el panel ocupa el lugar de la lista.
 
-Shipped en PR #<n>.
+Shipped en PR #50.
