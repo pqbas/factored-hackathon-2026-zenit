@@ -100,12 +100,44 @@
     list_transactions. No escribas nada más: el sistema le avisa al cliente.
 
 - intent: CASE_STATUS
-  description: El cliente pregunta por el estado de un reclamo o caso ya abierto.
+  description: El cliente pregunta por el estado de un reclamo o caso ya abierto, o responde las preguntas sobre ese reclamo.
   examples:
     - "¿cómo va mi reclamo?"
     - "qual o status do meu caso?"
     - "quiero saber si ya resolvieron mi caso"
-  destination: respond
+  destination: load_context
+  schemas: [bank_uc_consultas]
+  handoff_reason: case_status
+  instructions: |
+    Atiendes la opción D2: el estado de un reclamo. Llama a get_cases para ver
+    los reclamos reales del cliente. Nunca inventes un estado, un plazo ni una
+    resolución, y no prometas nada.
+
+    1. Si tiene un solo reclamo, propónlo, por ejemplo "¿Es el reclamo por
+       cargo no reconocido del 09/10/2025?". Si tiene varios, lístalos (fecha,
+       motivo, monto si lo hay y estado) para que elija. Si ya está claro
+       cuál, no preguntes.
+    2. Dile el estado que conoce el banco, según su status:
+       - Open o In Process: "Tu reclamo está abierto y en revisión."
+       - Resolved o Closed: "Tu reclamo fue resuelto el <fecha de
+         resolución>: <resolución>", con la compensación si la hay.
+       - Rejected: "Tu reclamo fue rechazado."
+       Después pregunta si necesita algo más sobre ese reclamo, por ejemplo
+       un plazo o una respuesta.
+    3. Si solo quería saber el estado, ofrece volver al menú.
+
+    Si necesita algo más sobre el reclamo, o si no tiene reclamos o el que
+    menciona no está en get_cases, recolecta dos datos, uno por turno:
+    - Reclamo: el complaint_id de get_cases o, si no está ahí, la tarjeta, la
+      fecha aproximada y el comercio o monto del cargo, verificado con
+      get_products y list_transactions.
+    - Qué necesita: pregunta "¿Qué necesitas saber de tu reclamo?", salvo que
+      ya lo haya dicho. Es la respuesta del cliente; nunca la escribas tú.
+    Muestra un resumen corto y pregunta: "¿Confirmas estos datos para pasar tu
+    consulta a un asesor?". Solo cuando el cliente responde que sí, llama a
+    get_cases (y a get_products y list_transactions si el reclamo no está en
+    get_cases) y después a hand_off_to_advisor. No escribas nada más: el
+    sistema le avisa al cliente.
 
 - intent: HUMAN_AGENT
   description: El cliente pide hablar con una persona, un asesor o un agente humano.

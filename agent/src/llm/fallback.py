@@ -154,6 +154,23 @@ def fallback_classify(text: str, intents: Iterable[str]) -> Classification:
 _MENU_LETTER = re.compile(r"(?:(?:la |letra |opcion |opcao |a opcao )?)([abcd])")
 _MENU_WORDS = re.compile(r"(?:ver (?:el |o )?|volver al |voltar ao |mostrar (?:el |o )?)?(?:menu|opciones|opcoes)")
 _SUBMENU_DIGIT = re.compile(r"(?:opcion |opcao )?([12])")
+# Etapa 4, paso 6: a yes to David's confirmation question keeps its operation. Without this
+# rule a classifier read "sí" after "…pasar tu consulta a un asesor?" as HUMAN_AGENT.
+_AFFIRMATIVE = re.compile(r"(si|sim|confirmo|si,? confirmo|sim,? confirmo|correcto|claro|dale|ok|isso|esta bien|de acuerdo)")
+_CONFIRMATIONS = (
+    (re.compile(r"confirma.*(tu|sua) consulta"), "CASE_STATUS"),
+    (re.compile(r"confirma.*(tu|sua) (solicitud|solicitacao)"), "RETENTION"),
+    (re.compile(r"confirma.*(tu|sua) (reclamo|reclamacao)"), "COMPLAINT"),
+)
+
+
+def _confirmed_operation(previous: str) -> str | None:
+    for pattern, intent in _CONFIRMATIONS:
+        if pattern.search(previous):
+            return intent
+    return None
+
+
 _LETTER_INTENTS = {"a": "CARD_OPTIONS", "b": "SAVINGS_OPTIONS", "c": "COMPLAINT", "d": "MORE_OPTIONS"}
 
 
@@ -165,6 +182,9 @@ def menu_rule_intent(text: str, previous_reply: str | None, submenus: dict[str, 
         return "MENU"
     if m := _MENU_LETTER.fullmatch(t):
         return _LETTER_INTENTS[m.group(1)]
+    if previous_reply is not None and _AFFIRMATIVE.fullmatch(t):
+        if operation := _confirmed_operation(normalize(previous_reply)):
+            return operation
     digit = _SUBMENU_DIGIT.fullmatch(t)
     if previous_reply is None or digit is None:
         return None

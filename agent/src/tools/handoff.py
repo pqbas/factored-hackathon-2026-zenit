@@ -36,9 +36,28 @@ class RetentionCase(BaseModel):
     reason: str = Field(description="Why the customer wants to cancel it, in their words.")
 
 
-_CASES: dict[str, type[BaseModel]] = {"complaint": ComplaintCase, "retention": RetentionCase}
+class CaseStatusCase(BaseModel):
+    complaint_id: str | None = Field(
+        default=None, description="complaint_id of the case, as get_cases returned it, if it is there."
+    )
+    card_last4: str | None = Field(default=None, description="Only if the case is not in get_cases: card of the charge.")
+    transaction_date: str | None = Field(default=None, description="Only if the case is not in get_cases: date of the charge, YYYY-MM-DD.")
+    merchant: str | None = Field(default=None, description="Only if the case is not in get_cases: merchant of the charge.")
+    amount: float | None = Field(default=None, description="Only if the case is not in get_cases: amount of the charge.")
+    need: str = Field(description="What the customer needs about the case, in their words.")
+
+
+_CASES: dict[str, type[BaseModel]] = {
+    "complaint": ComplaintCase,
+    "retention": RetentionCase,
+    "case_status": CaseStatusCase,
+}
 # What the customer asks for, in words: the bare reason ("retention") misled the summary.
-_REQUESTS = {"complaint": "reclamo por un cargo de tarjeta", "retention": "cancelar un producto"}
+_REQUESTS = {
+    "complaint": "reclamo por un cargo de tarjeta",
+    "retention": "cancelar un producto",
+    "case_status": "consulta sobre un reclamo existente",
+}
 
 
 def handoff_tool(reason: str) -> StructuredTool:
@@ -77,6 +96,8 @@ def verify_case(reason: str, args: dict, rows_by_tool: dict[str, list[dict]]) ->
         case = _CASES[reason].model_validate(args)
     except ValidationError as exc:
         return f"Datos incompletos: {exc.errors()[0]['loc'][0]}. Pregúntale al cliente el dato que falta."
+    if reason == "case_status":
+        return _verify_case_status(case, rows_by_tool)
     products = rows_by_tool.get("get_products", [])
     if not products:
         return "Antes de derivar, llama a get_products en este turno para verificar el producto."
@@ -91,37 +112,76 @@ def verify_case(reason: str, args: dict, rows_by_tool: dict[str, list[dict]]) ->
             "reason": case.reason,
         }
 
+    charge = _verified_charge(case.card_last4, case.transaction_date, case.merchant, case.amount, rows_by_tool)
+    if isinstance(charge, str):
+        return charge
+    return {**charge, "complaint_type": case.complaint_type, "description": case.description}
+
+
+def _verified_charge(
+    card_last4: str, transaction_date: str, merchant: str, amount: float, rows_by_tool: dict[str, list[dict]]
+) -> dict | str:
+    products = rows_by_tool.get("get_products", [])
+    if not products:
+        return "Antes de derivar, llama a get_products en este turno para verificar la tarjeta."
     card = next(
         (p for p in products
-         if p["product_number_last4"] == case.card_last4 and p["product_type"].startswith("Tarjeta")),
+         if p["product_number_last4"] == card_last4 and p["product_type"].startswith("Tarjeta")),
         None,
     )
     if card is None:
-        return f"El cliente no tiene una tarjeta de crédito activa terminada en {case.card_last4}."
+        return f"El cliente no tiene una tarjeta de crédito activa terminada en {card_last4}."
     transactions = rows_by_tool.get("list_transactions", [])
     if not transactions:
         return "Antes de derivar, llama a list_transactions de esa tarjeta en este turno para verificar el cargo."
     charge = next(
         (t for t in transactions
-         if t["product_number_last4"] == case.card_last4
-         and str(t["transaction_date"]).startswith(case.transaction_date)
-         and abs(float(t["amount"]) - case.amount) < 0.01
+         if t["product_number_last4"] == card_last4
+         and str(t["transaction_date"]).startswith(transaction_date)
+         and abs(float(t["amount"]) - amount) < 0.01
          # Payments and withdrawals have no merchant.
-         and (t["merchant_name"] or "").strip().lower() == case.merchant.strip().lower()),
+         and (t["merchant_name"] or "").strip().lower() == merchant.strip().lower()),
         None,
     )
     if charge is None:
         return "Ese cargo no está en los movimientos de esa tarjeta. Pídele al cliente que elija uno de la lista."
     return {
-        "card_last4": case.card_last4,
-        "transaction_date": case.transaction_date,
+        "card_last4": card_last4,
+        "transaction_date": transaction_date,
         "merchant": charge["merchant_name"],
         "amount": float(charge["amount"]),
         "currency": charge["currency"],
         "transaction_status": charge["transaction_status"],
-        "complaint_type": case.complaint_type,
-        "description": case.description,
     }
+
+
+def _verify_case_status(case: "CaseStatusCase", rows_by_tool: dict[str, list[dict]]) -> dict | str:
+    if case.complaint_id:
+        cases = rows_by_tool.get("get_cases", [])
+        if not cases:
+            return "Antes de derivar, llama a get_cases en este turno para verificar el reclamo."
+        row = next((c for c in cases if c["complaint_id"] == case.complaint_id), None)
+        if row is None:
+            return f"El cliente no tiene un reclamo {case.complaint_id}. Usa un complaint_id de get_cases."
+        return {
+            "complaint_id": row["complaint_id"],
+            "creation_date": str(row["creation_date"])[:10],
+            "subcategory": row["subcategory"],
+            "claimed_amount": None if row["claimed_amount"] is None else float(row["claimed_amount"]),
+            "currency": row["currency"],
+            "status": row["status"],
+            "resolution": row["resolution"],
+            "need": case.need,
+        }
+    if not (case.card_last4 and case.transaction_date and case.merchant and case.amount is not None):
+        return (
+            "Falta identificar el reclamo: pasa el complaint_id de get_cases o, si no está ahí, la "
+            "tarjeta, la fecha, el comercio y el monto del cargo."
+        )
+    charge = _verified_charge(case.card_last4, case.transaction_date, case.merchant, case.amount, rows_by_tool)
+    if isinstance(charge, str):
+        return charge
+    return {**charge, "need": case.need}
 
 
 async def case_summary(llm, reason: str, verified_data: dict) -> str | None:

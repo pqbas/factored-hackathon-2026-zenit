@@ -49,7 +49,9 @@ ROUTES = [
         handoff_reason="complaint",
     ),
     IntentRoute(
-        intent="CASE_STATUS", description="Estado de un caso", examples=["mi reclamo"], destination="respond",
+        intent="CASE_STATUS", description="Estado de un caso", examples=["mi reclamo"], destination="load_context",
+        schemas=["bank_uc_consultas"], instructions="Consulta get_cases y di el estado.",
+        handoff_reason="case_status",
     ),
     IntentRoute(
         intent="OUT_OF_SCOPE", description="Fuera de alcance", examples=["clima"], destination="respond"
@@ -310,7 +312,13 @@ def test_menu_letter_d_gets_the_submenu_without_calling_jev():
 
 def test_a_submenu_digit_after_more_options_is_its_option():
     jev = FakeJev(_classification())
-    graph = _build_graph(ExplodingLLM(), jev)
+    get_products = FakeMCPTool("get_products", GET_PRODUCTS_SCHEMA, result=[])
+    list_transactions = FakeMCPTool("list_transactions", LIST_TRANSACTIONS_SCHEMA, result=[])
+    llm = ScriptedToolLLM([
+        AIMessage(content="", tool_calls=[{"name": "get_products", "args": {}, "id": "c1"}]),
+        AIMessage(content="No tienes reclamos."),
+    ])
+    graph = _build_graph(llm, jev, tools_for=_fake_tools_for(get_products, list_transactions))
     history = [{"role": "user", "content": "D"}, {"role": "assistant", "content": MORE_OPTIONS["es"]}]
     result = _run(graph, "2", history=history)
     assert result["classification"]["intent"] == "CASE_STATUS"
@@ -686,3 +694,26 @@ def test_a_complaint_turn_offers_the_llm_the_handoff_tool():
     llm = ScriptedToolLLM([AIMessage(content="¿De qué tarjeta es el cargo?")])
     _run(_complaint_graph(llm), "C")
     assert "hand_off_to_advisor" in [tool.name for tool in llm.bound_tools]
+
+
+def test_a_case_status_handoff_carries_the_banks_case_id():
+    cases_result = [{"type": "text", "text": json.dumps({
+        "columns": ["complaint_id", "creation_date", "subcategory", "claimed_amount", "currency", "status", "resolution"],
+        "rows": [["CMP-1", "2025-10-09T00:18:40.000+0000", "Cargo no reconocido", None, None, "In Process", None]],
+    })}]
+    get_cases = FakeMCPTool("get_cases", GET_PRODUCTS_SCHEMA, result=cases_result)
+
+    async def tools_for(schema):
+        return [get_cases]
+
+    llm = _SummarizingToolLLM([
+        AIMessage(content="", tool_calls=[{"name": "get_cases", "args": {}, "id": "c1"}]),
+        AIMessage(content="", tool_calls=[{"name": "hand_off_to_advisor", "id": "c2",
+                                           "args": {"complaint_id": "CMP-1", "need": "saber el plazo"}}]),
+    ])
+    jev = FakeJev(_classification(intent="CASE_STATUS"))
+    result = _run(_build_graph(llm, jev, tools_for=tools_for), "sí")
+
+    assert result["handoff"]["reason"] == "case_status"
+    assert result["handoff"]["facts"]["case_id"] == "CMP-1"
+    assert result["handoff"]["facts"]["verified_data"]["status"] == "In Process"
