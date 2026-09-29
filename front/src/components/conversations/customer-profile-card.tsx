@@ -15,10 +15,19 @@ export function CustomerProfileCard({ profile }: { profile: CustomerProfile | nu
         {fields.map((field) => (
           <div key={field.key} className="contents">
             <dt className="text-muted-foreground">{field.label}</dt>
-            <dd data-testid={`profile-${field.key}`} className="flex min-w-0 flex-col break-words">
-              {field.values.map((value) => (
-                <span key={value}>{value}</span>
-              ))}
+            <dd data-testid={`profile-${field.key}`} className="flex min-w-0 flex-col">
+              {field.values.map((value) =>
+                // A long email breaks after the @, never mid-word.
+                field.key === 'email' && value.includes('@') ? (
+                  <span key={value}>
+                    {value.slice(0, value.indexOf('@') + 1)}
+                    <wbr />
+                    {value.slice(value.indexOf('@') + 1)}
+                  </span>
+                ) : (
+                  <span key={value}>{value}</span>
+                ),
+              )}
             </dd>
           </div>
         ))}
