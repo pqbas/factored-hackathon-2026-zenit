@@ -301,4 +301,4 @@ Shipped en PR #35.
 
 Fuera de alcance / futuro: el nombre real del cliente en la consola (el back
 lo deja para después del deploy) y los totales con monedas mezcladas.
-Shipped en PR #<n>.
+Shipped en PR #37.
