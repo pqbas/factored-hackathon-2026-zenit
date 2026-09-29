@@ -2,7 +2,9 @@ import { expect, test } from '@playwright/test';
 import type { ChatMessage } from '@chat-template/core';
 import {
   buildAgentHistory,
+  isPaused,
   shouldPersistAgentReply,
+  trimAfterHandoff,
 } from '../../server/src/agent-turn';
 
 function textMessage(
@@ -98,5 +100,67 @@ test.describe('shouldPersistAgentReply', () => {
 
   test('discards when the chat moved to the human queue', () => {
     expect(shouldPersistAgentReply('human_queue')).toBe(false);
+  });
+});
+
+test.describe('isPaused', () => {
+  test('is false only for the agent with no open handoff', () => {
+    expect(isPaused({ handledBy: 'ai_agent', hasOpenHandoff: false })).toBe(
+      false,
+    );
+  });
+
+  test('is true with an open handoff even if the agent still owns the chat', () => {
+    expect(isPaused({ handledBy: 'ai_agent', hasOpenHandoff: true })).toBe(
+      true,
+    );
+  });
+
+  test('is true when a human owns the chat, with or without a handoff', () => {
+    for (const handledBy of ['human_queue', 'human_agent'] as const) {
+      expect(isPaused({ handledBy, hasOpenHandoff: false })).toBe(true);
+      expect(isPaused({ handledBy, hasOpenHandoff: true })).toBe(true);
+    }
+  });
+});
+
+test.describe('trimAfterHandoff', () => {
+  const es = 'Te comunico con un asesor, que ya tiene los datos de tu caso.';
+  const pt =
+    'Vou transferir você para um atendente, que já tem os dados do seu caso.';
+
+  test('drops the parts after the handoff message', () => {
+    const parts = [
+      { type: 'text', text: es },
+      { type: 'text', text: 'Mientras tanto, ¿algo más?' },
+    ];
+    expect(trimAfterHandoff(parts)).toEqual([{ type: 'text', text: es }]);
+  });
+
+  test('cuts text glued after the phrase in the same part', () => {
+    const parts = [{ type: 'text', text: `${es} ¿Algo más en lo que ayude?` }];
+    expect(trimAfterHandoff(parts)).toEqual([{ type: 'text', text: es }]);
+  });
+
+  test('keeps what comes before the handoff message', () => {
+    const parts = [
+      { type: 'text', text: 'Entiendo tu reclamo.' },
+      { type: 'text', text: es },
+      { type: 'text', text: 'extra' },
+    ];
+    expect(trimAfterHandoff(parts)).toEqual(parts.slice(0, 2));
+  });
+
+  test('works in Portuguese', () => {
+    const parts = [{ type: 'text', text: `${pt} Posso ajudar em mais algo?` }];
+    expect(trimAfterHandoff(parts)).toEqual([{ type: 'text', text: pt }]);
+  });
+
+  test('leaves the parts untouched when there is no handoff phrase', () => {
+    const parts = [
+      { type: 'text', text: 'Tu saldo es USD 100.' },
+      { type: 'text', text: 'Algo más?' },
+    ];
+    expect(trimAfterHandoff(parts)).toBe(parts);
   });
 });
