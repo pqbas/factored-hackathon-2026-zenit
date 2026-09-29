@@ -1,11 +1,14 @@
 {
   "name": "06-estado-reclamo",
-  "description": "Estado de un reclamo (línea base)",
-  "sessionToken": "demo-ar-1",
-  "customer": 3,
+  "description": "Estado de un reclamo: David lista los reclamos, da el estado real y, si el cliente necesita algo más (un plazo), confirma los datos y deriva (3.D2)",
+  "sessionToken": "demo-mx-2",
+  "customer": 2,
   "messages": [
     "hola",
-    "quiero saber el estado de mi reclamo",
-    "no tengo el número de caso"
+    "D",
+    "2",
+    "el de octubre",
+    "quiero saber cuándo lo van a resolver",
+    "sí, confirmo"
   ]
 }
