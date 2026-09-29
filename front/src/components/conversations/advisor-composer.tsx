@@ -1,4 +1,5 @@
 import { SendHorizontal, Zap } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -8,10 +9,13 @@ import { cn } from '@/lib/utils';
 export function AdvisorComposer({
   disabled,
   placeholder,
+  icon,
   onSend,
 }: {
   disabled: boolean;
   placeholder: string;
+  // Shown before the placeholder, e.g. who has the chat.
+  icon?: ReactNode;
   onSend: (text: string) => Promise<boolean>;
 }) {
   const [draft, setDraft] = useState('');
@@ -61,6 +65,7 @@ export function AdvisorComposer({
           <Zap className="size-[17px]" />
         </Button>
         <div className="flex h-[46px] flex-1 items-center gap-2 rounded-full border border-input bg-background pr-1.5 pl-5">
+          {icon && <span className="flex shrink-0 text-muted-foreground">{icon}</span>}
           <input
             value={draft}
             disabled={disabled}

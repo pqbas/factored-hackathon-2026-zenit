@@ -1,17 +1,15 @@
-import { ASSISTANT_KIND, ASSISTANT_NAME } from '@/lib/assistant';
+import { ASSISTANT_NAME } from '@/lib/assistant';
 import { Bot, PanelRight, X } from 'lucide-react';
 
-import { useCaseStyle } from '@/components/conversations/use-case-style';
+import { handoffReasonStyle } from '@/components/conversations/use-case-style';
 import { Button } from '@/components/ui/button';
 import {
   type AdvisorChat,
   customerLabel,
-  secondaryEmail,
   isMine,
   statusOf,
-  useCaseOf,
-  useCaseTag,
-  attentionOf,
+  reasonTagOf,
+  sectionLabel,
 } from '@/lib/advisor';
 import { avatarColor, getInitials } from '@/lib/conversations';
 import { cn } from '@/lib/utils';
@@ -30,6 +28,8 @@ function AssistantSwitch({
       type="button"
       role="switch"
       aria-checked={on}
+      aria-label={`${ASSISTANT_NAME} (asistente)`}
+      title={`${ASSISTANT_NAME} (asistente)`}
       data-testid="assistant-switch"
       disabled={disabled}
       onClick={onToggle}
@@ -39,9 +39,8 @@ function AssistantSwitch({
         className={cn('size-4', on ? 'text-primary' : 'text-muted-foreground')}
         strokeWidth={1.8}
       />
-      <span className="hidden sm:inline" title={ASSISTANT_KIND}>
-        {ASSISTANT_NAME} (asistente)
-      </span>
+      {/* No text label: the robot says it's David (name in the tooltip), so
+          the customer's name and email keep their room. */}
       <span className="w-6 text-left">{on ? 'ON' : 'OFF'}</span>
       <span
         className={cn(
@@ -76,10 +75,8 @@ export function ConversationHeader({
 }) {
   const status = statusOf(chat);
   const mine = isMine(chat, me);
-  const attention = attentionOf(chat, me, { long: true });
-  const tag = useCaseTag(chat);
+  const tag = reasonTagOf(chat);
   const name = customerLabel(chat);
-  const email = secondaryEmail(chat);
 
   return (
     <header className="flex items-center gap-3 border-border border-b px-4 py-3">
@@ -101,37 +98,23 @@ export function ConversationHeader({
         {getInitials(name)}
       </div>
       <div className="flex min-w-0 flex-col gap-0.5">
-        <span className="flex min-w-0 items-baseline gap-2">
-          <span data-testid="customer-name" className="truncate font-semibold text-[15px]">
-            {name}
-          </span>
-          {email && (
-            <span data-testid="customer-email" className="truncate text-muted-foreground text-xs">
-              {email}
-            </span>
-          )}
+        <span data-testid="customer-name" className="truncate font-semibold text-[15px]">
+          {name}
         </span>
-        {(attention || tag) && (
-          <span
-            data-testid="customer-meta"
-            className="flex min-w-0 items-center gap-2 text-muted-foreground text-xs"
-          >
-            {attention && (
-              <span data-testid="attention" className="whitespace-nowrap">
-                {attention.text}
-              </span>
-            )}
-            {tag && (
-              <span
-                data-testid="use-case-tag"
-                className={cn(
-                  'truncate rounded-md px-2 py-0.5 font-medium text-[11px]',
-                  useCaseStyle(useCaseOf(chat)).chip,
-                )}
-              >
-                {tag}
-              </span>
-            )}
+        {/* Second line: only why the customer is here. The state and who has
+            the chat live in the input's placeholder; who the customer is, in
+            the context panel. */}
+        {tag && (
+          <span data-testid="customer-meta" className="flex min-w-0 items-center text-xs">
+            <span
+              data-testid="use-case-tag"
+              className={cn(
+                'shrink-0 rounded-md px-2 py-0.5 font-medium text-[11px]',
+                handoffReasonStyle(tag).chip,
+              )}
+            >
+              {sectionLabel(tag)}
+            </span>
           </span>
         )}
       </div>

@@ -264,7 +264,7 @@ test.describe.serial('Context Injection', () => {
       expect(chatRequest?.customInputs?.session_token).toBe('demo-mx-1');
     });
 
-    test('POST /api/chat without sessionToken sends no custom_inputs', async ({
+    test('POST /api/chat without sessionToken sends no session_token', async ({
       adaContext,
     }) => {
       const chatId = generateUUID();
@@ -288,7 +288,8 @@ test.describe.serial('Context Injection', () => {
       );
 
       expect(chatRequest).toBeDefined();
-      expect(chatRequest?.customInputs).toBeUndefined();
+      // handled_by always travels; the session token only when there is one.
+      expect(chatRequest?.customInputs).toEqual({ handled_by: 'ai_agent' });
     });
 
     test('POST /api/chat/title sends no custom_inputs or context', async ({

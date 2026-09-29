@@ -1,5 +1,5 @@
 import { ASSISTANT_NAME } from '@/lib/assistant';
-import { ArrowDown, Bot, Hourglass, Lock, UserRound } from 'lucide-react';
+import { ArrowDown, UserRound } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 import { AdvisorComposer } from '@/components/conversations/advisor-composer';
@@ -8,68 +8,38 @@ import {
   MessageBubble,
   SystemNotice,
 } from '@/components/conversations/message-bubble';
-import { useCaseStyle } from '@/components/conversations/use-case-style';
+import { HandoffReasonChip } from '@/components/conversations/use-case-style';
 import {
   type AdvisorChat,
   type Bubble,
   canReply,
-  useCaseOf,
-  useCaseTag,
   isDavidReplying,
   isHeldByOther,
   statusOf,
 } from '@/lib/advisor';
 import { TypingIndicator } from '@/components/typing-indicator';
-import { HandoffCard } from '@/components/conversations/handoff-card';
 import { groupByDay, STATUS_LABEL } from '@/lib/conversations';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { cn } from '@/lib/utils';
 
 // How far from the end the advisor has to scroll before the jump button shows.
 const SCROLL_THRESHOLD = 120;
 
-function hint(chat: AdvisorChat, me: string | undefined) {
+// The input's line says the state and who has the chat (the header doesn't).
+function placeholderFor(chat: AdvisorChat, me: string | undefined): string {
+  if (canReply(chat, me)) return 'Escribe al cliente…';
   if (isHeldByOther(chat, me)) {
-    return {
-      icon: Lock,
-      text: `La atiende ${chat.assignedTo}. Solo quien la tomó puede responder.`,
-      className: 'text-muted-foreground',
-    };
+    const email = chat.assignedTo ?? '';
+    return email ? `La atiende ${email.split('@')[0]} (${email})` : 'La atiende otra persona';
   }
   switch (statusOf(chat)) {
     case 'waiting':
-      return {
-        icon: Hourglass,
-        text: 'Esperando a un asesor · tómala para responder.',
-        className: 'text-tint-amber-foreground',
-      };
-    case 'advisor':
-      return {
-        icon: UserRound,
-        text: `Estás atendiendo esta conversación. ${ASSISTANT_NAME} no responderá hasta que la devuelvas.`,
-        className: 'text-primary',
-      };
+      return 'En espera · tómala para responder';
     case 'resolved':
-      return {
-        icon: Bot,
-        text: `Conversación resuelta. Si el cliente escribe, responde ${ASSISTANT_NAME}.`,
-        className: 'text-tint-green-foreground',
-      };
+      return 'Resuelta';
     default:
-      return {
-        icon: Bot,
-        text: `${ASSISTANT_NAME} está respondiendo. Apágalo para tomar la conversación.`,
-        className: 'text-tint-blue-foreground',
-      };
+      return `La atiende ${ASSISTANT_NAME}`;
   }
-}
-
-function placeholderFor(chat: AdvisorChat, me: string | undefined): string {
-  if (canReply(chat, me)) return 'Escribe al cliente…';
-  if (isHeldByOther(chat, me)) return 'La atiende otra persona';
-  if (statusOf(chat) === 'assistant') return `${ASSISTANT_NAME} está respondiendo…`;
-  return 'Toma la conversación para responder';
 }
 
 export interface TimelineSegment {
@@ -77,9 +47,12 @@ export interface TimelineSegment {
   bubbles: Bubble[];
 }
 
-// Where one of the customer's conversations starts: its date, use case and state.
-function ConversationDivider({ chat }: { chat: AdvisorChat }) {
-  const tag = useCaseTag(chat);
+// Where one of the customer's conversations starts: its date, reason and
+// state. The active one shows only the date (the header has the rest).
+function ConversationDivider({ chat, active }: { chat: AdvisorChat; active: boolean }) {
+  // The handoff reason if this conversation was handed off; never the
+  // classifier's intent.
+  const reason = chat.handoff?.reason ?? null;
   return (
     <div
       data-testid="conversation-divider"
@@ -89,19 +62,12 @@ function ConversationDivider({ chat }: { chat: AdvisorChat }) {
       <span className="h-px flex-1 bg-border" />
       <span className="flex items-center gap-2 whitespace-nowrap">
         <span>Conversación del {format(parseISO(chat.createdAt), "d MMM yyyy, HH:mm", { locale: es })}</span>
-        {tag && (
-          <span
-            className={cn(
-              'rounded-md px-2 py-0.5 font-medium text-[11px]',
-              useCaseStyle(useCaseOf(chat)).chip,
-            )}
-          >
-            {tag}
+        {!active && reason && <HandoffReasonChip id={reason} />}
+        {!active && (
+          <span data-testid="divider-status" className="font-medium text-foreground/80">
+            {STATUS_LABEL[statusOf(chat)]}
           </span>
         )}
-        <span data-testid="divider-status" className="font-medium text-foreground/80">
-          {STATUS_LABEL[statusOf(chat)]}
-        </span>
       </span>
       <span className="h-px flex-1 bg-border" />
     </div>
@@ -162,7 +128,6 @@ export function ConversationView({
   const bottomRef = useRef<HTMLDivElement>(null);
   const [awayFromBottom, setAwayFromBottom] = useState(false);
   const now = new Date();
-  const banner = hint(chat, me);
   const bubbles = segments.at(-1)?.bubbles ?? [];
   const bubbleCount = segments.reduce((n, segment) => n + segment.bubbles.length, 0);
   const davidReplying = isDavidReplying(chat, bubbles, now);
@@ -194,13 +159,6 @@ export function ConversationView({
         onClose={onClose}
       />
 
-      {/* The active conversation's case stays in view above the messages. */}
-      {chat.handoff && (
-        <div className="border-border border-b px-4 py-2.5 sm:px-8">
-          <HandoffCard key={chat.id} handoff={chat.handoff} defaultOpen={!!chat.hasHandoff} />
-        </div>
-      )}
-
       <div className="relative min-h-0 flex-1">
         <div
           ref={scrollRef}
@@ -209,10 +167,8 @@ export function ConversationView({
         >
           {segments.map((segment, index) => (
             <section key={segment.chat.id} data-testid="timeline-segment">
-              {withDividers && <ConversationDivider chat={segment.chat} />}
-              {/* Earlier conversations keep their case, folded. */}
-              {index < segments.length - 1 && segment.chat.handoff && (
-                <HandoffCard handoff={segment.chat.handoff} defaultOpen={false} className="mb-3" />
+              {withDividers && (
+                <ConversationDivider chat={segment.chat} active={index === segments.length - 1} />
               )}
               <DayGroups bubbles={segment.bubbles} now={now} skipFirstLabel={withDividers} />
             </section>
@@ -241,18 +197,15 @@ export function ConversationView({
         )}
       </div>
 
-      <div
-        data-testid="status-banner"
-        className="flex items-center justify-center gap-1.5 px-4 pt-2 text-[11px] text-muted-foreground"
-      >
-        <banner.icon className={cn('size-3 shrink-0', banner.className)} strokeWidth={2.2} />
-        {banner.text}
-      </div>
+      {/* State and who has the chat are in the header and the input's
+          placeholder: no line repeating them here. */}
+      <div className="pt-2" />
 
       <AdvisorComposer
         key={chat.id}
         disabled={!canReply(chat, me)}
         placeholder={placeholderFor(chat, me)}
+        icon={isHeldByOther(chat, me) ? <UserRound className="size-4" strokeWidth={1.8} /> : undefined}
         onSend={onSend}
       />
     </div>

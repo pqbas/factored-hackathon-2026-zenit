@@ -10,7 +10,7 @@ import {
   XCircle,
 } from 'lucide-react';
 
-import { OTHER_GROUP, useCaseLabelOf } from '@/lib/advisor';
+import { OTHER_GROUP, sectionLabel, useCaseLabelOf } from '@/lib/advisor';
 import { cn } from '@/lib/utils';
 
 // Soft label colors per use case, readable in both themes.
@@ -69,6 +69,39 @@ const NEUTRAL = {
 
 export function useCaseStyle(id: string) {
   return STYLE[id] ?? NEUTRAL;
+}
+
+// Handoff reasons reuse the hues of the use cases they came from.
+const REASON_STYLE: Record<string, keyof typeof STYLE> = {
+  complaint: 'COMPLAINT',
+  retention: 'CANCEL',
+  case_status: 'CASE_STATUS',
+  // Agente AI's "Consultas generales" section.
+  general: 'GENERAL_INQUIRY',
+};
+
+export function handoffReasonStyle(id: string) {
+  return STYLE[REASON_STYLE[id]] ?? NEUTRAL;
+}
+
+export function HandoffReasonIcon({ id, className }: { id: string; className?: string }) {
+  const { icon: Icon, icon_ } = handoffReasonStyle(id);
+  return <Icon className={cn('size-4 shrink-0', icon_, className)} strokeWidth={1.8} />;
+}
+
+// Section title in the inbox grouped by handoff reason.
+export function HandoffReasonChip({ id }: { id: string }) {
+  return (
+    <span
+      data-testid={`reason-chip-${id}`}
+      className={cn(
+        'inline-flex items-center rounded-md px-2 py-0.5 font-medium text-xs',
+        handoffReasonStyle(id).chip,
+      )}
+    >
+      {sectionLabel(id)}
+    </span>
+  );
 }
 
 export function UseCaseIcon({ id, className }: { id: string; className?: string }) {

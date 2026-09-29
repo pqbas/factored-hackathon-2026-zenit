@@ -34,12 +34,14 @@ import {
   isStateOnlyMessage,
 } from '@/lib/handoff';
 import {
+  chatCustomerToken,
+  chooseCustomerToken,
   getChatCustomerToken,
   getLastCustomerToken,
   pickDefaultToken,
   setChatCustomerToken,
+  getActiveCustomerToken,
   setActiveCustomerToken,
-  setLastCustomerToken,
 } from '@/lib/demo-customer-storage';
 
 export function Chat({
@@ -51,6 +53,7 @@ export function Chat({
   initialLastContext,
   initialHandledBy = 'ai_agent',
   initialAgentPending = false,
+  initialCustomerToken = null,
 }: {
   id: string;
   initialMessages: ChatMessage[];
@@ -61,6 +64,8 @@ export function Chat({
   initialLastContext?: LanguageModelUsage;
   initialHandledBy?: HandledBy;
   initialAgentPending?: boolean;
+  // The customer the back stored for this chat, when it has one.
+  initialCustomerToken?: string | null;
 }) {
   const { visibilityType } = useChatVisibility({
     chatId: id,
@@ -80,22 +85,21 @@ export function Chat({
   // goes out, because the agent keys its memory on the chat id.
   const { customers } = useDemoCustomers();
   const [customerToken, setCustomerToken] = useState<string | null>(() =>
-    getChatCustomerToken(id),
+    chatCustomerToken(id, initialCustomerToken),
   );
   const [isCustomerLocked, setIsCustomerLocked] = useState(
-    () => getChatCustomerToken(id) !== null,
+    () => initialMessages.length > 0 && chatCustomerToken(id, initialCustomerToken) !== null,
   );
   const customerTokenRef = useRef(customerToken);
   customerTokenRef.current = customerToken;
   useEffect(() => {
     if (customerToken === null && customers.length > 0) {
-      setCustomerToken(pickDefaultToken(customers, getLastCustomerToken()));
+      const picked = pickDefaultToken(customers, getLastCustomerToken());
+      setCustomerToken(picked);
+      // Nothing picked yet this session: the default is the session's customer.
+      if (picked && getActiveCustomerToken() === null) setActiveCustomerToken(picked);
     }
   }, [customers, customerToken]);
-  // The history and the greeting follow this chat's customer.
-  useEffect(() => {
-    if (customerToken) setActiveCustomerToken(customerToken);
-  }, [customerToken]);
 
   const [streamCursor, setStreamCursor] = useState(0);
   const streamCursorRef = useRef(streamCursor);
@@ -176,7 +180,6 @@ export function Chat({
         const sessionToken = customerTokenRef.current;
         if (sessionToken && isUserMessage && getChatCustomerToken(id) === null) {
           setChatCustomerToken(id, sessionToken);
-          setLastCustomerToken(sessionToken);
           setIsCustomerLocked(true);
         }
 
@@ -365,7 +368,10 @@ export function Chat({
           chatId={id}
           customers={customers}
           customerToken={customerToken}
-          onCustomerChange={setCustomerToken}
+          onCustomerChange={(t) => {
+            setCustomerToken(t);
+            chooseCustomerToken(t);
+          }}
           isCustomerLocked={isCustomerLocked}
           handledBy={handledBy}
           agentPending={agentPending}

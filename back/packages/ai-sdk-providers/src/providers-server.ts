@@ -16,6 +16,7 @@ import { shouldInjectContextForEndpoint } from './request-context';
 export const CONTEXT_HEADER_CONVERSATION_ID = 'x-databricks-conversation-id';
 export const CONTEXT_HEADER_USER_ID = 'x-databricks-user-id';
 export const CONTEXT_HEADER_SESSION_TOKEN = 'x-databricks-session-token';
+export const CONTEXT_HEADER_HANDLED_BY = 'x-databricks-handled-by';
 
 // Use centralized authentication - only on server side
 async function getProviderToken(): Promise<string> {
@@ -89,6 +90,8 @@ export interface AgentOutputs {
   language?: string | null;
   blocked?: boolean;
   handoff?: AgentHandoff | null;
+  // The agent was called on a conversation it no longer owns and stayed quiet.
+  paused?: boolean;
 }
 
 const stringOrNull = (value: unknown) =>
@@ -118,6 +121,7 @@ export function parseAgentOutputs(raw: unknown): AgentOutputs {
     language: stringOrNull(raw.language),
     blocked: typeof raw.blocked === 'boolean' ? raw.blocked : undefined,
     handoff,
+    paused: typeof raw.paused === 'boolean' ? raw.paused : undefined,
   };
 }
 
@@ -214,16 +218,18 @@ export const databricksFetch: typeof fetch = async (input, init) => {
   const conversationId = headers.get(CONTEXT_HEADER_CONVERSATION_ID);
   const userId = headers.get(CONTEXT_HEADER_USER_ID);
   const sessionToken = headers.get(CONTEXT_HEADER_SESSION_TOKEN);
+  const handledBy = headers.get(CONTEXT_HEADER_HANDLED_BY);
   // Remove context headers so they don't get sent to the API
   headers.delete(CONTEXT_HEADER_CONVERSATION_ID);
   headers.delete(CONTEXT_HEADER_USER_ID);
   headers.delete(CONTEXT_HEADER_SESSION_TOKEN);
+  headers.delete(CONTEXT_HEADER_HANDLED_BY);
   requestInit = { ...requestInit, headers };
 
   // Inject context into request body if appropriate
   const hasContext = Boolean(conversationId && userId);
   if (
-    (hasContext || sessionToken) &&
+    (hasContext || sessionToken || handledBy) &&
     requestInit?.body &&
     typeof requestInit.body === 'string' &&
     shouldInjectContext()
@@ -241,6 +247,12 @@ export const databricksFetch: typeof fetch = async (input, init) => {
         body.custom_inputs = {
           ...body.custom_inputs,
           session_token: sessionToken,
+        };
+      }
+      if (handledBy) {
+        body.custom_inputs = {
+          ...body.custom_inputs,
+          handled_by: handledBy,
         };
       }
       requestInit = { ...requestInit, body: JSON.stringify(body) };

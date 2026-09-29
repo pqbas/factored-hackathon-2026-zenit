@@ -1373,6 +1373,20 @@ export async function retryAgentTurnLater({
     .where(eq(agentTurn.id, id));
 }
 
+// Puts a claimed turn back without counting an attempt (it wasn't tried).
+export async function deferAgentTurn({
+  id,
+  delayMs,
+}: {
+  id: string;
+  delayMs: number;
+}) {
+  await (await ensureDb())
+    .update(agentTurn)
+    .set({ nextAttemptAt: sql`now() + ${`${delayMs} milliseconds`}::interval` })
+    .where(eq(agentTurn.id, id));
+}
+
 export async function hasPendingAgentTurn({
   chatId,
 }: {
@@ -1386,6 +1400,17 @@ export async function hasPendingAgentTurn({
     .where(and(eq(agentTurn.chatId, chatId), eq(agentTurn.status, 'pending')))
     .limit(1);
   return Boolean(row);
+}
+
+// Cancels the chat's queued turns (a handoff or an advisor take: David has
+// nothing more to say there).
+export async function cancelAgentTurns({ chatId }: { chatId: string }) {
+  if (!isDatabaseAvailable()) return;
+
+  await (await ensureDb())
+    .update(agentTurn)
+    .set({ status: 'discarded' })
+    .where(and(eq(agentTurn.chatId, chatId), eq(agentTurn.status, 'pending')));
 }
 
 export async function getAgentTurns({
@@ -1419,6 +1444,21 @@ export async function openHandoff({
     .insert(handoff)
     .values({ chatId, reason, summary, facts })
     .onConflictDoNothing();
+}
+
+export async function hasOpenHandoff({
+  chatId,
+}: {
+  chatId: string;
+}): Promise<boolean> {
+  if (!isDatabaseAvailable()) return false;
+
+  const [row] = await (await ensureDb())
+    .select({ id: handoff.id })
+    .from(handoff)
+    .where(and(eq(handoff.chatId, chatId), isNull(handoff.resolvedAt)))
+    .limit(1);
+  return Boolean(row);
 }
 
 export async function closeHandoffs({ chatId }: { chatId: string }) {

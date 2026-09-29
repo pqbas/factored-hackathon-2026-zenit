@@ -8,23 +8,25 @@ import {
   countFor,
   countsUrl,
   parseCounts,
-  groupByUseCase,
+  groupByHandoffReason,
   lastActivityAt,
   rowText,
   sameView,
-  useCaseOf,
   viewUrl,
   isHeldByOther,
   isDavidReplying,
+  groupByDavidSection,
+  holderLabel,
   customerConversationsUrl,
   customerKeyOf,
   customerLabel,
-  secondaryEmail,
   type Bubble,
   mergeMessages,
   statusOf,
   toBubble,
-  useCaseTag,
+  reasonTagOf,
+  rowPreview,
+  shortSummary,
 } from '@/lib/advisor';
 
 const ME = 'babbage@example.com';
@@ -99,15 +101,15 @@ describe('viewUrl', () => {
     const params = (url: string) => Object.fromEntries(new URL(url, 'http://x').searchParams);
     // One row per customer in every view.
     expect(params(viewUrl({ kind: 'inbox' }))).toEqual({ limit: '20', groupBy: 'customer', status: 'open' });
-    expect(params(viewUrl({ kind: 'useCase', useCase: 'COMPLAINT' }))).toEqual({
+    expect(params(viewUrl({ kind: 'reason', reason: 'complaint' }))).toEqual({
       limit: '20',
       groupBy: 'customer',
       status: 'open',
-      useCase: 'COMPLAINT',
+      handoffReason: 'complaint',
     });
     expect(params(viewUrl({ kind: 'waiting' }))).toMatchObject({ status: 'open', handledBy: 'human_queue' });
     expect(params(viewUrl({ kind: 'david' }))).toMatchObject({ status: 'open', handledBy: 'ai_agent' });
-    expect(params(viewUrl({ kind: 'mine' }))).toMatchObject({ assignedTo: 'me' });
+    expect(params(viewUrl({ kind: 'advisor' }))).toMatchObject({ status: 'open', handledBy: 'human_agent' });
     expect(params(viewUrl({ kind: 'resolved' }))).toMatchObject({ status: 'closed' });
     expect(params(viewUrl({ kind: 'inbox' }, { startingAfter: 'c9', userId: 'u7' }))).toMatchObject({
       starting_after: 'c9',
@@ -115,35 +117,43 @@ describe('viewUrl', () => {
     });
   });
 
-  it('compares views, including the use case', () => {
+  it('compares views, including the reason', () => {
     expect(sameView({ kind: 'inbox' }, { kind: 'inbox' })).toBe(true);
-    expect(sameView({ kind: 'useCase', useCase: 'A' }, { kind: 'useCase', useCase: 'B' })).toBe(false);
+    expect(sameView({ kind: 'reason', reason: 'complaint' }, { kind: 'reason', reason: 'retention' })).toBe(false);
   });
 });
 
-describe('groupByUseCase', () => {
-  it('orders sections by use case, unknown ones next, and "Otras" last', () => {
-    const groups = groupByUseCase([
-      chat({ id: 'a', useCase: null }),
-      chat({ id: 'b', useCase: 'GENERAL_INQUIRY' }),
-      chat({ id: 'c', useCase: 'NEW_ONE' }),
-      chat({ id: 'd', useCase: 'COMPLAINT' }),
-      chat({ id: 'e', useCase: 'GREETING' }),
-      chat({ id: 'f', useCase: 'COMPLAINT' }),
+function withReason(id: string, reason: string | null): AdvisorChat {
+  return chat({
+    id,
+    handoff: reason
+      ? { reason, summary: null, verifiedData: null, facts: null, at: '2026-09-28T10:00:00.000Z', resolvedAt: null }
+      : null,
+  });
+}
+
+describe('groupByHandoffReason', () => {
+  it('orders sections by reason, unknown ones next, and "Otros" last', () => {
+    const groups = groupByHandoffReason([
+      withReason('a', null),
+      withReason('b', 'case_status'),
+      withReason('c', 'new_one'),
+      withReason('d', 'complaint'),
+      withReason('e', 'retention'),
+      withReason('f', 'complaint'),
     ]);
     expect(groups.map((g) => [g.id, g.chats.map((c) => c.id)])).toEqual([
-      ['COMPLAINT', ['d', 'f']],
-      ['GENERAL_INQUIRY', ['b']],
-      ['NEW_ONE', ['c']],
-      ['OTHER', ['a', 'e']],
+      ['complaint', ['d', 'f']],
+      ['retention', ['e']],
+      ['case_status', ['b']],
+      ['new_one', ['c']],
+      ['NONE', ['a']],
     ]);
-    expect(groups.at(-1)?.label).toBe('Otras');
+    expect(groups.at(-1)?.label).toBe('Otros');
   });
 
-  it('files small talk and chats without a use case under OTHER', () => {
-    expect(useCaseOf(chat({ useCase: 'GOODBYE' }))).toBe('OTHER');
-    expect(useCaseOf(chat({ useCase: null }))).toBe('OTHER');
-    expect(useCaseOf(chat({ useCase: 'CANCEL' }))).toBe('CANCEL');
+  it('returns only the sections that have chats', () => {
+    expect(groupByHandoffReason([withReason('a', 'retention')]).map((g) => g.id)).toEqual(['retention']);
   });
 });
 
@@ -175,13 +185,23 @@ describe('toBubble', () => {
 });
 
 
-describe('useCaseTag', () => {
-  it('labels the use case, and shows nothing without one or for small talk', () => {
-    expect(useCaseTag(chat({ useCase: 'GENERAL_INQUIRY' }))).toBe('Consultas generales');
-    expect(useCaseTag(chat({ useCase: 'COMPLAINT' }))).toBe('Reclamo');
-    expect(useCaseTag(chat({ useCase: null }))).toBeNull();
-    expect(useCaseTag(chat({ useCase: 'GREETING' }))).toBeNull();
-    expect(useCaseTag(chat({ useCase: 'NEW_ONE' }))).toBe('NEW_ONE');
+describe('reasonTagOf', () => {
+  const complaint = { reason: 'complaint', summary: null, verifiedData: null, facts: null, at: '', resolvedAt: null };
+  it('is the handoff reason for a handed-off conversation, waiting or taken', () => {
+    expect(reasonTagOf(chat({ handledBy: 'human_queue', useCase: 'GENERAL_INQUIRY', handoff: complaint }))).toBe('complaint');
+    expect(reasonTagOf(chat({ handledBy: 'human_agent', handoff: complaint }))).toBe('complaint');
+  });
+
+  it("is David's case while he has it, never for Otros", () => {
+    expect(reasonTagOf(chat({ useCase: 'GENERAL_INQUIRY' }))).toBe('general');
+    expect(reasonTagOf(chat({ useCase: 'CANCEL' }))).toBe('retention');
+    expect(reasonTagOf(chat({ useCase: 'GREETING' }))).toBeNull();
+    // Back with David after a handoff: his case again.
+    expect(reasonTagOf(chat({ useCase: 'CANCEL', handoff: complaint }))).toBe('retention');
+  });
+
+  it('is nothing for a person handling a chat without a handoff', () => {
+    expect(reasonTagOf(chat({ handledBy: 'human_agent', useCase: 'COMPLAINT' }))).toBeNull();
   });
 });
 
@@ -194,10 +214,11 @@ describe('attentionOf', () => {
   it('flags waiting, held and resolved chats', () => {
     expect(attentionOf(chat({ handledBy: 'human_queue' }), ME)?.text).toBe('En espera');
     const mine = chat({ handledBy: 'human_agent', assignedTo: ME });
-    expect(attentionOf(mine, ME)?.text).toBe('Con asesor · tú');
+    // Rows say only the state; the advisor has their own column (holderLabel).
+    expect(attentionOf(mine, ME)?.text).toBe('Con asesor');
     expect(attentionOf(mine, ME, { long: true })?.text).toBe('Con asesor · la atiendes tú');
     const other = chat({ handledBy: 'human_agent', assignedTo: 'ada@example.com' });
-    expect(attentionOf(other, ME)?.text).toBe('Con asesor · ada');
+    expect(attentionOf(other, ME)?.text).toBe('Con asesor');
     expect(attentionOf(other, ME, { long: true })?.text).toBe('Con asesor · ada@example.com');
     expect(attentionOf(chat({ closedAt: '2026-09-28T11:00:00.000Z' }), ME)?.text).toBe('Resuelta');
   });
@@ -228,24 +249,24 @@ describe('view counts', () => {
       parseCounts({
         total: 7,
         unattended: 2,
-        byUseCase: { COMPLAINT: 3, CANCEL: -1 },
-        withoutUseCase: 1,
+        byHandoffReason: { complaint: 3, retention: -1 },
+        withAdvisor: 4,
       }),
     ).toEqual({
       inbox: 7,
       david: 0,
       waiting: 2,
-      mine: 0,
+      advisor: 4,
       resolved: 0,
-      useCases: { COMPLAINT: 3, CANCEL: 0 },
+      reasons: { complaint: 3, retention: 0 },
     });
     expect(parseCounts(null)).toEqual({
       inbox: 0,
       david: 0,
       waiting: 0,
-      mine: 0,
+      advisor: 0,
       resolved: 0,
-      useCases: {},
+      reasons: {},
     });
   });
 
@@ -253,18 +274,18 @@ describe('view counts', () => {
     const counts = parseCounts({
       total: 7,
       unattended: 2,
-      mine: 1,
+      withAdvisor: 1,
       resolved: 4,
       aiAgent: 12,
-      byUseCase: { COMPLAINT: 3 },
-      withoutUseCase: 4,
+      byHandoffReason: { complaint: 3 },
     });
     expect(countFor({ kind: 'inbox' }, counts)).toBe(7);
     expect(countFor({ kind: 'david' }, counts)).toBe(12);
     expect(countFor({ kind: 'waiting' }, counts)).toBe(2);
-    expect(countFor({ kind: 'useCase', useCase: 'COMPLAINT' }, counts)).toBe(3);
-    expect(countFor({ kind: 'useCase', useCase: 'CANCEL' }, counts)).toBe(0);
-    expect(countFor({ kind: 'mine' }, undefined)).toBe(0);
+    expect(countFor({ kind: 'reason', reason: 'complaint' }, counts)).toBe(3);
+    expect(countFor({ kind: 'reason', reason: 'retention' }, counts)).toBe(0);
+    expect(countFor({ kind: 'advisor' }, counts)).toBe(1);
+    expect(countFor({ kind: 'advisor' }, undefined)).toBe(0);
   });
 
   it('asks for the counts of one user when filtered', () => {
@@ -306,18 +327,16 @@ describe('isDavidReplying', () => {
   });
 });
 
-describe('customerLabel and secondaryEmail', () => {
-  it('names the bank customer and keeps the email as secondary', () => {
+describe('customerLabel', () => {
+  it('names the bank customer', () => {
     const named = chat({ customerName: 'Javier Molina Morales' });
     expect(customerLabel(named)).toBe('Javier Molina Morales');
-    expect(secondaryEmail(named)).toBe('curie@example.com');
   });
 
   it('falls back to the email when there is no customer name', () => {
     for (const customerName of [undefined, null, '  ']) {
       const c = chat({ customerName });
       expect(customerLabel(c)).toBe('curie@example.com');
-      expect(secondaryEmail(c)).toBeNull();
     }
     expect(customerLabel(chat({ userEmail: null }))).toBe('Cliente sin email');
   });
@@ -359,5 +378,60 @@ describe('toBubble text parts', () => {
     expect(toBubble(message, ME).text).toBe(
       'Se verificó que la transacción fue aprobada.\n\nTe comunico con un asesor.',
     );
+  });
+});
+
+describe('holderLabel', () => {
+  it('names the advisor who took the chat, "tú" for the viewer, nothing otherwise', () => {
+    expect(holderLabel(chat({ handledBy: 'human_agent', assignedTo: ME }), ME)).toBe('tú');
+    expect(holderLabel(chat({ handledBy: 'human_agent', assignedTo: 'asesor1@banco.test' }), ME)).toBe('asesor1');
+    expect(holderLabel(chat({ handledBy: 'human_queue' }), ME)).toBeNull();
+    expect(holderLabel(chat(), ME)).toBeNull();
+    expect(
+      holderLabel(chat({ handledBy: 'human_agent', assignedTo: ME, closedAt: '2026-09-29T10:00:00.000Z' }), ME),
+    ).toBeNull();
+  });
+});
+
+describe('groupByDavidSection', () => {
+  it('sections Agente AI by what David is working on, Otros last', () => {
+    const groups = groupByDavidSection([
+      chat({ id: 'a', useCase: 'GREETING' }),
+      chat({ id: 'b', useCase: 'CANCEL' }),
+      chat({ id: 'c', useCase: 'GENERAL_INQUIRY' }),
+      chat({ id: 'd', useCase: 'COMPLAINT' }),
+      chat({ id: 'e', useCase: 'RETENTION' }),
+      chat({ id: 'f', useCase: null }),
+      chat({ id: 'g', useCase: 'CASE_STATUS' }),
+    ]);
+    expect(groups.map((g) => [g.id, g.label, g.chats.map((c) => c.id)])).toEqual([
+      ['complaint', 'Reclamo', ['d']],
+      ['retention', 'Cancelación de producto', ['b', 'e']],
+      ['case_status', 'Estado de un reclamo', ['g']],
+      ['general', 'Consultas generales', ['c']],
+      ['NONE', 'Otros', ['a', 'f']],
+    ]);
+  });
+});
+
+describe('shortSummary and rowPreview', () => {
+  it('cuts the summary at a whole word within 60 characters', () => {
+    expect(
+      shortSummary(
+        'El cliente consulta el estado de su reclamo CMP-G43865 presentado el 9 de octubre y pide plazo.',
+      ),
+    ).toBe('El cliente consulta el estado de su reclamo CMP-G43865...');
+    expect(shortSummary('Corto y claro.')).toBe('Corto y claro.');
+  });
+
+  it('previews the summary for a handed-off conversation, the last message otherwise', () => {
+    const handoff = { reason: 'complaint', summary: 'Resumen del caso', verifiedData: null, facts: null, at: '', resolvedAt: null };
+    const last = { text: 'sí, confirmo', senderType: 'customer' as const, createdAt: '2026-09-29T10:00:00.000Z' };
+    const taken = { handoff, hasHandoff: true, handledBy: 'human_agent' as const };
+    expect(rowPreview({ ...chat(taken), lastMessage: last })).toBe('Resumen del caso');
+    // Handed off without a summary: nothing rather than the last message.
+    expect(rowPreview({ ...chat({ ...taken, handoff: { ...handoff, summary: null } }), lastMessage: last })).toBe('');
+    // Back with David: the last message.
+    expect(rowPreview({ ...chat({ handoff, hasHandoff: false }), lastMessage: last })).toBe('sí, confirmo');
   });
 });

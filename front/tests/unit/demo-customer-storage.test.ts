@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  chatCustomerToken,
+  chooseCustomerToken,
   getChatCustomerToken,
   getLastCustomerToken,
   pickDefaultToken,
@@ -73,6 +75,29 @@ describe('active demo customer', () => {
     stop();
     setActiveCustomerToken('demo-mx-1');
     expect(seen).toEqual(['demo-co-1']);
+  });
+});
+
+describe('chooseCustomerToken', () => {
+  it('saves the session pick and notifies the active token', () => {
+    setActiveCustomerToken('demo-mx-1');
+    const seen: (string | null)[] = [];
+    const stop = subscribeActiveCustomer(() => seen.push(getActiveCustomerToken()));
+    chooseCustomerToken('demo-co-1');
+    stop();
+    expect(getLastCustomerToken()).toBe('demo-co-1');
+    expect(getActiveCustomerToken()).toBe('demo-co-1');
+    expect(seen).toEqual(['demo-co-1']);
+  });
+});
+
+describe('chatCustomerToken', () => {
+  it("prefers the back's token, then the browser's, then null", () => {
+    setChatCustomerToken('chat-a', 'demo-co-1');
+    expect(chatCustomerToken('chat-a', 'demo-mx-1')).toBe('demo-mx-1');
+    expect(chatCustomerToken('chat-a', null)).toBe('demo-co-1');
+    expect(chatCustomerToken('chat-a', undefined)).toBe('demo-co-1');
+    expect(chatCustomerToken('chat-b', null)).toBeNull();
   });
 });
 

@@ -307,3 +307,44 @@ ahora, con casos sembrados en local para probarlo.
 
 Pendiente: sembrar el caso de Eduardo (`case_status`) cuando el agente local
 lo derive (bloque c del agente).
+
+---
+
+## Phase 12: David se pausa después de derivar (Complete)
+
+**Goal:** que David no diga nada más en una conversación derivada hasta que un
+humano la devuelva.
+
+<!-- Regla permanente del usuario vía w1:p4, 29-09-26. Spec en
+     spec/29-09-26-pausa-tras-handoff/. El lado del agente (custom_outputs.paused)
+     lo hace w1:p3. -->
+
+- [x] Una conversación con handoff abierto o que no atiende David no llama al
+      agente ni guarda respuestas, en vivo, en la cola o en reintentos.
+- [x] Derivar o tomar el chat cancela los turnos pendientes, y los mensajes
+      simultáneos se encolan en vez de ir al agente en paralelo.
+- [x] Contrato con el agente: `custom_inputs.handled_by` en cada llamada, y un
+      turno `paused` no se guarda.
+- [x] Lo guardado se recorta tras la frase de derivación, el vencimiento abre
+      un handoff `agent_unavailable` y devolver a David cierra el handoff.
+
+---
+
+## Phase 13: Datos principales del cliente en el contexto (Complete)
+
+**Goal:** que el panel de contexto de la consola empiece con los datos
+principales del cliente, tal como están en el banco.
+
+<!-- Pedido del usuario vía w1:p4, 29-09-26. Spec en
+     spec/29-09-26-perfil-cliente/. -->
+
+- [x] `customer-context` trae `profile`: id, país y ciudad, segmento, estado,
+      fecha de alta, productos activos, contacto y canal preferido.
+- [x] Si el perfil no se puede leer, `profile` viene `null` y el resto del
+      contexto no cambia.
+- [x] Las rutas del cliente nunca traen `profile`.
+- [x] `scripts/uc-grants.sh` reúne los grants del SP, incluido `SELECT` sobre
+      `bank_silver.customers`.
+
+Pendiente: correr `scripts/uc-grants.sh` en el despliegue de back+front
+(espera el OK del usuario).

@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
-import { Bot, Search } from 'lucide-react';
+import { Bot, Search, UserRound } from 'lucide-react';
 
-import { UseCaseChip } from '@/components/conversations/use-case-style';
+import { HandoffReasonChip, handoffReasonStyle } from '@/components/conversations/use-case-style';
 import { ASSISTANT_NAME } from '@/lib/assistant';
 import { SidebarToggle } from '@/components/sidebar-toggle';
 import {
@@ -9,35 +9,36 @@ import {
   attentionOf,
   customerKeyOf,
   customerLabel,
-  groupByUseCase,
+  groupByDavidSection,
+  groupByHandoffReason,
+  holderLabel,
+  isHandedOff,
+  reasonTagOf,
+  sectionLabel,
   type InboxItem,
   lastActivityAt,
-  rowText,
+  rowPreview,
 } from '@/lib/advisor';
 import { avatarColor, formatListTime, getInitials, STATUS_LABEL } from '@/lib/conversations';
-import { handoffReasonLabel, handoffReasonShort } from '@/lib/handoff-case';
 import { cn } from '@/lib/utils';
 
 function Row({
   chat,
   me,
   selected,
-  compact,
   onOpen,
 }: {
   chat: InboxItem;
   me: string | undefined;
   selected: boolean;
-  compact: boolean;
   onOpen: () => void;
 }) {
-  const full = attentionOf(chat, me);
-  // Narrow list (a chat is open): keep only states that ask for action.
-  const attention =
-    compact && full && (full.tone === 'mine' || full.tone === 'other') ? null : full;
+  const attention = attentionOf(chat, me);
   // The inbox API has no unread count: the dot marks chats waiting for someone.
   const waiting = !chat.closedAt && chat.handledBy === 'human_queue';
   const withDavid = !chat.closedAt && chat.handledBy === 'ai_agent';
+  const holder = holderLabel(chat, me);
+  const reason = chat.closedAt ? null : reasonTagOf(chat);
 
   return (
     <button
@@ -75,39 +76,47 @@ function Row({
       >
         {customerLabel(chat)}
       </span>
-      {/* Fixed-width column, centered between name and subject; empty unless
-          David has the chat. */}
-      <span className="flex items-center justify-center">
+      {/* Who has the chat, between name and subject: David's robot, or the
+          advisor who took it. Empty while it waits. */}
+      <span className="flex min-w-0 items-center">
+        {holder && (
+          <span
+            data-testid="advisor-badge"
+            title={`Lo atiende ${chat.assignedTo ?? holder}`}
+            className="flex min-w-0 max-w-full items-center gap-1 rounded-md bg-secondary px-1.5 py-0.5 text-[11px] text-muted-foreground"
+          >
+            <UserRound className="size-3 shrink-0" strokeWidth={2} />
+            <span className="truncate">{holder}</span>
+          </span>
+        )}
         {withDavid && (
           <span
             data-testid="david-icon"
             title={`${STATUS_LABEL.assistant}: lo atiende ${ASSISTANT_NAME}`}
             aria-label={`${STATUS_LABEL.assistant}: lo atiende ${ASSISTANT_NAME}`}
-            className="flex text-muted-foreground"
+            className="flex min-w-0 max-w-full items-center gap-1 rounded-md bg-secondary px-1.5 py-0.5 text-[11px] text-muted-foreground"
           >
-            <Bot className="size-4" strokeWidth={1.8} />
+            <Bot className="size-3 shrink-0" strokeWidth={2} />
+            <span className="truncate">{ASSISTANT_NAME}</span>
           </span>
         )}
       </span>
-      {/* The customer's last message; the subject (chat title) stays as the
-          tooltip. */}
-      <span className="flex min-w-0 items-center gap-2">
-        {/* An open case David handed off, by reason. */}
-        {chat.hasHandoff && chat.handoff && (
-          <span
-            data-testid="row-handoff"
-            title={handoffReasonLabel(chat.handoff.reason)}
-            className="shrink-0 rounded-md bg-primary/15 px-1.5 py-0.5 font-medium text-[11px] text-primary"
-          >
-            {handoffReasonShort(chat.handoff.reason)}
+      {/* Subject and preview, like a mail row: why the customer is here (a
+          dot in the reason's color and its name), then the context in gray,
+          with the full summary (or the chat's subject) as tooltip. */}
+      <span className="flex min-w-0 items-center gap-2 overflow-hidden text-sm">
+        {reason && (
+          <span data-testid="row-subject" className="flex shrink-0 items-center gap-1.5 font-medium text-foreground">
+            <span className={cn('size-1.5 rounded-full bg-current', handoffReasonStyle(reason).icon_)} />
+            {sectionLabel(reason)}
           </span>
         )}
         <span
           data-testid="row-text"
-          title={chat.title}
-          className="min-w-0 truncate text-muted-foreground text-sm"
+          title={(isHandedOff(chat) && chat.handoff?.summary) || chat.title}
+          className="min-w-0 truncate text-muted-foreground"
         >
-          {rowText(chat)}
+          {rowPreview(chat)}
         </span>
       </span>
       <span
@@ -124,17 +133,17 @@ function Row({
   );
 }
 
-// The inbox list: grouped by use case in "Bandeja", flat in any other view.
+// The inbox list: grouped by handoff reason in Bandeja, by what David is
+// working on in Agente AI, flat in any other view.
 export function InboxList({
   title,
   chats,
-  grouped,
+  grouping,
   me,
   selectedKey,
   onOpen,
   query,
   onQueryChange,
-  compact,
   hasMore,
   onLoadMore,
   empty,
@@ -142,28 +151,30 @@ export function InboxList({
   title: string;
   // One per customer, with their latest conversation.
   chats: InboxItem[];
-  grouped: boolean;
+  grouping: 'reason' | 'david' | null;
   me: string | undefined;
   selectedKey: string | null;
   onOpen: (customerKey: string) => void;
   query: string;
   onQueryChange: (query: string) => void;
-  compact: boolean;
   hasMore: boolean;
   onLoadMore: () => void;
   // Replaces the generic empty message.
   empty?: ReactNode;
 }) {
-  const groups = grouped
-    ? groupByUseCase(chats)
-    : [{ id: 'all', label: '', chats }];
+  const grouped = grouping !== null;
+  const groups =
+    grouping === 'reason'
+      ? groupByHandoffReason(chats)
+      : grouping === 'david'
+        ? groupByDavidSection(chats)
+        : [{ id: 'all', label: '', chats }];
   const row = (chat: InboxItem) => (
     <Row
       key={customerKeyOf(chat)}
       chat={chat}
       me={me}
       selected={customerKeyOf(chat) === selectedKey}
-      compact={compact}
       onOpen={() => onOpen(customerKeyOf(chat))}
     />
   );
@@ -178,7 +189,7 @@ export function InboxList({
         <span className="whitespace-nowrap text-muted-foreground text-sm">
           {chats.length} {chats.length === 1 ? 'cliente' : 'clientes'}
         </span>
-        <div className={cn('relative ml-auto', compact ? 'w-32' : 'w-60')}>
+        <div className="relative ml-auto w-60">
           <Search className="absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
           <input
             type="text"
@@ -203,14 +214,9 @@ export function InboxList({
         {/* One grid for every row: margin | dot | avatar | name | David |
             subject | state | time | margin. Sections are subgrids too, so all
             rows align. */}
-        <div
-          className={cn(
-            'grid gap-x-3',
-            compact
-              ? 'grid-cols-[0_0.5rem_1.75rem_fit-content(8rem)_1.25rem_minmax(0,1fr)_auto_auto_0]'
-              : 'grid-cols-[0_0.5rem_1.75rem_fit-content(15rem)_1.25rem_minmax(0,1fr)_auto_auto_0]',
-          )}
-        >
+        {/* The name column has a fixed width: an open chat floats over the
+            list starting right after it (PEEK_LEFT in ConversationsPage). */}
+        <div className="grid grid-cols-[0_0.5rem_1.75rem_15rem_6rem_minmax(0,1fr)_auto_auto_0] gap-x-3">
           {groups.map((group, index) => (
             <section
               key={group.id}
@@ -222,7 +228,7 @@ export function InboxList({
             >
               {grouped && (
                 <div className="col-span-full px-3 pb-1.5">
-                  <UseCaseChip id={group.id} />
+                  <HandoffReasonChip id={group.id} />
                 </div>
               )}
               {group.chats.map(row)}

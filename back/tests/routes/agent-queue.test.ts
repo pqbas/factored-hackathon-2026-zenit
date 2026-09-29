@@ -4,6 +4,7 @@ import { generateUUID } from '@chat-template/core';
 import {
   getAgentTurns,
   getChatById,
+  getLatestHandoffs,
   getMessagesByChatId,
 } from '@chat-template/db';
 import { skipInEphemeralMode } from '../helpers';
@@ -129,5 +130,9 @@ test.describe('Agent queue (with database)', () => {
       'David no pudo responder. Un asesor te va a atender.',
     );
     expect((await getChatById({ id: chatId }))?.handledBy).toBe('human_queue');
+
+    const [handoff] = await getLatestHandoffs({ chatIds: [chatId] });
+    expect(handoff.reason).toBe('agent_unavailable');
+    expect(handoff.resolvedAt).toBeNull();
   });
 });

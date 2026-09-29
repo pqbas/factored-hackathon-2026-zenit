@@ -16,20 +16,21 @@ export interface AgentHandoff {
   resolvedAt: string | null;
 }
 
-const REASON: Record<string, { label: string; short: string }> = {
-  complaint: { label: 'Reclamo por un cargo', short: 'Reclamo por cargo' },
-  retention: { label: 'Cancelación de un producto', short: 'Cancelación' },
-  case_status: { label: 'Estado de un reclamo', short: 'Estado de reclamo' },
-};
+// The three reasons David hands a case to the inbox, in filter order
+// (docs/flujo-atencion.md). One name per reason, used everywhere: filters,
+// sections, header chip, handoff card, dividers.
+export const HANDOFF_REASONS = [
+  { id: 'complaint', label: 'Reclamo' },
+  { id: 'retention', label: 'Cancelación de producto' },
+  { id: 'case_status', label: 'Estado de un reclamo' },
+] as const;
+
+// Section id for conversations without a handoff.
+export const NO_HANDOFF_GROUP = 'NONE';
 
 export function handoffReasonLabel(reason: string | null | undefined): string {
   if (!reason) return 'Caso derivado';
-  return REASON[reason]?.label ?? reason;
-}
-
-export function handoffReasonShort(reason: string | null | undefined): string {
-  if (!reason) return 'Derivado';
-  return REASON[reason]?.short ?? reason;
+  return HANDOFF_REASONS.find((r) => r.id === reason)?.label ?? reason;
 }
 
 const COMPLAINT_TYPE: Record<string, string> = {

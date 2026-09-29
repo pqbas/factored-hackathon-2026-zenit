@@ -9,6 +9,7 @@ export {
   CONTEXT_HEADER_CONVERSATION_ID,
   CONTEXT_HEADER_USER_ID,
   CONTEXT_HEADER_SESSION_TOKEN,
+  CONTEXT_HEADER_HANDLED_BY,
   getAndClearAgentOutputs,
   type AgentOutputs,
 } from '@chat-template/ai-sdk-providers';
