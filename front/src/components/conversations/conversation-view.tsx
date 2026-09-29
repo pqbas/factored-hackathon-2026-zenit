@@ -8,13 +8,11 @@ import {
   MessageBubble,
   SystemNotice,
 } from '@/components/conversations/message-bubble';
-import { useCaseStyle } from '@/components/conversations/use-case-style';
+import { HandoffReasonChip } from '@/components/conversations/use-case-style';
 import {
   type AdvisorChat,
   type Bubble,
   canReply,
-  useCaseOf,
-  useCaseTag,
   isDavidReplying,
   isHeldByOther,
   statusOf,
@@ -78,7 +76,9 @@ export interface TimelineSegment {
 
 // Where one of the customer's conversations starts: its date, use case and state.
 function ConversationDivider({ chat }: { chat: AdvisorChat }) {
-  const tag = useCaseTag(chat);
+  // The handoff reason if this conversation was handed off; never the
+  // classifier's intent.
+  const reason = chat.handoff?.reason ?? null;
   return (
     <div
       data-testid="conversation-divider"
@@ -88,16 +88,7 @@ function ConversationDivider({ chat }: { chat: AdvisorChat }) {
       <span className="h-px flex-1 bg-border" />
       <span className="flex items-center gap-2 whitespace-nowrap">
         <span>Conversación del {format(parseISO(chat.createdAt), "d MMM yyyy, HH:mm", { locale: es })}</span>
-        {tag && (
-          <span
-            className={cn(
-              'rounded-md px-2 py-0.5 font-medium text-[11px]',
-              useCaseStyle(useCaseOf(chat)).chip,
-            )}
-          >
-            {tag}
-          </span>
-        )}
+        {reason && <HandoffReasonChip id={reason} />}
         <span data-testid="divider-status" className="font-medium text-foreground/80">
           {STATUS_LABEL[statusOf(chat)]}
         </span>

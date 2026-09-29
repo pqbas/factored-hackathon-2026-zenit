@@ -47,6 +47,9 @@
    - In `src/pages/ConversationsPage.tsx`, opening a customer whose active conversation has a handoff opens the panel without saving that choice. The toggle still closes it.
    - Adjust the e2e test for the handed-off case to find the card inside `customer-context`.
 
+5e. In `src/components/conversations/conversation-view.tsx`, `ConversationDivider` replaces the use-case tag (`useCaseTag`) with `HandoffReasonChip` when `chat.handoff` exists, and renders no chip otherwise.
+5f. In `src/components/conversations/inbox-list.tsx`, the narrow list stops hiding the `mine`/`other` states: every row shows its state.
+
 6. In `src/pages/ConversationsPage.tsx`, `viewTitle`: `reason` → its label; `advisor` → `STATUS_LABEL.advisor` ("Con asesor").
 
 ---

@@ -31,10 +31,7 @@ function Row({
   compact: boolean;
   onOpen: () => void;
 }) {
-  const full = attentionOf(chat, me);
-  // Narrow list (a chat is open): keep only states that ask for action.
-  const attention =
-    compact && full && (full.tone === 'mine' || full.tone === 'other') ? null : full;
+  const attention = attentionOf(chat, me);
   // The inbox API has no unread count: the dot marks chats waiting for someone.
   const waiting = !chat.closedAt && chat.handledBy === 'human_queue';
   const withDavid = !chat.closedAt && chat.handledBy === 'ai_agent';

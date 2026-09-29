@@ -599,7 +599,10 @@ test.describe('Advisor console', () => {
     const dividers = page.getByTestId('conversation-divider');
     await expect(dividers).toHaveCount(2);
     await expect(dividers.first()).toHaveAttribute('data-chat-id', 'c-old');
-    await expect(dividers.first()).toContainText('Estado de un caso');
+    // Each divider shows the handoff reason of that conversation, never the intent.
+    await expect(dividers.first().getByTestId('reason-chip-retention')).toBeVisible();
+    await expect(dividers.first()).not.toContainText('Estado de un caso');
+    await expect(dividers.last().getByTestId('reason-chip-complaint')).toBeVisible();
     await expect(dividers.first().getByTestId('divider-status')).toHaveText('Resuelta');
     await expect(dividers.last()).toHaveAttribute('data-chat-id', 'c-waiting');
     await expect(dividers.last().getByTestId('divider-status')).toHaveText('En espera');
@@ -651,6 +654,20 @@ test.describe('Advisor console', () => {
     await expect(card.getByTestId('handoff-facts')).toHaveCount(0);
     await page.getByTestId('context-toggle').click();
     await expect(panel).toHaveCount(0);
+  });
+
+  test('the narrow list shows every row\'s state', async ({ page }) => {
+    await openConsole(page);
+    // A chat without a handed-off case, with the context panel closed, so
+    // the list stays beside the chat.
+    await page.getByTestId('conversation-row-c-race').click();
+    await page.getByTestId('context-toggle').click();
+    await expect(page.getByTestId('conversation-row-c-other').getByTestId('attention')).toHaveText(
+      'Con asesor · ada',
+    );
+    await expect(page.getByTestId('conversation-row-c-waiting').getByTestId('attention')).toHaveText(
+      'En espera',
+    );
   });
 
   test('/admin now leads to Chats', async ({ page }) => {
