@@ -95,6 +95,16 @@ derivar; cada tipo se cuenta aparte, con su denominador. Limitación: "dice una
 cifra que la herramienta no devolvió" solo se mide en los casos que lo
 declaran (#38, #40).
 
+## Cambios a los casos
+
+Los mensajes, patrones y resultados esperados quedaron fijos en el commit
+`90e22fce`, antes de la primera corrida contra el agente. Cualquier cambio
+posterior a un caso va en `case-changes.json` con fecha, campo, antes, después
+y motivo, marcando `afterSeeingResults` si se hizo después de ver resultados.
+El reporte los lista en "Cambios a los casos", y un test falla si un caso
+cambió desde ese commit sin su entrada. Así queda constancia de que ningún
+patrón se ajustó al resultado en silencio.
+
 ## Formato del `.json` del reporte
 
 Lo lee el front (bloque 4):

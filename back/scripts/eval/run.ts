@@ -25,6 +25,7 @@ import {
 } from './report';
 import { isSilence, observedOutcome, verdict } from './score';
 import {
+  caseChangesSchema,
   evalCaseSchema,
   type EvalCase,
   type Handoff,
@@ -401,6 +402,9 @@ export async function main(argv: string[]) {
     classifier: first((t) => t.classifier),
     model: first((t) => t.model),
     promptVersion: first((t) => t.promptVersion),
+    caseChanges: caseChangesSchema.parse(
+      JSON.parse(readFileSync(join(HERE, 'case-changes.json'), 'utf8')),
+    ),
   });
 
   mkdirSync(args.out, { recursive: true });

@@ -1,7 +1,12 @@
+import { execFileSync } from 'node:child_process';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, test } from '@playwright/test';
-import { evalCaseSchema, type EvalCase } from '../../scripts/eval/types';
+import {
+  caseChangesSchema,
+  evalCaseSchema,
+  type EvalCase,
+} from '../../scripts/eval/types';
 
 const DIR = join(process.cwd(), 'scripts/eval/cases');
 const files = readdirSync(DIR)
@@ -111,5 +116,29 @@ test.describe('evaluation cases', () => {
         }
       }
     }
+  });
+
+  // A case edited after its patterns were frozen must be on the record, so
+  // the report shows it: nothing gets tuned to the results in silence.
+  test('every case changed since the freeze is listed in case-changes.json', () => {
+    const { frozenAt, changes } = caseChangesSchema.parse(
+      JSON.parse(
+        readFileSync(
+          join(process.cwd(), 'scripts/eval/case-changes.json'),
+          'utf8',
+        ),
+      ),
+    );
+    const changed = execFileSync(
+      'git',
+      ['diff', '--name-only', frozenAt, '--', 'scripts/eval/cases'],
+      { encoding: 'utf8' },
+    )
+      .split('\n')
+      .filter(Boolean)
+      .map((path) => path.split('/').pop()?.split('-')[0]);
+    const listed = new Set(changes.map((c) => c.caseId));
+    for (const id of changed)
+      expect(listed.has(id as string), `#${id}`).toBe(true);
   });
 });

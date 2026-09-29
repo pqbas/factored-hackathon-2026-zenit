@@ -23,6 +23,9 @@ La fase está lista para mergear cuando se cumple todo lo que sigue.
 - [ ] `buildReport` da los numeradores, denominadores y la variabilidad
       esperados sobre corridas fijas
 - [ ] El runner rechaza una `--base` que no es local
+- [ ] Un caso cambiado desde el commit fijado sin entrada en
+      `case-changes.json` hace fallar el test de casos, y el `.md` lista cada
+      cambio
 - [ ] Un caso con `knownFailure` cuenta en las métricas y sale marcado en el
       `.md`
 - [ ] `parseAgentOutputs` lee `usage`, `model`, `prompt_version` y

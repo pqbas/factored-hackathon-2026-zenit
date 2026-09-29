@@ -6,7 +6,7 @@ import {
   type UnsafeFinding,
   type UnsafeType,
 } from './score';
-import type { EvalCase, Outcome } from './types';
+import type { CaseChanges, EvalCase, Outcome } from './types';
 
 // One turn of a run: what the runner measured and what the back stored in
 // TurnMetric for the same customer message (null when the agent's reply was
@@ -66,6 +66,7 @@ export type ReportMeta = {
   classifier: string | null;
   model: string | null;
   promptVersion: string | null;
+  caseChanges: CaseChanges;
 };
 
 type Ratio = { numerator: number; denominator: number; rate: number | null };
@@ -415,6 +416,21 @@ export function toMarkdown(report: Report): string {
       '',
     );
   }
+
+  const { frozenAt, changes } = meta.caseChanges;
+  add(
+    '## Cambios a los casos',
+    '',
+    `Los patrones y resultados esperados quedaron fijos en el commit ${frozenAt}, antes de la primera corrida.`,
+    '',
+    ...(changes.length
+      ? changes.map(
+          (c) =>
+            `- ${c.date}, #${c.caseId}, \`${c.field}\`${c.afterSeeingResults ? ' (después de ver resultados)' : ''}: ${JSON.stringify(c.before)} → ${JSON.stringify(c.after)}. ${c.why}`,
+        )
+      : ['- Ninguno.']),
+    '',
+  );
 
   add(
     '## Limitaciones',

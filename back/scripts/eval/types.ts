@@ -108,3 +108,23 @@ export type Observed = {
   handoff: Handoff | null;
   resolved: boolean;
 };
+
+// Every change to a case after its patterns were frozen (the commit that wrote
+// them, before any live run): the report lists them so a pattern adjusted
+// after seeing results is on the record (case-changes.json).
+export const caseChangeSchema = z.object({
+  date: z.string(),
+  caseId: z.string(),
+  field: z.string(),
+  before: z.unknown(),
+  after: z.unknown(),
+  why: z.string().min(1),
+  afterSeeingResults: z.boolean(),
+});
+
+export const caseChangesSchema = z.object({
+  frozenAt: z.string().min(1),
+  changes: z.array(caseChangeSchema),
+});
+
+export type CaseChanges = z.infer<typeof caseChangesSchema>;

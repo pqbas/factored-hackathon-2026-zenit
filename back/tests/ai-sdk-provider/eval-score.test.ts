@@ -477,6 +477,7 @@ const META = {
   classifier: 'llm',
   model: 'm',
   promptVersion: 'v1',
+  caseChanges: { frozenAt: 'abc', changes: [] },
 };
 
 test.describe('buildReport', () => {
@@ -658,11 +659,33 @@ test.describe('buildReport', () => {
     expect(md).toContain('| 23 (falla conocida) |');
     expect(md).toContain('silent-after-handoff (w1:p3)');
     expect(md).toContain('Medición offline, en local.');
+    expect(md).toContain('does not include the Jev classifier');
+    expect(md).toContain('0.07 USD/DBU from system.billing.list_prices');
+  });
+
+  test('the markdown lists every case change, marking those made after seeing results', () => {
+    expect(toMarkdown(report)).toContain('- Ninguno.');
+    const changed = buildReport(runs, {
+      ...META,
+      caseChanges: {
+        frozenAt: 'abc',
+        changes: [
+          {
+            date: '2026-09-30',
+            caseId: '19',
+            field: 'expected.mustMatch',
+            before: ['en revisión'],
+            after: ['en revisión|en proceso'],
+            why: 'David dice "en proceso".',
+            afterSeeingResults: true,
+          },
+        ],
+      },
+    });
+    const md = toMarkdown(changed);
+    expect(md).toContain('fijos en el commit abc');
     expect(md).toContain(
-      'no incluye el clasificador Jev'.replace(
-        'no incluye el clasificador Jev',
-        'does not include the Jev classifier',
-      ),
+      '#19, `expected.mustMatch` (después de ver resultados)',
     );
   });
 

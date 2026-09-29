@@ -3,18 +3,18 @@
 // conversation, so this is an estimate from public list prices, not the bill.
 //
 // Sources, consulted 2026-09-29:
-// - Endpoint: https://www.databricks.com/product/pricing/foundation-model-serving
+// - DBU rates: https://www.databricks.com/product/pricing/foundation-model-serving
 //   lists "Qwen 3 80B Instruct" (standard pay per token) at 2.143 DBU per 1M
-//   input tokens and 17.143 DBU per 1M output tokens. The page shows DBUs, not
-//   USD.
-// - App: https://docs.databricks.com/aws/en/dev-tools/databricks-apps/compute-size
+//   input tokens and 17.143 DBU per 1M output tokens;
+//   https://docs.databricks.com/aws/en/dev-tools/databricks-apps/compute-size
 //   gives 0.5 DBU/hour for a Medium app (the default size).
-// TODO: confirm the two USD-per-DBU rates below against the workspace's
-// contract. Neither page states them: 0.07 is the AWS list rate for serverless
-// model serving and 0.75 the AWS Premium list rate for Apps (secondary
-// sources), and they are assumptions until someone checks them.
-const SERVING_USD_PER_DBU = 0.07; // TODO: unconfirmed
-const APPS_USD_PER_DBU = 0.75; // TODO: unconfirmed
+// - USD per DBU: the workspace's current list prices in
+//   system.billing.list_prices. Serving is SKU
+//   PREMIUM_SERVERLESS_REAL_TIME_INFERENCE_US_WEST_OREGON at 0.07 USD/DBU,
+//   Apps is PREMIUM_ALL_PURPOSE_SERVERLESS_COMPUTE_US_WEST_OREGON at 0.75
+//   USD/DBU. The workspace's real billing matches 0.5 DBU/hour per App.
+const SERVING_USD_PER_DBU = 0.07;
+const APPS_USD_PER_DBU = 0.75;
 
 export const PRICING = {
   endpoint: 'databricks-qwen3-next-80b-a3b-instruct',
@@ -24,6 +24,7 @@ export const PRICING = {
   sources: [
     'https://www.databricks.com/product/pricing/foundation-model-serving',
     'https://docs.databricks.com/aws/en/dev-tools/databricks-apps/compute-size',
+    'system.billing.list_prices: PREMIUM_SERVERLESS_REAL_TIME_INFERENCE_US_WEST_OREGON, PREMIUM_ALL_PURPOSE_SERVERLESS_COMPUTE_US_WEST_OREGON',
   ],
   consultedAt: '2026-09-29',
 } as const;
@@ -32,10 +33,11 @@ export const PRICING_ASSUMPTIONS =
   `Estimate from list prices consulted ${PRICING.consultedAt}: ` +
   `${PRICING.endpoint} at ${PRICING.inputUsdPerMillion.toFixed(3)} USD per 1M input tokens ` +
   `and ${PRICING.outputUsdPerMillion.toFixed(3)} USD per 1M output tokens (DBU rates from the ` +
-  `Databricks pricing page at an assumed ${SERVING_USD_PER_DBU} USD/DBU), plus the App ` +
-  `(Medium, 0.5 DBU/hour at an assumed ${APPS_USD_PER_DBU} USD/DBU) prorated by the turn's ` +
-  `duration. It does not include the Jev classifier, the warehouse or the database. ` +
-  `Databricks billing can't be attributed per conversation.`;
+  `Databricks pricing page, at ${SERVING_USD_PER_DBU} USD/DBU from system.billing.list_prices, ` +
+  `SKU PREMIUM_SERVERLESS_REAL_TIME_INFERENCE_US_WEST_OREGON), plus the App (Medium, ` +
+  `0.5 DBU/hour at ${APPS_USD_PER_DBU} USD/DBU, SKU PREMIUM_ALL_PURPOSE_SERVERLESS_COMPUTE_US_WEST_OREGON) ` +
+  `prorated by the turn's duration. It does not include the Jev classifier, the warehouse ` +
+  `or the database. Databricks billing can't be attributed per conversation.`;
 
 // Cost of some turns' tokens plus the App's share of their combined duration.
 // null when there are no tokens: unknown, never zero.
