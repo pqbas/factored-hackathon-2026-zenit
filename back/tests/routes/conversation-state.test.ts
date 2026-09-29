@@ -302,4 +302,25 @@ test.describe('Conversation state (with database)', () => {
       .poll(async () => (await getChatById({ id: chatId }))?.handledBy)
       .toBe('human_queue');
   });
+
+  test('a goodbye turn resolves the chat, and the next message reopens it', async ({
+    adaContext,
+  }) => {
+    const chatId = generateUUID();
+    await (
+      await postChatMessage(
+        adaContext,
+        chatId,
+        '[agent-outputs:goodbye] no gracias, eso es todo',
+      )
+    ).text();
+
+    await expect
+      .poll(async () => (await getChatById({ id: chatId }))?.closedAt)
+      .not.toBeNull();
+    expect((await getChatById({ id: chatId }))?.handledBy).toBe('ai_agent');
+
+    await (await postChatMessage(adaContext, chatId, 'una cosa más')).text();
+    expect((await getChatById({ id: chatId }))?.closedAt).toBeNull();
+  });
 });

@@ -138,6 +138,10 @@ agente.
 - [x] Solo quien tiene tomada la conversación le puede responder al cliente,
       y el cliente ve esos mensajes en su chat casi en tiempo real.
 - [x] El asesor devuelve la conversación al asistente o la cierra.
+- [x] Cuando el cliente se despide y el agente responde con intent GOODBYE,
+      la conversación queda resuelta (closedAt) si la atiende el agente; si
+      el cliente vuelve a escribir, se reabre (decisión del usuario,
+      28-09-26).
 - [x] Un admin puede quitarle una conversación a otro asesor o devolverla; un
       asesor no.
 - [x] Si el asesor toma la conversación mientras el agente responde, esa
