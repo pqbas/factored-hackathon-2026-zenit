@@ -390,11 +390,11 @@ test.describe('Advisor console', () => {
             json: {
               customer: { customerId: 'CUS000123', firstName: 'Daniela', lastName: 'Sosa' },
               interactions: [
-                { date: '2026-09-26T11:42:00.000Z', channel: 'Phone', reason: 'Cargo duplicado', resolved: false, escalated: true, sentiment: 'Negative' },
-                { date: '2026-09-20T18:05:00.000Z', channel: 'Web', reason: null, resolved: true, escalated: null, sentiment: null },
+                { date: '2026-09-26T11:42:00.000Z', interactionType: 'Inbound Call', channel: 'Phone', reason: 'Cargo duplicado', resolved: false, escalated: true, sentiment: 'Negative' },
+                { date: '2026-09-20T18:05:00.000Z', interactionType: 'Outbound Call', channel: 'Phone', reason: null, resolved: true, escalated: null, sentiment: null },
               ],
               transcripts: [
-                { date: '2026-09-26', customerText: 'Me cobraron dos veces, tarjeta [NÚMERO OCULTO].', agentText: 'Le abro un reclamo.' },
+                { date: '2026-09-26', customerText: 'Me cobraron dos veces, tarjeta [NÚMERO OCULTO].', agentText: 'Le abro un reclamo.', language: 'es', intents: 'consulta_general', topics: 'Queja' },
               ],
               cases: [],
             },
@@ -413,16 +413,33 @@ test.describe('Advisor console', () => {
     // No cases: it opens on the first tab with something in it.
     await expect(page.getByTestId('context-tab-interactions')).toHaveAttribute('aria-selected', 'true');
     await expect(panel.getByTestId('context-interaction')).toHaveCount(2);
-    await expect(panel.getByTestId('context-interaction').first()).toContainText('Llamada');
-    await expect(panel.getByTestId('context-interaction').first()).toContainText('Sin resolver');
-    await expect(panel.getByTestId('context-interaction').first()).toContainText('Negativo');
+    await expect(page.getByTestId('context-tab-interactions')).toContainText('Interacciones');
+    const [inbound, outbound] = [
+      panel.getByTestId('context-interaction').first(),
+      panel.getByTestId('context-interaction').last(),
+    ];
+    // Who called, and every recorded field translated one to one.
+    await expect(inbound.getByTestId('interaction-type')).toHaveText('Llamada entrante: llamó el cliente');
+    await expect(outbound.getByTestId('interaction-type')).toHaveText('Llamada saliente: llamó el banco');
+    for (const text of ['CanalTeléfono', 'MotivoCargo duplicado', 'ResueltaNo', 'EscaladaSí', 'SentimientoNegativo']) {
+      await expect(inbound).toContainText(text);
+    }
+    // Fields the bank didn't record aren't shown.
+    await expect(outbound).not.toContainText('Motivo');
+    await expect(outbound).not.toContainText('Escalada');
 
     await page.getByTestId('context-tab-cases').click();
     await expect(panel).toContainText('Sin casos ni reclamos registrados.');
 
     await page.getByTestId('context-tab-transcripts').click();
-    await panel.getByRole('button', { name: /Ver transcripción/ }).click();
-    await expect(panel.getByTestId('context-transcript')).toContainText('Ejecutivo: Le abro un reclamo.');
+    await expect(page.getByTestId('context-tab-transcripts')).toContainText('Transcripciones');
+    const transcript = panel.getByTestId('context-transcript');
+    await expect(transcript).toContainText('IdiomaEspañol');
+    await expect(transcript).toContainText('Intencionesconsulta_general');
+    await expect(transcript).toContainText('TemasQueja');
+    await transcript.getByRole('button', { name: /Ver texto/ }).click();
+    await expect(transcript).toContainText('Cliente: Me cobraron dos veces, tarjeta [NÚMERO OCULTO].');
+    await expect(transcript).toContainText('Agente: Le abro un reclamo.');
 
     // The toggle hides it and the choice sticks.
     await page.getByTestId('context-toggle').click();

@@ -124,7 +124,7 @@ export default function MetricsPage() {
               className={cn(
                 'h-7 rounded-[7px] px-3.5 font-medium text-[13px] transition-colors',
                 range === r.id
-                  ? 'bg-background text-foreground shadow-sm dark:bg-muted'
+                  ? 'bg-background text-foreground shadow-sm dark:bg-input'
                   : 'text-muted-foreground hover:text-foreground',
               )}
             >
