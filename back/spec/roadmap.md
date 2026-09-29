@@ -274,3 +274,6 @@ cliente y su historia con el banco.
 - [x] La consola muestra al cliente del banco por su nombre (customerName, de
       customer_360, una consulta por cliente y reintento si falla); las rutas
       del cliente no lo traen.
+- [x] La consola agrupa por cliente: una fila por cliente con su conversación
+      más reciente (`?groupBy=customer`), contadores por cliente y todas sus
+      conversaciones en orden cronológico (decisión del usuario, 28-09-26).
