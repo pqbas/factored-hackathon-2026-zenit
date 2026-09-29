@@ -71,6 +71,8 @@ export function ConversationView({
   bubbles,
   me,
   busy,
+  contextOpen,
+  onToggleContext,
   onTake,
   onRelease,
   onSend,
@@ -80,6 +82,8 @@ export function ConversationView({
   bubbles: Bubble[];
   me: string | undefined;
   busy: boolean;
+  contextOpen: boolean;
+  onToggleContext: () => void;
   onTake: () => void;
   onRelease: (outcome: 'returned_to_agent' | 'resolved') => void;
   onSend: (text: string) => Promise<boolean>;
@@ -110,6 +114,8 @@ export function ConversationView({
         chat={chat}
         me={me}
         busy={busy}
+        contextOpen={contextOpen}
+        onToggleContext={onToggleContext}
         onTake={onTake}
         onRelease={onRelease}
         onClose={onClose}

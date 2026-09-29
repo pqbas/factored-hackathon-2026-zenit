@@ -5,6 +5,7 @@ import useSWRInfinite from 'swr/infinite';
 import { InboxList } from '@/components/conversations/inbox-list';
 import { InboxViews } from '@/components/conversations/inbox-views';
 import { ConversationView } from '@/components/conversations/conversation-view';
+import { CustomerContextPanel } from '@/components/conversations/customer-context-panel';
 import { toast } from '@/components/toast';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { useSession } from '@/contexts/SessionContext';
@@ -70,6 +71,16 @@ function useConversationMessages(chatId: string | null) {
   return { messages, append: (m: AdvisorMessage) => apply([m], false), refresh };
 }
 
+const CONTEXT_KEY = 'console:context-open';
+
+function readContextOpen(): boolean {
+  try {
+    return localStorage.getItem(CONTEXT_KEY) !== 'false';
+  } catch {
+    return true;
+  }
+}
+
 const VIEW_TITLE = {
   inbox: 'Bandeja',
   david: STATUS_LABEL.assistant,
@@ -97,6 +108,17 @@ export default function ConversationsPage() {
   const [busy, setBusy] = useState(false);
   // Same persisted open/closed state as the Agente section's sidebar.
   const isCollapsed = localStorage.getItem('sidebar:state') === 'false';
+  // The customer context panel stays as the advisor last left it (open by default).
+  const [contextOpen, setContextOpen] = useState(() => readContextOpen());
+  function toggleContext() {
+    const next = !contextOpen;
+    setContextOpen(next);
+    try {
+      localStorage.setItem(CONTEXT_KEY, String(next));
+    } catch {
+      // Private mode: it just isn't remembered.
+    }
+  }
 
   // Counters in the views sidebar, on the same polling as the inbox.
   const { data: counts, mutate: mutateCounts } = useSWR(countsUrl(userId), fetchCounts, {
@@ -236,7 +258,14 @@ export default function ConversationsPage() {
           <div
             className={cn(
               'h-full min-w-0',
-              current ? 'w-[520px] shrink-0 border-border border-r' : 'flex-1',
+              // With the context panel open the list narrows, and on screens
+              // under 1600px it steps aside so the chat keeps room.
+              current
+                ? cn(
+                    'shrink-0 border-border border-r',
+                    contextOpen ? 'hidden w-[380px] min-[1600px]:block' : 'w-[520px]',
+                  )
+                : 'flex-1',
             )}
           >
             <InboxList
@@ -261,6 +290,8 @@ export default function ConversationsPage() {
                 bubbles={bubbles}
                 me={me}
                 busy={busy}
+                contextOpen={contextOpen}
+                onToggleContext={toggleContext}
                 onTake={handleTake}
                 onRelease={handleRelease}
                 onSend={handleSend}
@@ -268,6 +299,7 @@ export default function ConversationsPage() {
               />
             </div>
           )}
+          {current && contextOpen && <CustomerContextPanel key={current.id} chatId={current.id} />}
         </div>
       </SidebarInset>
     </SidebarProvider>

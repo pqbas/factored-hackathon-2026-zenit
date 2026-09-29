@@ -350,3 +350,19 @@ Shipped en PR #44.
 - [x] Estados de carga, sin resoluciones y error con reintento.
 
 Shipped en PR #49.
+
+---
+
+## Phase 15: Contexto del cliente en la consola (Complete)
+
+**Goal:** que el asesor vea la historia del cliente con el banco sin salir de la conversación.
+
+- [x] Panel "Contexto del cliente" al lado de la conversación abierta, con el botón
+      "Contexto" para abrirlo y cerrarlo (se recuerda).
+- [x] Pestañas Casos, Contactos y Llamadas (transcripción desplegable), leídas
+      del banco y traducidas al español.
+- [x] Estados de carga, sin cliente del banco y error con reintento, sin
+      bloquear la conversación.
+- [x] En pantallas de menos de 1600 px el panel ocupa el lugar de la lista.
+
+Shipped en PR #50.

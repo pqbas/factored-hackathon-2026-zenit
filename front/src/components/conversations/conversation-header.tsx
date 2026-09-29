@@ -1,5 +1,5 @@
 import { ASSISTANT_KIND, ASSISTANT_NAME } from '@/lib/assistant';
-import { Bot, X } from 'lucide-react';
+import { Bot, PanelRight, X } from 'lucide-react';
 
 import { useCaseStyle } from '@/components/conversations/use-case-style';
 import { Button } from '@/components/ui/button';
@@ -58,6 +58,8 @@ export function ConversationHeader({
   chat,
   me,
   busy,
+  contextOpen,
+  onToggleContext,
   onTake,
   onRelease,
   onClose,
@@ -65,6 +67,8 @@ export function ConversationHeader({
   chat: AdvisorChat;
   me: string | undefined;
   busy: boolean;
+  contextOpen: boolean;
+  onToggleContext: () => void;
   onTake: () => void;
   onRelease: (outcome: 'returned_to_agent' | 'resolved') => void;
   onClose: () => void;
@@ -121,6 +125,19 @@ export function ConversationHeader({
         )}
       </div>
       <div className="ml-auto flex shrink-0 items-center gap-2">
+        <button
+          type="button"
+          data-testid="context-toggle"
+          aria-pressed={contextOpen}
+          onClick={onToggleContext}
+          className={cn(
+            'flex h-8 items-center gap-1.5 rounded-full px-3 font-semibold text-xs transition-colors',
+            contextOpen ? 'bg-primary/15 text-primary' : 'bg-secondary text-foreground hover:bg-accent',
+          )}
+        >
+          <PanelRight className="size-3.5" strokeWidth={1.9} />
+          Contexto
+        </button>
         {(status === 'assistant' || status === 'resolved') && (
           <AssistantSwitch on disabled={busy} onToggle={onTake} />
         )}
