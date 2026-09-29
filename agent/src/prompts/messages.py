@@ -85,6 +85,13 @@ GREETING_REPLY: dict[str, str] = {
     "pt": "Olá! Sou o David, seu assistente virtual do banco.",
 }
 
+# 3.D2 with no complaints on record: said together with "No encuentro reclamos registrados."
+# The question mentions the reclamo, so the answer stays in CASE_STATUS (fallback.case_status_follow_up).
+ASK_CASE_CHARGE: dict[str, str] = {
+    "es": "¿Sobre qué cargo es tu reclamo? Dime la tarjeta, la fecha y el comercio o el monto.",
+    "pt": "Sobre qual cobrança é a sua reclamação? Me diga o cartão, a data e o comércio ou o valor.",
+}
+
 # 3.A and 3.B, step 2: what the customer wants from the product they picked by its letter.
 CARD_OPTIONS: dict[str, str] = {
     "es": "¿Qué quieres ver de tu tarjeta de crédito?\n\n1) Saldo, límite y cupo disponible\n2) Movimientos",

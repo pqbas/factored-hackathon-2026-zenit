@@ -7,6 +7,7 @@ from langchain_core.messages import AIMessage, HumanMessage
 
 from src.graph.state import AgentState
 from src.llm.fallback import (
+    case_status_follow_up,
     check_guardrail_rules,
     detect_language,
     fallback_classify,
@@ -113,6 +114,19 @@ async def classify(
             guardrail_probability=0.0,
             language=detect_language(text),
             intent=menu_intent,
+            intent_confidence=1.0,
+            sentiment="neutral",
+            source="rules",
+        )
+    elif case_status_follow_up(text, previous_reply):
+        # An answer to David's question about the customer's complaint stays in CASE_STATUS: the
+        # classifier read "necesito que me devuelvan el dinero" as a charge complaint.
+        masked_text = None
+        classification = Classification(
+            guardrail="OK",
+            guardrail_probability=0.0,
+            language=detect_language(text),
+            intent="CASE_STATUS",
             intent_confidence=1.0,
             sentiment="neutral",
             source="rules",

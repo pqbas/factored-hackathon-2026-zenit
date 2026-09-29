@@ -162,7 +162,7 @@ def test_a_bare_cancelar_is_still_cancel():
         ("…¿Confirmas estos datos para pasar tu reclamo a un asesor?", "COMPLAINT"),
         ("…¿Confirmas estos datos para pasar tu consulta a un asesor?", "CASE_STATUS"),
         ("…Você confirma estes dados para passar sua reclamação a um atendente?", "COMPLAINT"),
-        ("Está en revisión.\n¿Necesitas que te ayude a pasar esta consulta a un asesor?", "CASE_STATUS"),
+        ("Está en revisión.\n¿Confirmas estos datos para pasar tu consulta a un asesor?", "CASE_STATUS"),
     ],
 )
 def test_a_yes_to_a_confirmation_question_keeps_its_operation(previous, intent):
@@ -181,7 +181,7 @@ def test_a_yes_to_any_other_question_is_not_a_rule():
         "…¿Confirmas estos datos para pasar tu reclamo a un asesor?",
         "…¿Confirmas estos datos para pasar tu consulta a un asesor?",
         "…Você confirma estes dados para passar sua solicitação a um atendente?",
-        "Está en revisión.\n¿Necesitas que te ayude a pasar esta consulta a un asesor?",
+        "Está en revisión.\n¿Confirmas estos datos para pasar tu consulta a un asesor?",
     ],
 )
 def test_is_confirmation_is_true_for_a_yes_to_a_confirmation_question(previous):

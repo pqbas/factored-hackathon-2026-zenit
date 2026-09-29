@@ -157,14 +157,13 @@ _SUBMENU_DIGIT = re.compile(r"(?:opcion |opcao )?([12])")
 # Etapa 4, paso 6: a yes to David's confirmation question keeps its operation. Without this
 # rule a classifier read "sí" after "…pasar tu consulta a un asesor?" as HUMAN_AGENT.
 _AFFIRMATIVE = re.compile(r"(si|sim|confirmo|si,? confirmo|sim,? confirmo|correcto|claro|dale|ok|isso|esta bien|de acuerdo)")
-# David closes the collection with a fixed question, but the LLM sometimes words it its own
-# way ("¿…pasar esta consulta a un asesor?"), so any question that offers to pass the
-# operation to an advisor counts.
+# The last line of David's confirmation question has the operation's exact phrase. A line that
+# only mentions "solicitud" and "reclamo" in passing ("sua solicitação … reclamação") isn't one.
 _TO_ADVISOR = re.compile(r"(asesor|atendente)")
 _CONFIRMATIONS = (
-    (re.compile(r"(tu|sua|esta|essa) consulta"), "CASE_STATUS"),
-    (re.compile(r"(tu|sua|esta|essa) (solicitud|solicitacao)"), "RETENTION"),
-    (re.compile(r"(tu|sua|este|esta|essa) (reclamo|reclamacao)"), "COMPLAINT"),
+    (re.compile(r"(pasar tu|passar sua) consulta"), "CASE_STATUS"),
+    (re.compile(r"(pasar tu|passar sua) (solicitud|solicitacao)"), "RETENTION"),
+    (re.compile(r"(pasar tu|passar sua) (reclamo|reclamacao)"), "COMPLAINT"),
 )
 
 
@@ -187,6 +186,22 @@ def _confirmed_by(normalized_text: str, previous_reply: str | None) -> str | Non
 def is_confirmation(text: str, previous_reply: str | None) -> bool:
     """Whether the text is a yes to David's confirmation question in the previous reply."""
     return _confirmed_by(normalize(text).strip(" .!?)"), previous_reply) is not None
+
+
+_ABOUT_COMPLAINT = re.compile(r"(reclamo|reclamacao)")
+
+
+def case_status_follow_up(text: str, previous_reply: str | None) -> bool:
+    """Whether the text answers David's question about the customer's complaint (3.D2): the
+    previous reply's last line asks about the reclamo without offering an advisor. A menu letter,
+    "menú" and a cancel are not answers; their own rules catch them."""
+    if not previous_reply or not previous_reply.strip():
+        return False
+    last_line = normalize(previous_reply).strip().splitlines()[-1]
+    if "?" not in last_line or not _ABOUT_COMPLAINT.search(last_line) or _TO_ADVISOR.search(last_line):
+        return False
+    t = normalize(text).strip(" .!?)")
+    return not (_MENU_WORDS.fullmatch(t) or _MENU_LETTER.fullmatch(t) or _CANCEL.match(t))
 
 
 _LETTER_INTENTS = {"a": "CARD_OPTIONS", "b": "SAVINGS_OPTIONS", "c": "COMPLAINT", "d": "MORE_OPTIONS"}
