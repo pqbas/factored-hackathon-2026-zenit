@@ -386,3 +386,17 @@ Shipped en PR #50.
       muestra el email; la búsqueda también encuentra por nombre.
 
 Shipped en PR #54.
+
+---
+
+## Phase 17: Chat del cliente según el cliente demo (Complete)
+
+**Goal:** que el chat del cliente se sienta el del cliente demo elegido, no el del usuario de la app.
+
+- [x] La barra de conversaciones muestra solo los chats del cliente demo elegido y
+      se refresca al cambiarlo (`/api/history?sessionToken=`).
+- [x] El saludo usa el nombre del cliente demo ("Buenas noches, Daniela").
+- [x] Las tarjetas sugeridas son las opciones reales del menú de David: saldo y
+      movimientos de tarjeta, cuentas de ahorro, reclamo y más opciones.
+
+Shipped en PR #<n>.
