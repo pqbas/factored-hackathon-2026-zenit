@@ -8,16 +8,21 @@ import {
   MessageBubble,
   SystemNotice,
 } from '@/components/conversations/message-bubble';
+import { useCaseStyle } from '@/components/conversations/use-case-style';
 import {
   type AdvisorChat,
   type Bubble,
   canReply,
+  useCaseOf,
+  useCaseTag,
   isDavidReplying,
   isHeldByOther,
   statusOf,
 } from '@/lib/advisor';
 import { TypingIndicator } from '@/components/typing-indicator';
-import { groupByDay } from '@/lib/conversations';
+import { groupByDay, STATUS_LABEL } from '@/lib/conversations';
+import { format, parseISO } from 'date-fns';
+import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 
 // How far from the end the advisor has to scroll before the jump button shows.
@@ -66,9 +71,70 @@ function placeholderFor(chat: AdvisorChat, me: string | undefined): string {
   return 'Toma la conversación para responder';
 }
 
+export interface TimelineSegment {
+  chat: AdvisorChat;
+  bubbles: Bubble[];
+}
+
+// Where one of the customer's conversations starts: its date, use case and state.
+function ConversationDivider({ chat }: { chat: AdvisorChat }) {
+  const tag = useCaseTag(chat);
+  return (
+    <div
+      data-testid="conversation-divider"
+      data-chat-id={chat.id}
+      className="my-4 flex items-center gap-3 text-muted-foreground text-xs"
+    >
+      <span className="h-px flex-1 bg-border" />
+      <span className="flex items-center gap-2 whitespace-nowrap">
+        <span>Conversación del {format(parseISO(chat.createdAt), "d MMM yyyy, HH:mm", { locale: es })}</span>
+        {tag && (
+          <span
+            className={cn(
+              'rounded-md px-2 py-0.5 font-medium text-[11px]',
+              useCaseStyle(useCaseOf(chat)).chip,
+            )}
+          >
+            {tag}
+          </span>
+        )}
+        <span data-testid="divider-status" className="font-medium text-foreground/80">
+          {STATUS_LABEL[statusOf(chat)]}
+        </span>
+      </span>
+      <span className="h-px flex-1 bg-border" />
+    </div>
+  );
+}
+
+function DayGroups({ bubbles, now, skipFirstLabel }: { bubbles: Bubble[]; now: Date; skipFirstLabel: boolean }) {
+  return (
+    <>
+      {groupByDay(bubbles, now).map((group, index) => (
+        <div key={`${group.label}-${group.items[0].id}`}>
+          {!(skipFirstLabel && index === 0) && (
+            <div className="my-3 flex justify-center">
+              <span className="rounded-full bg-secondary px-3 py-1 text-muted-foreground text-xs">
+                {group.label}
+              </span>
+            </div>
+          )}
+          {group.items.map((bubble) =>
+            bubble.from === 'system' ? (
+              <SystemNotice key={bubble.id} bubble={bubble} now={now} />
+            ) : (
+              <MessageBubble key={bubble.id} bubble={bubble} now={now} />
+            ),
+          )}
+        </div>
+      ))}
+    </>
+  );
+}
+
 export function ConversationView({
   chat,
-  bubbles,
+  segments,
   me,
   busy,
   contextOpen,
@@ -78,8 +144,10 @@ export function ConversationView({
   onSend,
   onClose,
 }: {
+  // The active (latest) conversation; actions and the composer apply to it.
   chat: AdvisorChat;
-  bubbles: Bubble[];
+  // Every conversation of the customer, oldest first, the active one last.
+  segments: TimelineSegment[];
   me: string | undefined;
   busy: boolean;
   contextOpen: boolean;
@@ -94,11 +162,15 @@ export function ConversationView({
   const [awayFromBottom, setAwayFromBottom] = useState(false);
   const now = new Date();
   const banner = hint(chat, me);
+  const bubbles = segments.at(-1)?.bubbles ?? [];
+  const bubbleCount = segments.reduce((n, segment) => n + segment.bubbles.length, 0);
   const davidReplying = isDavidReplying(chat, bubbles, now);
+  // A single conversation keeps the plain day layout; several get dividers.
+  const withDividers = segments.length > 1;
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: 'end' });
-  }, [chat.id, bubbles.length, davidReplying]);
+  }, [chat.id, bubbleCount, davidReplying]);
 
   function handleScroll() {
     const el = scrollRef.current;
@@ -127,21 +199,11 @@ export function ConversationView({
           onScroll={handleScroll}
           className="h-full overflow-y-auto bg-wa-chat-bg px-4 py-4 sm:px-8"
         >
-          {groupByDay(bubbles, now).map((group) => (
-            <div key={`${group.label}-${group.items[0].id}`}>
-              <div className="my-3 flex justify-center">
-                <span className="rounded-full bg-secondary px-3 py-1 text-muted-foreground text-xs">
-                  {group.label}
-                </span>
-              </div>
-              {group.items.map((bubble) =>
-                bubble.from === 'system' ? (
-                  <SystemNotice key={bubble.id} bubble={bubble} now={now} />
-                ) : (
-                  <MessageBubble key={bubble.id} bubble={bubble} now={now} />
-                ),
-              )}
-            </div>
+          {segments.map((segment) => (
+            <section key={segment.chat.id} data-testid="timeline-segment">
+              {withDividers && <ConversationDivider chat={segment.chat} />}
+              <DayGroups bubbles={segment.bubbles} now={now} skipFirstLabel={withDividers} />
+            </section>
           ))}
           {davidReplying && (
             <div className="mb-2 flex justify-end">
