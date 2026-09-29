@@ -45,6 +45,7 @@ import {
   updateChatLastContextById,
   updateChatVisiblityById,
   updateChatAgentState,
+  updateChatCustomer,
   resolveChatByAgent,
   markMessagesBlocked,
   isDatabaseAvailable,
@@ -67,6 +68,7 @@ import {
 import { ChatSDKError } from '@chat-template/core/errors';
 import { generateTitleFromUserMessage } from '../title';
 import { toCustomerChat } from '../customer-view';
+import { findDemoCustomer } from '../demo-customers';
 import { buildAgentHistory, shouldPersistAgentReply } from '../agent-turn';
 
 export const chatRouter: RouterType = Router();
@@ -133,6 +135,15 @@ chatRouter.post('/', requireAuth, async (req: Request, res: Response) => {
       return res.status(response.status).json(response.json);
     }
 
+    // The session's bank customer, kept on the chat for the console.
+    const sessionCustomer = sessionToken
+      ? findDemoCustomer(sessionToken)
+      : undefined;
+    const customerId =
+      sessionCustomer && !sessionCustomer.expired
+        ? sessionCustomer.customerId
+        : null;
+
     if (!chat) {
       // Only create new chat if we have a message (not a continuation)
       if (isDatabaseAvailable() && message) {
@@ -144,6 +155,7 @@ chatRouter.post('/', requireAuth, async (req: Request, res: Response) => {
           userEmail: session.user.email,
           title,
           visibility: selectedVisibilityType,
+          customerId,
         });
       }
     } else {
@@ -151,6 +163,9 @@ chatRouter.post('/', requireAuth, async (req: Request, res: Response) => {
         const error = new ChatSDKError('forbidden:chat');
         const response = error.toResponse();
         return res.status(response.status).json(response.json);
+      }
+      if (customerId && chat.customerId !== customerId) {
+        await updateChatCustomer({ chatId: id, customerId });
       }
     }
 

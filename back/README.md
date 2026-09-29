@@ -72,6 +72,8 @@ from `databricks apps get dev-bank-assistant-ui`):
   GRANT USE CATALOG ON CATALOG workspace TO `<sp-application-id>`;
   GRANT USE SCHEMA, SELECT ON SCHEMA workspace.bank_gold TO `<sp-application-id>`;
   GRANT USE SCHEMA, EXECUTE ON SCHEMA workspace.bank_uc_consultas TO `<sp-application-id>`;
+  GRANT USE SCHEMA ON SCHEMA workspace.bank_silver TO `<sp-application-id>`;
+  GRANT SELECT ON TABLE workspace.bank_silver.call_transcripts TO `<sp-application-id>`;
   ```
 
 ### Turn it on and off (cost)

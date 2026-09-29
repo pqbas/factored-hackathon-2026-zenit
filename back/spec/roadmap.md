@@ -255,3 +255,19 @@ punta, cuántas un asesor y cuántas con ayuda humana.
 - [x] El admin consulta `GET /api/advisor/metrics?from&to`: total, contenidas
       por la IA, resueltas por un asesor y asistidas, por caso de uso y por
       día.
+
+---
+
+## Phase 10: Contexto del cliente en la consola (Complete)
+
+**Goal:** que el asesor o el admin vea, al abrir una conversación, quién es el
+cliente y su historia con el banco.
+
+<!-- Pedido del usuario, 28-09-26. Definición en docs/flujo-atencion.md §4. -->
+
+- [x] Cada conversación guarda el cliente de la sesión (token demo →
+      customer_id), al crearse y en cada turno si cambia.
+- [x] `GET /api/advisor/conversations/:id/customer-context` devuelve el
+      cliente, sus últimos 10 contactos, sus últimas 5 transcripciones de
+      llamadas (enmascaradas con las mismas reglas que el agente) y sus casos,
+      leídos del warehouse en paralelo; 204 si el chat no tiene cliente.

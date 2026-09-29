@@ -51,6 +51,9 @@ export const chat = createTable('Chat', {
   // A handoff or a take happened since the chat last opened; a customer
   // message on a closed chat resets it. Feeds ResolutionEvent.hadHuman.
   hadHuman: boolean('hadHuman').notNull().default(false),
+  // The bank customer of the chat's session (demo token -> customer_id), for
+  // the console's customer context. Null when the chat has no session.
+  customerId: varchar('customerId', { length: 64 }),
 });
 
 export type Chat = InferSelectModel<typeof chat>;
