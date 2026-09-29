@@ -77,12 +77,12 @@ function Row({
       </span>
       {/* Who has the chat, between name and subject: David's robot, or the
           advisor who took it. Empty while it waits. */}
-      <span className="flex items-center justify-center">
+      <span className="flex min-w-0 items-center">
         {holder && (
           <span
             data-testid="advisor-badge"
             title={`Lo atiende ${chat.assignedTo ?? holder}`}
-            className="flex max-w-32 items-center gap-1 rounded-md bg-secondary px-1.5 py-0.5 text-[11px] text-muted-foreground"
+            className="flex min-w-0 max-w-full items-center gap-1 rounded-md bg-secondary px-1.5 py-0.5 text-[11px] text-muted-foreground"
           >
             <UserRound className="size-3 shrink-0" strokeWidth={2} />
             <span className="truncate">{holder}</span>
@@ -219,8 +219,8 @@ export function InboxList({
           className={cn(
             'grid gap-x-3',
             compact
-              ? 'grid-cols-[0_0.5rem_1.75rem_fit-content(8rem)_auto_minmax(0,1fr)_auto_auto_0]'
-              : 'grid-cols-[0_0.5rem_1.75rem_fit-content(15rem)_auto_minmax(0,1fr)_auto_auto_0]',
+              ? 'grid-cols-[0_0.5rem_1.75rem_fit-content(8rem)_6rem_minmax(0,1fr)_auto_auto_0]'
+              : 'grid-cols-[0_0.5rem_1.75rem_fit-content(15rem)_6rem_minmax(0,1fr)_auto_auto_0]',
           )}
         >
           {groups.map((group, index) => (

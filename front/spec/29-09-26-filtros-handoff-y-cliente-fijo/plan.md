@@ -53,7 +53,7 @@
 5g. Advisor in the rows:
    - In `src/lib/advisor.ts`, add `holderLabel(chat, me)` ('tú', or the part of `assignedTo` before the @, or null).
    - `attentionOf` short (row) for `human_agent` returns just `STATUS_LABEL.advisor`; the long one (header) doesn't change.
-   - In `src/components/conversations/inbox-list.tsx`, the middle column (`1.25rem` → `auto`) renders `advisor-badge` (UserRound + holder) for `human_agent`, the robot for `ai_agent`, and nothing otherwise.
+   - In `src/components/conversations/inbox-list.tsx`, the middle column (fixed `6rem`, content aligned left so every badge starts and lines up the same in every row, like the robot) renders `advisor-badge` (UserRound + holder) for `human_agent`, the robot for `ai_agent`, and nothing otherwise.
    - Update unit and e2e tests that expected "Con asesor · …" in the rows.
 
 6. In `src/pages/ConversationsPage.tsx`, `viewTitle`: `reason` → its label; `advisor` → `STATUS_LABEL.advisor` ("Con asesor").
