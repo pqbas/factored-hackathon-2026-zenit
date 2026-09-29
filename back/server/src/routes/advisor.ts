@@ -16,6 +16,7 @@ import {
   getChats,
   getChatOwners,
   getConversationCounts,
+  HUMAN_HANDLED_BY,
   getLastCustomerMessages,
   getChatById,
   getMessagesAfter,
@@ -85,10 +86,16 @@ advisorRouter.get('/conversations', async (req: Request, res: Response) => {
   const limit = Number.parseInt((req.query.limit as string) || '10');
   const startingAfter = req.query.starting_after as string | undefined;
   const endingBefore = req.query.ending_before as string | undefined;
-  const handledBy = req.query.handledBy as string | undefined;
+  // Without handledBy, the inbox is the human cases only (open). David's chats
+  // come with handledBy=ai_agent; the closed view keeps every resolved chat,
+  // since resolving hands the chat back to ai_agent.
+  const handledByParam = req.query.handledBy as string | undefined;
+  const statusParam = req.query.status as 'open' | 'closed' | undefined;
+  const humanInbox = !handledByParam && statusParam !== 'closed';
+  const handledBy = humanInbox ? HUMAN_HANDLED_BY : handledByParam;
+  const status = humanInbox ? 'open' : statusParam;
   const useCase = req.query.useCase as string | undefined;
   const userId = req.query.userId as string | undefined;
-  const status = req.query.status as 'open' | 'closed' | undefined;
   const assignedToParam = req.query.assignedTo as string | undefined;
   const assignedTo =
     normalizeEmail(
