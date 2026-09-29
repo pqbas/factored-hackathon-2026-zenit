@@ -4,6 +4,7 @@ import {
   containmentPct,
   dayLabel,
   fillDays,
+  localDay,
   metricsUrl,
   parseMetrics,
   rangeCaption,
@@ -19,18 +20,24 @@ const r = (total: number, aiContained: number, human: number, assisted: number) 
 });
 
 describe('rangeDays and metricsUrl', () => {
-  // 02:00 UTC on the 28th: the back's day is still the 28th.
-  const now = new Date('2026-09-28T02:00:00.000Z');
+  // 22:30 in Lima (UTC-5) on the 28th is already 03:30 UTC on the 29th.
+  const limaNight = new Date('2026-09-29T03:30:00.000Z');
 
-  it('counts inclusive UTC days ending today', () => {
-    expect(rangeDays('today', now)).toEqual({ from: '2026-09-28', to: '2026-09-28' });
-    expect(rangeDays('week', now)).toEqual({ from: '2026-09-22', to: '2026-09-28' });
-    expect(rangeDays('month', now)).toEqual({ from: '2026-08-30', to: '2026-09-28' });
+  it('counts the viewer\'s local days, not UTC days', () => {
+    expect(localDay(limaNight, 'America/Lima')).toBe('2026-09-28');
+    expect(localDay(limaNight, 'UTC')).toBe('2026-09-29');
+    expect(rangeDays('today', limaNight, 'America/Lima')).toEqual({
+      from: '2026-09-28',
+      to: '2026-09-28',
+      tz: 'America/Lima',
+    });
+    expect(rangeDays('week', limaNight, 'America/Lima')).toMatchObject({ from: '2026-09-22', to: '2026-09-28' });
+    expect(rangeDays('month', limaNight, 'America/Lima')).toMatchObject({ from: '2026-08-30', to: '2026-09-28' });
   });
 
-  it('sends from and to', () => {
-    expect(metricsUrl({ from: '2026-09-22', to: '2026-09-28' })).toBe(
-      '/api/advisor/metrics?from=2026-09-22&to=2026-09-28',
+  it('sends from, to and the time zone', () => {
+    expect(metricsUrl({ from: '2026-09-22', to: '2026-09-28', tz: 'America/Lima' })).toBe(
+      '/api/advisor/metrics?from=2026-09-22&to=2026-09-28&tz=America%2FLima',
     );
   });
 });

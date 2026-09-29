@@ -86,4 +86,27 @@ test.describe('Métricas', () => {
     await page.getByRole('button', { name: 'Reintentar' }).click();
     await expect(page.getByTestId('kpi-containment-value')).toHaveText('60%');
   });
+
+  test.describe('in Lima (UTC-5)', () => {
+    test.use({ timezoneId: 'America/Lima' });
+
+    test('a closure at 22:30 counts on the local day', async ({ page }) => {
+      // 22:30 on the 28th in Lima = 03:30 UTC on the 29th.
+      await page.clock.setFixedTime(new Date('2026-09-29T03:30:00.000Z'));
+      const requested = await mockMetrics(page, () => ({ status: 200, json: METRICS }));
+      await page.goto('/metrics');
+      await page.getByTestId('metrics-range-today').click();
+      await expect(page.getByTestId('metrics-range-caption')).toHaveText('Hoy, 28 de septiembre');
+      await expect(page.getByTestId('kpi-containment-value')).toHaveText('60%');
+      const today = requested.at(-1);
+      expect(today?.searchParams.get('from')).toBe('2026-09-28');
+      expect(today?.searchParams.get('to')).toBe('2026-09-28');
+      expect(today?.searchParams.get('tz')).toBe('America/Lima');
+
+      // The week ends on the local 28th, with that day's bar.
+      await page.getByTestId('metrics-range-week').click();
+      await expect(page.getByTestId('metrics-day-2026-09-28')).toBeAttached();
+      await expect(page.getByTestId('metrics-day-2026-09-29')).toHaveCount(0);
+    });
+  });
 });

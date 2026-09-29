@@ -7,6 +7,7 @@ import { KpiCards } from '@/components/metrics/kpi-cards';
 import { UseCaseBreakdown } from '@/components/metrics/use-case-breakdown';
 import { Button } from '@/components/ui/button';
 import {
+  browserTimeZone,
   fetchMetrics,
   fillDays,
   metricsUrl,
@@ -52,7 +53,7 @@ function Notice({
 export default function MetricsPage() {
   const [range, setRange] = useState<MetricsRange>('week');
   // The range is fixed per pick so the key stays stable across renders.
-  const days = useMemo(() => rangeDays(range, new Date()), [range]);
+  const days = useMemo(() => rangeDays(range, new Date(), browserTimeZone()), [range]);
   const { data, error, isLoading, mutate } = useSWR(metricsUrl(days), fetchMetrics, {
     revalidateOnFocus: false,
   });
