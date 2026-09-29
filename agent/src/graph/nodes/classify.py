@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+
 import mlflow
 from langchain_core.messages import AIMessage, HumanMessage
 
@@ -9,6 +11,8 @@ from src.llm.jev import JevClient, JevUnavailable
 from src.prompts.messages import GUARDRAIL_REPLIES
 from src.schemas.classification import Classification, country_language, reply_language
 from src.schemas.routing import IntentRoute
+
+logger = logging.getLogger(__name__)
 
 
 # es and pt are too close to tell apart from one or two words: Jev labels "Cancelar" as pt
@@ -69,9 +73,10 @@ async def classify(
         masked_text = None
         try:
             if jev is None:
-                raise JevUnavailable("Jev is not configured")
+                raise JevUnavailable("jev_client is None")
             classification = await jev.classify(text, routes)
-        except JevUnavailable:
+        except JevUnavailable as exc:
+            logger.warning("Jev unavailable, classifying with rules: %s", exc)
             classification = fallback_classify(text, [route.intent for route in routes])
 
     # Only Jev can tell another language apart; the local detector says "other" when it
