@@ -14,6 +14,7 @@ import { useDemoCustomers } from '@/hooks/use-demo-customers';
 import {
   getLastCustomerToken,
   pickDefaultToken,
+  setActiveCustomerToken,
   setLastCustomerToken,
 } from '@/lib/demo-customer-storage';
 import {
@@ -75,6 +76,7 @@ export default function ProductsPage() {
   function changeCustomer(next: string) {
     setPicked(next);
     setLastCustomerToken(next);
+    setActiveCustomerToken(next);
     setSelectedId(null);
   }
 

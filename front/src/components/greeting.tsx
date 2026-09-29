@@ -5,6 +5,9 @@ import { motion } from 'framer-motion';
 
 import { SuggestedActions } from '@/components/suggested-actions';
 import { useSession } from '@/contexts/SessionContext';
+import { useActiveCustomerToken } from '@/hooks/use-active-customer';
+import { useDemoCustomers } from '@/hooks/use-demo-customers';
+import { customerFirstName } from '@/lib/demo-customer-storage';
 
 function greetingForHour(hour: number): string {
   if (hour < 12) return 'Buenos días';
@@ -27,11 +30,18 @@ export const Greeting = ({
   sendMessage: UseChatHelpers<ChatMessage>['sendMessage'];
 }) => {
   const { session } = useSession();
-  const name = firstName(
-    session?.user?.name ||
-      session?.user?.preferredUsername ||
-      session?.user?.email,
-  );
+  const { customers } = useDemoCustomers();
+  const token = useActiveCustomerToken();
+  // Greet the bank customer the chat talks as; without demo customers, the
+  // app user as before.
+  const customer = customers.find((c) => c.token === token);
+  const name = customers.length
+    ? customerFirstName(customer?.label)
+    : firstName(
+        session?.user?.name ||
+          session?.user?.preferredUsername ||
+          session?.user?.email,
+      );
   const greeting = greetingForHour(new Date().getHours());
 
   return (
@@ -44,6 +54,7 @@ export const Greeting = ({
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 8 }}
         transition={{ delay: 0.3 }}
+        data-testid="greeting"
         className="font-semibold text-3xl tracking-tight md:text-[42px]"
       >
         {name ? `${greeting}, ${name}` : greeting}
