@@ -176,6 +176,9 @@ type ApiTurn = {
   model: string | null;
   promptVersion: string | null;
   classifier: string | null;
+  guardFired: boolean | null;
+  guardMissingTool: string | null;
+  guardAction: string | null;
 };
 
 // One run of a case, in a new chat as the customer's local user.
@@ -271,6 +274,9 @@ export async function runCase(
         model: row?.model ?? null,
         promptVersion: row?.promptVersion ?? null,
         classifier: row?.classifier ?? null,
+        guardFired: row?.guardFired ?? null,
+        guardMissingTool: row?.guardMissingTool ?? null,
+        guardAction: row?.guardAction ?? null,
       };
     });
   const firstSay = sent[0];

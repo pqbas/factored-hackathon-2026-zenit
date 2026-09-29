@@ -174,6 +174,11 @@ export const turnMetric = createTable(
     model: varchar('model', { length: 128 }),
     promptVersion: varchar('promptVersion', { length: 64 }),
     classifier: varchar('classifier', { length: 32 }),
+    // The grounding guard: null when the agent doesn't report it, false when
+    // it didn't fire.
+    guardFired: boolean('guardFired'),
+    guardMissingTool: varchar('guardMissingTool', { length: 64 }),
+    guardAction: varchar('guardAction', { length: 32 }),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
   },
   (t) => [index('TurnMetric_createdAt').on(t.createdAt)],

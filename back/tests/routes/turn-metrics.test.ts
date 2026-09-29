@@ -63,6 +63,36 @@ test.describe('TurnMetric (with database)', () => {
     expect(row.classifier).toBe('llm');
   });
 
+  test('the grounding guard is stored: fired, not fired, or not reported', async ({
+    adaContext,
+  }) => {
+    const fired = generateUUID();
+    await postChatMessage(
+      adaContext,
+      fired,
+      '[agent-outputs:guardFired] movimientos',
+    );
+    const quiet = generateUUID();
+    await postChatMessage(adaContext, quiet, '[agent-outputs:guardNull] saldo');
+    const unreported = generateUUID();
+    await postChatMessage(
+      adaContext,
+      unreported,
+      '[agent-outputs:usage] saldo',
+    );
+
+    await expect.poll(async () => (await rowsOf(unreported)).length).toBe(1);
+    const [f] = await rowsOf(fired);
+    expect(f.guardFired).toBe(true);
+    expect(f.guardMissingTool).toBe('list_transactions');
+    expect(f.guardAction).toBe('retried_ok');
+    const [q] = await rowsOf(quiet);
+    expect(q.guardFired).toBe(false);
+    expect(q.guardMissingTool).toBeNull();
+    const [u] = await rowsOf(unreported);
+    expect(u.guardFired).toBeNull();
+  });
+
   test('a handoff turn records the handoff reason', async ({ adaContext }) => {
     const chatId = generateUUID();
     await postChatMessage(

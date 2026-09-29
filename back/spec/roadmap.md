@@ -374,3 +374,6 @@ segura, a qué latencia y a qué costo (bloques 1, 2 y 3 de
 
 Línea base 40×3 (clasificador llm, prompt 68747d24cacf) en
 `scripts/eval/results/2026-09-29-llm.md`: 86/120 pasan, 0 inseguros.
+
+Shipped en PR #86 (merge `a77e94f8`). El guard de grounding del agente
+(`custom_outputs.guard`) queda en `TurnMetric` y en el reporte: PR #87.

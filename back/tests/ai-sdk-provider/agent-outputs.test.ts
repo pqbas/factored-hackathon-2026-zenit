@@ -123,4 +123,30 @@ test.describe('parseAgentOutputs', () => {
       parseAgentOutputs({ model: 7, classifier: false }).model,
     ).toBeUndefined();
   });
+
+  test('reads the grounding guard: fired, null, absent or malformed', () => {
+    expect(
+      parseAgentOutputs({
+        guard: {
+          fired: true,
+          missing_tool: 'list_transactions',
+          action: 'retried_ok',
+        },
+      }).guard,
+    ).toEqual({
+      fired: true,
+      missingTool: 'list_transactions',
+      action: 'retried_ok',
+    });
+    expect(parseAgentOutputs({ guard: null }).guard).toBeNull();
+    expect(parseAgentOutputs({}).guard).toBeUndefined();
+    expect(
+      parseAgentOutputs({ guard: { fired: 'yes' } }).guard,
+    ).toBeUndefined();
+    expect(parseAgentOutputs({ guard: { fired: true } }).guard).toEqual({
+      fired: true,
+      missingTool: null,
+      action: null,
+    });
+  });
 });

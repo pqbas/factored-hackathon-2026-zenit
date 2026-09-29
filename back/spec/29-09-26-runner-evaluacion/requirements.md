@@ -202,3 +202,15 @@ And it changes in these ways:
   - `agent/src/db/session_repo.py`: `DEMO_SESSIONS_JSON` y `demo-expired`.
   - `agent/src/prompts/messages.py`: respuestas fijas.
   - `agent/src/schemas/turn_outputs.py`: `custom_outputs`.
+
+## Anexo: guard de grounding (revisión de w1:p4, 29-09-26)
+
+21. El agente devuelve `custom_outputs.guard`: `null` si no se disparó, o
+    `{ fired, missing_tool, action }` si David mostró datos de la cuenta sin
+    llamar a la herramienta que los devuelve (`action`: `retried_ok` o
+    `safe_reply`). Viene en todos los turnos.
+22. `TurnMetric` guarda `guardFired` (`null` si el agente no lo reporta,
+    `false` si no se disparó), `guardMissingTool` y `guardAction`.
+23. El reporte muestra los disparos sobre los turnos que reportan el guard,
+    cuántos reintentos salieron respaldados, cuántos terminaron en respuesta
+    segura y el desglose por herramienta faltante.

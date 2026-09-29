@@ -98,6 +98,17 @@ export interface AgentOutputs {
   promptVersion?: string | null;
   // The agent's configured CLASSIFIER ('llm' or 'jev').
   classifier?: string | null;
+  // The grounding guard: null when it didn't fire; undefined when the agent
+  // doesn't report it.
+  guard?: AgentGuard | null;
+}
+
+export interface AgentGuard {
+  fired: boolean;
+  // The tool that returns the data David showed without calling it.
+  missingTool: string | null;
+  // retried_ok: retried forcing the tool; safe_reply: "Ahora no puedo…".
+  action: string | null;
 }
 
 const stringOrNull = (value: unknown) =>
@@ -135,6 +146,17 @@ export function parseAgentOutputs(raw: unknown): AgentOutputs {
         }
       : undefined;
 
+  let guard: AgentGuard | null | undefined;
+  if (raw.guard === null) {
+    guard = null;
+  } else if (isObject(raw.guard) && typeof raw.guard.fired === 'boolean') {
+    guard = {
+      fired: raw.guard.fired,
+      missingTool: stringOrNull(raw.guard.missing_tool) ?? null,
+      action: stringOrNull(raw.guard.action) ?? null,
+    };
+  }
+
   return {
     useCase: stringOrNull(raw.use_case),
     intent: stringOrNull(raw.intent),
@@ -146,6 +168,7 @@ export function parseAgentOutputs(raw: unknown): AgentOutputs {
     model: stringOrNull(raw.model),
     promptVersion: stringOrNull(raw.prompt_version),
     classifier: stringOrNull(raw.classifier),
+    guard,
   };
 }
 
