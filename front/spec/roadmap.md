@@ -302,3 +302,19 @@ Shipped en PR #35.
 Fuera de alcance / futuro: el nombre real del cliente en la consola (el back
 lo deja para después del deploy) y los totales con monedas mezcladas.
 Shipped en PR #37.
+
+---
+
+## Phase 12: Ajustes de producción (Complete)
+
+**Goal:** que el admin pueda atender y que la demo no confunda mientras David piensa.
+
+- [x] En Chats el admin tiene los mismos controles que el asesor (David ON/OFF,
+      Tomar, responder, Resolver) y la vista Mías, sin perder la supervisión
+      (Bandeja completa y filtro por usuario). Si la tiene otro, solo lo ve.
+- [x] Indicador de "escribiendo" en la burbuja de David hasta el primer texto,
+      con "David está consultando tus datos…" pasados 3 s; también en la consola.
+- [x] El chip del cliente demo dice "Cliente demo: …" con un tooltip que
+      explica que elige qué cliente del banco simular (chat y Mis productos).
+
+Shipped en PR #<n>.
