@@ -14,6 +14,9 @@ export interface ContextCustomer {
 
 // bank_gold.interaction_history.
 export interface Interaction {
+  interactionId: string | null;
+  // The bank has a call transcript for this interaction.
+  hasTranscript: boolean;
   date: string | null;
   interactionType: string | null;
   channel: string | null;
@@ -25,6 +28,8 @@ export interface Interaction {
 
 // bank_silver.call_transcripts.
 export interface Transcript {
+  // The interaction this transcript belongs to.
+  interactionId: string | null;
   date: string | null;
   customerText: string | null;
   agentText: string | null;
@@ -88,6 +93,8 @@ export function parseCustomerContext(body: unknown): CustomerContext {
         }
       : null,
     interactions: list(raw.interactions).map((i) => ({
+      interactionId: str(i.interactionId),
+      hasTranscript: i.hasTranscript === true,
       date: str(i.date),
       interactionType: str(i.interactionType),
       channel: str(i.channel),
@@ -97,6 +104,7 @@ export function parseCustomerContext(body: unknown): CustomerContext {
       sentiment: str(i.sentiment),
     })),
     transcripts: list(raw.transcripts).map((t) => ({
+      interactionId: str(t.interactionId),
       date: str(t.date),
       customerText: str(t.customerText),
       agentText: str(t.agentText),
@@ -130,6 +138,15 @@ export async function fetchCustomerContext(url: string): Promise<CustomerContext
   if (res.status === 204) return null;
   if (!res.ok) throw new CustomerContextError(res.status);
   return parseCustomerContext(await res.json());
+}
+
+// The transcript of an interaction, when the bank has it and sent it.
+export function transcriptFor(
+  context: CustomerContext,
+  interaction: Interaction,
+): Transcript | null {
+  if (!interaction.hasTranscript || !interaction.interactionId) return null;
+  return context.transcripts.find((t) => t.interactionId === interaction.interactionId) ?? null;
 }
 
 // The tab to open first: the first one with something in it.

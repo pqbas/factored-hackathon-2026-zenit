@@ -1,5 +1,6 @@
 import {
   Building2,
+  FileText,
   Globe,
   Loader2,
   Mail,
@@ -34,6 +35,7 @@ import {
   priorityLabel,
   sentimentLabel,
   type Transcript,
+  transcriptFor,
   yesNo,
 } from '@/lib/customer-context';
 import { cn } from '@/lib/utils';
@@ -107,7 +109,53 @@ function Field({ label, value }: { label: string; value: string | null }) {
   );
 }
 
-function InteractionRow({ item }: { item: Interaction }) {
+function Chips({ label, values }: { label: string; values: string[] }) {
+  if (!values.length) return null;
+  return (
+    <>
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd className="flex min-w-0 flex-wrap gap-1">
+        {values.map((value) => (
+          <Tag key={value}>{value}</Tag>
+        ))}
+      </dd>
+    </>
+  );
+}
+
+// What the bank recorded about a call: language, intents and topics.
+function TranscriptMeta({ item }: { item: Transcript }) {
+  return (
+    <dl className="grid grid-cols-[auto_minmax(0,1fr)] items-baseline gap-x-3 gap-y-1 text-xs">
+      <Field label="Idioma" value={languageLabel(item.language)} />
+      <Chips label="Intenciones" values={item.intents} />
+      <Chips label="Temas" values={item.topics} />
+    </dl>
+  );
+}
+
+// Bank text is shown literally (already masked): no links or images.
+function TranscriptText({ item }: { item: Transcript }) {
+  return (
+    <div className="flex flex-col gap-2 rounded-lg bg-background px-3 py-2.5 text-xs leading-relaxed">
+      {item.customerText && (
+        <p className="whitespace-pre-wrap break-words">
+          <span className="font-semibold">Cliente: </span>
+          {item.customerText}
+        </p>
+      )}
+      {item.agentText && (
+        <p className="whitespace-pre-wrap break-words">
+          <span className="font-semibold text-primary">Agente: </span>
+          {item.agentText}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function InteractionRow({ item, transcript }: { item: Interaction; transcript: Transcript | null }) {
+  const [open, setOpen] = useState(false);
   const type = interactionTypeLabel(item.interactionType);
   const channel = channelLabel(item.channel);
   const Icon = item.interactionType?.toLowerCase().includes('video')
@@ -136,22 +184,31 @@ function InteractionRow({ item }: { item: Interaction }) {
           <Field label="Escalada" value={yesNo(item.escalated)} />
           <Field label="Sentimiento" value={sentimentLabel(item.sentiment)} />
         </dl>
+        {transcript && (
+          <>
+            <button
+              type="button"
+              data-testid="interaction-transcript-toggle"
+              aria-expanded={open}
+              onClick={() => setOpen(!open)}
+              className="flex items-center gap-1.5 self-start rounded-md py-0.5 font-medium text-primary text-xs hover:underline"
+            >
+              <FileText className="size-3.5" strokeWidth={1.9} />
+              {open ? 'Ocultar transcripción' : 'Ver transcripción'}
+            </button>
+            {open && (
+              <div
+                data-testid="interaction-transcript"
+                className="flex flex-col gap-2 rounded-xl bg-secondary/60 px-3 py-2.5"
+              >
+                <TranscriptMeta item={transcript} />
+                <TranscriptText item={transcript} />
+              </div>
+            )}
+          </>
+        )}
       </div>
     </div>
-  );
-}
-
-function Chips({ label, values }: { label: string; values: string[] }) {
-  if (!values.length) return null;
-  return (
-    <>
-      <dt className="text-muted-foreground">{label}</dt>
-      <dd className="flex min-w-0 flex-wrap gap-1">
-        {values.map((value) => (
-          <Tag key={value}>{value}</Tag>
-        ))}
-      </dd>
-    </>
   );
 }
 
@@ -171,27 +228,9 @@ function TranscriptCard({ item }: { item: Transcript }) {
         </span>
         <span className="ml-auto shrink-0 text-primary text-xs">{open ? 'Ocultar texto' : 'Ver texto'}</span>
       </button>
-      <dl className="grid grid-cols-[auto_minmax(0,1fr)] items-baseline gap-x-3 gap-y-1 text-xs">
-        <Field label="Idioma" value={languageLabel(item.language)} />
-        <Chips label="Intenciones" values={item.intents} />
-        <Chips label="Temas" values={item.topics} />
-      </dl>
-      {/* Bank text is shown literally (already masked): no links or images. */}
+      <TranscriptMeta item={item} />
       {open ? (
-        <div className="flex flex-col gap-2 rounded-lg bg-background px-3 py-2.5 text-xs leading-relaxed">
-          {item.customerText && (
-            <p className="whitespace-pre-wrap break-words">
-              <span className="font-semibold">Cliente: </span>
-              {item.customerText}
-            </p>
-          )}
-          {item.agentText && (
-            <p className="whitespace-pre-wrap break-words">
-              <span className="font-semibold text-primary">Agente: </span>
-              {item.agentText}
-            </p>
-          )}
-        </div>
+        <TranscriptText item={item} />
       ) : (
         <p className="line-clamp-2 break-words text-muted-foreground text-xs leading-relaxed">
           {item.customerText ?? item.agentText}
@@ -260,7 +299,11 @@ export function CustomerContextPanel({ chatId }: { chatId: string }) {
       body = data.interactions.length ? (
         <div className="flex flex-col">
           {data.interactions.map((item, i) => (
-            <InteractionRow key={`${item.date}-${i}`} item={item} />
+            <InteractionRow
+              key={`${item.interactionId ?? item.date}-${i}`}
+              item={item}
+              transcript={transcriptFor(data, item)}
+            />
           ))}
         </div>
       ) : (

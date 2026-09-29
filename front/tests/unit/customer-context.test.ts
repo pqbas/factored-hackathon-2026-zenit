@@ -13,6 +13,7 @@ import {
   maskedCustomerId,
   parseCustomerContext,
   priorityLabel,
+  transcriptFor,
   sentimentLabel,
 } from '@/lib/customer-context';
 
@@ -21,17 +22,19 @@ describe('parseCustomerContext', () => {
     const context = parseCustomerContext({
       customer: { customerId: 'CUS000123', firstName: 'Santiago', lastName: null },
       interactions: [
-        { date: '2026-09-26T11:42:00Z', interactionType: 'Inbound Call', channel: 'Phone', resolved: 'yes', escalated: true },
+        { interactionId: 'INT1', hasTranscript: true, date: '2026-09-26T11:42:00Z', interactionType: 'Inbound Call', channel: 'Phone', resolved: 'yes', escalated: true },
         null,
       ],
       transcripts: [
-        { date: '2026-09-26', customerText: 'Hola', agentText: '', language: 'es', intents: 'consulta_general', topics: 'Queja' },
+        { interactionId: 'INT1', date: '2026-09-26', customerText: 'Hola', agentText: '', language: 'es', intents: 'consulta_general', topics: 'Queja' },
       ],
       cases: [{ type: 'Claim', claimedAmount: '10', status: 'Open' }],
     });
     expect(context.customer).toEqual({ customerId: 'CUS000123', firstName: 'Santiago', lastName: null });
     expect(context.interactions).toEqual([
       {
+        interactionId: 'INT1',
+        hasTranscript: true,
         date: '2026-09-26T11:42:00Z',
         interactionType: 'Inbound Call',
         channel: 'Phone',
@@ -43,6 +46,7 @@ describe('parseCustomerContext', () => {
     ]);
     // intents and topics come as text: kept as they are.
     expect(context.transcripts[0]).toEqual({
+      interactionId: 'INT1',
       date: '2026-09-26',
       customerText: 'Hola',
       agentText: null,
@@ -107,5 +111,25 @@ describe('labels', () => {
     expect(formatContextDate('not a date')).toBe('not a date');
     expect(formatClaim(null, 'USD')).toBeNull();
     expect(formatClaim(1500, 'USD')).toContain('1500');
+  });
+});
+
+describe('transcriptFor', () => {
+  const context = parseCustomerContext({
+    interactions: [
+      { interactionId: 'INT1', hasTranscript: true },
+      { interactionId: 'INT2', hasTranscript: false },
+      { interactionId: 'INT3', hasTranscript: true },
+    ],
+    transcripts: [{ interactionId: 'INT1', customerText: 'Hola' }],
+  });
+
+  it('finds the transcript of an interaction by its id', () => {
+    expect(transcriptFor(context, context.interactions[0])?.customerText).toBe('Hola');
+  });
+
+  it('is null without a transcript, or when the bank did not send it', () => {
+    expect(transcriptFor(context, context.interactions[1])).toBeNull();
+    expect(transcriptFor(context, context.interactions[2])).toBeNull();
   });
 });

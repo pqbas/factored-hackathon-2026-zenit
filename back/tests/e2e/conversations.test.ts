@@ -390,11 +390,11 @@ test.describe('Advisor console', () => {
             json: {
               customer: { customerId: 'CUS000123', firstName: 'Daniela', lastName: 'Sosa' },
               interactions: [
-                { date: '2026-09-26T11:42:00.000Z', interactionType: 'Inbound Call', channel: 'Phone', reason: 'Cargo duplicado', resolved: false, escalated: true, sentiment: 'Negative' },
-                { date: '2026-09-20T18:05:00.000Z', interactionType: 'Outbound Call', channel: 'Phone', reason: null, resolved: true, escalated: null, sentiment: null },
+                { interactionId: 'INT1', hasTranscript: true, date: '2026-09-26T11:42:00.000Z', interactionType: 'Inbound Call', channel: 'Phone', reason: 'Cargo duplicado', resolved: false, escalated: true, sentiment: 'Negative' },
+                { interactionId: 'INT2', hasTranscript: false, date: '2026-09-20T18:05:00.000Z', interactionType: 'Outbound Call', channel: 'Phone', reason: null, resolved: true, escalated: null, sentiment: null },
               ],
               transcripts: [
-                { date: '2026-09-26', customerText: 'Me cobraron dos veces, tarjeta [NÚMERO OCULTO].', agentText: 'Le abro un reclamo.', language: 'es', intents: 'consulta_general', topics: 'Queja' },
+                { interactionId: 'INT1', date: '2026-09-26', customerText: 'Me cobraron dos veces, tarjeta [NÚMERO OCULTO].', agentText: 'Le abro un reclamo.', language: 'es', intents: 'consulta_general', topics: 'Queja' },
               ],
               cases: [],
             },
@@ -427,6 +427,22 @@ test.describe('Advisor console', () => {
     // Fields the bank didn't record aren't shown.
     await expect(outbound).not.toContainText('Motivo');
     await expect(outbound).not.toContainText('Escalada');
+
+    // The call's transcript opens inside its interaction; no button without one.
+    await expect(outbound.getByTestId('interaction-transcript-toggle')).toHaveCount(0);
+    await inbound.getByTestId('interaction-transcript-toggle').click();
+    const inline = inbound.getByTestId('interaction-transcript');
+    for (const text of [
+      'IdiomaEspañol',
+      'Intencionesconsulta_general',
+      'TemasQueja',
+      'Cliente: Me cobraron dos veces, tarjeta [NÚMERO OCULTO].',
+      'Agente: Le abro un reclamo.',
+    ]) {
+      await expect(inline).toContainText(text);
+    }
+    await inbound.getByTestId('interaction-transcript-toggle').click();
+    await expect(inline).toHaveCount(0);
 
     await page.getByTestId('context-tab-cases').click();
     await expect(panel).toContainText('Sin casos ni reclamos registrados.');
