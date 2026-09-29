@@ -267,7 +267,9 @@ export function mockResponsesApiMultiTextStream(
   const items = texts.map((text) => ({
     id: generateUUID(),
     text,
-    content: [{ annotations: [], text, type: 'output_text', logprobs: null }],
+    content: [
+      { annotations: [], text, type: 'output_text', logprobs: null },
+    ],
   }));
   const message = (item: (typeof items)[number], status: string) => ({
     id: item.id,
@@ -306,12 +308,7 @@ export function mockResponsesApiMultiTextStream(
         content_index: 0,
         item_id: item.id,
         output_index: index,
-        part: {
-          annotations: [],
-          text: '',
-          type: 'output_text',
-          logprobs: null,
-        },
+        part: { annotations: [], text: '', type: 'output_text', logprobs: null },
         sequence_number: seq++,
         type: 'response.content_part.added',
       }),
@@ -341,18 +338,6 @@ export function mockResponsesApiMultiTextStream(
       }),
     );
   });
-  // A turn without text items (the agent paused) carries its custom_outputs
-  // on a response.in_progress event, as the real agent does.
-  if (customOutputs && items.length === 0) {
-    events.push(
-      mockSSE({
-        response: response({ output: [] }),
-        sequence_number: seq++,
-        type: 'response.in_progress',
-        custom_outputs: customOutputs,
-      }),
-    );
-  }
   events.push(
     mockSSE({
       response: response({
@@ -361,6 +346,9 @@ export function mockResponsesApiMultiTextStream(
       }),
       sequence_number: seq++,
       type: 'response.completed',
+      ...(customOutputs && items.length === 0
+        ? { custom_outputs: customOutputs }
+        : {}),
     }),
   );
   return events;
