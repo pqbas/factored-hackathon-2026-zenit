@@ -76,7 +76,11 @@ And it changes in these ways:
 - El vencimiento abre un handoff `agent_unavailable` en vez de dejar el chat en
   `human_queue` sin handoff, porque así queda pausado por la misma regla, se
   cierra al resolver o devolver, y aparece en `byHandoffReason` como clave
-  extra.
+  extra. En la Bandeja cae en "Otros" y no tiene filtro propio (revisión de
+  w1:p4).
+- Devolver a David cierra el handoff (`resolvedAt`, ya lo hace `releaseChat`).
+  Si no, el chat quedaría pausado para siempre por la nueva regla; un test lo
+  cubre (caso Marco).
 - Los chats de Santiago y Javier en `human_queue` sin fila en Handoff son dato
   viejo, no un camino abierto. Derivaron entre las 04:40 y las 05:04 UTC del
   29/09, cuando `:3200` todavía corría #68, sin la tabla Handoff (migración

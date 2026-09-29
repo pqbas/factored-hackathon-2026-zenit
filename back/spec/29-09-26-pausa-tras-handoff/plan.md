@@ -114,5 +114,8 @@
     - `custom_inputs.handled_by` viaja en cada llamada (requests capturadas).
     - Texto después de la derivación: el mensaje guardado termina en "Te
       comunico con un asesor…".
+    - Devuelto a David (caso Marco): derivación, take, release
+      `returned_to_agent` → el handoff queda con `resolvedAt` y el siguiente
+      mensaje del cliente sí llama al agente y guarda la respuesta de David.
     - Vencimiento: el turno vencido deja un handoff abierto `agent_unavailable`
       (ampliar `agent-queue.test.ts`).

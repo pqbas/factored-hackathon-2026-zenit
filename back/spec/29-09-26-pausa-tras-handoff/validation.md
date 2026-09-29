@@ -38,6 +38,8 @@ La fase está lista para mergear cuando se cumple todo lo que sigue.
 - [ ] Cada llamada al agente lleva `custom_inputs.handled_by`
 - [ ] El mensaje guardado de un turno de derivación termina en la frase de
       derivación aunque el agente mande texto después
+- [ ] Devuelto a David (release `returned_to_agent`): el handoff queda cerrado
+      y David vuelve a responder el siguiente mensaje
 - [ ] Un turno vencido deja un handoff abierto `agent_unavailable`, además del
       aviso y de `human_queue`
 
