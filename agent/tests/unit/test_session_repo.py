@@ -70,3 +70,22 @@ def test_demo_session_exposes_the_customers_country():
     session = session_repo.resolve_session({"session_token": "demo-mx-1"})
     assert session.country == "México"
     assert session.as_dict()["country"] == "México"
+
+
+def test_a_session_entry_can_list_the_tools_that_fail(monkeypatch):
+    monkeypatch.setenv(
+        "DEMO_SESSIONS_JSON",
+        '{"tok-1": {"customer_id": "C", "expires_at": "2099-01-01T00:00:00Z", "fail_tools": ["get_products"]},'
+        ' "tok-2": {"customer_id": "C", "expires_at": "2099-01-01T00:00:00Z"}}',
+    )
+    importlib.reload(config)
+    importlib.reload(session_repo)
+    try:
+        failing = session_repo.resolve_session({"session_token": "tok-1"})
+        assert failing.fail_tools == ("get_products",)
+        assert failing.as_dict()["fail_tools"] == ["get_products"]
+        assert session_repo.resolve_session({"session_token": "tok-2"}).fail_tools == ()
+    finally:
+        monkeypatch.undo()
+        importlib.reload(config)
+        importlib.reload(session_repo)

@@ -449,6 +449,24 @@ def test_failing_tool_gives_the_llm_a_toolmessage_with_the_error():
     assert "warehouse timeout" in tool_messages[-1].content
 
 
+def test_a_tool_in_the_sessions_fail_tools_is_not_called_and_the_llm_gets_the_error():
+    get_products = FakeMCPTool("get_products", GET_PRODUCTS_SCHEMA, result=[{"product_last4": "1234"}])
+    list_transactions = FakeMCPTool("list_transactions", LIST_TRANSACTIONS_SCHEMA, result=[])
+    llm = ScriptedToolLLM([
+        AIMessage(content="", tool_calls=[{"name": "get_products", "args": {}, "id": "call_1"}]),
+        AIMessage(content="No puedo consultar tu saldo ahora mismo"),
+    ])
+    jev = FakeJev(_classification(intent="GENERAL_INQUIRY"))
+    graph = _build_graph(llm, jev, tools_for=_fake_tools_for(get_products, list_transactions))
+
+    result = _run(graph, "¿cuál es mi saldo?", session={**VALID_SESSION, "fail_tools": ["get_products"]})
+
+    assert get_products.calls == []
+    assert result["messages"][-1].content == "No puedo consultar tu saldo ahora mismo"
+    tool_messages = [m for m in llm.received if isinstance(m, ToolMessage)]
+    assert "SQL warehouse didn't answer" in tool_messages[-1].content
+
+
 def test_greeting_after_general_inquiry_in_the_same_thread_has_no_tools_and_clears_use_case():
     get_products = FakeMCPTool("get_products", GET_PRODUCTS_SCHEMA, result=[])
     list_transactions = FakeMCPTool("list_transactions", LIST_TRANSACTIONS_SCHEMA, result=[])

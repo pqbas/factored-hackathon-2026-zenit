@@ -1,0 +1,80 @@
+{
+  "demo-mx-1": {
+    "customer_id": "CLI-FLEUCGTWGAHL",
+    "country": "México",
+    "expires_at": "2099-01-01T00:00:00Z"
+  },
+  "demo-co-1": {
+    "customer_id": "CLI-7MPS3ZOPSN4Q",
+    "country": "Colombia",
+    "expires_at": "2099-01-01T00:00:00Z"
+  },
+  "demo-ar-1": {
+    "customer_id": "CLI-714PN0OOE0WX",
+    "country": "Argentina",
+    "expires_at": "2099-01-01T00:00:00Z"
+  },
+  "demo-mx-2": {
+    "customer_id": "CLI-0IY07CEBUL79",
+    "country": "México",
+    "expires_at": "2099-01-01T00:00:00Z"
+  },
+  "demo-mx-3": {
+    "customer_id": "CLI-OAZTV7GG5M0D",
+    "country": "México",
+    "expires_at": "2099-01-01T00:00:00Z"
+  },
+  "demo-co-2": {
+    "customer_id": "CLI-TVX8Q10GJDTW",
+    "country": "Colombia",
+    "expires_at": "2099-01-01T00:00:00Z"
+  },
+  "demo-ar-2": {
+    "customer_id": "CLI-2MM9EXMOO8KD",
+    "country": "Argentina",
+    "expires_at": "2099-01-01T00:00:00Z"
+  },
+  "demo-mx-4": {
+    "customer_id": "CLI-01OSDSMM4FX2",
+    "country": "México",
+    "expires_at": "2099-01-01T00:00:00Z"
+  },
+  "demo-co-3": {
+    "customer_id": "CLI-JLLEM8RQT11E",
+    "country": "Colombia",
+    "expires_at": "2099-01-01T00:00:00Z"
+  },
+  "demo-ar-3": {
+    "customer_id": "CLI-MO9NTQLU8K63",
+    "country": "Argentina",
+    "expires_at": "2099-01-01T00:00:00Z"
+  },
+  "demo-ar-4": {
+    "customer_id": "CLI-BTHO9TGJDB68",
+    "country": "Argentina",
+    "expires_at": "2099-01-01T00:00:00Z"
+  },
+  "demo-mx-5": {
+    "customer_id": "CLI-MA350GCK64W1",
+    "country": "México",
+    "expires_at": "2099-01-01T00:00:00Z"
+  },
+  "demo-co-4": {
+    "customer_id": "CLI-2UJ5P5LESPCJ",
+    "country": "Colombia",
+    "expires_at": "2099-01-01T00:00:00Z"
+  },
+  "demo-expired": {
+    "customer_id": "CLI-FLEUCGTWGAHL",
+    "country": "México",
+    "expires_at": "2020-01-01T00:00:00Z"
+  },
+  "demo-tool-down": {
+    "customer_id": "CLI-FLEUCGTWGAHL",
+    "country": "México",
+    "expires_at": "2099-01-01T00:00:00Z",
+    "fail_tools": [
+      "get_products"
+    ]
+  }
+}

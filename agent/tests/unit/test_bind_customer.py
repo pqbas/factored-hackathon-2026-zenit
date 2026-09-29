@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import asyncio
 
+import pytest
+
 from langchain_core.tools import StructuredTool
 
 from src.tools.bind_customer import bind_customer
@@ -42,3 +44,11 @@ def test_bind_customer_sends_the_sessions_customer_id_even_when_the_call_brings_
     bound = bind_customer(_fake_tool(calls), "CLI-TEST")
     asyncio.run(bound.ainvoke({"product_last4": "1234", "customer_id": "CLI-OTHER"}))
     assert calls == [{"product_last4": "1234", "customer_id": "CLI-TEST"}]
+
+
+def test_bind_customer_with_fail_raises_and_never_calls_the_tool():
+    calls: list[dict] = []
+    bound = bind_customer(_fake_tool(calls), "CLI-TEST", fail=True)
+    with pytest.raises(TimeoutError, match="SQL warehouse didn't answer"):
+        asyncio.run(bound.ainvoke({"product_last4": "1234"}))
+    assert calls == []

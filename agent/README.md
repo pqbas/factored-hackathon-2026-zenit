@@ -120,6 +120,14 @@ seguridad.
 | Latencia              | Tiempo por turno y por creación de caso.                                         |
 | Costo                 | Llamadas al LLM por conversación.                                                |
 
+## Agente local para el runner de evaluación
+
+Los tokens de los casos de evaluación están en `configs/eval_sessions.json` (solo para local; la App no lo usa). Cada turno devuelve además `usage`, `model`, `prompt_version` y `classifier` en `custom_outputs`.
+
+```bash
+DEMO_SESSIONS_JSON="$(cat configs/eval_sessions.json)" CLASSIFIER=llm uv run start-server --port 8001
+```
+
 ## Pendientes
 
 - [ ] Configurar el login real y la tabla Customer Sessions (hoy los tokens

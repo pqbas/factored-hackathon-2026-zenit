@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib
 import json
 import os
+import re
 
 import httpx
 import pytest
@@ -10,6 +11,7 @@ from fastapi.testclient import TestClient
 from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import AIMessage, AIMessageChunk, HumanMessage
+from langchain_core.runnables import RunnableLambda
 from langchain_core.outputs import ChatGeneration, ChatGenerationChunk, ChatResult
 from langchain_core.tools import StructuredTool
 
@@ -32,6 +34,14 @@ importlib.reload(_config)
 importlib.reload(_session_repo)
 
 FAKE_LLM_TEXT = "Hola, ¿en qué más te ayudo?"
+
+
+def _signals(usage=None, classifier="jev"):
+    # The fixed signals of every turn; a turn with no LLM call reports zero tokens.
+    return {
+        "usage": usage or {"input_tokens": 0, "output_tokens": 0}, "model": main.settings.llm_endpoint,
+        "prompt_version": main.prompt_version(), "classifier": classifier,
+    }
 
 
 
@@ -384,7 +394,7 @@ def test_a_greeting_returns_its_intent_and_language_in_custom_outputs(client, mo
 
     assert body["custom_outputs"] == {
         "thread_id": "e2e-signals-greeting", "use_case": None, "intent": "GREETING",
-        "language": "es", "blocked": False, "handoff": None, "paused": False,
+        "language": "es", "blocked": False, "handoff": None, "paused": False, **_signals(),
     }
 
 
@@ -416,7 +426,7 @@ def test_a_request_without_session_has_null_labels(client):
 
     assert response.json()["custom_outputs"] == {
         "thread_id": "e2e-signals-nosession", "use_case": None, "intent": None, "language": None,
-        "blocked": False, "handoff": None, "paused": False,
+        "blocked": False, "handoff": None, "paused": False, **_signals(),
     }
 
 
@@ -808,7 +818,7 @@ _AFTER_HANDOFF = [
 ]
 _PAUSED_OUTPUTS = {
     "thread_id": "e2e-paused", "use_case": None, "intent": None, "language": None,
-    "blocked": False, "handoff": None, "paused": True,
+    "blocked": False, "handoff": None, "paused": True, **_signals(),
 }
 
 
@@ -877,3 +887,79 @@ def test_the_same_history_with_handled_by_ai_agent_gets_a_normal_answer(client, 
 
     assert _output_text(body) == FAKE_LLM_TEXT
     assert body["custom_outputs"]["paused"] is False
+
+
+class UsageChatModel(BaseChatModel):
+    """A real chat model (so callbacks apply) that reports usage on every call: 10 tokens in,
+    3 out. It answers the classifier's structured output too, through a runnable that keeps
+    the config, as ChatDatabricks does."""
+
+    usage: dict | None = {"input_tokens": 10, "output_tokens": 3, "total_tokens": 13}
+
+    @property
+    def _llm_type(self) -> str:
+        return "usage-fake"
+
+    def _generate(self, messages, stop=None, run_manager=None, **kwargs):
+        message = AIMessage(content=FAKE_LLM_TEXT, usage_metadata=self.usage)
+        return ChatResult(generations=[ChatGeneration(message=message)])
+
+    def bind_tools(self, tools, **kwargs):
+        return self
+
+    def with_structured_output(self, schema, **kwargs):
+        async def answer(messages, config):
+            await self.ainvoke(messages, config)
+            return schema(guardrail="OK", guardrail_probability=0.95, language="es",
+                          intent="GENERAL_INQUIRY", intent_confidence=0.9, sentiment="neutral")
+
+        return RunnableLambda(answer)
+
+
+def _llm_classifier_turn(client, monkeypatch, model):
+    import dataclasses
+
+    monkeypatch.setattr(main, "settings", dataclasses.replace(main.settings, classifier="llm"))
+    monkeypatch.setattr(main, "get_chat_model", lambda: model)
+    return _invoke(client, "¿cuál es el saldo de mi tarjeta?", thread_id="e2e-usage").json()
+
+
+def test_usage_is_the_sum_of_the_tokens_of_every_llm_call_of_the_turn(client, monkeypatch):
+    # The classifier call (inside asyncio.wait_for) and the reply call each report 10 in, 3 out.
+    body = _llm_classifier_turn(client, monkeypatch, UsageChatModel())
+
+    assert body["custom_outputs"]["usage"] == {"input_tokens": 20, "output_tokens": 6}
+
+
+def test_every_turn_carries_the_model_the_prompt_version_and_the_classifier(client, monkeypatch):
+    body = _llm_classifier_turn(client, monkeypatch, UsageChatModel())
+
+    outputs = body["custom_outputs"]
+    assert outputs["model"] == main.settings.llm_endpoint
+    assert outputs["classifier"] == "llm"
+    assert re.fullmatch(r"[0-9a-f]{12}", outputs["prompt_version"])
+    assert _invoke(client, "hola", thread_id="e2e-usage-2").json()["custom_outputs"]["prompt_version"] == outputs["prompt_version"]
+
+
+def test_an_llm_that_reports_no_usage_gives_usage_null(client, monkeypatch):
+    body = _llm_classifier_turn(client, monkeypatch, UsageChatModel(usage=None))
+
+    assert body["custom_outputs"]["usage"] is None
+
+
+def test_a_turn_with_no_llm_call_reports_zero_tokens(client, monkeypatch):
+    monkeypatch.setattr(main, "jev_client", _greeting_jev())
+
+    body = _invoke(client, "hola", thread_id="e2e-usage-greeting").json()
+
+    assert body["custom_outputs"]["usage"] == {"input_tokens": 0, "output_tokens": 0}
+
+
+def test_a_paused_turn_and_a_gate_rejected_turn_report_zero_tokens(client, monkeypatch):
+    _must_not_be_called(monkeypatch)
+    paused = client.post("/invocations", json=_paused_request(stream=False)).json()
+    rejected = client.post("/invocations", json={"input": [{"role": "user", "content": "hola"}]}).json()
+
+    assert paused["custom_outputs"]["usage"] == {"input_tokens": 0, "output_tokens": 0}
+    assert rejected["custom_outputs"]["usage"] == {"input_tokens": 0, "output_tokens": 0}
+    assert paused["custom_outputs"]["classifier"] == "jev"

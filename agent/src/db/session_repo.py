@@ -24,11 +24,13 @@ class Session:
     customer_id: str | None = None
     country: str | None = None
     reason: str | None = None  # missing | invalid | expired
+    # Short names of the UC tools that fail in this session (the evaluation's tool-down case).
+    fail_tools: tuple[str, ...] = ()
 
     def as_dict(self) -> dict:
         return {"authenticated": self.authenticated, "customer_id": self.customer_id,
             "country": self.country,
-            "reason": self.reason}
+            "reason": self.reason, "fail_tools": list(self.fail_tools)}
 
 
 def _sessions() -> dict[str, dict]:
@@ -48,4 +50,5 @@ def resolve_session(custom_inputs: dict | None, now: datetime | None = None) -> 
     expires = datetime.fromisoformat(entry["expires_at"].replace("Z", "+00:00"))
     if expires <= now:
         return Session(False, reason="expired")
-    return Session(True, customer_id=entry["customer_id"], country=entry.get("country"))
+    return Session(True, customer_id=entry["customer_id"], country=entry.get("country"),
+        fail_tools=tuple(entry.get("fail_tools", ())))
