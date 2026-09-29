@@ -124,7 +124,8 @@
        cuál reclamo quieres saber?" para que elija. Si ya está claro cuál, no
        preguntes.
     2. Dile el estado que conoce el banco, según su status:
-       - Open o In Process: "Tu reclamo está abierto y en revisión."
+       - Open: "Tu reclamo está abierto."
+       - In Process: "Tu reclamo está en proceso de revisión."
        - Resolved o Closed: "Tu reclamo fue resuelto el <fecha de
          resolución>: <resolución>", con la compensación si la hay.
        - Rejected: "Tu reclamo fue rechazado."
