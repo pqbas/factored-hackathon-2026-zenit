@@ -10,6 +10,7 @@ from src.schemas.routing import IntentRoute
 from src.prompts.messages import HANDOFF_REPLY
 from src.schemas.classification import reply_language
 from src.tools.bind_customer import bind_customer
+from src.tools.collector import CollectorUnavailable, card_to_fetch, extract_fields, next_step
 from src.tools.handoff import HANDOFF_TOOL_NAME, handoff_tool, tool_rows, verify_case
 
 logger = logging.getLogger(__name__)
@@ -26,6 +27,9 @@ _LANGUAGE_LINE = {
     ),
 }
 
+# The cases whose fields code collects (3.C, 3.D1); 3.D2 needs the LLM to explain the status.
+_COLLECTED = ("complaint", "retention")
+
 # Bounds the tool-calling loop below so a misbehaving LLM can't call tools forever.
 _MAX_TOOL_ROUNDS = 4
 
@@ -39,6 +43,11 @@ async def respond(
 
     if use_case:
         route = next(route for route in routes if route.intent == use_case)
+        if route.handoff_reason in _COLLECTED and not state.get("confirmation"):
+            try:
+                return await _collect(state, llm, route, tools_for)
+            except CollectorUnavailable as exc:
+                logger.warning("Collector unavailable, the LLM collects the case: %s", exc)
         return await _respond_with_tools(state, llm, route, language_line, tools_for)
 
     situation = situation_for(classification, intent_threshold)
@@ -67,12 +76,7 @@ async def _respond_with_tools(
     # first system prompt, the Spanish instructions and tool results pulled replies to Spanish.
     reminder = [SystemMessage(content=language_line.strip())] if language_line else []
 
-    customer_id = state["session"]["customer_id"]
-    tools = [
-        bind_customer(tool, customer_id)
-        for schema in route.schemas
-        for tool in await tools_for(schema)
-    ]
+    tools = await _bound_tools(state, route, tools_for)
     tools_by_name = {tool.name: tool for tool in tools}
     if route.handoff_reason:
         tools.append(handoff_tool(route.handoff_reason))
@@ -123,6 +127,31 @@ async def _respond_with_tools(
     return {"messages": [_without_advisor_prefix(reply)]}
 
 
+async def _bound_tools(state: AgentState, route: IntentRoute, tools_for) -> list:
+    customer_id = state["session"]["customer_id"]
+    return [
+        bind_customer(tool, customer_id)
+        for schema in route.schemas
+        for tool in await tools_for(schema)
+    ]
+
+
+async def _collect(state: AgentState, llm, route: IntentRoute, tools_for) -> dict:
+    """Etapa 4 for 3.C and 3.D1: code decides the next question. The LLM only reads the
+    conversation for the fields already given, so a field that is there is never asked again."""
+    reason = route.handoff_reason
+    language = reply_language((state.get("classification") or {}).get("language"))
+    fields = await extract_fields(llm, reason, state["messages"])
+    tools_by_name = {tool.name: tool for tool in await _bound_tools(state, route, tools_for)}
+    rows_by_tool: dict[str, list[dict]] = {}
+    await _fetch_missing_rows(reason, {}, tools_by_name, rows_by_tool)
+    if card := card_to_fetch(reason, fields, rows_by_tool):
+        await _fetch_missing_rows(reason, {"card_last4": card}, tools_by_name, rows_by_tool)
+    kind, text = next_step(reason, fields, rows_by_tool, language)
+    logger.info("Collector %s: %s", reason, kind)
+    return {"messages": [AIMessage(content=text)]}
+
+
 def _hand_off(state: AgentState, route: IntentRoute, verified_data: dict, rows_by_tool: dict) -> dict:
     """Etapa 5: the fixed reply for the customer and custom_outputs.handoff for the back."""
     classification = state.get("classification") or {}
@@ -154,7 +183,7 @@ async def _fetch_missing_rows(reason: str, args: dict, tools_by_name: dict, rows
     card = args.get("card_last4")
     if reason == "case_status" and args.get("complaint_id"):
         needed.append(("get_cases", {}))
-    elif reason == "retention" or card:
+    elif reason in ("retention", "complaint") or card:
         needed.append(("get_products", {}))
         if card:
             needed.append(("list_transactions", {"product_last4": card}))

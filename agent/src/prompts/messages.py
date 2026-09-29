@@ -118,3 +118,102 @@ HANDOFF_REPLY: dict[str, str] = {
     "es": "Te comunico con un asesor, que ya tiene los datos de tu caso.",
     "pt": "Vou transferir você para um atendente, que já tem os dados do seu caso.",
 }
+
+# docs/flujo-atencion.md, 3.C, 3.D1 and etapa 4: the questions the collector asks, in the
+# order of the case's fields, and the summary it closes with. The last line of each summary
+# is the confirmation question the menu rule recognises (fallback._CONFIRMATIONS).
+ASK_CARD: dict[str, str] = {
+    "es": "¿De qué tarjeta es el cargo?\n\n{options}",
+    "pt": "De qual cartão é a cobrança?\n\n{options}",
+}
+
+ASK_CHARGE: dict[str, str] = {
+    "es": "¿Cuál es el cargo? Estos son los últimos movimientos de tu tarjeta terminada en {last4}:\n\n{options}",
+    "pt": "Qual é a cobrança? Estas são as últimas movimentações do seu cartão com final {last4}:\n\n{options}",
+}
+
+ASK_TYPE: dict[str, str] = {
+    "es": "¿Qué pasó? No lo reconozco, me cobraron dos veces o el monto es distinto.",
+    "pt": "O que aconteceu? Não reconheço, fui cobrado duas vezes ou o valor está diferente.",
+}
+
+ASK_DESCRIPTION: dict[str, str] = {
+    "es": "Cuéntame brevemente lo que pasó.",
+    "pt": "Me conte brevemente o que aconteceu.",
+}
+
+ASK_PRODUCT: dict[str, str] = {
+    "es": "¿Qué producto quieres cancelar?\n\n{options}",
+    "pt": "Qual produto você quer cancelar?\n\n{options}",
+}
+
+ASK_REASON: dict[str, str] = {
+    "es": "¿Por qué quieres cancelarlo?",
+    "pt": "Por que você quer cancelá-lo?",
+}
+
+# Said before asking again when what the customer gave doesn't match the bank's data.
+NOT_THE_CUSTOMERS: dict[str, dict[str, str]] = {
+    "card": {
+        "es": "No encuentro esa tarjeta entre las tuyas.",
+        "pt": "Não encontro esse cartão entre os seus.",
+    },
+    "product": {
+        "es": "No encuentro ese producto entre los tuyos.",
+        "pt": "Não encontro esse produto entre os seus.",
+    },
+    "charge": {
+        "es": "No encuentro ese cargo en los movimientos de esa tarjeta.",
+        "pt": "Não encontro essa cobrança nas movimentações desse cartão.",
+    },
+}
+
+CARD_CHOICE: dict[str, str] = {
+    "es": "terminada en {last4} ({currency})",
+    "pt": "com final {last4} ({currency})",
+}
+
+PRODUCT_CHOICE: dict[str, str] = {
+    "es": "{product_type} terminada en {last4} ({currency})",
+    "pt": "{product_type} com final {last4} ({currency})",
+}
+
+COMPLAINT_TYPE_LABEL: dict[str, dict[str, str]] = {
+    "not_recognized": {"es": "no lo reconozco", "pt": "não reconheço"},
+    "duplicate_charge": {"es": "me cobraron dos veces", "pt": "fui cobrado duas vezes"},
+    "different_amount": {"es": "el monto es distinto", "pt": "o valor está diferente"},
+}
+
+COMPLAINT_SUMMARY: dict[str, str] = {
+    "es": (
+        "Estos son los datos de tu reclamo:\n\n"
+        "- Tarjeta: terminada en {card_last4}\n"
+        "- Cargo: {charge}\n"
+        "- Qué pasó: {complaint_type}\n"
+        "- Descripción: {description}\n\n"
+        "¿Confirmas estos datos para pasar tu reclamo a un asesor?"
+    ),
+    "pt": (
+        "Estes são os dados da sua reclamação:\n\n"
+        "- Cartão: com final {card_last4}\n"
+        "- Cobrança: {charge}\n"
+        "- O que aconteceu: {complaint_type}\n"
+        "- Descrição: {description}\n\n"
+        "Você confirma estes dados para passar sua reclamação a um atendente?"
+    ),
+}
+
+RETENTION_SUMMARY: dict[str, str] = {
+    "es": (
+        "Estos son los datos de tu solicitud:\n\n"
+        "- Producto: {product}\n"
+        "- Motivo: {reason}\n\n"
+        "¿Confirmas estos datos para pasar tu solicitud a un asesor?"
+    ),
+    "pt": (
+        "Estes são os dados da sua solicitação:\n\n"
+        "- Produto: {product}\n"
+        "- Motivo: {reason}\n\n"
+        "Você confirma estes dados para passar sua solicitação a um atendente?"
+    ),
+}
