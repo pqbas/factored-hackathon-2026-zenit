@@ -400,3 +400,18 @@ Shipped en PR #54.
       movimientos de tarjeta, cuentas de ahorro, reclamo y más opciones.
 
 Shipped en PR #64.
+
+---
+
+## Phase 18: Consola agrupada por cliente (Complete)
+
+**Goal:** que cada cliente aparezca una sola vez en la consola, como en WhatsApp.
+
+- [x] Una fila por cliente con su último mensaje, hora y estado de su conversación
+      más reciente; vistas, robot y contadores se aplican a esa conversación y los
+      contadores cuentan clientes.
+- [x] Al abrir un cliente, una línea de tiempo con todas sus conversaciones en orden
+      cronológico, separadas por un divisor con fecha, caso de uso y estado.
+- [x] Las acciones aplican a la conversación más reciente; las anteriores son de solo lectura.
+
+Shipped en PR #66.

@@ -16,6 +16,8 @@ import {
   viewUrl,
   isHeldByOther,
   isDavidReplying,
+  customerConversationsUrl,
+  customerKeyOf,
   customerLabel,
   secondaryEmail,
   type Bubble,
@@ -95,9 +97,11 @@ describe('canReply and isHeldByOther', () => {
 describe('viewUrl', () => {
   it('maps each view to the contract params', () => {
     const params = (url: string) => Object.fromEntries(new URL(url, 'http://x').searchParams);
-    expect(params(viewUrl({ kind: 'inbox' }))).toEqual({ limit: '20', status: 'open' });
+    // One row per customer in every view.
+    expect(params(viewUrl({ kind: 'inbox' }))).toEqual({ limit: '20', groupBy: 'customer', status: 'open' });
     expect(params(viewUrl({ kind: 'useCase', useCase: 'COMPLAINT' }))).toEqual({
       limit: '20',
+      groupBy: 'customer',
       status: 'open',
       useCase: 'COMPLAINT',
     });
@@ -264,8 +268,8 @@ describe('view counts', () => {
   });
 
   it('asks for the counts of one user when filtered', () => {
-    expect(countsUrl()).toBe('/api/advisor/conversations/counts');
-    expect(countsUrl('u7')).toBe('/api/advisor/conversations/counts?userId=u7');
+    expect(countsUrl()).toBe('/api/advisor/conversations/counts?groupBy=customer');
+    expect(countsUrl('u7')).toBe('/api/advisor/conversations/counts?groupBy=customer&userId=u7');
   });
 });
 
@@ -316,5 +320,24 @@ describe('customerLabel and secondaryEmail', () => {
       expect(secondaryEmail(c)).toBeNull();
     }
     expect(customerLabel(chat({ userEmail: null }))).toBe('Cliente sin email');
+  });
+});
+
+describe('customers', () => {
+  it('keys a row by its customer, else by the chat', () => {
+    expect(customerKeyOf({ ...chat(), customerKey: 'CUS1' })).toBe('CUS1');
+    expect(customerKeyOf(chat({ id: 'c9' }))).toBe('c9');
+  });
+
+  it('encodes the customer key in the path', () => {
+    expect(customerConversationsUrl('ana@banco.test')).toBe(
+      '/api/advisor/customers/ana%40banco.test/conversations',
+    );
+  });
+
+  it('orders rows by the latest message time when the back sends it', () => {
+    expect(lastActivityAt({ ...chat(), updatedAt: '2026-09-28T12:00:00.000Z' })).toBe(
+      '2026-09-28T12:00:00.000Z',
+    );
   });
 });

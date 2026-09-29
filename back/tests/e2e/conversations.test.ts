@@ -19,6 +19,7 @@ type Chat = {
   closedAt: string | null;
   useCase: string | null;
   customerName?: string | null;
+  customerKey?: string;
   lastMessage?: { text: string; senderType: string; createdAt: string } | null;
 };
 type Message = {
@@ -51,6 +52,12 @@ async function mockAdvisorApi(page: Page, me: string, role: Role = 'advisor') {
     ...extra,
   });
   const chats: Chat[] = [
+    // Daniela wrote before: an earlier, resolved conversation.
+    chat('c-old', 'daniela@banco.test', {
+      customerName: 'Daniela Sosa Ruiz',
+      useCase: 'CASE_STATUS',
+      closedAt: now(),
+    }),
     chat('c-assistant', 'javier@banco.test', {}),
     chat('c-waiting', 'daniela@banco.test', {
       customerName: 'Daniela Sosa Ruiz',
@@ -80,6 +87,7 @@ async function mockAdvisorApi(page: Page, me: string, role: Role = 'advisor') {
     return message;
   };
   for (const c of chats) say(c.id, 'customer', `Hola, soy ${c.userEmail}`);
+  say('c-old', 'ai_agent', 'Tu caso 48213 sigue en revisión.');
   say('c-waiting', 'system', 'Te atiende un asesor.');
   say('c-waiting', 'customer', 'Mira ![](https://tracker.test/px.png) y [aquí](https://phishing.test/login)');
   say('c-assistant', 'ai_agent', 'Tus tarjetas activas:\n\n- Terminada en **1070**\n- Terminada en 6262');
@@ -92,6 +100,14 @@ async function mockAdvisorApi(page: Page, me: string, role: Role = 'advisor') {
         })
       : route.fulfill({ status: 403, json: { code: 'forbidden:chat' } }),
   );
+  // All of a customer's conversations, oldest first.
+  await page.route('**/api/advisor/customers/*/conversations', (route) => {
+    const key = decodeURIComponent(new URL(route.request().url()).pathname.split('/')[4]);
+    const list = chats.filter((c) => (c.userEmail ?? c.userId) === key);
+    return list.length
+      ? route.fulfill({ json: { chats: list } })
+      : route.fulfill({ status: 404, json: { code: 'not_found:chat' } });
+  });
   await page.route('**/api/advisor/conversations**', async (route) => {
     const request = route.request();
     const url = new URL(request.url());
@@ -100,8 +116,16 @@ async function mockAdvisorApi(page: Page, me: string, role: Role = 'advisor') {
     const target = chats.find((c) => c.id === id);
     const body = request.postDataJSON() ?? {};
 
+    // One row per customer (keyed by email here): their latest conversation.
+    const keyOf = (c: Chat) => c.userEmail ?? c.userId;
+    const latest = [...new Map(chats.map((c) => [keyOf(c), c])).values()].map((c) => ({
+      ...c,
+      customerKey: keyOf(c),
+      conversationCount: chats.filter((x) => keyOf(x) === keyOf(c)).length,
+    }));
+
     if (id === 'counts') {
-      const open = chats.filter((c) => !c.closedAt);
+      const open = latest.filter((c) => !c.closedAt);
       // The inbox counts only the cases that need a person.
       const human = open.filter((c) => c.handledBy !== 'ai_agent');
       const byUseCase: Record<string, number> = {};
@@ -114,13 +138,14 @@ async function mockAdvisorApi(page: Page, me: string, role: Role = 'advisor') {
           withoutUseCase: human.filter((c) => !c.useCase).length,
           unattended: open.filter((c) => c.handledBy === 'human_queue').length,
           mine: open.filter((c) => c.assignedTo === me).length,
-          resolved: chats.length - open.length,
+          resolved: latest.length - open.length,
         },
       });
     }
     if (!id) {
       const q = url.searchParams;
-      const list = chats.filter(
+      expect(q.get('groupBy')).toBe('customer');
+      const list = latest.filter(
         (c) =>
           (!q.get('status') || (q.get('status') === 'closed' ? !!c.closedAt : !c.closedAt)) &&
           (!q.get('userId') || c.userId === q.get('userId')) &&
@@ -488,6 +513,36 @@ test.describe('Advisor console', () => {
     await row.click();
     await expect(page.getByTestId('customer-name')).toHaveText('Daniela Sosa Ruiz');
     await expect(page.getByTestId('customer-email')).toHaveText('daniela@banco.test');
+  });
+
+  test('a customer is one row; opening it shows all their conversations in order', async ({ page }) => {
+    const requested = await openConsole(page);
+    await page.getByTestId('view-resolved').click();
+    // Daniela's old conversation is resolved, but her latest one isn't: she's not here.
+    await expect(page.getByTestId('conversation-row-c-old')).toHaveCount(0);
+    await page.getByTestId('view-inbox').click();
+    await expect(page.getByTestId('conversation-row-c-waiting')).toHaveCount(1);
+    expect(requested.some((u) => u.includes('groupBy=customer'))).toBe(true);
+
+    await page.getByTestId('conversation-row-c-waiting').click();
+    const dividers = page.getByTestId('conversation-divider');
+    await expect(dividers).toHaveCount(2);
+    await expect(dividers.first()).toHaveAttribute('data-chat-id', 'c-old');
+    await expect(dividers.first()).toContainText('Estado de un caso');
+    await expect(dividers.first().getByTestId('divider-status')).toHaveText('Resuelta');
+    await expect(dividers.last()).toHaveAttribute('data-chat-id', 'c-waiting');
+    await expect(dividers.last().getByTestId('divider-status')).toHaveText('En espera');
+    // The earlier conversation reads first, then the latest.
+    const segments = page.getByTestId('timeline-segment');
+    await expect(segments.first()).toContainText('Tu caso 48213 sigue en revisión.');
+    await expect(segments.last()).toContainText('Mira ![](https://tracker.test/px.png)');
+
+    // Actions apply to the latest conversation.
+    await page.getByTestId('take-button').click();
+    await expect(page.getByTestId('customer-meta')).toContainText('Con asesor · la atiendes tú');
+    expect(requested.some((u) => u.includes('/c-waiting/take'))).toBe(true);
+    expect(requested.some((u) => u.includes('/c-old/take'))).toBe(false);
+    await expect(dividers.last().getByTestId('divider-status')).toHaveText('Con asesor');
   });
 
   test('/admin now leads to Chats', async ({ page }) => {

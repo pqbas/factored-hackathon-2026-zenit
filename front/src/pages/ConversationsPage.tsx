@@ -13,7 +13,11 @@ import {
   type AdvisorChat,
   type AdvisorChatPage,
   type AdvisorMessage,
+  customerConversationsUrl,
+  customerKeyOf,
+  fetchCustomerConversations,
   fetchInbox,
+  type InboxItem,
   fetchMessages,
   type InboxView,
   countsUrl,
@@ -104,7 +108,8 @@ export default function ConversationsPage() {
     revalidateOnFocus: false,
   });
   const [query, setQuery] = useState('');
-  const [selected, setSelected] = useState<AdvisorChat | null>(null);
+  // The open row: a customer, shown with every conversation they had.
+  const [selected, setSelected] = useState<InboxItem | null>(null);
   const [busy, setBusy] = useState(false);
   // Same persisted open/closed state as the Agente section's sidebar.
   const isCollapsed = localStorage.getItem('sidebar:state') === 'false';
@@ -131,7 +136,7 @@ export default function ConversationsPage() {
       if (previous && !previous.hasMore) return null;
       return viewUrl(view, {
         userId,
-        startingAfter: index > 0 ? previous?.chats.at(-1)?.id : undefined,
+        startingAfter: index > 0 && previous?.chats.length ? customerKeyOf(previous.chats.at(-1)!) : undefined,
       });
     },
     fetchInbox,
@@ -170,20 +175,58 @@ export default function ConversationsPage() {
               className="text-primary hover:underline"
             >
               {ASSISTANT_NAME} está atendiendo {davidCount}{' '}
-              {davidCount === 1 ? 'conversación' : 'conversaciones'}
+              {davidCount === 1 ? 'cliente' : 'clientes'}
             </button>
           </>
         )}
       </span>
     ) : undefined;
 
-  // Keep the open conversation in sync with each inbox refresh; it stays open
+  // Keep the open customer in sync with each inbox refresh; it stays open
   // even when it no longer matches the current filter.
-  const fresh = chats.find((chat) => chat.id === selected?.id);
-  const current = fresh ?? selected;
+  const selectedKey = selected ? customerKeyOf(selected) : null;
+  const row = chats.find((chat) => customerKeyOf(chat) === selectedKey) ?? selected;
+
+  // All the customer's conversations, oldest first. The latest is the active
+  // one: actions and the composer apply to it; earlier ones are read-only.
+  const { data: conversations, mutate: mutateConversations } = useSWR(
+    row ? customerConversationsUrl(customerKeyOf(row)) : null,
+    fetchCustomerConversations,
+    { refreshInterval: POLL_MS, revalidateOnFocus: false },
+  );
+  const timeline: AdvisorChat[] = conversations?.length ? conversations : row ? [row] : [];
+  const current = timeline.at(-1) ?? null;
 
   const { messages, append, refresh } = useConversationMessages(current?.id ?? null);
   const bubbles = useMemo(() => messages.map((m) => toBubble(m, me)), [messages, me]);
+
+  // Earlier conversations don't change: load them once.
+  const earlierIds = timeline.slice(0, -1).map((chat) => chat.id);
+  const { data: earlierMessages } = useSWR(
+    earlierIds.length ? ['advisor-earlier', ...earlierIds] : null,
+    ([, ...ids]: string[]) =>
+      Promise.all(ids.map((id) => fetchMessages(id).then((r) => r.messages))),
+    { revalidateOnFocus: false, revalidateIfStale: false },
+  );
+  const segments = useMemo(
+    () =>
+      timeline.map((chat, i) => ({
+        chat,
+        bubbles:
+          i === timeline.length - 1
+            ? bubbles
+            : (earlierMessages?.[i] ?? []).map((m) => toBubble(m, me)),
+      })),
+    [timeline, bubbles, earlierMessages, me],
+  );
+
+  // An action's answer updates the active conversation right away.
+  function applyChat(chat: AdvisorChat) {
+    mutateConversations(
+      (list) => (list?.length ? list.map((c) => (c.id === chat.id ? chat : c)) : [chat]),
+      { revalidate: true },
+    );
+  }
 
   async function act(run: () => Promise<void>) {
     setBusy(true);
@@ -203,7 +246,7 @@ export default function ConversationsPage() {
     act(async () => {
       const result = await takeConversation(current.id);
       if (result.ok) {
-        setSelected(result.chat);
+        applyChat(result.chat);
         refresh();
       } else {
         toast({
@@ -219,7 +262,7 @@ export default function ConversationsPage() {
     act(async () => {
       const result = await releaseConversation(current.id, outcome);
       if (result.ok) {
-        setSelected(result.chat);
+        applyChat(result.chat);
         refresh();
       } else {
         toast({ type: 'error', description: 'Esta conversación ya no es tuya.' });
@@ -262,7 +305,7 @@ export default function ConversationsPage() {
               'h-full min-w-0',
               // With the context panel open the list narrows, and on screens
               // under 1600px it steps aside so the chat keeps room.
-              current
+              row
                 ? cn(
                     'shrink-0 border-border border-r',
                     contextOpen ? 'hidden w-[380px] min-[1600px]:block' : 'w-[520px]',
@@ -275,11 +318,11 @@ export default function ConversationsPage() {
               chats={chats}
               grouped={view.kind === 'inbox'}
               me={me}
-              selectedId={current?.id ?? null}
-              onOpen={(id) => setSelected(chats.find((chat) => chat.id === id) ?? null)}
+              selectedKey={selectedKey}
+              onOpen={(key) => setSelected(chats.find((chat) => customerKeyOf(chat) === key) ?? null)}
               query={query}
               onQueryChange={setQuery}
-              compact={!!current}
+              compact={!!row}
               hasMore={hasMore}
               empty={pages ? inboxEmpty : undefined}
               onLoadMore={() => setSize(size + 1)}
@@ -289,7 +332,7 @@ export default function ConversationsPage() {
             <div className="h-full min-w-0 flex-1">
               <ConversationView
                 chat={current}
-                bubbles={bubbles}
+                segments={segments}
                 me={me}
                 busy={busy}
                 contextOpen={contextOpen}
@@ -301,7 +344,9 @@ export default function ConversationsPage() {
               />
             </div>
           )}
-          {current && contextOpen && <CustomerContextPanel key={current.id} chatId={current.id} />}
+          {current && contextOpen && (
+            <CustomerContextPanel key={selectedKey ?? current.id} chatId={current.id} />
+          )}
         </div>
       </SidebarInset>
     </SidebarProvider>

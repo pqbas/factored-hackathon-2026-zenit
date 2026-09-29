@@ -39,9 +39,37 @@ export type AdvisorChat = OverJson<
   } | null;
 };
 
+// A row of the inbox: one per customer, carrying their most recent
+// conversation (?groupBy=customer).
+export type InboxItem = AdvisorChat & {
+  // customerId, else userEmail, else userId: plain text, stable per customer.
+  customerKey?: string;
+  conversationCount?: number;
+  // When that conversation last had a message.
+  updatedAt?: string;
+};
+
 export interface AdvisorChatPage {
-  chats: AdvisorChat[];
+  chats: InboxItem[];
   hasMore: boolean;
+}
+
+// Which customer a row stands for; the chat id for rows without a key.
+export function customerKeyOf(item: InboxItem): string {
+  return item.customerKey ?? item.id;
+}
+
+export function customerConversationsUrl(customerKey: string): string {
+  return `/api/advisor/customers/${encodeURIComponent(customerKey)}/conversations`;
+}
+
+// Every conversation of a customer, oldest first.
+export async function fetchCustomerConversations(url: string): Promise<AdvisorChat[]> {
+  const res = await fetch(url, { credentials: 'include' });
+  if (res.status === 204 || res.status === 404) return [];
+  if (!res.ok) throw new AdvisorRequestError(res.status);
+  const body = (await res.json()) as { chats?: AdvisorChat[] };
+  return body.chats ?? [];
 }
 
 export type SenderType = NonNullable<DBMessage['senderType']>;
@@ -79,7 +107,8 @@ export function viewUrl(
   view: InboxView,
   { startingAfter, userId }: { startingAfter?: string; userId?: string | null } = {},
 ): string {
-  const params = new URLSearchParams({ limit: String(INBOX_PAGE_SIZE) });
+  // One row per customer: views filter on each customer's latest conversation.
+  const params = new URLSearchParams({ limit: String(INBOX_PAGE_SIZE), groupBy: 'customer' });
   params.set('status', view.kind === 'resolved' ? 'closed' : 'open');
   if (view.kind === 'useCase') params.set('useCase', view.useCase);
   if (view.kind === 'waiting') params.set('handledBy', 'human_queue');
@@ -221,10 +250,10 @@ export function useCaseTag(chat: AdvisorChat): string | null {
 
 // Inbox sections: known use cases in USE_CASES order, then unknown ones, then
 // "Otras". Chats keep their order (newest first) inside each section.
-export function groupByUseCase(
-  chats: AdvisorChat[],
-): { id: string; label: string; chats: AdvisorChat[] }[] {
-  const groups = new Map<string, AdvisorChat[]>();
+export function groupByUseCase<T extends AdvisorChat>(
+  chats: T[],
+): { id: string; label: string; chats: T[] }[] {
+  const groups = new Map<string, T[]>();
   for (const chat of chats) {
     const id = useCaseOf(chat);
     groups.set(id, [...(groups.get(id) ?? []), chat]);
@@ -371,8 +400,8 @@ export function rowText(chat: AdvisorChat): string {
 }
 
 // When the row last moved: the customer's last message, else the chat start.
-export function lastActivityAt(chat: AdvisorChat): string {
-  return chat.lastMessage?.createdAt ?? chat.createdAt;
+export function lastActivityAt(chat: InboxItem): string {
+  return chat.updatedAt ?? chat.lastMessage?.createdAt ?? chat.createdAt;
 }
 
 // How many conversations each view has, for the counters in the views sidebar.
@@ -385,8 +414,9 @@ export interface ViewCounts {
   useCases: Record<string, number>;
 }
 
+// Counters count customers, like the rows.
 export function countsUrl(userId?: string | null): string {
-  const params = new URLSearchParams();
+  const params = new URLSearchParams({ groupBy: 'customer' });
   if (userId) params.set('userId', userId);
   const query = params.toString();
   return `${BASE}/counts${query ? `?${query}` : ''}`;

@@ -7,8 +7,10 @@ import { SidebarToggle } from '@/components/sidebar-toggle';
 import {
   type AdvisorChat,
   attentionOf,
+  customerKeyOf,
   customerLabel,
   groupByUseCase,
+  type InboxItem,
   lastActivityAt,
   rowText,
 } from '@/lib/advisor';
@@ -22,7 +24,7 @@ function Row({
   compact,
   onOpen,
 }: {
-  chat: AdvisorChat;
+  chat: InboxItem;
   me: string | undefined;
   selected: boolean;
   compact: boolean;
@@ -115,7 +117,7 @@ export function InboxList({
   chats,
   grouped,
   me,
-  selectedId,
+  selectedKey,
   onOpen,
   query,
   onQueryChange,
@@ -125,11 +127,12 @@ export function InboxList({
   empty,
 }: {
   title: string;
-  chats: AdvisorChat[];
+  // One per customer, with their latest conversation.
+  chats: InboxItem[];
   grouped: boolean;
   me: string | undefined;
-  selectedId: string | null;
-  onOpen: (chatId: string) => void;
+  selectedKey: string | null;
+  onOpen: (customerKey: string) => void;
   query: string;
   onQueryChange: (query: string) => void;
   compact: boolean;
@@ -141,14 +144,14 @@ export function InboxList({
   const groups = grouped
     ? groupByUseCase(chats)
     : [{ id: 'all', label: '', chats }];
-  const row = (chat: AdvisorChat) => (
+  const row = (chat: InboxItem) => (
     <Row
-      key={chat.id}
+      key={customerKeyOf(chat)}
       chat={chat}
       me={me}
-      selected={chat.id === selectedId}
+      selected={customerKeyOf(chat) === selectedKey}
       compact={compact}
-      onOpen={() => onOpen(chat.id)}
+      onOpen={() => onOpen(customerKeyOf(chat))}
     />
   );
 
@@ -160,7 +163,7 @@ export function InboxList({
           {title}
         </h1>
         <span className="whitespace-nowrap text-muted-foreground text-sm">
-          {chats.length} {chats.length === 1 ? 'conversación' : 'conversaciones'}
+          {chats.length} {chats.length === 1 ? 'cliente' : 'clientes'}
         </span>
         <div className={cn('relative ml-auto', compact ? 'w-32' : 'w-60')}>
           <Search className="absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
