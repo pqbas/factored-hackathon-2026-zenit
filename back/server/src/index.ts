@@ -23,6 +23,7 @@ import { productsRouter } from './routes/products';
 import { ChatSDKError } from '@chat-template/core/errors';
 import { isDatabaseAvailable } from '@chat-template/db';
 import { backfillCustomerNames } from './customer-name';
+import { startAgentQueueWorker } from './agent-queue';
 
 // ESM-compatible __dirname
 const __filename = fileURLToPath(import.meta.url);
@@ -176,7 +177,10 @@ async function startServer() {
     console.log(`Environment: ${isDevelopment ? 'development' : 'production'}`);
   });
 
-  if (isDatabaseAvailable()) void backfillCustomerNames();
+  if (isDatabaseAvailable()) {
+    void backfillCustomerNames();
+    startAgentQueueWorker();
+  }
 }
 
 startServer();
