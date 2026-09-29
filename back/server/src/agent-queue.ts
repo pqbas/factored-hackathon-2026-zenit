@@ -12,11 +12,7 @@ import {
   type AgentTurn,
 } from '@chat-template/db';
 import { convertToUIMessages, generateUUID } from '@chat-template/core';
-import {
-  persistAgentReply,
-  streamAgentTurn,
-  streamCache,
-} from './agent-reply';
+import { persistAgentReply, streamAgentTurn, streamCache } from './agent-reply';
 import { isPaused } from './agent-turn';
 
 // Customer turns the agent couldn't take (its App was redeploying) wait in
@@ -134,6 +130,8 @@ export async function processAgentTurn(turn: AgentTurn) {
         role: 'assistant',
         parts: [{ type: 'text', text }],
       },
+      startedAt: turn.createdAt,
+      source: 'queue',
     });
     await finishAgentTurn({
       id: turn.id,

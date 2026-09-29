@@ -23,7 +23,9 @@ import {
   resolutionEvent,
   agentTurn,
   handoff,
+  turnMetric,
   type AgentTurn,
+  type TurnMetric,
   type Handoff,
   type DBMessage,
   type Chat,
@@ -881,7 +883,9 @@ export async function saveMessages({
 
 export async function getMessagesByChatId({ id }: { id: string }) {
   if (!isDatabaseAvailable()) {
-    console.log('[getMessagesByChatId] Database not available, returning empty');
+    console.log(
+      '[getMessagesByChatId] Database not available, returning empty',
+    );
     return [];
   }
 
@@ -985,7 +989,9 @@ export async function deleteMessagesByChatIdAfterTimestamp({
   timestamp: Date;
 }) {
   if (!isDatabaseAvailable()) {
-    console.log('[deleteMessagesByChatIdAfterTimestamp] Database not available, skipping deletion');
+    console.log(
+      '[deleteMessagesByChatIdAfterTimestamp] Database not available, skipping deletion',
+    );
     return;
   }
 
@@ -1022,7 +1028,9 @@ export async function updateChatVisiblityById({
   visibility: 'private' | 'public';
 }) {
   if (!isDatabaseAvailable()) {
-    console.log('[updateChatVisiblityById] Database not available, skipping update');
+    console.log(
+      '[updateChatVisiblityById] Database not available, skipping update',
+    );
     return;
   }
 
@@ -1048,7 +1056,9 @@ export async function updateChatLastContextById({
   context: LanguageModelV3Usage;
 }) {
   if (!isDatabaseAvailable()) {
-    console.log('[updateChatLastContextById] Database not available, skipping update');
+    console.log(
+      '[updateChatLastContextById] Database not available, skipping update',
+    );
     return;
   }
 
@@ -1077,7 +1087,9 @@ export async function updateChatAgentState({
   handledBy?: Chat['handledBy'];
 }) {
   if (!isDatabaseAvailable()) {
-    console.log('[updateChatAgentState] Database not available, skipping update');
+    console.log(
+      '[updateChatAgentState] Database not available, skipping update',
+    );
     return;
   }
 
@@ -1141,9 +1153,28 @@ export interface ResolutionTotals {
   assisted: number;
 }
 
+export interface LatencyMetrics {
+  p50Ms: number | null;
+  p95Ms: number | null;
+  turns: number;
+}
+
+// Token totals over the turns that reported usage. durationMs is the sum of
+// those turns' durations, for the App's share of the cost (server/src/pricing.ts).
+export interface CostAggregates {
+  turnsWithUsage: number;
+  inputTokens: number;
+  outputTokens: number;
+  durationMs: number;
+  // Distinct chats with at least one turn in the range.
+  conversations: number;
+}
+
 export interface ResolutionMetrics extends ResolutionTotals {
   byUseCase: Record<string, ResolutionTotals>;
   byDay: Array<{ day: string } & ResolutionTotals>;
+  latency: LatencyMetrics;
+  cost: CostAggregates;
 }
 
 // Chats resolved without a use case are grouped under this key.
@@ -1168,6 +1199,14 @@ export async function getResolutionMetrics({
     assisted: 0,
     byUseCase: {},
     byDay: [],
+    latency: { p50Ms: null, p95Ms: null, turns: 0 },
+    cost: {
+      turnsWithUsage: 0,
+      inputTokens: 0,
+      outputTokens: 0,
+      durationMs: 0,
+      conversations: 0,
+    },
   };
   if (!isDatabaseAvailable()) return metrics;
 
@@ -1224,6 +1263,56 @@ export async function getResolutionMetrics({
       add(byDay.get(row.day) as ResolutionTotals, row);
     }
     metrics.byDay = [...byDay.values()];
+
+    // Same range, over TurnMetric.createdAt (also UTC wall-clock time).
+    const turnLocal = sql`((${turnMetric.createdAt} at time zone 'UTC') at time zone ${sql.raw(`'${tz.replaceAll("'", "''")}'`)})`;
+    const turnConditions: SQL[] = [];
+    if (from) turnConditions.push(sql`${turnLocal} >= ${from}::date`);
+    if (to) {
+      turnConditions.push(sql`${turnLocal} < ${to}::date + interval '1 day'`);
+    }
+    const hasUsage = sql`${turnMetric.inputTokens} is not null and ${turnMetric.outputTokens} is not null`;
+    const [turns] = await (await ensureDb())
+      .select({
+        liveTurns: countWhere(sql`${turnMetric.source} = 'live'`),
+        p50: sql<
+          number | null
+        >`percentile_cont(0.5) within group (order by ${turnMetric.durationMs}) filter (where ${turnMetric.source} = 'live')`,
+        p95: sql<
+          number | null
+        >`percentile_cont(0.95) within group (order by ${turnMetric.durationMs}) filter (where ${turnMetric.source} = 'live')`,
+        turnsWithUsage: countWhere(hasUsage),
+        inputTokens:
+          sql<number>`coalesce(sum(${turnMetric.inputTokens}) filter (where ${hasUsage}), 0)`.mapWith(
+            Number,
+          ),
+        outputTokens:
+          sql<number>`coalesce(sum(${turnMetric.outputTokens}) filter (where ${hasUsage}), 0)`.mapWith(
+            Number,
+          ),
+        durationMs:
+          sql<number>`coalesce(sum(${turnMetric.durationMs}) filter (where ${hasUsage}), 0)`.mapWith(
+            Number,
+          ),
+        conversations:
+          sql<number>`count(distinct ${turnMetric.chatId})`.mapWith(Number),
+      })
+      .from(turnMetric)
+      .where(turnConditions.length ? and(...turnConditions) : undefined);
+    if (turns) {
+      metrics.latency = {
+        p50Ms: turns.p50 === null ? null : Number(turns.p50),
+        p95Ms: turns.p95 === null ? null : Number(turns.p95),
+        turns: turns.liveTurns,
+      };
+      metrics.cost = {
+        turnsWithUsage: turns.turnsWithUsage,
+        inputTokens: turns.inputTokens,
+        outputTokens: turns.outputTokens,
+        durationMs: turns.durationMs,
+        conversations: turns.conversations,
+      };
+    }
     return metrics;
   } catch (error) {
     console.error('[getResolutionMetrics] Error:', error);
@@ -1314,7 +1403,9 @@ export async function claimAgentTurns({
 }): Promise<AgentTurn[]> {
   if (!isDatabaseAvailable()) return [];
 
-  const rows = (await (await ensureDb()).execute(sql`
+  const rows = (await (
+    await ensureDb()
+  ).execute(sql`
     update ${agentTurn} set "nextAttemptAt" = now() + ${`${leaseMs} milliseconds`}::interval
     where "id" in (
       select t."id" from ${agentTurn} t
@@ -1485,7 +1576,9 @@ export async function getLatestHandoffs({
 
 export async function markMessagesBlocked({ ids }: { ids: string[] }) {
   if (!isDatabaseAvailable()) {
-    console.log('[markMessagesBlocked] Database not available, skipping update');
+    console.log(
+      '[markMessagesBlocked] Database not available, skipping update',
+    );
     return;
   }
 
@@ -1500,4 +1593,31 @@ export async function markMessagesBlocked({ ids }: { ids: string[] }) {
     console.warn('Failed to mark messages blocked', ids, error);
     return;
   }
+}
+
+// Saves the turn's metric. It never breaks the turn: a failure only warns.
+export async function saveTurnMetric(
+  row: Omit<TurnMetric, 'id' | 'createdAt'>,
+) {
+  if (!isDatabaseAvailable()) return;
+
+  try {
+    await (await ensureDb()).insert(turnMetric).values(row);
+  } catch (error) {
+    console.warn('Failed to save turn metric for chat', row.chatId, error);
+  }
+}
+
+export async function getTurnMetrics({
+  chatId,
+}: {
+  chatId: string;
+}): Promise<TurnMetric[]> {
+  if (!isDatabaseAvailable()) return [];
+
+  return (await ensureDb())
+    .select()
+    .from(turnMetric)
+    .where(eq(turnMetric.chatId, chatId))
+    .orderBy(asc(turnMetric.createdAt));
 }
