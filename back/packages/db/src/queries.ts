@@ -101,12 +101,14 @@ export async function saveChat({
   userEmail,
   title,
   visibility,
+  customerId,
 }: {
   id: string;
   userId: string;
   userEmail?: string | null;
   title: string;
   visibility: VisibilityType;
+  customerId?: string | null;
 }) {
   if (!isDatabaseAvailable()) {
     console.log('[saveChat] Database not available, skipping persistence');
@@ -121,6 +123,7 @@ export async function saveChat({
       userEmail,
       title,
       visibility,
+      customerId,
     });
   } catch (error) {
     console.error('[saveChat] Error saving chat:', error);
@@ -973,6 +976,28 @@ export async function getResolutionMetrics({
       'bad_request:database',
       'Failed to get resolution metrics',
     );
+  }
+}
+
+export async function updateChatCustomer({
+  chatId,
+  customerId,
+}: {
+  chatId: string;
+  customerId: string;
+}) {
+  if (!isDatabaseAvailable()) {
+    console.log('[updateChatCustomer] Database not available, skipping');
+    return;
+  }
+
+  try {
+    await (await ensureDb())
+      .update(chat)
+      .set({ customerId })
+      .where(eq(chat.id, chatId));
+  } catch (error) {
+    console.warn('Failed to update customer for chat', chatId, error);
   }
 }
 

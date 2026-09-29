@@ -1,5 +1,6 @@
 import { getDatabricksToken } from '@chat-template/auth';
 import { getWorkspaceHostname } from '@chat-template/ai-sdk-providers';
+import { maskSensitive } from './mask';
 
 // Reads the bank's data through the same Unity Catalog functions the agent
 // uses (agent/uc/bank_uc_consultas.sql), on the SQL warehouse.
@@ -99,4 +100,64 @@ export async function getTransactions(customerId: string) {
     currency: row.currency,
     status: row.transaction_status,
   }));
+}
+
+const toBoolean = (value: string | null) =>
+  value === null ? null : value === 'true';
+
+// The console's customer context (docs/flujo-atencion.md §4), read-only. The
+// transcripts are masked: they're free text from past calls.
+export async function getCustomerContext(customerId: string) {
+  const parameters = [{ name: 'customer_id', value: customerId }];
+  const [profile, interactions, transcripts, cases] = await Promise.all([
+    getCustomerProfile(customerId),
+    runStatement(
+      `SELECT interaction_date, channel, contact_reason, was_resolved, was_escalated, detected_sentiment
+       FROM ${catalog()}.bank_gold.interaction_history
+       WHERE customer_id = :customer_id
+       ORDER BY interaction_date DESC LIMIT 10`,
+      parameters,
+    ),
+    runStatement(
+      `SELECT process_date, customer_text, agent_text
+       FROM ${catalog()}.bank_silver.call_transcripts
+       WHERE customer_id = :customer_id
+       ORDER BY process_date DESC LIMIT 5`,
+      parameters,
+    ),
+    runStatement(
+      `SELECT case_type, category, creation_date, claimed_amount, currency, priority, status, resolution
+       FROM ${catalog()}.bank_gold.customer_cases
+       WHERE customer_id = :customer_id
+       ORDER BY creation_date DESC LIMIT 20`,
+      parameters,
+    ),
+  ]);
+
+  return {
+    customer: { customerId, ...profile },
+    interactions: interactions.map((row) => ({
+      date: row.interaction_date,
+      channel: row.channel,
+      reason: row.contact_reason,
+      resolved: toBoolean(row.was_resolved),
+      escalated: toBoolean(row.was_escalated),
+      sentiment: row.detected_sentiment,
+    })),
+    transcripts: transcripts.map((row) => ({
+      date: row.process_date,
+      customerText: row.customer_text && maskSensitive(row.customer_text),
+      agentText: row.agent_text && maskSensitive(row.agent_text),
+    })),
+    cases: cases.map((row) => ({
+      type: row.case_type,
+      category: row.category,
+      date: row.creation_date,
+      claimedAmount: toNumber(row.claimed_amount),
+      currency: row.currency,
+      priority: row.priority,
+      status: row.status,
+      resolution: row.resolution,
+    })),
+  };
 }
