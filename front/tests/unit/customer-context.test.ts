@@ -5,6 +5,9 @@ import {
   channelLabel,
   customerName,
   firstTab,
+  interactionTypeLabel,
+  languageLabel,
+  yesNo,
   formatClaim,
   formatContextDate,
   maskedCustomerId,
@@ -17,15 +20,40 @@ describe('parseCustomerContext', () => {
   it('reads the contract and tolerates nulls and junk', () => {
     const context = parseCustomerContext({
       customer: { customerId: 'CUS000123', firstName: 'Santiago', lastName: null },
-      interactions: [{ date: '2026-09-26T11:42:00Z', channel: 'Phone', resolved: 'yes', escalated: true }, null],
-      transcripts: [{ date: '2026-09-26', customerText: 'Hola', agentText: '' }],
+      interactions: [
+        { date: '2026-09-26T11:42:00Z', interactionType: 'Inbound Call', channel: 'Phone', resolved: 'yes', escalated: true },
+        null,
+      ],
+      transcripts: [
+        { date: '2026-09-26', customerText: 'Hola', agentText: '', language: 'es', intents: 'consulta_general', topics: 'Queja' },
+      ],
       cases: [{ type: 'Claim', claimedAmount: '10', status: 'Open' }],
     });
     expect(context.customer).toEqual({ customerId: 'CUS000123', firstName: 'Santiago', lastName: null });
     expect(context.interactions).toEqual([
-      { date: '2026-09-26T11:42:00Z', channel: 'Phone', reason: null, resolved: null, escalated: true, sentiment: null },
+      {
+        date: '2026-09-26T11:42:00Z',
+        interactionType: 'Inbound Call',
+        channel: 'Phone',
+        reason: null,
+        resolved: null,
+        escalated: true,
+        sentiment: null,
+      },
     ]);
-    expect(context.transcripts[0]).toEqual({ date: '2026-09-26', customerText: 'Hola', agentText: null });
+    // intents and topics come as text: kept as they are.
+    expect(context.transcripts[0]).toEqual({
+      date: '2026-09-26',
+      customerText: 'Hola',
+      agentText: null,
+      language: 'es',
+      intents: ['consulta_general'],
+      topics: ['Queja'],
+    });
+    expect(parseCustomerContext({ transcripts: [{ intents: ['a', null, 'b'] }] }).transcripts[0].intents).toEqual([
+      'a',
+      'b',
+    ]);
     expect(context.cases[0]).toMatchObject({ type: 'Claim', claimedAmount: null, status: 'Open' });
   });
 
@@ -46,10 +74,21 @@ describe('firstTab', () => {
 
 describe('labels', () => {
   it('translates warehouse values and keeps unknown ones', () => {
-    expect(channelLabel('Phone')).toBe('Llamada');
+    expect(interactionTypeLabel('Inbound Call')).toBe('Llamada entrante: llamó el cliente');
+    expect(interactionTypeLabel('Outbound Call')).toBe('Llamada saliente: llamó el banco');
+    expect(interactionTypeLabel('Video')).toBe('Videollamada');
+    expect(interactionTypeLabel('Email')).toBe('Correo');
+    expect(interactionTypeLabel('Walk-in')).toBe('Walk-in');
+    expect(interactionTypeLabel(null)).toBeNull();
+    expect(channelLabel('Phone')).toBe('Teléfono');
     expect(channelLabel('WEB')).toBe('Web');
     expect(channelLabel('Fax')).toBe('Fax');
-    expect(channelLabel(null)).toBe('Contacto');
+    expect(channelLabel(null)).toBeNull();
+    expect(languageLabel('es')).toBe('Español');
+    expect(languageLabel('fr')).toBe('fr');
+    expect(yesNo(true)).toBe('Sí');
+    expect(yesNo(false)).toBe('No');
+    expect(yesNo(null)).toBeNull();
     expect(sentimentLabel('Neutral')).toBe('Neutral');
     expect(sentimentLabel('Negative')).toBe('Negativo');
     expect(sentimentLabel(null)).toBeNull();

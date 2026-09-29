@@ -12,8 +12,10 @@ export interface ContextCustomer {
   lastName: string | null;
 }
 
+// bank_gold.interaction_history.
 export interface Interaction {
   date: string | null;
+  interactionType: string | null;
   channel: string | null;
   reason: string | null;
   resolved: boolean | null;
@@ -21,10 +23,14 @@ export interface Interaction {
   sentiment: string | null;
 }
 
+// bank_silver.call_transcripts.
 export interface Transcript {
   date: string | null;
   customerText: string | null;
   agentText: string | null;
+  language: string | null;
+  intents: string[];
+  topics: string[];
 }
 
 export interface BankCase {
@@ -55,6 +61,12 @@ const str = (value: unknown) => (typeof value === 'string' && value.trim() ? val
 const bool = (value: unknown) => (typeof value === 'boolean' ? value : null);
 const num = (value: unknown) =>
   typeof value === 'number' && Number.isFinite(value) ? value : null;
+// A list as the warehouse stores it: an array, or one string (kept as is).
+const strings = (value: unknown): string[] => {
+  if (Array.isArray(value)) return value.map(str).filter((v): v is string => v !== null);
+  const one = str(value);
+  return one ? [one] : [];
+};
 const list = (value: unknown) =>
   (Array.isArray(value) ? value : []).filter(
     (item): item is Record<string, unknown> => !!item && typeof item === 'object',
@@ -77,6 +89,7 @@ export function parseCustomerContext(body: unknown): CustomerContext {
       : null,
     interactions: list(raw.interactions).map((i) => ({
       date: str(i.date),
+      interactionType: str(i.interactionType),
       channel: str(i.channel),
       reason: str(i.reason),
       resolved: bool(i.resolved),
@@ -87,6 +100,9 @@ export function parseCustomerContext(body: unknown): CustomerContext {
       date: str(t.date),
       customerText: str(t.customerText),
       agentText: str(t.agentText),
+      language: str(t.language),
+      intents: strings(t.intents),
+      topics: strings(t.topics),
     })),
     cases: list(raw.cases).map((c) => ({
       type: str(c.type),
@@ -135,16 +151,34 @@ export function maskedCustomerId(customer: ContextCustomer | null): string | nul
   return id ? `•• ${id.slice(-4)}` : null;
 }
 
-// Warehouse enums in Spanish; unknown values stay as they come.
+// Warehouse values translated one to one; unknown values stay as they come.
+const INTERACTION_TYPE: Record<string, string> = {
+  'inbound call': 'Llamada entrante: llamó el cliente',
+  'outbound call': 'Llamada saliente: llamó el banco',
+  video: 'Videollamada',
+  'video call': 'Videollamada',
+  chat: 'Chat',
+  email: 'Correo',
+  'branch visit': 'Visita a sucursal',
+};
 const CHANNEL: Record<string, string> = {
-  phone: 'Llamada',
-  call: 'Llamada',
+  phone: 'Teléfono',
   web: 'Web',
   chat: 'Chat',
   app: 'App',
-  mobile: 'App',
+  mobile: 'App móvil',
+  'mobile app': 'App móvil',
   email: 'Correo',
   branch: 'Sucursal',
+  video: 'Video',
+};
+const LANGUAGE: Record<string, string> = {
+  es: 'Español',
+  spanish: 'Español',
+  en: 'Inglés',
+  english: 'Inglés',
+  pt: 'Portugués',
+  portuguese: 'Portugués',
 };
 const SENTIMENT: Record<string, string> = {
   positive: 'Positivo',
@@ -166,8 +200,21 @@ export type CaseTone = 'open' | 'closed' | 'other';
 
 const key = (value: string | null) => value?.trim().toLowerCase().replace(/[_-]+/g, ' ') ?? '';
 
-export function channelLabel(channel: string | null): string {
-  return CHANNEL[key(channel)] ?? channel ?? 'Contacto';
+export function interactionTypeLabel(type: string | null): string | null {
+  return type ? (INTERACTION_TYPE[key(type)] ?? type) : null;
+}
+
+export function channelLabel(channel: string | null): string | null {
+  return channel ? (CHANNEL[key(channel)] ?? channel) : null;
+}
+
+export function languageLabel(language: string | null): string | null {
+  return language ? (LANGUAGE[key(language)] ?? language) : null;
+}
+
+// "Sí" / "No"; nothing when the field isn't recorded.
+export function yesNo(value: boolean | null): string | null {
+  return value === null ? null : value ? 'Sí' : 'No';
 }
 
 export function sentimentLabel(sentiment: string | null): string | null {

@@ -8,6 +8,7 @@ import {
   RefreshCw,
   Smartphone,
   UserRoundX,
+  Video,
   type LucideIcon,
 } from 'lucide-react';
 import { type ReactNode, useState } from 'react';
@@ -27,10 +28,13 @@ import {
   formatClaim,
   formatContextDate,
   type Interaction,
+  interactionTypeLabel,
+  languageLabel,
   maskedCustomerId,
   priorityLabel,
   sentimentLabel,
   type Transcript,
+  yesNo,
 } from '@/lib/customer-context';
 import { cn } from '@/lib/utils';
 
@@ -41,12 +45,14 @@ const TONE: Record<CaseTone, string> = {
 };
 
 const CHANNEL_ICON: Record<string, LucideIcon> = {
-  Llamada: Phone,
+  Teléfono: Phone,
   Web: Globe,
   Chat: MessageCircle,
   App: Smartphone,
+  'App móvil': Smartphone,
   Correo: Mail,
   Sucursal: Building2,
+  Video,
 };
 
 function Tag({ children, className }: { children: ReactNode; className?: string }) {
@@ -90,36 +96,62 @@ function CaseCard({ item }: { item: BankCase }) {
   );
 }
 
-function InteractionRow({ item }: { item: Interaction }) {
-  const channel = channelLabel(item.channel);
-  const Icon = CHANNEL_ICON[channel] ?? MessageCircle;
-  const sentiment = sentimentLabel(item.sentiment);
+// A recorded field, label and value; nothing when the bank didn't record it.
+function Field({ label, value }: { label: string; value: string | null }) {
+  if (!value) return null;
   return (
-    <div data-testid="context-interaction" className="grid grid-cols-[1.75rem_minmax(0,1fr)] gap-2.5 px-1 py-2">
+    <>
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd className="min-w-0 break-words">{value}</dd>
+    </>
+  );
+}
+
+function InteractionRow({ item }: { item: Interaction }) {
+  const type = interactionTypeLabel(item.interactionType);
+  const channel = channelLabel(item.channel);
+  const Icon = item.interactionType?.toLowerCase().includes('video')
+    ? Video
+    : item.interactionType?.toLowerCase().includes('call')
+      ? Phone
+      : (CHANNEL_ICON[channel ?? ''] ?? MessageCircle);
+  return (
+    <div data-testid="context-interaction" className="grid grid-cols-[1.75rem_minmax(0,1fr)] gap-2.5 px-1 py-2.5">
       <span className="flex size-7 items-center justify-center rounded-full bg-secondary text-muted-foreground">
         <Icon className="size-3.5" strokeWidth={1.8} />
       </span>
-      <div className="flex min-w-0 flex-col gap-1">
+      <div className="flex min-w-0 flex-col gap-1.5">
         <div className="flex items-baseline gap-2">
-          <span className="font-semibold text-[13px]">{channel}</span>
+          <span data-testid="interaction-type" className="min-w-0 font-semibold text-[13px]">
+            {type ?? 'Interacción'}
+          </span>
           <span className="ml-auto shrink-0 text-[11px] text-muted-foreground">
             {formatContextDate(item.date)}
           </span>
         </div>
-        {item.reason && (
-          <span className="break-words text-muted-foreground text-xs leading-relaxed">{item.reason}</span>
-        )}
-        <div className="flex flex-wrap gap-1.5">
-          {item.resolved !== null && (
-            <Tag className={item.resolved ? TONE.closed : TONE.open}>
-              {item.resolved ? 'Resuelto' : 'Sin resolver'}
-            </Tag>
-          )}
-          {item.escalated && <Tag>Escalado</Tag>}
-          {sentiment && <Tag>{sentiment}</Tag>}
-        </div>
+        <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-0.5 text-xs">
+          <Field label="Canal" value={channel} />
+          <Field label="Motivo" value={item.reason} />
+          <Field label="Resuelta" value={yesNo(item.resolved)} />
+          <Field label="Escalada" value={yesNo(item.escalated)} />
+          <Field label="Sentimiento" value={sentimentLabel(item.sentiment)} />
+        </dl>
       </div>
     </div>
+  );
+}
+
+function Chips({ label, values }: { label: string; values: string[] }) {
+  if (!values.length) return null;
+  return (
+    <>
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd className="flex min-w-0 flex-wrap gap-1">
+        {values.map((value) => (
+          <Tag key={value}>{value}</Tag>
+        ))}
+      </dd>
+    </>
   );
 }
 
@@ -134,12 +166,17 @@ function TranscriptCard({ item }: { item: Transcript }) {
         onClick={() => setOpen(!open)}
         className="flex items-center gap-2 text-left"
       >
-        <span className="font-semibold text-[13px]">{date ? `Llamada del ${date}` : 'Llamada'}</span>
-        <span className="ml-auto text-primary text-xs">
-          {open ? 'Ocultar transcripción' : 'Ver transcripción'}
+        <span className="font-semibold text-[13px]">
+          {date ? `Transcripción del ${date}` : 'Transcripción'}
         </span>
+        <span className="ml-auto shrink-0 text-primary text-xs">{open ? 'Ocultar texto' : 'Ver texto'}</span>
       </button>
-      {/* Bank text is shown literally: no links or images. */}
+      <dl className="grid grid-cols-[auto_minmax(0,1fr)] items-baseline gap-x-3 gap-y-1 text-xs">
+        <Field label="Idioma" value={languageLabel(item.language)} />
+        <Chips label="Intenciones" values={item.intents} />
+        <Chips label="Temas" values={item.topics} />
+      </dl>
+      {/* Bank text is shown literally (already masked): no links or images. */}
       {open ? (
         <div className="flex flex-col gap-2 rounded-lg bg-background px-3 py-2.5 text-xs leading-relaxed">
           {item.customerText && (
@@ -150,7 +187,7 @@ function TranscriptCard({ item }: { item: Transcript }) {
           )}
           {item.agentText && (
             <p className="whitespace-pre-wrap break-words">
-              <span className="font-semibold text-primary">Ejecutivo: </span>
+              <span className="font-semibold text-primary">Agente: </span>
               {item.agentText}
             </p>
           )}
@@ -207,8 +244,8 @@ export function CustomerContextPanel({ chatId }: { chatId: string }) {
   const tabs: { id: ContextTab; label: string; count: number }[] = data
     ? [
         { id: 'cases', label: 'Casos', count: data.cases.length },
-        { id: 'interactions', label: 'Contactos', count: data.interactions.length },
-        { id: 'transcripts', label: 'Llamadas', count: data.transcripts.length },
+        { id: 'interactions', label: 'Interacciones', count: data.interactions.length },
+        { id: 'transcripts', label: 'Transcripciones', count: data.transcripts.length },
       ]
     : [];
 
@@ -227,13 +264,13 @@ export function CustomerContextPanel({ chatId }: { chatId: string }) {
           ))}
         </div>
       ) : (
-        <Empty>Sin contactos anteriores.</Empty>
+        <Empty>Sin interacciones registradas.</Empty>
       );
     } else {
       body = data.transcripts.length ? (
         data.transcripts.map((item, i) => <TranscriptCard key={`${item.date}-${i}`} item={item} />)
       ) : (
-        <Empty>Sin llamadas registradas.</Empty>
+        <Empty>Sin transcripciones registradas.</Empty>
       );
     }
   }
@@ -272,7 +309,7 @@ export function CustomerContextPanel({ chatId }: { chatId: string }) {
                 className={cn(
                   'h-7 flex-1 rounded-[7px] font-medium text-xs transition-colors',
                   current === t.id
-                    ? 'bg-background text-foreground shadow-sm dark:bg-muted'
+                    ? 'bg-background text-foreground shadow-sm dark:bg-input'
                     : 'text-muted-foreground hover:text-foreground',
                 )}
               >
