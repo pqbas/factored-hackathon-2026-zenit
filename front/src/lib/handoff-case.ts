@@ -43,11 +43,6 @@ export function handoffReasonLabel(reason: string | null | undefined): string {
   return REASON[reason]?.label ?? reason;
 }
 
-export function handoffReasonShort(reason: string | null | undefined): string {
-  if (!reason) return 'Derivado';
-  return REASON[reason]?.short ?? reason;
-}
-
 const COMPLAINT_TYPE: Record<string, string> = {
   not_recognized: 'No reconoce el cargo',
   duplicate_charge: 'Cobro duplicado',
@@ -142,4 +137,17 @@ export function caseFields(handoff: AgentHandoff | null | undefined): CaseField[
     push(key, typeof value === 'object' ? JSON.stringify(value) : text(value));
   }
   return fields;
+}
+
+// What sets this case apart within its reason, for the inbox row: the kind of
+// complaint, or the product to cancel. null when the agent sent neither.
+export function handoffDetail(handoff: AgentHandoff | null | undefined): string | null {
+  const data = handoff?.verifiedData;
+  if (!data) return null;
+  const type = text(data.complaint_type);
+  if (type) return COMPLAINT_TYPE[type] ?? type;
+  const product = text(data.product_type);
+  const last4 = text(data.product_last4);
+  if (product || last4) return [product, last4 && `••${last4}`].filter(Boolean).join(' ');
+  return null;
 }

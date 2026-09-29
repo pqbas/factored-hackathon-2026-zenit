@@ -620,7 +620,8 @@ test.describe('Advisor console', () => {
   }) => {
     await openConsole(page);
     const row = page.getByTestId('conversation-row-c-waiting');
-    await expect(row.getByTestId('row-handoff')).toHaveText('Reclamo por cargo');
+    // The row shows the case's detail, not the reason again.
+    await expect(row.getByTestId('row-handoff')).toHaveText('Cobro duplicado');
     await expect(page.getByTestId('conversation-row-c-race').getByTestId('row-handoff')).toHaveCount(0);
 
     await row.click();

@@ -37,6 +37,8 @@
 
 5. In `src/components/conversations/inbox-list.tsx` group with `groupByHandoffReason` and render sections with `HandoffReasonChip` (`inbox-section-<reason>`).
 
+5b. In `src/lib/handoff-case.ts` add `handoffDetail(handoff)`: the `complaint_type` label, or `product_type ••product_last4`, else null. In `src/components/conversations/inbox-list.tsx` the row chip (`row-handoff`) shows `handoffDetail`, and doesn't render without it.
+
 6. In `src/pages/ConversationsPage.tsx`, `viewTitle`: `reason` → its label; `advisor` → `STATUS_LABEL.advisor` ("Con asesor").
 
 ---

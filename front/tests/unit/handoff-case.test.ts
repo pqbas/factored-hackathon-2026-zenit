@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { type AgentHandoff, caseFields, handoffReasonLabel, handoffReasonShort } from '@/lib/handoff-case';
+import { type AgentHandoff, caseFields, handoffDetail, handoffReasonLabel } from '@/lib/handoff-case';
 
 const handoff = (verifiedData: Record<string, unknown> | null): AgentHandoff => ({
   reason: 'complaint',
@@ -17,7 +17,6 @@ describe('handoffReasonLabel', () => {
     expect(handoffReasonLabel('retention')).toBe('Cancelación de un producto');
     expect(handoffReasonLabel('case_status')).toBe('Estado de un reclamo');
     expect(handoffReasonLabel('fraud')).toBe('fraud');
-    expect(handoffReasonShort('retention')).toBe('Cancelación');
   });
 });
 
@@ -61,5 +60,16 @@ describe('caseFields', () => {
     expect(caseFields(handoff({ case_id: 'C-9' }))).toEqual([{ key: 'case_id', label: 'case_id', value: 'C-9' }]);
     expect(caseFields(handoff(null))).toEqual([]);
     expect(caseFields(null)).toEqual([]);
+  });
+});
+
+describe('handoffDetail', () => {
+  it('is the kind of complaint or the product, never the reason', () => {
+    expect(handoffDetail(handoff({ complaint_type: 'duplicate_charge', card_last4: '1070' }))).toBe('Cobro duplicado');
+    expect(handoffDetail(handoff({ product_type: 'Tarjeta Crédito', product_last4: '6262' }))).toBe(
+      'Tarjeta Crédito ••6262',
+    );
+    expect(handoffDetail(handoff({ merchant: 'X' }))).toBeNull();
+    expect(handoffDetail(handoff(null))).toBeNull();
   });
 });

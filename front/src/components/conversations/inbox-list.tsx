@@ -15,7 +15,7 @@ import {
   rowText,
 } from '@/lib/advisor';
 import { avatarColor, formatListTime, getInitials, STATUS_LABEL } from '@/lib/conversations';
-import { handoffReasonLabel, handoffReasonShort } from '@/lib/handoff-case';
+import { handoffDetail, handoffReasonLabel } from '@/lib/handoff-case';
 import { cn } from '@/lib/utils';
 
 function Row({
@@ -38,6 +38,7 @@ function Row({
   // The inbox API has no unread count: the dot marks chats waiting for someone.
   const waiting = !chat.closedAt && chat.handledBy === 'human_queue';
   const withDavid = !chat.closedAt && chat.handledBy === 'ai_agent';
+  const detail = handoffDetail(chat.handoff);
 
   return (
     <button
@@ -92,14 +93,15 @@ function Row({
       {/* The customer's last message; the subject (chat title) stays as the
           tooltip. */}
       <span className="flex min-w-0 items-center gap-2">
-        {/* An open case David handed off, by reason. */}
-        {chat.hasHandoff && chat.handoff && (
+        {/* The detail of an open case David handed off (the reason is the
+            section's or the view's); nothing when there is no detail. */}
+        {chat.hasHandoff && detail && (
           <span
             data-testid="row-handoff"
-            title={handoffReasonLabel(chat.handoff.reason)}
+            title={handoffReasonLabel(chat.handoff?.reason)}
             className="shrink-0 rounded-md bg-primary/15 px-1.5 py-0.5 font-medium text-[11px] text-primary"
           >
-            {handoffReasonShort(chat.handoff.reason)}
+            {detail}
           </span>
         )}
         <span
