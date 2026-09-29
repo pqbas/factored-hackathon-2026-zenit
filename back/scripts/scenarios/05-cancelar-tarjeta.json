@@ -1,11 +1,12 @@
 {
   "name": "05-cancelar-tarjeta",
-  "description": "Cancelar una tarjeta con motivo (línea base, sin recolección)",
+  "description": "Cancelar una tarjeta: David recolecta producto y motivo y deriva (3.D1)",
   "sessionToken": "demo-co-1",
   "customer": 2,
   "messages": [
     "quiero cancelar mi tarjeta de crédito",
+    "la 0279",
     "porque me cobran una comisión muy alta",
-    "sí, quiero cancelarla igual"
+    "sí, confirmo"
   ]
 }

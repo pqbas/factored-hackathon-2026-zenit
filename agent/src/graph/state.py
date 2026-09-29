@@ -9,3 +9,4 @@ class AgentState(TypedDict):
     thread_id: str
     classification: dict | None
     use_case: str | None
+    handoff: dict | None

@@ -1,14 +1,16 @@
 from __future__ import annotations
 
 import asyncio
+import json
 
 from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
-from langchain_core.messages import AIMessage, SystemMessage, ToolMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 
 from src.graph.build import build_graph
 from src.llm.jev import JevUnavailable
 from src.prompts.messages import (
     CANCEL_REPLY,
+    HANDOFF_REPLY,
     GREETING_REPLY,
     GUARDRAIL_REPLIES,
     HUMAN_WITHOUT_TOPIC,
@@ -42,7 +44,9 @@ ROUTES = [
         instructions="Usa get_products para el saldo y el límite, y list_transactions para los movimientos.",
     ),
     IntentRoute(
-        intent="COMPLAINT", description="Reclamo", examples=["no reconozco un cargo"], destination="respond",
+        intent="COMPLAINT", description="Reclamo", examples=["no reconozco un cargo"], destination="load_context",
+        schemas=["bank_uc_consultas"], instructions="Recolecta la ficha del reclamo y deriva.",
+        handoff_reason="complaint",
     ),
     IntentRoute(
         intent="CASE_STATUS", description="Estado de un caso", examples=["mi reclamo"], destination="respond",
@@ -455,17 +459,17 @@ def test_greeting_after_general_inquiry_in_the_same_thread_has_no_tools_and_clea
     assert list_transactions.calls == []
 
 
-def test_tool_loop_stops_after_three_rounds_and_answers_with_text():
+def test_tool_loop_stops_after_four_rounds_and_answers_with_text():
     get_products = FakeMCPTool("get_products", GET_PRODUCTS_SCHEMA, result=[])
     list_transactions = FakeMCPTool("list_transactions", LIST_TRANSACTIONS_SCHEMA, result=[])
     tool_call = AIMessage(content="", tool_calls=[{"name": "get_products", "args": {}, "id": "call_1"}])
-    llm = ScriptedToolLLM([tool_call] * 4 + [AIMessage(content="No encontré productos")])
+    llm = ScriptedToolLLM([tool_call] * 5 + [AIMessage(content="No encontré productos")])
     jev = FakeJev(_classification(intent="GENERAL_INQUIRY"))
     graph = _build_graph(llm, jev, tools_for=_fake_tools_for(get_products, list_transactions))
 
     result = _run(graph, "¿cuál es mi saldo?")
 
-    assert len(get_products.calls) == 3
+    assert len(get_products.calls) == 4
     assert result["messages"][-1].content == "No encontré productos"
 
 
@@ -602,3 +606,73 @@ def test_a_failing_llm_classifier_falls_back_to_the_keyword_rules():
 
     assert result["classification"]["source"] == "fallback"
     assert result["classification"]["intent"] == "CANCEL"
+
+
+# --- Etapas 4 y 5: collection and handoff -----------------------------------------------
+
+_PRODUCTS_RESULT = [{"type": "text", "text": json.dumps({
+    "columns": ["product_type", "product_number_last4", "currency"],
+    "rows": [["Tarjeta Crédito", "4930", "USD"]],
+})}]
+_TRANSACTIONS_RESULT = [{"type": "text", "text": json.dumps({
+    "columns": ["transaction_date", "product_number_last4", "merchant_name", "amount", "currency", "transaction_status"],
+    "rows": [["2026-06-08T15:00:51.000+0000", "4930", "Internet Plus", 329.44, "USD", "Approved"]],
+})}]
+_CASE = {
+    "card_last4": "4930", "transaction_date": "2026-06-08", "merchant": "Internet Plus", "amount": 329.44,
+    "complaint_type": "not_recognized", "description": "Nunca contraté ese servicio",
+}
+
+
+def _complaint_graph(llm):
+    get_products = FakeMCPTool("get_products", GET_PRODUCTS_SCHEMA, result=_PRODUCTS_RESULT)
+    list_transactions = FakeMCPTool("list_transactions", LIST_TRANSACTIONS_SCHEMA, result=_TRANSACTIONS_RESULT)
+    jev = FakeJev(_classification(intent="COMPLAINT"))
+    return _build_graph(llm, jev, tools_for=_fake_tools_for(get_products, list_transactions))
+
+
+class _SummarizingToolLLM(ScriptedToolLLM):
+    """The tool loop's scripted replies, plus a fixed answer for the case summary call."""
+
+    async def ainvoke(self, messages, tool_choice=None):
+        if isinstance(messages[-1], HumanMessage) and messages[-1].content.startswith("{"):
+            return AIMessage(content="El cliente no reconoce un cargo de Internet Plus.")
+        return await super().ainvoke(messages, tool_choice)
+
+
+def test_a_confirmed_and_verified_complaint_is_handed_off():
+    llm = _SummarizingToolLLM([
+        AIMessage(content="", tool_calls=[
+            {"name": "get_products", "args": {}, "id": "c1"},
+            {"name": "list_transactions", "args": {"product_last4": "4930"}, "id": "c2"},
+        ]),
+        AIMessage(content="", tool_calls=[{"name": "hand_off_to_advisor", "args": _CASE, "id": "c3"}]),
+    ])
+    result = _run(_complaint_graph(llm), "sí, confirmo")
+
+    assert result["messages"][-1].content == HANDOFF_REPLY["es"]
+    handoff = result["handoff"]
+    assert handoff["reason"] == "complaint"
+    assert handoff["summary"] == "El cliente no reconoce un cargo de Internet Plus."
+    assert handoff["facts"]["verified_data"]["merchant"] == "Internet Plus"
+    assert handoff["facts"]["tools_called"] == ["get_products", "list_transactions"]
+    assert handoff["facts"]["use_case"] == "COMPLAINT"
+
+
+def test_a_handoff_without_verifying_the_charge_gets_an_error_and_no_handoff():
+    llm = _SummarizingToolLLM([
+        AIMessage(content="", tool_calls=[{"name": "hand_off_to_advisor", "args": _CASE, "id": "c1"}]),
+        AIMessage(content="¿Me confirmas la tarjeta?"),
+    ])
+    result = _run(_complaint_graph(llm), "sí")
+
+    assert result["messages"][-1].content == "¿Me confirmas la tarjeta?"
+    assert result.get("handoff") is None
+    error = next(m for m in llm.received if isinstance(m, ToolMessage))
+    assert "get_products" in error.content
+
+
+def test_a_complaint_turn_offers_the_llm_the_handoff_tool():
+    llm = ScriptedToolLLM([AIMessage(content="¿De qué tarjeta es el cargo?")])
+    _run(_complaint_graph(llm), "C")
+    assert "hand_off_to_advisor" in [tool.name for tool in llm.bound_tools]

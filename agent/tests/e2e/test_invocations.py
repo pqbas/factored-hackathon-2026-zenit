@@ -13,7 +13,7 @@ from langchain_core.tools import StructuredTool
 
 import src.main as main
 from src.llm.jev import JevClient
-from src.prompts.messages import CANCEL_REPLY, GREETING_REPLY, MENU, SESSION_REJECTED
+from src.prompts.messages import CANCEL_REPLY, GREETING_REPLY, HANDOFF_REPLY, MENU, SESSION_REJECTED
 
 # src.main loads the real .env with override=True at import time, which writes
 # into the shared process environment for the rest of the pytest session, and
@@ -464,3 +464,50 @@ def test_classifier_llm_classifies_without_calling_jev(client, monkeypatch):
     assert body["custom_outputs"]["intent"] == "GENERAL_INQUIRY"
     assert body["custom_outputs"]["use_case"] == "GENERAL_INQUIRY"
     assert _output_text(body) == FAKE_LLM_TEXT
+
+
+def test_a_confirmed_retention_carries_the_handoff_in_custom_outputs(client, monkeypatch):
+    products = [{"type": "text", "text": json.dumps({
+        "columns": ["product_type", "product_number_last4", "currency"],
+        "rows": [["Tarjeta Crédito", "1070", "USD"]],
+    })}]
+
+    async def fake_get_products(**kwargs):
+        return products
+
+    get_products_tool = StructuredTool.from_function(
+        coroutine=fake_get_products, name="get_products", description="d",
+        args_schema={"type": "object", "properties": {"customer_id": {"type": "string"}}, "required": ["customer_id"]},
+        infer_schema=False,
+    )
+
+    async def fake_tools_for(schema):
+        return [get_products_tool]
+
+    class HandoffChatModel(ScriptedToolChatModel):
+        async def ainvoke(self, messages):
+            if messages[-1].content.startswith("{"):  # the case summary call
+                return AIMessage(content="El cliente pide cancelar su tarjeta 1070.")
+            return await super().ainvoke(messages)
+
+    monkeypatch.setattr(main, "tools_for", fake_tools_for)
+    monkeypatch.setattr(main, "get_chat_model", lambda: HandoffChatModel([
+        AIMessage(content="", tool_calls=[{"name": "get_products", "args": {}, "id": "c1"}]),
+        AIMessage(content="", tool_calls=[{"name": "hand_off_to_advisor", "id": "c2",
+                                           "args": {"product_last4": "1070", "reason": "comisión alta"}}]),
+    ]))
+    monkeypatch.setattr(
+        main, "jev_client",
+        JevClient(api_key="test-key", url="https://api.typesafe.ai/v1/systemone", timeout=2.0,
+                  transport=httpx.MockTransport(lambda request: _jev_response_for("RETENTION"))),
+    )
+
+    body = _invoke(client, "sí, confirmo", thread_id="e2e-handoff").json()
+
+    assert _output_text(body) == HANDOFF_REPLY["es"]
+    handoff = body["custom_outputs"]["handoff"]
+    assert handoff["reason"] == "retention"
+    assert handoff["summary"] == "El cliente pide cancelar su tarjeta 1070."
+    assert handoff["facts"]["verified_data"] == {
+        "product_type": "Tarjeta Crédito", "product_last4": "1070", "currency": "USD", "reason": "comisión alta",
+    }

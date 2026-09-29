@@ -98,7 +98,7 @@ async def _process_agent_astream_events(
             for node_name, node_data in event[1].items():
                 if not node_data:
                     continue
-                for key in ("classification", "use_case"):
+                for key in ("classification", "use_case", "handoff"):
                     if key in node_data:
                         turn[key] = node_data[key]
                 if len(node_data.get("messages", [])) > 0:
@@ -173,7 +173,7 @@ async def streaming(
     )
     # The turn's signals ride on its last output_item.done, so each done event is held back
     # until the next one arrives or the stream ends.
-    turn: dict = {"classification": None, "use_case": None}
+    turn: dict = {"classification": None, "use_case": None, "handoff": None}
     last_done = None
     async for event in _process_agent_astream_events(
         graph.astream(input_state, stream_mode=["updates", "messages"]), turn
@@ -186,7 +186,7 @@ async def streaming(
         last_done = event
     if last_done is not None:
         custom_outputs = turn_custom_outputs(
-            thread_id, turn["classification"], turn["use_case"], settings.guardrail_threshold
+            thread_id, turn["classification"], turn["use_case"], settings.guardrail_threshold, turn["handoff"]
         )
         yield last_done.model_copy(update={"custom_outputs": custom_outputs})
 

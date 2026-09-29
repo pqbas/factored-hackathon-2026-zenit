@@ -4,7 +4,11 @@ from src.schemas.classification import Classification
 
 
 def turn_custom_outputs(
-    thread_id: str, classification: dict | None, use_case: str | None, threshold: float
+    thread_id: str,
+    classification: dict | None,
+    use_case: str | None,
+    threshold: float,
+    handoff: dict | None = None,
 ) -> dict:
     """The signals the back stores for each turn (docs/limites-agente-back.md). Only labels,
     never message text, so no sensitive data can leave through them."""
@@ -21,6 +25,6 @@ def turn_custom_outputs(
         "intent": parsed.intent,
         "language": parsed.language,
         "blocked": parsed.blocked(threshold),
-        # Filled by the handoff phase; until then the agent never hands off.
-        "handoff": None,
+        # { reason, summary, facts } when the turn handed the case off (etapa 5), else None.
+        "handoff": handoff,
     }

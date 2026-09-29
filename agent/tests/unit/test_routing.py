@@ -25,9 +25,10 @@ def test_load_routing_loads_the_ten_intents():
     assert {r.intent for r in routes} == TEN_INTENTS
     by_intent = {r.intent: r.destination for r in routes}
     assert by_intent["CANCEL"] == "cancel"
-    assert by_intent["GENERAL_INQUIRY"] == "load_context"
+    use_cases = ("GENERAL_INQUIRY", "COMPLAINT", "RETENTION")
+    assert all(by_intent[intent] == "load_context" for intent in use_cases)
     assert all(
-        dest == "respond" for intent, dest in by_intent.items() if intent not in ("CANCEL", "GENERAL_INQUIRY")
+        dest == "respond" for intent, dest in by_intent.items() if intent not in ("CANCEL", *use_cases)
     )
 
 
@@ -36,8 +37,9 @@ def test_load_routing_loads_schemas_and_instructions_for_general_inquiry():
     by_intent = {r.intent: r for r in routes}
     assert by_intent["GENERAL_INQUIRY"].schemas == ["bank_uc_consultas"]
     assert "get_products" in by_intent["GENERAL_INQUIRY"].instructions
-    assert by_intent["COMPLAINT"].schemas == []
-    assert by_intent["COMPLAINT"].instructions is None
+    assert by_intent["COMPLAINT"].handoff_reason == "complaint"
+    assert by_intent["RETENTION"].handoff_reason == "retention"
+    assert by_intent["GENERAL_INQUIRY"].handoff_reason is None
 
 
 def test_load_routing_fails_on_a_load_context_route_without_schemas(tmp_path):

@@ -30,9 +30,7 @@ def test_low_confidence_gets_the_menu_even_for_a_greeting():
         ("OUT_OF_SCOPE", "out_of_menu"),
         ("COMMERCIAL", "out_of_menu"),
         ("HUMAN_AGENT", "human_without_topic"),
-        ("COMPLAINT", "not_yet_available"),
         ("CASE_STATUS", "not_yet_available"),
-        ("RETENTION", "not_yet_available"),
     ],
 )
 def test_situation_for_maps_the_intent_to_its_situation(intent, situation):

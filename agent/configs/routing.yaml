@@ -53,12 +53,51 @@
     menú.
 
 - intent: COMPLAINT
-  description: El cliente reclama por un cobro, la app o la atención.
+  description: El cliente reclama por un cargo de su tarjeta que no reconoce, que le cobraron dos veces o con un monto distinto, o responde las preguntas de ese reclamo.
   examples:
     - "no reconozco un cargo"
     - "me cobraron dos veces"
     - "não reconheço uma cobrança"
-  destination: respond
+  destination: load_context
+  schemas: [bank_uc_consultas]
+  handoff_reason: complaint
+  instructions: |
+    Atiendes la opción C: un reclamo por un cargo de tarjeta de crédito. No
+    resuelves el reclamo: recolectas la ficha, la verificas con los datos del
+    banco y la derivas a un asesor con hand_off_to_advisor. Nunca prometas
+    una devolución ni digas que registraste, abriste o iniciaste el reclamo, y
+    no ofrezcas otra cosa.
+
+    La ficha tiene cuatro datos, que se piden en este orden:
+    1. Tarjeta: los últimos 4 dígitos de una tarjeta de crédito activa del
+       cliente (get_products). Si tiene una sola, propónla.
+    2. Cargo: llama a list_transactions con los últimos 4 dígitos de la
+       tarjeta en product_last4. Si el cliente todavía no identificó el cargo
+       (por comercio, monto o fecha), muéstrale esos movimientos (fecha,
+       comercio, monto y moneda) y pregúntale cuál es; nunca lo elijas tú. El
+       cargo tiene que estar en esos movimientos.
+    3. Tipo: pregunta "¿Qué pasó? No lo reconozco, me cobraron dos veces o el
+       monto es distinto", salvo que el cliente ya lo haya dicho.
+    4. Descripción: pregunta "Cuéntame brevemente lo que pasó". Es la
+       respuesta del cliente a esa pregunta, con sus palabras; nunca la
+       escribas tú ni uses el tipo como descripción.
+
+    En cada turno lee toda la conversación y marca los datos que el cliente ya
+    dio, también los del primer mensaje (por ejemplo, "no reconozco un cargo
+    de Uber en la 1070" ya trae la tarjeta, el comercio y el tipo).
+    Verifícalos con las herramientas y pregunta solo el primer dato que falta,
+    uno por turno. Si un dato no coincide (la tarjeta no es suya, el cargo no
+    aparece), dilo y vuelve a preguntarlo.
+
+    Con los cuatro datos, muestra un resumen corto (tarjeta, fecha, comercio,
+    monto, tipo y descripción) y pregunta: "¿Confirmas estos datos para pasar
+    tu reclamo a un asesor?". Si corrige un dato, vuelve a preguntarlo.
+
+    Solo cuando el cliente responde que sí a esa pregunta de confirmación
+    (sí, confirmo, correcto), llama a get_products y a list_transactions de
+    esa tarjeta, y después a hand_off_to_advisor con los datos del resumen, la
+    fecha como AAAA-MM-DD y el comercio y el monto tal como los devolvió
+    list_transactions. No escribas nada más: el sistema le avisa al cliente.
 
 - intent: CASE_STATUS
   description: El cliente pregunta por el estado de un reclamo o caso ya abierto.
@@ -85,13 +124,41 @@
   destination: respond
 
 - intent: RETENTION
-  description: El cliente quiere cancelar o cerrar una tarjeta, una cuenta u otro producto del banco.
+  description: El cliente quiere cancelar o cerrar una tarjeta, una cuenta u otro producto del banco, o responde las preguntas de esa cancelación.
   examples:
     - "quiero cancelar mi tarjeta"
     - "quiero cerrar mi cuenta"
     - "quero cancelar meu cartão"
     - "ya no quiero seguir siendo cliente"
-  destination: respond
+  destination: load_context
+  schemas: [bank_uc_consultas]
+  handoff_reason: retention
+  instructions: |
+    Atiendes la opción D1: cancelar un producto. No cancelas el producto, no
+    intentas retener al cliente y no le ofreces nada a cambio (beneficios,
+    otro producto): eso lo hace un asesor. Recolectas la ficha, la verificas y
+    la derivas con hand_off_to_advisor. Nunca digas que cancelaste o
+    registraste la cancelación.
+
+    La ficha tiene dos datos:
+    1. Producto: tipo y últimos 4 dígitos de un producto activo del cliente
+       (get_products). Si tiene uno solo, propónlo; si tiene varios, lístalos
+       para que elija.
+    2. Motivo: por qué quiere cancelarlo, con sus palabras. Pregúntalo siempre;
+       nunca lo escribas tú.
+
+    En cada turno lee toda la conversación y marca los datos que el cliente ya
+    dio. Verifícalos con get_products y pregunta solo el primer dato que
+    falta. Si el producto no es suyo, dilo y vuelve a preguntarlo.
+
+    Con los dos datos, muestra un resumen corto (producto y motivo) y pregunta:
+    "¿Confirmas estos datos para pasar tu solicitud a un asesor?". Si corrige
+    un dato, vuelve a preguntarlo.
+
+    Solo cuando el cliente responde que sí a esa pregunta de confirmación
+    (sí, confirmo, correcto), llama a get_products y después a
+    hand_off_to_advisor con los datos del resumen. No escribas nada más: el
+    sistema le avisa al cliente.
 
 - intent: CANCEL
   description: El cliente quiere detener la solicitud o el flujo actual, sin nombrar un producto. "Cancelar mi tarjeta" o "cancelar mi cuenta" es RETENTION.

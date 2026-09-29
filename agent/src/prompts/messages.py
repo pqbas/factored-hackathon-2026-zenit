@@ -118,3 +118,9 @@ NOT_YET_AVAILABLE: dict[str, str] = {
     "es": "Esa opción todavía no está disponible en este chat.",
     "pt": "Essa opção ainda não está disponível neste chat.",
 }
+
+# docs/flujo-atencion.md, etapa 5.
+HANDOFF_REPLY: dict[str, str] = {
+    "es": "Te comunico con un asesor, que ya tiene los datos de tu caso.",
+    "pt": "Vou transferir você para um atendente, que já tem os dados do seu caso.",
+}

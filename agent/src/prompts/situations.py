@@ -17,7 +17,7 @@ SITUATIONS: dict[str, str] = {
 
 # Intents the chat can't serve (§3, regla 6): a short line, then the menu. Never a handoff.
 _OUT_OF_MENU_INTENTS = {"OUT_OF_SCOPE", "COMMERCIAL"}
-_NOT_YET_AVAILABLE_INTENTS = {"COMPLAINT", "CASE_STATUS", "RETENTION"}
+_NOT_YET_AVAILABLE_INTENTS = {"CASE_STATUS"}
 # Menu letters that open a submenu instead of a use case (etapa 2 and 3.A, 3.B, D).
 _SUBMENU_INTENTS = {
     "CARD_OPTIONS": "card_options",
