@@ -22,7 +22,9 @@ import {
   message,
   resolutionEvent,
   agentTurn,
+  handoff,
   type AgentTurn,
+  type Handoff,
   type DBMessage,
   type Chat,
 } from './schema';
@@ -145,6 +147,7 @@ export async function deleteChatById({ id }: { id: string }) {
       .delete(resolutionEvent)
       .where(eq(resolutionEvent.chatId, id));
     await (await ensureDb()).delete(agentTurn).where(eq(agentTurn.chatId, id));
+    await (await ensureDb()).delete(handoff).where(eq(handoff.chatId, id));
 
     const [chatsDeleted] = await (await ensureDb())
       .delete(chat)
@@ -740,6 +743,7 @@ export async function releaseChat({
       })
       .where(eq(chat.id, chatId))
       .returning();
+    if (updated) await closeHandoffs({ chatId });
     if (updated && outcome === 'resolved') {
       await (await ensureDb()).insert(resolutionEvent).values({
         chatId,
@@ -1328,6 +1332,49 @@ export async function getAgentTurns({
     .from(agentTurn)
     .where(eq(agentTurn.chatId, chatId))
     .orderBy(asc(agentTurn.createdAt));
+}
+
+// Records the agent's handoff; a no-op while the chat already has one open
+// (the partial unique index Handoff_open_chat).
+export async function openHandoff({
+  chatId,
+  reason,
+  summary,
+  facts,
+}: {
+  chatId: string;
+  reason: string;
+  summary: string | null;
+  facts: Record<string, unknown> | null;
+}) {
+  if (!isDatabaseAvailable()) return;
+
+  await (await ensureDb())
+    .insert(handoff)
+    .values({ chatId, reason, summary, facts })
+    .onConflictDoNothing();
+}
+
+export async function closeHandoffs({ chatId }: { chatId: string }) {
+  await (await ensureDb())
+    .update(handoff)
+    .set({ resolvedAt: new Date() })
+    .where(and(eq(handoff.chatId, chatId), isNull(handoff.resolvedAt)));
+}
+
+// The most recent handoff of each chat (open or closed), in one query.
+export async function getLatestHandoffs({
+  chatIds,
+}: {
+  chatIds: string[];
+}): Promise<Handoff[]> {
+  if (!isDatabaseAvailable() || chatIds.length === 0) return [];
+
+  return (await ensureDb())
+    .selectDistinctOn([handoff.chatId])
+    .from(handoff)
+    .where(inArray(handoff.chatId, chatIds))
+    .orderBy(handoff.chatId, desc(handoff.createdAt));
 }
 
 export async function markMessagesBlocked({ ids }: { ids: string[] }) {

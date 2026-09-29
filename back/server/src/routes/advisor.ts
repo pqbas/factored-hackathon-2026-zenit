@@ -33,6 +33,7 @@ import { ChatSDKError } from '@chat-template/core/errors';
 import { normalizeEmail } from '../roles';
 import { toLastMessagePreview } from '../inbox';
 import { getCustomerContext } from '../bank-data';
+import { withHandoff, withHandoffs } from '../handoff-view';
 
 export const advisorRouter: RouterType = Router();
 
@@ -133,16 +134,18 @@ advisorRouter.get('/conversations', async (req: Request, res: Response) => {
       const lastByChat = new Map(lastMessages.map((m) => [m.chatId, m]));
       return res.json({
         hasMore,
-        chats: rows.map(({ chat, customerKey, conversationCount, updatedAt }) => {
-          const last = lastByChat.get(chat.id);
-          return {
-            ...chat,
-            lastMessage: last ? toLastMessagePreview(last) : null,
-            customerKey,
-            conversationCount,
-            updatedAt,
-          };
-        }),
+        chats: await withHandoffs(
+          rows.map(({ chat, customerKey, conversationCount, updatedAt }) => {
+            const last = lastByChat.get(chat.id);
+            return {
+              ...chat,
+              lastMessage: last ? toLastMessagePreview(last) : null,
+              customerKey,
+              conversationCount,
+              updatedAt,
+            };
+          }),
+        ),
       });
     }
 
@@ -164,10 +167,15 @@ advisorRouter.get('/conversations', async (req: Request, res: Response) => {
 
     res.json({
       ...chats,
-      chats: chats.chats.map((c) => {
-        const last = lastByChat.get(c.id);
-        return { ...c, lastMessage: last ? toLastMessagePreview(last) : null };
-      }),
+      chats: await withHandoffs(
+        chats.chats.map((c) => {
+          const last = lastByChat.get(c.id);
+          return {
+            ...c,
+            lastMessage: last ? toLastMessagePreview(last) : null,
+          };
+        }),
+      ),
     });
   } catch (error) {
     console.error('[/api/advisor/conversations] Error in handler:', error);
@@ -300,7 +308,7 @@ advisorRouter.get(
         const response = new ChatSDKError('not_found:chat').toResponse();
         return res.status(response.status).json(response.json);
       }
-      res.json(chat);
+      res.json(await withHandoff(chat));
     } catch (error) {
       console.error('[/api/advisor/conversations/:id] Error in handler:', error);
       res.status(500).json({ error: 'Failed to fetch conversation' });
@@ -327,7 +335,7 @@ advisorRouter.get(
         const response = new ChatSDKError('not_found:chat').toResponse();
         return res.status(response.status).json(response.json);
       }
-      res.json({ chats });
+      res.json({ chats: await withHandoffs(chats) });
     } catch (error) {
       console.error(
         '[/api/advisor/customers/:customerKey/conversations] Error:',
@@ -442,7 +450,7 @@ advisorRouter.post(
         await saveSystemMessage({ chatId: id, text: SYSTEM_MESSAGES.taken });
       }
 
-      res.json({ chat: result.chat });
+      res.json({ chat: await withHandoff(result.chat) });
     } catch (error) {
       console.error(
         '[/api/advisor/conversations/:id/take] Error in handler:',
@@ -571,7 +579,7 @@ advisorRouter.post(
         text: SYSTEM_MESSAGES[body.outcome],
       });
 
-      res.json({ chat: updatedChat });
+      res.json({ chat: updatedChat && (await withHandoff(updatedChat)) });
     } catch (error) {
       console.error(
         '[/api/advisor/conversations/:id/release] Error in handler:',

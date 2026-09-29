@@ -239,6 +239,29 @@ export const AGENT_OUTPUTS = {
       },
     },
   },
+  complaint: {
+    thread_id: 'mock',
+    use_case: 'COMPLAINT',
+    intent: 'COMPLAINT',
+    language: 'es',
+    blocked: false,
+    handoff: {
+      reason: 'complaint',
+      summary: 'Reclamo por un cargo no reconocido.',
+      facts: {
+        verified_data: {
+          card_last4: '4930',
+          merchant: 'Internet Plus',
+          amount: 329.44,
+          currency: 'USD',
+        },
+        tools_called: ['list_transactions'],
+        intent: 'COMPLAINT',
+        language: 'es',
+        sentiment: 'negative',
+      },
+    },
+  },
 } as const;
 
 // '[agent-down-N:<key>]' in the prompt: the agent answers 502 the first N
