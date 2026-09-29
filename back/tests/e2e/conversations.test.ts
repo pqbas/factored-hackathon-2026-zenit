@@ -663,8 +663,9 @@ test.describe('Advisor console', () => {
     await page.getByTestId('conversation-row-c-race').click();
     await page.getByTestId('context-toggle').click();
     await expect(page.getByTestId('conversation-row-c-other').getByTestId('attention')).toHaveText(
-      'Con asesor · ada',
+      'Con asesor',
     );
+    await expect(page.getByTestId('conversation-row-c-other').getByTestId('advisor-badge')).toHaveText('ada');
     await expect(page.getByTestId('conversation-row-c-waiting').getByTestId('attention')).toHaveText(
       'En espera',
     );
@@ -702,7 +703,11 @@ test.describe('Advisor console', () => {
     await expect(waitingRow.getByTestId('row-text')).toHaveText('Es urgente, por favor');
     await expect(waitingRow.getByTestId('row-text')).toHaveAttribute('title', 'Consulta de daniela');
     await expect(waitingRow.getByTestId('david-icon')).toHaveCount(0);
-    await expect(page.getByTestId('conversation-row-c-other').getByTestId('attention')).toHaveText('Con asesor · ada');
+    // The advisor who took it has their own column; the state stays short.
+    const otherRow = page.getByTestId('conversation-row-c-other');
+    await expect(otherRow.getByTestId('attention')).toHaveText('Con asesor');
+    await expect(otherRow.getByTestId('advisor-badge')).toHaveText('ada');
+    await expect(page.getByTestId('conversation-row-c-waiting').getByTestId('advisor-badge')).toHaveCount(0);
     await expect(page.locator('body')).not.toContainText('Sin caso de uso');
 
     await page.getByTestId('view-david').click();

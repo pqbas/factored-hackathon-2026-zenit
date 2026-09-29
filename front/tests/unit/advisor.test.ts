@@ -16,6 +16,7 @@ import {
   viewUrl,
   isHeldByOther,
   isDavidReplying,
+  holderLabel,
   customerConversationsUrl,
   customerKeyOf,
   customerLabel,
@@ -210,10 +211,11 @@ describe('attentionOf', () => {
   it('flags waiting, held and resolved chats', () => {
     expect(attentionOf(chat({ handledBy: 'human_queue' }), ME)?.text).toBe('En espera');
     const mine = chat({ handledBy: 'human_agent', assignedTo: ME });
-    expect(attentionOf(mine, ME)?.text).toBe('Con asesor · tú');
+    // Rows say only the state; the advisor has their own column (holderLabel).
+    expect(attentionOf(mine, ME)?.text).toBe('Con asesor');
     expect(attentionOf(mine, ME, { long: true })?.text).toBe('Con asesor · la atiendes tú');
     const other = chat({ handledBy: 'human_agent', assignedTo: 'ada@example.com' });
-    expect(attentionOf(other, ME)?.text).toBe('Con asesor · ada');
+    expect(attentionOf(other, ME)?.text).toBe('Con asesor');
     expect(attentionOf(other, ME, { long: true })?.text).toBe('Con asesor · ada@example.com');
     expect(attentionOf(chat({ closedAt: '2026-09-28T11:00:00.000Z' }), ME)?.text).toBe('Resuelta');
   });
@@ -375,5 +377,17 @@ describe('toBubble text parts', () => {
     expect(toBubble(message, ME).text).toBe(
       'Se verificó que la transacción fue aprobada.\n\nTe comunico con un asesor.',
     );
+  });
+});
+
+describe('holderLabel', () => {
+  it('names the advisor who took the chat, "tú" for the viewer, nothing otherwise', () => {
+    expect(holderLabel(chat({ handledBy: 'human_agent', assignedTo: ME }), ME)).toBe('tú');
+    expect(holderLabel(chat({ handledBy: 'human_agent', assignedTo: 'asesor1@banco.test' }), ME)).toBe('asesor1');
+    expect(holderLabel(chat({ handledBy: 'human_queue' }), ME)).toBeNull();
+    expect(holderLabel(chat(), ME)).toBeNull();
+    expect(
+      holderLabel(chat({ handledBy: 'human_agent', assignedTo: ME, closedAt: '2026-09-29T10:00:00.000Z' }), ME),
+    ).toBeNull();
   });
 });

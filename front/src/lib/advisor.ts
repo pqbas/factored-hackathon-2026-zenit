@@ -297,22 +297,23 @@ export function attentionOf(
   if (chat.closedAt) return { text: STATUS_LABEL.resolved, tone: 'resolved' };
   if (chat.handledBy === 'human_queue') return { text: STATUS_LABEL.waiting, tone: 'waiting' };
   if (chat.handledBy === 'human_agent') {
-    const holder = isMine(chat, me)
-      ? long
-        ? 'la atiendes tú'
-        : 'tú'
-      : chat.assignedTo
-        ? long
-          ? chat.assignedTo
-          : chat.assignedTo.split('@')[0]
-        : 'otro asesor';
-    return {
-      text: `${STATUS_LABEL.advisor} · ${holder}`,
-      tone: isMine(chat, me) ? 'mine' : 'other',
-    };
+    const tone = isMine(chat, me) ? 'mine' : 'other';
+    // Rows name the advisor in their own column (holderLabel); the header
+    // spells it out here.
+    if (!long) return { text: STATUS_LABEL.advisor, tone };
+    const holder = isMine(chat, me) ? 'la atiendes tú' : (chat.assignedTo ?? 'otro asesor');
+    return { text: `${STATUS_LABEL.advisor} · ${holder}`, tone };
   }
   // Rows show David's chats with the robot; the header names the state.
   return long ? { text: STATUS_LABEL.assistant, tone: 'assistant' } : null;
+}
+
+// Who holds a chat an advisor took, for the row: "tú", or their user (the
+// email before the @). null unless an advisor has it.
+export function holderLabel(chat: AdvisorChat, me: string | undefined): string | null {
+  if (chat.closedAt || chat.handledBy !== 'human_agent') return null;
+  if (isMine(chat, me)) return 'tú';
+  return chat.assignedTo ? chat.assignedTo.split('@')[0] : 'otro asesor';
 }
 
 export class AdvisorRequestError extends Error {

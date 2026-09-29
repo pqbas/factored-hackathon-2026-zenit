@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Bot, Search } from 'lucide-react';
+import { Bot, Search, UserRound } from 'lucide-react';
 
 import { HandoffReasonChip } from '@/components/conversations/use-case-style';
 import { ASSISTANT_NAME } from '@/lib/assistant';
@@ -10,6 +10,7 @@ import {
   customerKeyOf,
   customerLabel,
   groupByHandoffReason,
+  holderLabel,
   type InboxItem,
   lastActivityAt,
   rowText,
@@ -35,6 +36,7 @@ function Row({
   // The inbox API has no unread count: the dot marks chats waiting for someone.
   const waiting = !chat.closedAt && chat.handledBy === 'human_queue';
   const withDavid = !chat.closedAt && chat.handledBy === 'ai_agent';
+  const holder = holderLabel(chat, me);
   const detail = handoffDetail(chat.handoff);
 
   return (
@@ -73,9 +75,19 @@ function Row({
       >
         {customerLabel(chat)}
       </span>
-      {/* Fixed-width column, centered between name and subject; empty unless
-          David has the chat. */}
+      {/* Who has the chat, between name and subject: David's robot, or the
+          advisor who took it. Empty while it waits. */}
       <span className="flex items-center justify-center">
+        {holder && (
+          <span
+            data-testid="advisor-badge"
+            title={`Lo atiende ${chat.assignedTo ?? holder}`}
+            className="flex max-w-32 items-center gap-1 rounded-md bg-secondary px-1.5 py-0.5 text-[11px] text-muted-foreground"
+          >
+            <UserRound className="size-3 shrink-0" strokeWidth={2} />
+            <span className="truncate">{holder}</span>
+          </span>
+        )}
         {withDavid && (
           <span
             data-testid="david-icon"
@@ -207,8 +219,8 @@ export function InboxList({
           className={cn(
             'grid gap-x-3',
             compact
-              ? 'grid-cols-[0_0.5rem_1.75rem_fit-content(8rem)_1.25rem_minmax(0,1fr)_auto_auto_0]'
-              : 'grid-cols-[0_0.5rem_1.75rem_fit-content(15rem)_1.25rem_minmax(0,1fr)_auto_auto_0]',
+              ? 'grid-cols-[0_0.5rem_1.75rem_fit-content(8rem)_auto_minmax(0,1fr)_auto_auto_0]'
+              : 'grid-cols-[0_0.5rem_1.75rem_fit-content(15rem)_auto_minmax(0,1fr)_auto_auto_0]',
           )}
         >
           {groups.map((group, index) => (
