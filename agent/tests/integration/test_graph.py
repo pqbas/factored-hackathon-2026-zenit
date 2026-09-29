@@ -784,3 +784,178 @@ def test_a_turn_that_is_not_a_confirmation_keeps_the_required_tool_choice():
         {"role": "user", "content": "C"}, {"role": "assistant", "content": "¿Quieres ver tus movimientos?"},
     ])
     assert llm.calls == ["required"]
+
+
+# --- Etapa 4: the collector asks the case's questions from code ---------------------------
+
+class _CollectingLLM(_SummarizingToolLLM):
+    """The tool loop's LLM plus a structured-output extractor that returns each scripted
+    Partial case in turn (an Exception instance is raised instead)."""
+
+    def __init__(self, extractions, replies=()):
+        super().__init__(list(replies))
+        self._extractions = iter(extractions)
+        self.extraction_inputs: list = []
+
+    def with_structured_output(self, schema):
+        llm = self
+
+        class _Structured:
+            async def ainvoke(self, messages):
+                llm.extraction_inputs.append(messages)
+                answer = next(llm._extractions)
+                if isinstance(answer, Exception):
+                    raise answer
+                return answer
+
+        return _Structured()
+
+
+def _partial(**fields):
+    from src.tools.handoff import PartialComplaintCase
+
+    return PartialComplaintCase(**fields)
+
+
+_CARD_AND_CHARGE = dict(card_last4="4930", transaction_date="2026-06-08", merchant="Internet Plus", amount=329.44)
+
+
+def test_a_complaint_turn_asks_the_next_fixed_question_and_never_calls_the_tool_loop_llm():
+    llm = _CollectingLLM([_partial(**_CARD_AND_CHARGE)])
+    result = _run(_complaint_graph(llm), "no reconozco el cargo de Internet Plus de la 4930")
+
+    assert result["messages"][-1].content == "¿Qué pasó? No lo reconozco, me cobraron dos veces o el monto es distinto."
+    assert getattr(llm, "calls", []) == []
+    assert llm.bound_tools is None
+    assert len(llm.extraction_inputs) == 1
+    assert result.get("handoff") is None
+
+
+def test_a_field_already_given_is_never_asked_again_on_the_next_turn():
+    llm = _CollectingLLM([
+        _partial(**_CARD_AND_CHARGE),
+        _partial(**_CARD_AND_CHARGE, complaint_type="not_recognized"),
+        _partial(**_CARD_AND_CHARGE, complaint_type="not_recognized", description="Nunca contraté ese servicio"),
+    ])
+    graph = _complaint_graph(llm)
+    history: list = []
+    replies = []
+    for text in ("cargo de Internet Plus en la 4930", "no lo reconozco", "nunca contraté ese servicio"):
+        result = _run(graph, text, history=history)
+        reply = result["messages"][-1].content
+        history += [{"role": "user", "content": text}, {"role": "assistant", "content": reply}]
+        replies.append(reply)
+
+    assert replies[0].startswith("¿Qué pasó?")
+    assert replies[1] == "Cuéntame brevemente lo que pasó."
+    assert replies[2].endswith("¿Confirmas estos datos para pasar tu reclamo a un asesor?")
+    # the extractor read the whole conversation, the fixed questions included
+    contents = [m.content for m in llm.extraction_inputs[2][1:]]
+    assert contents[0] == "cargo de Internet Plus en la 4930" and replies[1] in contents
+    assert llm.bound_tools is None
+
+
+def test_the_collector_asks_the_card_first_with_the_customers_cards():
+    llm = _CollectingLLM([_partial()])
+    result = _run(_complaint_graph(llm), "C")
+    assert result["messages"][-1].content.startswith("¿De qué tarjeta es el cargo?")
+    assert "terminada en 4930 (USD)" in result["messages"][-1].content
+
+
+def test_a_confirmation_turn_runs_no_extraction():
+    llm = _CollectingLLM([], replies=[
+        AIMessage(content="", tool_calls=[{"name": "hand_off_to_advisor", "args": _CASE, "id": "c1"}]),
+    ])
+    result = _run(_complaint_graph(llm), "sí, confirmo", history=_CONFIRMATION_HISTORY)
+    assert llm.extraction_inputs == []
+    assert result["handoff"]["reason"] == "complaint"
+
+
+def test_a_case_status_turn_runs_no_extraction():
+    llm = _CollectingLLM([], replies=[AIMessage(content="Tu reclamo sigue en revisión.")])
+    get_cases = FakeMCPTool("get_cases", GET_PRODUCTS_SCHEMA, result=[])
+
+    async def tools_for(schema):
+        return [get_cases]
+
+    jev = FakeJev(_classification(intent="CASE_STATUS"))
+    result = _run(_build_graph(llm, jev, tools_for=tools_for), "quiero saber el estado de mi reclamo")
+    assert llm.extraction_inputs == []
+    assert result["messages"][-1].content == "Tu reclamo sigue en revisión."
+
+
+def test_a_failing_extractor_falls_back_to_the_llm_path_and_still_replies():
+    llm = _CollectingLLM([RuntimeError("endpoint down")], replies=[AIMessage(content="¿De qué tarjeta es el cargo?")])
+    result = _run(_complaint_graph(llm), "C")
+    assert result["messages"][-1].content == "¿De qué tarjeta es el cargo?"
+    assert llm.calls == ["required"]
+
+
+def test_bank_data_that_cannot_be_read_falls_back_to_the_llm_path():
+    llm = _CollectingLLM([_partial()], replies=[AIMessage(content="Ahora mismo no puedo ver tus tarjetas.")])
+    get_products = FakeMCPTool("get_products", GET_PRODUCTS_SCHEMA, error=RuntimeError("warehouse down"))
+    list_transactions = FakeMCPTool("list_transactions", LIST_TRANSACTIONS_SCHEMA, result=[])
+    jev = FakeJev(_classification(intent="COMPLAINT"))
+    graph = _build_graph(llm, jev, tools_for=_fake_tools_for(get_products, list_transactions))
+    result = _run(graph, "C")
+    assert result["messages"][-1].content == "Ahora mismo no puedo ver tus tarjetas."
+
+
+def test_a_card_that_is_not_the_customers_is_said_and_the_real_cards_listed():
+    llm = _CollectingLLM([_partial(card_last4="9999")])
+    result = _run(_complaint_graph(llm), "la 9999")
+    text = result["messages"][-1].content
+    assert text.startswith("No encuentro esa tarjeta entre las tuyas.")
+    assert "4930" in text
+
+
+def test_a_portuguese_complaint_gets_portuguese_questions():
+    llm = _CollectingLLM([_partial()])
+    get_products = FakeMCPTool("get_products", GET_PRODUCTS_SCHEMA, result=_PRODUCTS_RESULT)
+    list_transactions = FakeMCPTool("list_transactions", LIST_TRANSACTIONS_SCHEMA, result=_TRANSACTIONS_RESULT)
+    jev = FakeJev(_classification(intent="COMPLAINT", language="pt"))
+    graph = _build_graph(llm, jev, tools_for=_fake_tools_for(get_products, list_transactions))
+    result = _run(graph, "não reconheço uma cobrança no meu cartão")
+    assert result["messages"][-1].content.startswith("De qual cartão é a cobrança?")
+
+
+def test_the_charges_movements_are_fetched_only_for_a_card_that_is_the_customers():
+    llm = _CollectingLLM([_partial(card_last4="4930"), _partial(card_last4="9999")])
+    get_products = FakeMCPTool("get_products", GET_PRODUCTS_SCHEMA, result=_PRODUCTS_RESULT)
+    list_transactions = FakeMCPTool("list_transactions", LIST_TRANSACTIONS_SCHEMA, result=_TRANSACTIONS_RESULT)
+    jev = FakeJev(_classification(intent="COMPLAINT"))
+    graph = _build_graph(llm, jev, tools_for=_fake_tools_for(get_products, list_transactions))
+
+    first = _run(graph, "la 4930")["messages"][-1].content
+    assert first.startswith("¿Cuál es el cargo?")
+    assert list_transactions.calls == [{"customer_id": "CLI-TEST", "product_last4": "4930"}]
+
+    list_transactions.calls.clear()
+    assert _run(graph, "la 9999")["messages"][-1].content.startswith("No encuentro esa tarjeta")
+    assert list_transactions.calls == []
+
+
+def test_a_retention_turn_asks_the_reason_after_the_product_and_summarizes_when_complete():
+    from src.tools.handoff import PartialRetentionCase
+
+    llm = _CollectingLLM([
+        PartialRetentionCase(product_last4="4930"),
+        PartialRetentionCase(product_last4="4930", reason="comisión alta"),
+    ])
+    routes = [*ROUTES, IntentRoute(
+        intent="RETENTION", description="Cancelar", examples=["cancelar mi tarjeta"], destination="load_context",
+        schemas=["bank_uc_consultas"], instructions="Recolecta y deriva.", handoff_reason="retention",
+    )]
+    get_products = FakeMCPTool("get_products", GET_PRODUCTS_SCHEMA, result=_PRODUCTS_RESULT)
+    list_transactions = FakeMCPTool("list_transactions", LIST_TRANSACTIONS_SCHEMA, result=[])
+    jev = FakeJev(_classification(intent="RETENTION"))
+    graph = _build_graph(llm, jev, routes=routes, tools_for=_fake_tools_for(get_products, list_transactions))
+
+    first = _run(graph, "quiero cancelar la 4930")["messages"][-1].content
+    second = _run(graph, "por la comisión", history=[
+        {"role": "user", "content": "quiero cancelar la 4930"}, {"role": "assistant", "content": first},
+    ])["messages"][-1].content
+
+    assert first == "¿Por qué quieres cancelarlo?"
+    assert second.splitlines()[-1] == "¿Confirmas estos datos para pasar tu solicitud a un asesor?"
+    assert "comisión alta" in second
