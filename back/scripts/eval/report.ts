@@ -26,6 +26,10 @@ export type TurnRecord = {
   model: string | null;
   promptVersion: string | null;
   classifier: string | null;
+  // The grounding guard: null when the agent didn't report it.
+  guardFired: boolean | null;
+  guardMissingTool: string | null;
+  guardAction: string | null;
 };
 
 export type RunResult = {
@@ -115,6 +119,30 @@ function breakdown(runs: RunResult[], key: (r: RunResult) => string) {
     };
   }
   return groups;
+}
+
+// Grounding guard: fired over the turns where the agent reported it, and what
+// came out of the firings.
+function guardMetrics(turns: TurnRecord[]) {
+  const reported = turns.filter((t) => t.guardFired !== null);
+  const fired = reported.filter((t) => t.guardFired);
+  const byMissingTool: Record<string, number> = {};
+  for (const t of fired) {
+    const tool = t.guardMissingTool ?? 'desconocida';
+    byMissingTool[tool] = (byMissingTool[tool] ?? 0) + 1;
+  }
+  return {
+    fired: ratio(fired.length, reported.length),
+    retriedOk: ratio(
+      fired.filter((t) => t.guardAction === 'retried_ok').length,
+      fired.length,
+    ),
+    safeReply: ratio(
+      fired.filter((t) => t.guardAction === 'safe_reply').length,
+      fired.length,
+    ),
+    byMissingTool,
+  };
 }
 
 export function buildReport(all: RunResult[], meta: ReportMeta) {
@@ -251,6 +279,7 @@ export function buildReport(all: RunResult[], meta: ReportMeta) {
           : null,
         perSafeResolvedRuns: safeWithCost.length,
       },
+      guard: guardMetrics(turns),
       variability: {
         consistentCases: ratio(
           perCase.filter((c) => c.consistent).length,
@@ -364,6 +393,15 @@ export function toMarkdown(report: Report): string {
     `- Por caso intentado: ${usd(m.cost.perAttemptedUsd)} (sobre ${m.cost.perAttemptedRuns} corridas con datos).`,
     `- Por caso resuelto automáticamente: ${usd(m.cost.perSafeResolvedUsd)} (costo total sobre ${m.cost.perSafeResolvedRuns} corridas seguras con datos).`,
     `- Supuestos: ${meta.costAssumptions}`,
+    '',
+    '### Guard de grounding',
+    '',
+    `- Disparos (turnos donde David mostró datos sin llamar a la herramienta): ${frac(m.guard.fired)} de los turnos que lo reportan.`,
+    `- Reintentos que salieron respaldados: ${frac(m.guard.retriedOk)}.`,
+    `- Terminaron en respuesta segura: ${frac(m.guard.safeReply)}.`,
+    ...Object.entries(m.guard.byMissingTool).map(
+      ([tool, n]) => `- Herramienta faltante ${tool}: ${n}.`,
+    ),
     '',
     '### Variabilidad',
     '',

@@ -69,3 +69,12 @@ La fase está lista para mergear cuando se cumple todo lo que sigue.
 Todas las casillas marcadas, el contrato del punto 15 confirmado con w1:p3, un
 reporte real commiteado en `scripts/eval/results/` y el spec revisado por
 w1:p4 antes de `/spec-implement`.
+
+## Anexo: guard de grounding
+
+- [ ] `parseAgentOutputs` lee el guard disparado, `null`, ausente y mal
+      formado
+- [ ] `TurnMetric` guarda el guard disparado, no disparado (`false`) y no
+      reportado (`null`)
+- [ ] El reporte muestra disparos sobre turnos que lo reportan, reintentos
+      respaldados, respuestas seguras y desglose por herramienta

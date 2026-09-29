@@ -287,6 +287,42 @@ export const AGENT_OUTPUTS = {
     prompt_version: 'mock-prompt-v1',
     classifier: 'llm',
   },
+  // The grounding guard fired: David showed movements without calling
+  // list_transactions and the retry forcing it came out backed (the shape of
+  // a real agent event, 29-09-26).
+  guardFired: {
+    thread_id: 'mock',
+    use_case: 'GENERAL_INQUIRY',
+    intent: 'GENERAL_INQUIRY',
+    language: 'es',
+    blocked: false,
+    handoff: null,
+    paused: false,
+    usage: { input_tokens: 36592, output_tokens: 2280 },
+    model: 'mock-model',
+    prompt_version: 'mock-prompt-v1',
+    classifier: 'llm',
+    guard: {
+      fired: true,
+      missing_tool: 'list_transactions',
+      action: 'retried_ok',
+    },
+  },
+  // The guard ran and didn't fire.
+  guardNull: {
+    thread_id: 'mock',
+    use_case: 'GENERAL_INQUIRY',
+    intent: 'GENERAL_INQUIRY',
+    language: 'es',
+    blocked: false,
+    handoff: null,
+    paused: false,
+    usage: { input_tokens: 19528, output_tokens: 624 },
+    model: 'mock-model',
+    prompt_version: 'mock-prompt-v1',
+    classifier: 'llm',
+    guard: null,
+  },
   // The agent was called on a conversation it doesn't own and says nothing.
   paused: {
     thread_id: 'mock',

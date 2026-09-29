@@ -262,3 +262,19 @@
     En `tests/api-mocking/api-mock-handlers.ts`, sumar la salida `usage` al
     marcador `[agent-outputs:X]`. Ampliar `metrics.test.ts` para que los
     campos viejos no cambien.
+
+---
+
+## Anexo: guard de grounding
+
+30. `providers-server.ts`: `AgentGuard` y `guard` en `parseAgentOutputs`
+    (`null`, objeto con `fired` booleano, o `undefined`).
+31. `schema.ts`: `guardFired`, `guardMissingTool`, `guardAction` en
+    `TurnMetric` (migración 0012). `persistAgentReply` los guarda.
+32. `scripts/eval/report.ts`: `guardMetrics` en `metrics.guard` y la sección
+    "Guard de grounding" del `.md`; `run.ts` los lee de `/turns`.
+33. Tests: `agent-outputs.test.ts` (fired, null, ausente, mal formado),
+    `turn-metrics.test.ts` (los tres estados guardados, con los marcadores
+    `[agent-outputs:guardFired]` y `[agent-outputs:guardNull]`, tomados de
+    eventos reales del agente) y `eval-score.test.ts` (numeradores y
+    denominadores del guard).

@@ -461,6 +461,9 @@ function run(over: Partial<RunResult>): RunResult {
         model: 'm',
         promptVersion: 'v1',
         classifier: 'llm',
+        guardFired: false,
+        guardMissingTool: null,
+        guardAction: null,
       },
     ],
     transcript: [{ role: 'david', text: 'Tu saldo.' }],
@@ -687,6 +690,52 @@ test.describe('buildReport', () => {
     expect(md).toContain(
       '#19, `expected.mustMatch` (después de ver resultados)',
     );
+  });
+
+  test('guard firings count over the turns that report the guard', () => {
+    const turn = run({}).turns[0];
+    const guarded = buildReport(
+      [
+        run({
+          turns: [
+            {
+              ...turn,
+              guardFired: true,
+              guardMissingTool: 'list_transactions',
+              guardAction: 'retried_ok',
+            },
+            {
+              ...turn,
+              guardFired: true,
+              guardMissingTool: 'get_products',
+              guardAction: 'safe_reply',
+            },
+            { ...turn, guardFired: false },
+            { ...turn, guardFired: null },
+          ],
+        }),
+      ],
+      META,
+    );
+    expect(guarded.metrics.guard.fired).toMatchObject({
+      numerator: 2,
+      denominator: 3,
+    });
+    expect(guarded.metrics.guard.retriedOk).toMatchObject({
+      numerator: 1,
+      denominator: 2,
+    });
+    expect(guarded.metrics.guard.safeReply).toMatchObject({
+      numerator: 1,
+      denominator: 2,
+    });
+    expect(guarded.metrics.guard.byMissingTool).toEqual({
+      list_transactions: 1,
+      get_products: 1,
+    });
+    const md = toMarkdown(guarded);
+    expect(md).toContain('### Guard de grounding');
+    expect(md).toContain('Herramienta faltante get_products: 1.');
   });
 
   test('cost is "sin datos", never zero, when no turn reports usage', () => {
