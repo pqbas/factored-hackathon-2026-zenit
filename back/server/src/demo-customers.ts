@@ -15,6 +15,11 @@ export const DEFAULT_DEMO_CUSTOMERS: DemoCustomer[] = [
     customerId: 'CLI-FLEUCGTWGAHL',
   },
   {
+    token: 'demo-mx-2',
+    label: 'Eduardo · México',
+    customerId: 'CLI-0IY07CEBUL79',
+  },
+  {
     token: 'demo-co-1',
     label: 'Javier · Colombia',
     customerId: 'CLI-7MPS3ZOPSN4Q',
@@ -64,4 +69,11 @@ export function getDemoCustomers(): DemoCustomer[] {
 // The customer behind a session token, or undefined for an unknown token.
 export function findDemoCustomer(token: string): DemoCustomer | undefined {
   return getDemoCustomers().find((c) => c.token === token);
+}
+
+// The first live demo token of a customer id, or undefined.
+export function tokenForCustomerId(customerId: string): string | undefined {
+  return getDemoCustomers().find(
+    (c) => c.customerId === customerId && !c.expired,
+  )?.token;
 }

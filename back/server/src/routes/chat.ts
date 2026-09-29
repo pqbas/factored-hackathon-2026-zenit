@@ -44,7 +44,7 @@ import { isAgentUnavailableError } from '@chat-template/ai-sdk-providers';
 import { ChatSDKError } from '@chat-template/core/errors';
 import { generateTitleFromUserMessage } from '../title';
 import { toCustomerChat } from '../customer-view';
-import { findDemoCustomer } from '../demo-customers';
+import { findDemoCustomer, tokenForCustomerId } from '../demo-customers';
 import { resolveCustomerName } from '../customer-name';
 import { persistAgentReply, streamAgentTurn } from '../agent-reply';
 
@@ -434,6 +434,9 @@ chatRouter.get(
     return res.status(200).json({
       ...toCustomerChat(chat),
       agentPending: await hasPendingAgentTurn({ chatId: chat.id }),
+      demoCustomerToken: chat.customerId
+        ? (tokenForCustomerId(chat.customerId) ?? null)
+        : null,
     });
   },
 );

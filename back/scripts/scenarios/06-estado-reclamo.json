@@ -1,14 +1,13 @@
 {
   "name": "06-estado-reclamo",
-  "description": "Estado de un reclamo: David lista los reclamos, da el estado real y, si el cliente necesita algo más (un plazo), confirma los datos y deriva (3.D2)",
+  "description": "Estado de un reclamo de Eduardo: David lo consulta y, como necesita algo más, deriva con case_status (3.D2)",
   "sessionToken": "demo-mx-2",
-  "customer": 3,
+  "customer": 6,
   "messages": [
     "hola",
-    "D",
-    "2",
-    "el de octubre",
-    "quiero saber cuándo lo van a resolver",
+    "quiero saber el estado de mi reclamo",
+    "sí, ese es",
+    "necesito saber en cuánto tiempo me van a responder",
     "sí, confirmo"
   ]
 }
