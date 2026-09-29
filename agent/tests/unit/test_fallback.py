@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from src.llm.fallback import check_guardrail_rules, detect_language, fallback_classify, mask_sensitive
 
 INTENTS = ["GENERAL_INQUIRY", "COMPLAINT", "HUMAN_AGENT", "CANCEL", "GREETING", "OUT_OF_SCOPE"]
@@ -88,3 +90,23 @@ def test_mask_sensitive_masks_every_card_number_and_cvv():
 
 def test_mask_sensitive_leaves_clean_text_unchanged():
     assert mask_sensitive("¿Cuál es mi saldo?") == "¿Cuál es mi saldo?"
+
+
+INTENTS = ["GENERAL_INQUIRY", "COMPLAINT", "HUMAN_AGENT", "CANCEL", "GREETING", "GOODBYE", "OUT_OF_SCOPE"]
+
+
+@pytest.mark.parametrize(
+    "text",
+    ["¿Cuál es el saldo de mi tarjeta de crédito?", "¿Cuánto tengo en mi cuenta de ahorros?",
+     "quiero ver mis últimos movimientos", "Qual é o limite do meu cartão?"],
+)
+def test_fallback_routes_balance_and_movement_questions_to_general_inquiry(text):
+    assert fallback_classify(text, INTENTS).intent == "GENERAL_INQUIRY"
+
+
+def test_fallback_keeps_an_unrecognized_charge_as_a_complaint():
+    assert fallback_classify("No reconozco un cargo en mi saldo", INTENTS).intent == "COMPLAINT"
+
+
+def test_fallback_recognizes_a_goodbye():
+    assert fallback_classify("Gracias, eso es todo", INTENTS).intent == "GOODBYE"

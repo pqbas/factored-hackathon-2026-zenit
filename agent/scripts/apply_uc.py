@@ -16,8 +16,12 @@ from databricks.sdk.service.sql import StatementState  # noqa: E402
 from src.config import settings  # noqa: E402
 
 
-def apply_sql_file(path: str | Path, client: WorkspaceClient | None = None) -> None:
+def apply_sql_file(
+    path: str | Path, client: WorkspaceClient | None = None, variables: dict[str, str] | None = None
+) -> None:
     sql = Path(path).read_text().replace("${catalog}", settings.uc_catalog)
+    for name, value in (variables or {}).items():
+        sql = sql.replace("${" + name + "}", value)
     client = client or WorkspaceClient()
 
     for statement in _statements(sql):
@@ -52,10 +56,14 @@ def _warehouse_id() -> str:
 
 
 def main() -> None:
-    if len(sys.argv) != 2:
-        print("usage: uv run python scripts/apply_uc.py <path-to-sql-file>", file=sys.stderr)
+    if len(sys.argv) < 2:
+        print(
+            "usage: uv run python scripts/apply_uc.py <path-to-sql-file> [name=value ...]",
+            file=sys.stderr,
+        )
         sys.exit(1)
-    apply_sql_file(sys.argv[1])
+    variables = dict(arg.split("=", 1) for arg in sys.argv[2:])
+    apply_sql_file(sys.argv[1], variables=variables)
 
 
 if __name__ == "__main__":

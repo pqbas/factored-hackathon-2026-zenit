@@ -15,3 +15,5 @@ env:
     value: "workspace"
   - name: LLM_ENDPOINT
     value: "databricks-qwen3-next-80b-a3b-instruct"
+  - name: JEV_API_KEY
+    valueFrom: "jev_api_key"
