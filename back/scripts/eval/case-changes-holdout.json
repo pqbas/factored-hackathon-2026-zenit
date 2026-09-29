@@ -1,4 +1,14 @@
 {
   "frozenAt": "8c937f73",
-  "changes": []
+  "changes": [
+    {
+      "date": "2026-09-29",
+      "caseId": "H06",
+      "field": "steps[1].say",
+      "before": "la 4930",
+      "after": "es la terminada en 4930",
+      "why": "Repetía un mensaje del escenario de desarrollo 04; lo detectó el test de held-out antes de cualquier corrida.",
+      "afterSeeingResults": false
+    }
+  ]
 }

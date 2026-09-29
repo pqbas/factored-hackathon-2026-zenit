@@ -5,13 +5,26 @@ import { expect, test } from '@playwright/test';
 import {
   compareToMarkdown,
   type ComparedReport,
-} from '../../scripts/eval/compare';
-import { loadCases, parseArgs, reportStem } from '../../scripts/eval/run';
-import { caseChangesSchema } from '../../scripts/eval/types';
+} from '../../scripts/eval/compare-report';
+import { parseArgs, reportStem } from '../../scripts/eval/args';
+import {
+  caseChangesSchema,
+  type EvalCase,
+  evalCaseSchema,
+} from '../../scripts/eval/types';
 
 const EVAL = join(process.cwd(), 'scripts/eval');
-const holdout = loadCases(null, 'holdout');
-const dev = loadCases(null, 'dev');
+const loadCases = (dir: string): EvalCase[] =>
+  readdirSync(join(EVAL, dir))
+    .filter((f) => f.endsWith('.json'))
+    .sort()
+    .map((f) =>
+      evalCaseSchema.parse(
+        JSON.parse(readFileSync(join(EVAL, dir, f), 'utf8')),
+      ),
+    );
+const holdout = loadCases('cases-holdout');
+const dev = loadCases('cases');
 
 const says = (cases: typeof dev) =>
   cases.flatMap((c) => c.steps.flatMap((s) => ('say' in s ? [s.say] : [])));
