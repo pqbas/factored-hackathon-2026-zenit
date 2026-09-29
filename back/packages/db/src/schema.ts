@@ -54,6 +54,9 @@ export const chat = createTable('Chat', {
   // The bank customer of the chat's session (demo token -> customer_id), for
   // the console's customer context. Null when the chat has no session.
   customerId: varchar('customerId', { length: 64 }),
+  // First and last name from customer_360, looked up once per customer id so
+  // the console shows the bank customer. Never sent on customer routes.
+  customerName: varchar('customerName', { length: 256 }),
 });
 
 export type Chat = InferSelectModel<typeof chat>;

@@ -21,6 +21,8 @@ import { configRouter } from './routes/config';
 import { demoCustomersRouter } from './routes/demo-customers';
 import { productsRouter } from './routes/products';
 import { ChatSDKError } from '@chat-template/core/errors';
+import { isDatabaseAvailable } from '@chat-template/db';
+import { backfillCustomerNames } from './customer-name';
 
 // ESM-compatible __dirname
 const __filename = fileURLToPath(import.meta.url);
@@ -173,6 +175,8 @@ async function startServer() {
     console.log(`Backend server is running on http://localhost:${PORT}`);
     console.log(`Environment: ${isDevelopment ? 'development' : 'production'}`);
   });
+
+  if (isDatabaseAvailable()) void backfillCustomerNames();
 }
 
 startServer();

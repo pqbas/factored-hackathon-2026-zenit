@@ -271,3 +271,6 @@ cliente y su historia con el banco.
       cliente, sus últimos 10 contactos, sus últimas 5 transcripciones de
       llamadas (enmascaradas con las mismas reglas que el agente) y sus casos,
       leídos del warehouse en paralelo; 204 si el chat no tiene cliente.
+- [x] La consola muestra al cliente del banco por su nombre (customerName, de
+      customer_360, una consulta por cliente y reintento si falla); las rutas
+      del cliente no lo traen.
