@@ -16,6 +16,8 @@ import {
   getChats,
   getChatOwners,
   getConversationCounts,
+  getCustomerInbox,
+  getChatsByCustomerKey,
   getResolutionMetrics,
   HUMAN_HANDLED_BY,
   getLastCustomerMessages,
@@ -114,6 +116,36 @@ advisorRouter.get('/conversations', async (req: Request, res: Response) => {
   }
 
   try {
+    // One row per bank customer, by their most recent chat.
+    if (req.query.groupBy === 'customer') {
+      const { rows, hasMore } = await getCustomerInbox({
+        userId,
+        handledBy,
+        useCase,
+        assignedTo,
+        status,
+        limit,
+        startingAfter,
+      });
+      const lastMessages = await getLastCustomerMessages({
+        chatIds: rows.map((r) => r.chat.id),
+      });
+      const lastByChat = new Map(lastMessages.map((m) => [m.chatId, m]));
+      return res.json({
+        hasMore,
+        chats: rows.map(({ chat, customerKey, conversationCount, updatedAt }) => {
+          const last = lastByChat.get(chat.id);
+          return {
+            ...chat,
+            lastMessage: last ? toLastMessagePreview(last) : null,
+            customerKey,
+            conversationCount,
+            updatedAt,
+          };
+        }),
+      });
+    }
+
     const chats = await getChats({
       scope: userId ? { userId } : 'all',
       limit,
@@ -238,6 +270,7 @@ advisorRouter.get(
         await getConversationCounts({
           userId: (req.query.userId as string | undefined) || undefined,
           advisorEmail: email,
+          byCustomer: req.query.groupBy === 'customer',
         }),
       );
     } catch (error) {
@@ -271,6 +304,36 @@ advisorRouter.get(
     } catch (error) {
       console.error('[/api/advisor/conversations/:id] Error in handler:', error);
       res.status(500).json({ error: 'Failed to fetch conversation' });
+    }
+  },
+);
+
+/**
+ * GET /api/advisor/customers/:customerKey/conversations - Every conversation
+ * of a customer (customerKey from ?groupBy=customer), oldest first.
+ */
+advisorRouter.get(
+  '/customers/:customerKey/conversations',
+  async (req: Request, res: Response) => {
+    if (!isDatabaseAvailable()) {
+      return res.status(204).end();
+    }
+
+    try {
+      const chats = await getChatsByCustomerKey({
+        customerKey: String(req.params.customerKey),
+      });
+      if (chats.length === 0) {
+        const response = new ChatSDKError('not_found:chat').toResponse();
+        return res.status(response.status).json(response.json);
+      }
+      res.json({ chats });
+    } catch (error) {
+      console.error(
+        '[/api/advisor/customers/:customerKey/conversations] Error:',
+        error,
+      );
+      res.status(500).json({ error: 'Failed to fetch conversations' });
     }
   },
 );

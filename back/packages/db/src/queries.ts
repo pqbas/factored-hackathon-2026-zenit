@@ -364,6 +364,160 @@ export async function getLastCustomerMessages({
   }
 }
 
+// A console row per bank customer: the customer id, else the app user's
+// email, else the user id.
+export const CUSTOMER_KEY = sql<string>`coalesce(${chat.customerId}, ${chat.userEmail}, ${chat.userId})`;
+
+export type CustomerInboxRow = {
+  chat: Chat;
+  customerKey: string;
+  conversationCount: number;
+  updatedAt: string;
+};
+
+// The advisor inbox grouped by customer: each customer's most recent chat
+// (by createdAt), filtered like getChats, ordered by its last message.
+// starting_after is the customerKey of the previous page's last row. Three
+// queries whatever the page size: the rows, their chats, nothing per row.
+export async function getCustomerInbox({
+  userId,
+  handledBy,
+  useCase,
+  assignedTo,
+  status,
+  limit,
+  startingAfter,
+}: {
+  userId?: string;
+  handledBy?: string | Chat['handledBy'][];
+  useCase?: string;
+  assignedTo?: string;
+  status?: 'open' | 'closed';
+  limit: number;
+  startingAfter?: string | null;
+}): Promise<{ rows: CustomerInboxRow[]; hasMore: boolean }> {
+  if (!isDatabaseAvailable()) return { rows: [], hasMore: false };
+
+  const filters: SQL[] = [];
+  if (Array.isArray(handledBy)) {
+    filters.push(
+      sql`r."handledBy" in (${sql.join(
+        handledBy.map((h) => sql`${h}`),
+        sql`, `,
+      )})`,
+    );
+  } else if (handledBy) {
+    filters.push(sql`r."handledBy" = ${handledBy}`);
+  }
+  if (useCase) filters.push(sql`r."useCase" = ${useCase}`);
+  if (assignedTo) filters.push(sql`r."assignedTo" = ${assignedTo}`);
+  if (status === 'open') filters.push(sql`r."closedAt" is null`);
+  if (status === 'closed') filters.push(sql`r."closedAt" is not null`);
+  if (startingAfter) {
+    filters.push(sql`(r."updatedAt", r."customerKey") < (
+      select c."updatedAt", c."customerKey" from ranked c
+      where c."customerKey" = ${startingAfter}
+    )`);
+  }
+
+  try {
+    const database = await ensureDb();
+    const found = (await database.execute(sql`
+      with latest as (
+        select distinct on (${CUSTOMER_KEY})
+          ${chat.id} as "id", ${CUSTOMER_KEY} as "customerKey",
+          ${chat.handledBy} as "handledBy", ${chat.useCase} as "useCase",
+          ${chat.assignedTo} as "assignedTo", ${chat.closedAt} as "closedAt",
+          ${chat.createdAt} as "createdAt",
+          count(*) over (partition by ${CUSTOMER_KEY}) as "conversationCount"
+        from ${chat}
+        ${userId ? sql`where ${chat.userId} = ${userId}` : sql``}
+        order by ${CUSTOMER_KEY}, ${chat.createdAt} desc, ${chat.id} desc
+      ),
+      ranked as (
+        select l.*, coalesce(
+          (select max(m."createdAt") from ${message} m where m."chatId" = l."id"),
+          l."createdAt"
+        ) as "updatedAt"
+        from latest l
+      )
+      select r."id", r."customerKey", r."conversationCount"::int as "conversationCount",
+        to_char(r."updatedAt", 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as "updatedAt"
+      from ranked r
+      ${filters.length ? sql`where ${sql.join(filters, sql` and `)}` : sql``}
+      order by r."updatedAt" desc, r."customerKey" desc
+      limit ${limit + 1}
+    `)) as unknown as Array<{
+      id: string;
+      customerKey: string;
+      conversationCount: number;
+      updatedAt: string;
+    }>;
+
+    const hasMore = found.length > limit;
+    const page = found.slice(0, limit);
+    const chats =
+      page.length === 0
+        ? []
+        : await database
+            .select()
+            .from(chat)
+            .where(
+              inArray(
+                chat.id,
+                page.map((r) => r.id),
+              ),
+            );
+    const byId = new Map(chats.map((c) => [c.id, c]));
+
+    return {
+      rows: page.flatMap((r) => {
+        const row = byId.get(r.id);
+        return row
+          ? [
+              {
+                chat: row,
+                customerKey: r.customerKey,
+                conversationCount: Number(r.conversationCount),
+                updatedAt: r.updatedAt,
+              },
+            ]
+          : [];
+      }),
+      hasMore,
+    };
+  } catch (error) {
+    console.error('[getCustomerInbox] Error:', error);
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to get the inbox by customer',
+    );
+  }
+}
+
+// Every chat of a customer (by CUSTOMER_KEY), oldest first.
+export async function getChatsByCustomerKey({
+  customerKey,
+}: {
+  customerKey: string;
+}): Promise<Chat[]> {
+  if (!isDatabaseAvailable()) return [];
+
+  try {
+    return await (await ensureDb())
+      .select()
+      .from(chat)
+      .where(eq(CUSTOMER_KEY, customerKey))
+      .orderBy(asc(chat.createdAt), asc(chat.id));
+  } catch (error) {
+    console.error('[getChatsByCustomerKey] Error:', error);
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to get the customer conversations',
+    );
+  }
+}
+
 export interface ConversationCounts {
   total: number;
   byUseCase: Record<string, number>;
@@ -385,12 +539,15 @@ export const HUMAN_HANDLED_BY: Chat['handledBy'][] = [
 // David handles, unattended = human_queue,
 // mine = open and assigned to advisorEmail, resolved = closed. One aggregate
 // query (a row per use case), no chat rows.
+// byCustomer counts customers instead: each one by its most recent chat.
 export async function getConversationCounts({
   userId,
   advisorEmail,
+  byCustomer = false,
 }: {
   userId?: string;
   advisorEmail?: string;
+  byCustomer?: boolean;
 }): Promise<ConversationCounts> {
   const counts: ConversationCounts = {
     total: 0,
@@ -407,29 +564,46 @@ export async function getConversationCounts({
     sql<number>`count(*) filter (where ${condition})`.mapWith(Number);
 
   try {
-    const rows = await (await ensureDb())
-      .select({
+    const database = await ensureDb();
+    const userCondition = userId ? eq(chat.userId, userId) : undefined;
+    const latest = database
+      .selectDistinctOn([CUSTOMER_KEY], {
         useCase: chat.useCase,
+        handledBy: chat.handledBy,
+        assignedTo: chat.assignedTo,
+        closedAt: chat.closedAt,
+      })
+      .from(chat)
+      .where(userCondition)
+      .orderBy(CUSTOMER_KEY, desc(chat.createdAt), desc(chat.id))
+      .as('latest');
+    // The subquery exposes the same column names, so the counts below read
+    // either source.
+    const c = (byCustomer ? latest : chat) as unknown as typeof chat;
+
+    const rows = await database
+      .select({
+        useCase: c.useCase,
         open: countWhere(
           and(
-            isNull(chat.closedAt),
-            inArray(chat.handledBy, HUMAN_HANDLED_BY),
+            isNull(c.closedAt),
+            inArray(c.handledBy, HUMAN_HANDLED_BY),
           ) as SQL,
         ),
         aiAgent: countWhere(
-          and(isNull(chat.closedAt), eq(chat.handledBy, 'ai_agent')) as SQL,
+          and(isNull(c.closedAt), eq(c.handledBy, 'ai_agent')) as SQL,
         ),
-        unattended: countWhere(eq(chat.handledBy, 'human_queue')),
+        unattended: countWhere(eq(c.handledBy, 'human_queue')),
         mine: advisorEmail
           ? countWhere(
-              and(eq(chat.assignedTo, advisorEmail), isNull(chat.closedAt)) as SQL,
+              and(eq(c.assignedTo, advisorEmail), isNull(c.closedAt)) as SQL,
             )
           : sql<number>`0`.mapWith(Number),
-        resolved: countWhere(isNotNull(chat.closedAt)),
+        resolved: countWhere(isNotNull(c.closedAt)),
       })
-      .from(chat)
-      .where(userId ? eq(chat.userId, userId) : undefined)
-      .groupBy(chat.useCase);
+      .from(byCustomer ? latest : chat)
+      .where(byCustomer ? undefined : userCondition)
+      .groupBy(c.useCase);
 
     for (const row of rows) {
       counts.total += row.open;
