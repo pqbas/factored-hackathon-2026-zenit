@@ -15,6 +15,7 @@ import {
 import { type ReactNode, useState } from 'react';
 import useSWR from 'swr';
 
+import { CustomerProfileCard } from '@/components/conversations/customer-profile-card';
 import { HandoffCard } from '@/components/conversations/handoff-card';
 import { Button } from '@/components/ui/button';
 import {
@@ -28,6 +29,7 @@ import {
   firstTab,
   formatClaim,
   formatContextDate,
+  profileFields,
   type Interaction,
   interactionTypeLabel,
   languageLabel,
@@ -341,6 +343,12 @@ export function CustomerContextPanel({
       </div>
       {/* Everything below the title scrolls together: the case can be tall. */}
       <div className="min-h-0 flex-1 overflow-y-auto">
+        {/* Who the customer is first, then the case David handed off. */}
+        {data?.profile && profileFields(data.profile).length > 0 && (
+          <div className="px-3.5 pt-3.5">
+            <CustomerProfileCard profile={data.profile} />
+          </div>
+        )}
         {handoff && (
           <div className="px-3.5 pt-3.5">
             <HandoffCard handoff={handoff} />

@@ -453,3 +453,14 @@ Shipped en PR #72.
 - [ ] El cliente demo elegido queda fijo para la sesión; un chat existente usa el cliente que guardó el back.
 
 Spec: `spec/29-09-26-filtros-handoff-y-cliente-fijo/`.
+
+---
+
+## Phase 22: Datos del cliente en el panel Contexto
+
+**Goal:** que el asesor vea primero quién es el cliente, tal como está en el banco.
+
+- [ ] Sección "Datos del cliente" como primera del panel Contexto (ubicación, segmento, estado,
+      cliente desde, productos activos, email, celular y canal preferido), sin repetir el nombre ni el id.
+
+Spec: `spec/29-09-26-datos-del-cliente/`.

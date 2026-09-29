@@ -504,6 +504,17 @@ test.describe('Advisor console', () => {
         : route.fulfill({
             json: {
               customer: { customerId: 'CUS000123', firstName: 'Daniela', lastName: 'Sosa' },
+              profile: {
+                customerId: 'CUS000123',
+                country: 'México',
+                city: 'Tijuana',
+                segment: 'Plus',
+                status: 'Active',
+                customerSince: '2022-07-03T18:46:46.000Z',
+                products: [{ productType: 'Tarjeta Crédito', last4: '1070' }],
+                contact: { email: 'daniela@correo.test', mobilePhone: null },
+                preferredChannel: 'Phone',
+              },
               interactions: [
                 { interactionId: 'INT1', hasTranscript: true, date: '2026-09-26T11:42:00.000Z', interactionType: 'Inbound Call', channel: 'Phone', reason: 'Cargo duplicado', resolved: false, escalated: true, sentiment: 'Negative' },
                 { interactionId: 'INT2', hasTranscript: false, date: '2026-09-20T18:05:00.000Z', interactionType: 'Outbound Call', channel: 'Phone', reason: null, resolved: true, escalated: null, sentiment: null },
@@ -527,6 +538,20 @@ test.describe('Advisor console', () => {
     // The customer's id goes in the chat header, not repeated in the panel.
     await expect(page.getByTestId('customer-id')).toHaveText('Cliente •• 0123');
     await expect(page.getByTestId('context-customer')).toHaveCount(0);
+
+    // "Datos del cliente" opens the panel, above the handed-off case, without
+    // the customer id or empty fields.
+    const contextPanel = page.getByTestId('customer-context');
+    const profile = contextPanel.getByTestId('customer-profile');
+    await expect(profile.getByTestId('profile-location')).toHaveText('Tijuana, México');
+    await expect(profile.getByTestId('profile-status')).toHaveText('Activo');
+    await expect(profile.getByTestId('profile-products')).toHaveText('Tarjeta Crédito ••1070');
+    await expect(profile.getByTestId('profile-preferredChannel')).toHaveText('Teléfono');
+    await expect(profile.getByTestId('profile-mobilePhone')).toHaveCount(0);
+    await expect(profile).not.toContainText('CUS000123');
+    const profileBox = await profile.boundingBox();
+    const caseBox = await contextPanel.getByTestId('handoff-card').boundingBox();
+    expect(profileBox && caseBox && profileBox.y < caseBox.y).toBe(true);
     // No cases: it opens on the first tab with something in it.
     await expect(page.getByTestId('context-tab-interactions')).toHaveAttribute('aria-selected', 'true');
     await expect(panel.getByTestId('context-interaction')).toHaveCount(2);
@@ -667,6 +692,8 @@ test.describe('Advisor console', () => {
     await expect(panel).toBeVisible();
     await expect(page.getByTestId('handoff-card')).toHaveCount(1);
     const card = panel.getByTestId('handoff-card');
+    // No profile from the bank (here, no bank customer): no section, no error.
+    await expect(panel.getByTestId('customer-profile')).toHaveCount(0);
     // The reason is the header's chip; the card doesn't repeat it.
     await expect(card.getByTestId('handoff-reason')).toHaveCount(0);
     // Row and card name the case's detail with the same text.
