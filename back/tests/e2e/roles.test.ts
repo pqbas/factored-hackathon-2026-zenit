@@ -3,7 +3,7 @@ import type { Page } from '@playwright/test';
 import { expect, test } from '../fixtures';
 import { mockSessionRole, type Role } from '../session-role';
 
-const SECTIONS = ['nav-agent', 'nav-products', 'nav-chats'] as const;
+const SECTIONS = ['nav-agent', 'nav-products', 'nav-chats', 'nav-metrics'] as const;
 
 async function expectRail(page: Page, visible: (typeof SECTIONS)[number][]) {
   await expect(page.getByTestId('nav-agent')).toBeVisible();
@@ -19,10 +19,10 @@ test.describe('Navigation by role', () => {
     blocked: string | null;
   }[] = [
     { role: 'customer', rail: ['nav-agent', 'nav-products'], blocked: '/conversations' },
-    { role: 'advisor', rail: ['nav-agent', 'nav-chats'], blocked: '/products' },
+    { role: 'advisor', rail: ['nav-agent', 'nav-chats'], blocked: '/metrics' },
     {
       role: 'admin',
-      rail: ['nav-agent', 'nav-products', 'nav-chats'],
+      rail: ['nav-agent', 'nav-products', 'nav-chats', 'nav-metrics'],
       blocked: null,
     },
     // No role in the session: treated as customer, never as admin.

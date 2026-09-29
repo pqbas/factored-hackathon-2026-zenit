@@ -335,3 +335,18 @@ Shipped en PR #42.
       filas y encabezado (docs/flujo-atencion.md §5); la vista de David es "Con AI".
 
 Shipped en PR #44.
+
+---
+
+## Phase 14: Panel de métricas (Complete)
+
+**Goal:** que el admin vea cuánto resuelve la IA sola y cuánto necesita a un asesor.
+
+- [x] Sección "Métricas" en el riel, solo para el admin, con rango hoy / 7 días / 30 días.
+- [x] Tarjetas: % resuelto por la IA de punta a punta, resueltas por la IA, por un
+      asesor y asistidas.
+- [x] Desglose por caso de uso con los colores de la consola y tendencia diaria
+      en barras apiladas (IA / asistidas / asesor).
+- [x] Estados de carga, sin resoluciones y error con reintento.
+
+Shipped en PR #49.
