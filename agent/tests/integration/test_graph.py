@@ -784,6 +784,30 @@ def test_a_made_up_complaint_id_on_the_yes_gets_the_real_ones_and_the_forced_ret
     assert result["messages"][-1].content == HANDOFF_REPLY["es"]
 
 
+def test_a_handoff_the_llm_calls_on_its_own_with_a_made_up_complaint_id_is_retried_once():
+    cases_result = [{"type": "text", "text": json.dumps({
+        "columns": ["complaint_id", "creation_date", "subcategory", "claimed_amount", "currency", "status", "resolution"],
+        "rows": [["CMP-1", "2025-10-09T00:18:40.000+0000", "Cargo no reconocido", None, None, "In Process", None]],
+    })}]
+    get_cases = FakeMCPTool("get_cases", GET_PRODUCTS_SCHEMA, result=cases_result)
+
+    async def tools_for(schema):
+        return [get_cases]
+
+    need = {"need": "saber cuándo lo resuelven"}
+    llm = _SummarizingToolLLM([
+        AIMessage(content="", tool_calls=[{"name": "hand_off_to_advisor", "id": "c1",
+                                           "args": {"complaint_id": "C-20251009-001", **need}}]),
+        AIMessage(content="", tool_calls=[{"name": "hand_off_to_advisor", "id": "c2",
+                                           "args": {"complaint_id": "CMP-1", **need}}]),
+    ])
+    result = _run(_build_graph(llm, FakeJev(_classification(intent="CASE_STATUS")), tools_for=tools_for),
+                  "necesito saber en cuánto tiempo me van a responder")
+
+    assert llm.calls[:2] == ["required", "hand_off_to_advisor"]
+    assert result["handoff"]["facts"]["case_id"] == "CMP-1"
+
+
 _CONFIRMATION_HISTORY = [
     {"role": "user", "content": "no lo reconozco"},
     {"role": "assistant", "content": "Tarjeta 4930, cargo de Internet Plus.\n\n"

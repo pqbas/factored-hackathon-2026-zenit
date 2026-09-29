@@ -93,10 +93,9 @@ async def _respond_with_tools(
 
     messages = [SystemMessage(content=system_prompt), *state["messages"]]
     rounds = 0
-    # On the yes, the LLM calls the handoff before any UC tool and once made up the complaint_id;
-    # after the error it wrote text instead of retrying, so the round after a failed check is
-    # forced once more.
-    forced_retries = 1 if forced == HANDOFF_TOOL_NAME else 0
+    # The LLM calls the handoff before any UC tool and has made up the complaint_id; after the
+    # error it wrote text instead of retrying, so the round after a failed check is forced once.
+    forced_retries = 1 if route.handoff_reason else 0
     reply = await first_llm.ainvoke(messages)
     while reply.tool_calls and rounds < _MAX_TOOL_ROUNDS:
         messages.append(reply)
@@ -125,7 +124,8 @@ async def _respond_with_tools(
         rounds += 1
         if handoff_failed and forced_retries:
             forced_retries -= 1
-            reply = await first_llm.ainvoke(messages + reminder)
+            retry_llm = llm.bind_tools(tools, tool_choice=HANDOFF_TOOL_NAME)
+            reply = await retry_llm.ainvoke(messages + reminder)
         else:
             reply = await bound_llm.ainvoke(messages + reminder)
     if reply.tool_calls:
