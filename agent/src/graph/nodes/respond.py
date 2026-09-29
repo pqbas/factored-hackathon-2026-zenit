@@ -91,6 +91,7 @@ async def _respond_with_tools(
         messages.append(reply)
         for tool_call in reply.tool_calls:
             if tool_call["name"] == HANDOFF_TOOL_NAME and route.handoff_reason:
+                await _fetch_missing_rows(route.handoff_reason, tool_call["args"], tools_by_name, rows_by_tool)
                 verified = verify_case(route.handoff_reason, tool_call["args"], rows_by_tool)
                 if isinstance(verified, dict):
                     return _hand_off(state, route, verified, rows_by_tool)
@@ -139,3 +140,26 @@ def _hand_off(state: AgentState, route: IntentRoute, verified_data: dict, rows_b
         },
     }
     return {"messages": [AIMessage(content=HANDOFF_REPLY[reply_language(language)])], "handoff": handoff}
+
+
+async def _fetch_missing_rows(reason: str, args: dict, tools_by_name: dict, rows_by_tool: dict) -> None:
+    """Calls the UC tools a handoff is verified against when the LLM didn't in this turn: in the
+    App the LLM went straight to hand_off_to_advisor on the customer's "sí" and never recovered."""
+    by_short_name = {name.split("__")[-1]: tool for name, tool in tools_by_name.items()}
+    needed: list[tuple[str, dict]] = []
+    card = args.get("card_last4")
+    if reason == "case_status" and args.get("complaint_id"):
+        needed.append(("get_cases", {}))
+    elif reason == "retention" or card:
+        needed.append(("get_products", {}))
+        if card:
+            needed.append(("list_transactions", {"product_last4": card}))
+    for name, tool_args in needed:
+        if rows_by_tool.get(name) or name not in by_short_name:
+            continue
+        try:
+            result = await by_short_name[name].ainvoke(tool_args)
+        except Exception as exc:  # noqa: BLE001 - verify_case then reports what is missing
+            logger.warning("Fetching %s for a handoff failed: %s", name, type(exc).__name__)
+            continue
+        rows_by_tool.setdefault(name, []).extend(tool_rows(result))

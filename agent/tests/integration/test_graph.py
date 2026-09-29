@@ -659,17 +659,27 @@ def test_a_confirmed_and_verified_complaint_is_handed_off():
     assert handoff["facts"]["use_case"] == "COMPLAINT"
 
 
-def test_a_handoff_without_verifying_the_charge_gets_an_error_and_no_handoff():
+def test_a_handoff_called_before_any_tool_fetches_the_bank_rows_itself():
     llm = _SummarizingToolLLM([
         AIMessage(content="", tool_calls=[{"name": "hand_off_to_advisor", "args": _CASE, "id": "c1"}]),
-        AIMessage(content="¿Me confirmas la tarjeta?"),
     ])
     result = _run(_complaint_graph(llm), "sí")
 
-    assert result["messages"][-1].content == "¿Me confirmas la tarjeta?"
+    assert result["messages"][-1].content == HANDOFF_REPLY["es"]
+    assert result["handoff"]["facts"]["verified_data"]["merchant"] == "Internet Plus"
+
+
+def test_a_handoff_on_a_charge_that_is_not_there_gets_an_error_and_no_handoff():
+    llm = _SummarizingToolLLM([
+        AIMessage(content="", tool_calls=[{"name": "hand_off_to_advisor", "args": {**_CASE, "amount": 1.0}, "id": "c1"}]),
+        AIMessage(content="Ese cargo no aparece, ¿cuál es?"),
+    ])
+    result = _run(_complaint_graph(llm), "sí")
+
+    assert result["messages"][-1].content == "Ese cargo no aparece, ¿cuál es?"
     assert result.get("handoff") is None
     error = next(m for m in llm.received if isinstance(m, ToolMessage))
-    assert "get_products" in error.content
+    assert "no está en los movimientos" in error.content
 
 
 def test_a_complaint_turn_offers_the_llm_the_handoff_tool():
