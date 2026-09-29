@@ -384,7 +384,7 @@ def test_a_greeting_returns_its_intent_and_language_in_custom_outputs(client, mo
 
     assert body["custom_outputs"] == {
         "thread_id": "e2e-signals-greeting", "use_case": None, "intent": "GREETING",
-        "language": "es", "blocked": False, "handoff": None,
+        "language": "es", "blocked": False, "handoff": None, "paused": False,
     }
 
 
@@ -416,7 +416,7 @@ def test_a_request_without_session_has_null_labels(client):
 
     assert response.json()["custom_outputs"] == {
         "thread_id": "e2e-signals-nosession", "use_case": None, "intent": None, "language": None,
-        "blocked": False, "handoff": None,
+        "blocked": False, "handoff": None, "paused": False,
     }
 
 
@@ -799,3 +799,4 @@ def test_a_handoff_turn_whose_llm_writes_text_next_to_the_call_only_carries_the_
     assert not [e for e in events if e.get("type") == "response.output_text.delta"]
     done = [e for e in events if e.get("type") == "response.output_item.done"]
     assert [e["item"]["content"][0]["text"] for e in done] == [HANDOFF_REPLY["es"]]
+

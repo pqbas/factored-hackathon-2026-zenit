@@ -1052,3 +1052,4 @@ def test_a_verified_handoff_ends_the_round_without_running_the_other_tool_calls_
     # Only the bank rows the handoff check fetched itself; the call after it in the round never ran.
     assert len(get_products.calls) == 1
     assert llm.calls == ["required"]  # the round's reply only, never a follow-up round
+
