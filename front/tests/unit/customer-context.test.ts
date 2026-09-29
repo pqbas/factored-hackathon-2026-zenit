@@ -2,15 +2,15 @@ import { describe, expect, it } from 'vitest';
 
 import {
   caseStatus,
+  customerStatusLabel,
+  profileFields,
   channelLabel,
-  customerName,
   firstTab,
   interactionTypeLabel,
   languageLabel,
   yesNo,
   formatClaim,
   formatContextDate,
-  maskedCustomerId,
   parseCustomerContext,
   priorityLabel,
   transcriptFor,
@@ -62,7 +62,13 @@ describe('parseCustomerContext', () => {
   });
 
   it('reads an empty body as no history', () => {
-    expect(parseCustomerContext(null)).toEqual({ customer: null, interactions: [], transcripts: [], cases: [] });
+    expect(parseCustomerContext(null)).toEqual({
+      customer: null,
+      profile: null,
+      interactions: [],
+      transcripts: [],
+      cases: [],
+    });
   });
 });
 
@@ -104,9 +110,6 @@ describe('labels', () => {
   });
 
   it('formats names, ids, dates and amounts', () => {
-    expect(customerName({ customerId: null, firstName: 'Santiago', lastName: 'Contreras' })).toBe('Santiago Contreras');
-    expect(customerName(null)).toBeNull();
-    expect(maskedCustomerId({ customerId: 'CUS000123', firstName: null, lastName: null })).toBe('•• 0123');
     expect(formatContextDate('2026-09-26')).toBe('26 sep 2026');
     expect(formatContextDate('not a date')).toBe('not a date');
     expect(formatClaim(null, 'USD')).toBeNull();
@@ -131,5 +134,48 @@ describe('transcriptFor', () => {
   it('is null without a transcript, or when the bank did not send it', () => {
     expect(transcriptFor(context, context.interactions[1])).toBeNull();
     expect(transcriptFor(context, context.interactions[2])).toBeNull();
+  });
+});
+
+describe('profile', () => {
+  const santiago = {
+    customerId: 'CLI-FLEUCGTW5M0D',
+    country: 'México',
+    city: 'Tijuana',
+    segment: 'Plus',
+    status: 'Active',
+    customerSince: '2022-07-03T18:46:46.000Z',
+    products: [{ productType: 'Tarjeta Crédito', last4: '1070' }, { productType: null, last4: null }],
+    contact: { email: 'santiago.contreras357@gmail.com', mobilePhone: null },
+    preferredChannel: 'Phone',
+  };
+
+  it('reads the profile, and null without one', () => {
+    const context = parseCustomerContext({ profile: santiago });
+    expect(context.profile?.products).toEqual([{ productType: 'Tarjeta Crédito', last4: '1070' }]);
+    expect(context.profile?.contact).toEqual({ email: 'santiago.contreras357@gmail.com', mobilePhone: null });
+    expect(parseCustomerContext({}).profile).toBeNull();
+    expect(parseCustomerContext({ profile: 'x' }).profile).toBeNull();
+  });
+
+  it('lists the data in order, without nulls or the customer id', () => {
+    const fields = profileFields(parseCustomerContext({ profile: santiago }).profile);
+    expect(fields.map((f) => [f.label, f.values])).toEqual([
+      ['Ubicación', ['Tijuana, México']],
+      ['Segmento', ['Plus']],
+      ['Estado', ['Activo']],
+      ['Cliente desde', ['3 jul 2022']],
+      ['Productos', ['Tarjeta Crédito ••1070']],
+      ['Email', ['santiago.contreras357@gmail.com']],
+      ['Canal preferido', ['Teléfono']],
+    ]);
+    expect(JSON.stringify(fields)).not.toContain('CLI-FLEUCGTW5M0D');
+  });
+
+  it('keeps unknown values and gives nothing for an empty profile', () => {
+    expect(customerStatusLabel('Dormant')).toBe('Dormant');
+    expect(customerStatusLabel('Active')).toBe('Activo');
+    expect(profileFields(parseCustomerContext({ profile: {} }).profile)).toEqual([]);
+    expect(profileFields(null)).toEqual([]);
   });
 });

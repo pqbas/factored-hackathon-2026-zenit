@@ -78,7 +78,8 @@ describe('useCaseRows', () => {
           NONE: r(2, 2, 0, 0),
           GREETING: r(4, 4, 0, 0),
           GENERAL_INQUIRY: r(9, 8, 1, 0),
-          CANCEL: r(0, 0, 0, 0),
+          CANCEL: r(1, 0, 1, 0),
+          RETENTION: r(2, 1, 1, 0),
         },
       }),
     );
@@ -86,6 +87,8 @@ describe('useCaseRows', () => {
       ['GENERAL_INQUIRY', 9, 8],
       ['OTHER', 6, 6],
       ['COMPLAINT', 3, 1],
+      // RETENTION and CANCEL are one reason, "Cancelación de producto".
+      ['CANCEL', 3, 1],
     ]);
   });
 });

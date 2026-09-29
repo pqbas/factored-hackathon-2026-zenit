@@ -49,8 +49,23 @@ export interface BankCase {
   resolution: string | null;
 }
 
+// The customer's main data as the bank has it (bank_gold.customer_360 and
+// the active products). Any field may be null; null profile = no section.
+export interface CustomerProfile {
+  customerId: string | null;
+  country: string | null;
+  city: string | null;
+  segment: string | null;
+  status: string | null;
+  customerSince: string | null;
+  products: { productType: string | null; last4: string | null }[];
+  contact: { email: string | null; mobilePhone: string | null };
+  preferredChannel: string | null;
+}
+
 export interface CustomerContext {
   customer: ContextCustomer | null;
+  profile: CustomerProfile | null;
   interactions: Interaction[];
   transcripts: Transcript[];
   cases: BankCase[];
@@ -122,6 +137,26 @@ export function parseCustomerContext(body: unknown): CustomerContext {
       status: str(c.status),
       resolution: str(c.resolution),
     })),
+    profile: parseProfile(raw.profile),
+  };
+}
+
+function parseProfile(value: unknown): CustomerProfile | null {
+  if (!value || typeof value !== 'object') return null;
+  const p = value as Record<string, unknown>;
+  const contact = (p.contact && typeof p.contact === 'object' ? p.contact : {}) as Record<string, unknown>;
+  return {
+    customerId: str(p.customerId),
+    country: str(p.country),
+    city: str(p.city),
+    segment: str(p.segment),
+    status: str(p.status),
+    customerSince: str(p.customerSince),
+    products: list(p.products)
+      .map((item) => ({ productType: str(item.productType), last4: str(item.last4) }))
+      .filter((item) => item.productType || item.last4),
+    contact: { email: str(contact.email), mobilePhone: str(contact.mobilePhone) },
+    preferredChannel: str(p.preferredChannel),
   };
 }
 
@@ -155,17 +190,6 @@ export function firstTab(context: CustomerContext): ContextTab {
   if (context.interactions.length) return 'interactions';
   if (context.transcripts.length) return 'transcripts';
   return 'cases';
-}
-
-export function customerName(customer: ContextCustomer | null): string | null {
-  const name = [customer?.firstName, customer?.lastName].filter(Boolean).join(' ');
-  return name || null;
-}
-
-// Only the tail of the id, like the rest of the masked data.
-export function maskedCustomerId(customer: ContextCustomer | null): string | null {
-  const id = customer?.customerId;
-  return id ? `•• ${id.slice(-4)}` : null;
 }
 
 // Warehouse values translated one to one; unknown values stay as they come.
@@ -264,4 +288,44 @@ export function formatClaim(amount: number | null, currency: string | null): str
   } catch {
     return `${amount.toLocaleString('es')} ${currency ?? ''}`.trim();
   }
+}
+
+const CUSTOMER_STATUS: Record<string, string> = {
+  active: 'Activo',
+  inactive: 'Inactivo',
+  blocked: 'Bloqueado',
+  closed: 'Cerrado',
+};
+
+export function customerStatusLabel(status: string | null): string | null {
+  return status ? (CUSTOMER_STATUS[key(status)] ?? status) : null;
+}
+
+export interface ProfileField {
+  key: string;
+  label: string;
+  // One line per value (products list one each).
+  values: string[];
+}
+
+// "Datos del cliente" as a record, in the order the advisor reads it. The
+// customer id is left out: it's already masked in the chat header.
+export function profileFields(profile: CustomerProfile | null): ProfileField[] {
+  if (!profile) return [];
+  const products = profile.products.map((p) =>
+    [p.productType, p.last4 && `••${p.last4}`].filter(Boolean).join(' '),
+  );
+  const rows: [string, string, (string | null)[]][] = [
+    ['location', 'Ubicación', [[profile.city, profile.country].filter(Boolean).join(', ') || null]],
+    ['segment', 'Segmento', [profile.segment]],
+    ['status', 'Estado', [customerStatusLabel(profile.status)]],
+    ['customerSince', 'Cliente desde', [formatContextDate(profile.customerSince)]],
+    ['products', 'Productos', products],
+    ['email', 'Email', [profile.contact.email]],
+    ['mobilePhone', 'Celular', [profile.contact.mobilePhone]],
+    ['preferredChannel', 'Canal preferido', [channelLabel(profile.preferredChannel)]],
+  ];
+  return rows
+    .map(([key, label, values]) => ({ key, label, values: values.filter((v): v is string => !!v) }))
+    .filter((row) => row.values.length > 0);
 }

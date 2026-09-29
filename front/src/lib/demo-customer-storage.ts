@@ -38,6 +38,19 @@ export function setLastCustomerToken(token: string): void {
   write(LAST_KEY, token);
 }
 
+// The session pick: the customer chosen in a selector. It is what new chats,
+// the sidebar and the greeting follow. Opening a chat is not a pick.
+export function chooseCustomerToken(token: string): void {
+  setLastCustomerToken(token);
+  setActiveCustomerToken(token);
+}
+
+// An existing chat's customer: the back's record, else what this browser
+// remembered for the chat, else none.
+export function chatCustomerToken(chatId: string, fromBack: string | null | undefined): string | null {
+  return fromBack ?? getChatCustomerToken(chatId);
+}
+
 // The last pick if it is still offered, else the first customer, else none.
 export function pickDefaultToken(
   customers: { token: string }[],

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { type AgentHandoff, caseFields, handoffReasonLabel, handoffReasonShort } from '@/lib/handoff-case';
+import { type AgentHandoff, caseFields, handoffReasonLabel } from '@/lib/handoff-case';
 
 const handoff = (verifiedData: Record<string, unknown> | null): AgentHandoff => ({
   reason: 'complaint',
@@ -13,11 +13,11 @@ const handoff = (verifiedData: Record<string, unknown> | null): AgentHandoff => 
 
 describe('handoffReasonLabel', () => {
   it('names the reasons and keeps unknown ones', () => {
-    expect(handoffReasonLabel('complaint')).toBe('Reclamo por un cargo');
-    expect(handoffReasonLabel('retention')).toBe('Cancelación de un producto');
+    // One name per reason, the filters' one.
+    expect(handoffReasonLabel('complaint')).toBe('Reclamo');
+    expect(handoffReasonLabel('retention')).toBe('Cancelación de producto');
     expect(handoffReasonLabel('case_status')).toBe('Estado de un reclamo');
     expect(handoffReasonLabel('fraud')).toBe('fraud');
-    expect(handoffReasonShort('retention')).toBe('Cancelación');
   });
 });
 

@@ -1,7 +1,7 @@
 import { Bot, Check, CheckCircle2, ChevronDown, Hourglass, Inbox, UserCheck, Users } from 'lucide-react';
 import type { ReactNode } from 'react';
 
-import { UseCaseIcon } from '@/components/conversations/use-case-style';
+import { HandoffReasonIcon } from '@/components/conversations/use-case-style';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,9 +24,10 @@ import {
   countFor,
   type InboxView,
   sameView,
-  USE_CASES,
   type ViewCounts,
+  DAVID_VIEW_LABEL,
 } from '@/lib/advisor';
+import { HANDOFF_REASONS } from '@/lib/handoff-case';
 import { cn } from '@/lib/utils';
 import { STATUS_LABEL } from '@/lib/conversations';
 
@@ -39,6 +40,7 @@ function ViewItem({
   testId,
   count,
   highlight = false,
+  showZero = false,
 }: {
   view: InboxView;
   current: InboxView;
@@ -49,6 +51,8 @@ function ViewItem({
   count: number;
   // "En espera" stands out while there are chats waiting.
   highlight?: boolean;
+  // Keep the counter visible at 0 (the reason filters).
+  showZero?: boolean;
 }) {
   const { setOpenMobile } = useSidebar();
   return (
@@ -64,7 +68,7 @@ function ViewItem({
       >
         {icon}
         <span className="flex-1 truncate">{label}</span>
-        {count > 0 && (
+        {(count > 0 || showZero) && (
           <span
             data-testid={`${testId}-count`}
             className={cn(
@@ -82,7 +86,7 @@ function ViewItem({
   );
 }
 
-// Left column of Chats: the inbox, one view per use case and the state views.
+// Left column of Chats: the inbox, one view per handoff reason and the state views.
 // Replaces the old "Filtros" menu.
 export function InboxViews({
   view,
@@ -102,7 +106,13 @@ export function InboxViews({
   counts: ViewCounts | undefined;
 }) {
   const selectedUser = users.find((u) => u.userId === userId);
-  const item = (v: InboxView, icon: ReactNode, label: string, testId: string) => (
+  const item = (
+    v: InboxView,
+    icon: ReactNode,
+    label: string,
+    testId: string,
+    showZero = false,
+  ) => (
     <ViewItem
       key={testId}
       view={v}
@@ -113,6 +123,7 @@ export function InboxViews({
       testId={testId}
       count={countFor(v, counts)}
       highlight={v.kind === 'waiting'}
+      showZero={showZero}
     />
   );
   const muted = 'size-4 shrink-0 text-muted-foreground';
@@ -168,7 +179,7 @@ export function InboxViews({
               {item(
                 { kind: 'david' },
                 <Bot className={muted} strokeWidth={1.8} />,
-                STATUS_LABEL.assistant,
+                DAVID_VIEW_LABEL,
                 'view-david',
               )}
             </SidebarMenu>
@@ -176,15 +187,16 @@ export function InboxViews({
         </SidebarGroup>
 
         <SidebarGroup>
-          <span className="px-2.5 pb-1.5 font-semibold text-[11px] text-muted-foreground">Casos de uso</span>
+          <span className="px-2.5 pb-1.5 font-semibold text-[11px] text-muted-foreground">Motivo de derivación</span>
           <SidebarGroupContent>
             <SidebarMenu>
-              {USE_CASES.map((u) =>
+              {HANDOFF_REASONS.map((r) =>
                 item(
-                  { kind: 'useCase', useCase: u.id },
-                  <UseCaseIcon id={u.id} />,
-                  u.label,
-                  `view-use-case-${u.id}`,
+                  { kind: 'reason', reason: r.id },
+                  <HandoffReasonIcon id={r.id} />,
+                  r.label,
+                  `view-reason-${r.id}`,
+                  true,
                 ),
               )}
             </SidebarMenu>
@@ -201,7 +213,12 @@ export function InboxViews({
                 STATUS_LABEL.waiting,
                 'view-waiting',
               )}
-              {item({ kind: 'mine' }, <UserCheck className={muted} strokeWidth={1.8} />, 'Mías', 'view-mine')}
+              {item(
+                { kind: 'advisor' },
+                <UserCheck className={muted} strokeWidth={1.8} />,
+                STATUS_LABEL.advisor,
+                'view-advisor',
+              )}
               {item(
                 { kind: 'resolved' },
                 <CheckCircle2 className="size-4 shrink-0 text-tint-green-foreground" strokeWidth={1.8} />,
