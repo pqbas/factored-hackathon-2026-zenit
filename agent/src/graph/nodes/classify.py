@@ -17,8 +17,10 @@ from src.schemas.routing import IntentRoute
 _MIN_WORDS_TO_SWITCH = 3
 
 
-def conversation_language(detected: str, text: str, earlier_texts: list[str], default: str) -> str:
-    if len(text.split()) >= _MIN_WORDS_TO_SWITCH:
+def conversation_language(
+    detected: str | None, text: str, earlier_texts: list[str], default: str
+) -> str:
+    if detected is not None and len(text.split()) >= _MIN_WORDS_TO_SWITCH:
         return detected
     # The agent keeps no state, so earlier messages are read from the history the back sends,
     # with the local detector: Jev only classifies the last message.
@@ -72,8 +74,13 @@ async def classify(
         except JevUnavailable:
             classification = fallback_classify(text, [route.intent for route in routes])
 
+    # Only Jev can tell another language apart; the local detector says "other" when it
+    # can't decide, so without Jev an undecided message keeps the conversation's language.
+    detected = classification.language
+    if classification.source != "jev" and detected not in ("es", "pt"):
+        detected = None
     language = conversation_language(
-        classification.language,
+        detected,
         text,
         [_text(message) for message in human_messages[:-1]],
         country_language(state.get("session", {}).get("country")),

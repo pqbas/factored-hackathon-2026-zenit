@@ -106,3 +106,7 @@ def test_a_two_word_message_does_not_switch_the_conversation_language():
 def test_a_three_word_message_switches_the_language():
     earlier = ["Hola, quiero saber el saldo de mi tarjeta"]
     assert conversation_language("pt", "Olá, boa tarde", earlier, "es") == "pt"
+
+
+def test_without_jev_an_undetected_language_keeps_the_country_language():
+    assert conversation_language(None, "Me gustaría hablar con alguien", [], "es") == "es"
