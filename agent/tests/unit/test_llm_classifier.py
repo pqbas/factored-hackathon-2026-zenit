@@ -54,6 +54,25 @@ def test_the_prompt_lists_routes_and_guardrails_and_the_text_goes_alone():
     assert human.content == "qual é o saldo?"
 
 
+def test_the_prompt_has_the_conversation_so_far_and_the_guardrail_judges_the_last_message():
+    llm = FakeStructuredLLM(ANSWER)
+    transcript = "Cliente: quiero cancelar mi tarjeta\nDavid: ¿Por qué quieres cancelarlo?"
+    asyncio.run(LLMClassifier(llm, timeout=4).classify("me cobran mucho", ROUTES, context=transcript))
+    system, human = llm.received
+    assert "The conversation so far" in system.content
+    assert transcript in system.content
+    assert "current intent of the conversation" in system.content
+    assert "stays RETENTION" in system.content
+    assert "judges only the customer's last message" in system.content
+    assert human.content == "me cobran mucho"
+
+
+def test_without_a_transcript_the_prompt_has_no_conversation_block():
+    llm = FakeStructuredLLM(ANSWER)
+    asyncio.run(LLMClassifier(llm, timeout=4).classify("hola", ROUTES))
+    assert "The conversation so far" not in llm.received[0].content
+
+
 def test_the_schema_only_accepts_the_routes_intents():
     model = _answer_model(("GENERAL_INQUIRY", "OUT_OF_SCOPE"))
     with pytest.raises(ValueError):

@@ -332,17 +332,38 @@ def test_a_submenu_digit_after_more_options_is_its_option():
     assert jev.calls == 0
 
 
-def test_the_classifier_gets_the_previous_reply_as_context():
-    class ContextJev(FakeJev):
-        async def classify(self, text, routes, context=None):
-            self.context = context
-            return await super().classify(text, routes)
+class _ContextJev(FakeJev):
+    async def classify(self, text, routes, context=None):
+        self.context = context
+        return await super().classify(text, routes)
 
-    jev = ContextJev(_classification())
+
+def test_the_classifier_gets_the_conversation_so_far_as_context():
+    jev = _ContextJev(_classification())
     graph = _build_graph(_fake_llm("ok"), jev)
     history = [{"role": "user", "content": "A"}, {"role": "assistant", "content": "¿Qué quieres ver? 1) saldo 2) movimientos"}]
     _run(graph, "movimientos", history=history)
-    assert jev.context == "¿Qué quieres ver? 1) saldo 2) movimientos"
+    assert jev.context == "Cliente: A\nDavid: ¿Qué quieres ver? 1) saldo 2) movimientos"
+
+
+def test_the_classifier_never_sees_the_messages_before_conversation_start():
+    jev = _ContextJev(_classification())
+    graph = _build_graph(_fake_llm("ok"), jev)
+    history = [
+        {"role": "user", "content": "reclamo viejo"}, {"role": "assistant", "content": "resuelto"},
+        {"role": "user", "content": "hola"}, {"role": "assistant", "content": "¿en qué te ayudo?"},
+    ]
+    messages = [*history, {"role": "user", "content": "mi saldo"}]
+    asyncio.run(graph.ainvoke({
+        "messages": messages, "session": VALID_SESSION, "thread_id": "t", "conversation_start": 2,
+    }))
+    assert jev.context == "Cliente: hola\nDavid: ¿en qué te ayudo?"
+
+
+def test_the_first_message_of_a_conversation_has_no_context():
+    jev = _ContextJev(_classification())
+    _run(_build_graph(_fake_llm("ok"), jev), "hola")
+    assert jev.context is None
 
 
 def test_cancelar_mi_tarjeta_is_retention_even_if_the_classifier_says_cancel():

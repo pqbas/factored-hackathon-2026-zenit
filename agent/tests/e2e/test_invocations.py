@@ -388,6 +388,44 @@ def test_the_llm_receives_only_the_last_20_messages_of_a_long_history(client, mo
     assert [m.content for m in llm.received[1:]] == [m["content"] for m in history[-20:]]
 
 
+@pytest.mark.parametrize(
+    ("conversation_start", "first_in_transcript"),
+    [(25, 25), (5, 18), (0, 18), ("x", 18), (-3, 18), (True, 18)],
+)
+def test_conversation_start_limits_the_transcript_the_classifier_reads(
+    client, monkeypatch, conversation_start, first_in_transcript
+):
+    states = []
+
+    def jev(request):
+        states.append(json.loads(request.content)["state"])
+        return _jev_response_for("GOODBYE")
+
+    monkeypatch.setattr(main, "get_chat_model", lambda: RecordingChatModel(FAKE_LLM_TEXT))
+    monkeypatch.setattr(
+        main, "jev_client",
+        JevClient(api_key="test-key", url="https://api.typesafe.ai/v1/systemone", timeout=2.0,
+                  transport=httpx.MockTransport(jev)),
+    )
+    history = [
+        {"role": "user" if i % 2 == 0 else "assistant", "content": f"mensaje número {i}"}
+        for i in range(31)
+    ]
+
+    response = client.post("/invocations", json={
+        "input": history,
+        "custom_inputs": {"session_token": "demo-mx-1", "conversation_start": conversation_start},
+    })
+
+    assert response.status_code == 200
+    lines = states[0].splitlines()
+    # The agent keeps the last 20 messages (indexes 11 to 30); the transcript is at most 12 of
+    # them, minus the current one (indexes 18 to 29), and never starts before conversation_start.
+    assert lines[-1] == "Cliente: mensaje número 30"
+    assert lines[0].endswith(f"mensaje número {first_in_transcript}")
+    assert len(lines) - 1 == 30 - first_in_transcript
+
+
 def test_advisor_turns_in_the_history_never_prefix_the_reply(client, monkeypatch):
     llm = RecordingChatModel("[Asesor] Hola de nuevo, ¿en qué te ayudo?")
     monkeypatch.setattr(main, "get_chat_model", lambda: llm)
