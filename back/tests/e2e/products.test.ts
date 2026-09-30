@@ -51,8 +51,31 @@ test.describe('Mis productos', () => {
     await expect(page.getByText('Hola, Santiago')).toBeVisible();
     await expect(page.getByTestId('customer-profile')).toContainText('Contreras López');
     await expect(page.locator('[data-testid^="product-row-"]:not([data-testid="product-row-summary"])')).toHaveCount(2);
-    await expect(page.getByTestId('overview-movements').getByTestId('transaction-row')).toHaveCount(2);
+    // Cards only: their movements show under the selected card, once.
+    await expect(page.getByTestId('overview-movements')).toHaveCount(0);
+    await expect(page.getByTestId('transaction-row')).toHaveCount(1);
     expect(tokens).toContain('demo-mx-1');
+  });
+
+  test('the accounts section lists only the savings movements', async ({ page }) => {
+    const withSavings = {
+      ...PRODUCTS,
+      products: [
+        ...PRODUCTS.products,
+        { productType: 'Cuenta Ahorro', last4: '5500', currency: 'USD', currentBalance: 2500, creditLimit: null, availableCredit: null },
+      ],
+      transactions: [
+        ...PRODUCTS.transactions,
+        { date: '2026-09-26T10:00:00.000Z', productType: 'Cuenta Ahorro', last4: '5500', type: 'Deposit', merchant: null, amount: 300, currency: 'USD', status: 'Approved' },
+      ],
+    };
+    await mockProducts(page, () => ({ status: 200, json: withSavings }));
+    await page.goto('/products');
+    const section = page.getByTestId('overview-movements');
+    await expect(section).toContainText('Movimientos de tus cuentas');
+    await expect(section.getByTestId('transaction-row')).toHaveCount(1);
+    await expect(section).toContainText('Cuenta Ahorro');
+    await expect(section).not.toContainText('Supermercado');
   });
 
   test('a card shows its limit usage and its own movements', async ({ page }) => {
