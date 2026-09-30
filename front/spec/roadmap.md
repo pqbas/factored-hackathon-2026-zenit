@@ -547,11 +547,13 @@ Shipped en PR #115.
 
 ---
 
-## Phase 30: Tarjetas visuales en Mis productos
+## Phase 30: Tarjetas visuales en Mis productos (Complete)
 
 **Goal:** que el cliente vea sus tarjetas de crédito como tarjetas, al estilo de las apps bancarias.
 
-- [ ] Carrusel "Mis tarjetas" con tarjetas visuales (color por tarjeta, número enmascarado, moneda) y puntos.
-- [ ] Detalle de la tarjeta seleccionada: saldo, límite, cupo con barra, movimientos y acciones que abren el chat con David.
+- [x] Carrusel "Mis tarjetas" con tarjetas visuales (color por tarjeta, número enmascarado, moneda) y puntos.
+- [x] Detalle de la tarjeta seleccionada: saldo, límite, cupo con barra, movimientos y acciones que abren el chat con David.
 
 Spec: `spec/30-09-26-tarjetas-visuales/`.
+
+Shipped en PR #116.
