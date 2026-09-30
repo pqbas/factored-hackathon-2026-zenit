@@ -20,6 +20,8 @@ export type ComparedReport = {
     latency: { runnerMs: { p50: number | null; p95: number | null } };
     cost: { perAttemptedUsd: number | null; perSafeResolvedUsd: number | null };
     variability: { consistentCases: Ratio };
+    // Absent in reports from before the grounding guard.
+    guard?: { fired: Ratio; retriedOk: Ratio; safeReply: Ratio };
     byLanguage: Record<string, { pasa: Ratio }>;
   };
 };
@@ -76,6 +78,14 @@ export function compareToMarkdown(reports: Comparison): string {
     [
       'Mismo veredicto en todas las corridas',
       (r) => ratio(r.metrics.variability.consistentCases),
+    ],
+    [
+      'Guard de grounding: disparos',
+      (r) => (r.metrics.guard ? ratio(r.metrics.guard.fired) : 'sin datos'),
+    ],
+    [
+      'Guard: reintentos respaldados',
+      (r) => (r.metrics.guard ? ratio(r.metrics.guard.retriedOk) : 'sin datos'),
     ],
     ['Pasa en español', (r) => ratio(r.metrics.byLanguage.es?.pasa)],
     ['Pasa en portugués', (r) => ratio(r.metrics.byLanguage.pt?.pasa)],
