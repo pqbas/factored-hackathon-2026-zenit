@@ -377,3 +377,41 @@ Línea base 40×3 (clasificador llm, prompt 68747d24cacf) en
 
 Shipped en PR #86 (merge `a77e94f8`). El guard de grounding del agente
 (`custom_outputs.guard`) queda en `TurnMetric` y en el reporte: PR #87.
+
+---
+
+## Phase 15: Datos del banco desde Lakebase (Complete)
+
+**Goal:** que el agente y el back lean los datos del banco de copias de solo
+lectura en Lakebase, sin la warehouse ni el MCP, para bajar el costo.
+
+<!-- Decisión del usuario vía w1:p4, 29-09-26. Spec en
+     spec/29-09-26-datos-banco-lakebase/. Las tools del agente las migra w1:p3. -->
+
+- [x] Siete synced tables en modo snapshot en `bank_ro` (instancia
+      `bank-assistant-chat-db`), en un pipeline, con refresco bajo demanda
+      (`scripts/bank-ro/`).
+- [x] Roles y grants de solo `SELECT`: el agente en sus tres tablas, el back en
+      las siete.
+- [x] El back lee productos, movimientos, perfil, contactos, transcripciones y
+      casos de `bank_ro`, y deja de usar la warehouse.
+- [x] Frescura, linaje y prueba de refresco en `docs/datos-banco-lakebase.md`.
+
+Pendiente: el costo medido de un refresco (billing con ~2 h de atraso).
+
+Shipped en PR #89.
+
+---
+
+## Phase 16: El agente recibe solo la conversación actual (Complete)
+
+**Goal:** que David lea la conversación actual y no el chat entero (decisión
+del usuario, pedido de w1:p3).
+
+<!-- Spec en spec/29-09-26-conversacion-actual/. -->
+
+- [x] El `input` al agente lleva solo lo posterior al último cierre del chat
+      (todo si nunca se cerró), en vivo y en la cola.
+- [x] Un chat devuelto por el asesor sin cerrar va entero, con `[Asesor]`.
+
+Shipped en PR #90.

@@ -1610,3 +1610,28 @@ export async function getTurnMetrics({
     .where(eq(turnMetric.chatId, chatId))
     .orderBy(asc(turnMetric.createdAt));
 }
+
+// The last message of the chat's last closed conversation: the newest message
+// saved at or before its latest ResolutionEvent, or null if it never closed.
+// Compared in the database, at millisecond precision.
+export async function getLastClosedMessageId({
+  chatId,
+}: {
+  chatId: string;
+}): Promise<string | null> {
+  if (!isDatabaseAvailable()) return null;
+
+  const [row] = await (await ensureDb())
+    .select({ id: message.id })
+    .from(message)
+    .where(
+      and(
+        eq(message.chatId, chatId),
+        sql`${message.createdAt} <= (select max(${resolutionEvent.resolvedAt}) from ${resolutionEvent} where ${resolutionEvent.chatId} = ${chatId})`,
+      ),
+    )
+    .orderBy(desc(message.createdAt))
+    .limit(1);
+  return row?.id ?? null;
+}
+
