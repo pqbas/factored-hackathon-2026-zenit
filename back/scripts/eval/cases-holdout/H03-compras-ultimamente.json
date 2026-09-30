@@ -1,0 +1,26 @@
+{
+  "id": "H03",
+  "language": "es",
+  "group": "consultas",
+  "customer": {
+    "token": "demo-ar-1",
+    "user": 3,
+    "segment": "Student",
+    "name": "Daniela"
+  },
+  "steps": [
+    {
+      "say": "qué compras hice últimamente con mi tarjeta de crédito?"
+    },
+    {
+      "say": "la 5842"
+    }
+  ],
+  "expected": {
+    "firstIntent": "GENERAL_INQUIRY",
+    "outcome": "R",
+    "mustMatch": [
+      "Streaming Music|Estación de Servicio|Servicios Públicos|¿?\\s*(te gustaría|deseas|quieres) ver (los )?(últimos |ultimos )?(10 )?movimientos"
+    ]
+  }
+}

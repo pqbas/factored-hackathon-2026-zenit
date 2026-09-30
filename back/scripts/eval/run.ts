@@ -6,17 +6,24 @@
  *   npm run eval                                  # 40 cases x 3 runs
  *   npm run eval -- --case 01,11,37 --runs 1
  *   npm run eval -- --base http://localhost:3300 --classifier llm
+ *   npm run eval -- --set holdout --label antes  # the held-out set
  *
  * Local only: it refuses any --base that isn't localhost or 127.0.0.1. Needs
  * the eval back (scripts/eval/start-eval-back.sh) and the agent on :8001.
  */
 import { execFileSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+} from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { headersFor, sendMessage } from '../simulate-customers';
-import { assertLocalBase } from './guard';
+import { type EvalSet, parseArgs, reportStem, SETS } from './args';
 import {
   buildReport,
   toMarkdown,
@@ -35,7 +42,6 @@ import {
 } from './types';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const DEFAULT_BASE = 'http://localhost:3300';
 
 const ADMIN = {
   'X-Forwarded-User': 'eval-admin',
@@ -46,48 +52,11 @@ const advisor = (name: 'asesor1' | 'asesor2') => ({
   'X-Forwarded-Email': `${name}@example.com`,
 });
 
-export type Args = {
-  cases: string[] | null;
-  runs: number;
-  base: string;
-  classifier: string;
-  out: string;
-  delay: number;
-};
-
-export function parseArgs(argv: string[]): Args {
-  const args: Args = {
-    cases: null,
-    runs: 3,
-    base: DEFAULT_BASE,
-    classifier: 'llm',
-    out: join(HERE, 'results'),
-    delay: 0,
-  };
-  for (let i = 0; i < argv.length; i++) {
-    const flag = argv[i];
-    const value = () => argv[++i];
-    if (flag === '--case')
-      args.cases = value()
-        .split(',')
-        .map((c) => c.trim().toUpperCase());
-    else if (flag === '--runs') args.runs = Number(value());
-    else if (flag === '--base') args.base = value();
-    else if (flag === '--classifier') args.classifier = value();
-    else if (flag === '--out') args.out = value();
-    else if (flag === '--delay') args.delay = Number(value());
-    else throw new Error(`Unknown flag: ${flag}`);
-  }
-  if (!Number.isInteger(args.runs) || args.runs < 1) {
-    throw new Error('--runs must be a positive integer');
-  }
-  // Before anything else: nothing is sent to a base that isn't local.
-  assertLocalBase(args.base);
-  return args;
-}
-
-export function loadCases(only: string[] | null = null): EvalCase[] {
-  const dir = join(HERE, 'cases');
+export function loadCases(
+  only: string[] | null = null,
+  set: EvalSet = 'dev',
+): EvalCase[] {
+  const dir = join(HERE, SETS[set].dir);
   const cases = readdirSync(dir)
     .filter((file) => file.endsWith('.json'))
     .sort()
@@ -332,9 +301,15 @@ function commit(): string {
 
 export async function main(argv: string[]) {
   const args = parseArgs(argv);
-  const cases = loadCases(args.cases);
+  args.out ||= join(HERE, 'results');
+  const cases = loadCases(args.cases, args.set);
+  // A report is never overwritten: the "before" must survive the "after".
+  const stem = join(args.out, reportStem(args));
+  if (existsSync(`${stem}.json`)) {
+    throw new Error(`${stem}.json exists: pass another --label`);
+  }
   console.log(
-    `Base: ${args.base} · ${cases.length} cases x ${args.runs} runs · classifier ${args.classifier}`,
+    `Base: ${args.base} · set ${args.set} · ${cases.length} cases x ${args.runs} runs · classifier ${args.classifier}`,
   );
 
   const results: RunResult[] = [];
@@ -408,13 +383,14 @@ export async function main(argv: string[]) {
     classifier: first((t) => t.classifier),
     model: first((t) => t.model),
     promptVersion: first((t) => t.promptVersion),
+    set: args.set,
+    label: args.label,
     caseChanges: caseChangesSchema.parse(
-      JSON.parse(readFileSync(join(HERE, 'case-changes.json'), 'utf8')),
+      JSON.parse(readFileSync(join(HERE, SETS[args.set].changes), 'utf8')),
     ),
   });
 
   mkdirSync(args.out, { recursive: true });
-  const stem = join(args.out, `${report.meta.date}-${args.classifier}`);
   writeFileSync(`${stem}.json`, `${JSON.stringify(report, null, 2)}\n`);
   writeFileSync(`${stem}.md`, toMarkdown(report));
   console.log(`\nReport: ${stem}.json and ${stem}.md`);

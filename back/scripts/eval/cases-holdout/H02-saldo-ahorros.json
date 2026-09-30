@@ -1,0 +1,21 @@
+{
+  "id": "H02",
+  "language": "es",
+  "group": "consultas",
+  "customer": {
+    "token": "demo-co-4",
+    "user": 13,
+    "segment": "Premium",
+    "name": "Leonardo"
+  },
+  "steps": [
+    {
+      "say": "necesito saber el saldo de mis ahorros"
+    }
+  ],
+  "expected": {
+    "firstIntent": "GENERAL_INQUIRY",
+    "outcome": "R",
+    "mustMatch": ["8927"]
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "id": "H11",
+  "language": "es",
+  "group": "estado-reclamo",
+  "customer": {
+    "token": "demo-mx-5",
+    "user": 12,
+    "segment": "Premium",
+    "name": "Natalia"
+  },
+  "steps": [
+    {
+      "say": "tienen alguna novedad de mi reclamo?"
+    },
+    {
+      "say": "sí, ese"
+    }
+  ],
+  "expected": {
+    "firstIntent": "CASE_STATUS",
+    "outcome": "R",
+    "mustMatch": ["abiert|open|en (curso|proceso|revisi[oó]n)|pendiente"]
+  }
+}

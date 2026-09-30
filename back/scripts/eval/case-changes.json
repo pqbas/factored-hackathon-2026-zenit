@@ -9,6 +9,95 @@
       "after": null,
       "why": "silent-after-handoff está en main (PR #84, 3129d9a): #23 ya no es falla conocida (pedido de w1:p4). Los patrones y el resultado esperado no cambian.",
       "afterSeeingResults": false
+    },
+    {
+      "date": "2026-09-30",
+      "caseId": "16",
+      "field": "steps",
+      "before": [
+        "ya no quiero mi tarjeta, dénla de baja",
+        "la 7354",
+        "porque casi no compro con ella",
+        "sí, confirmo"
+      ],
+      "after": [
+        "ya no quiero mi tarjeta, dénla de baja",
+        "la 7354",
+        "porque casi no compro con ella"
+      ],
+      "why": "Cambio de flujo decidido por el usuario (vía w1:p4, 29-09-26): en la cancelación (retention) David ya no pide confirmación; recolecta producto y motivo y deriva directo. Se quita el paso de confirmación.",
+      "afterSeeingResults": true
+    },
+    {
+      "date": "2026-09-30",
+      "caseId": "17",
+      "field": "steps",
+      "before": [
+        "quiero cerrar mi tarjeta porque la anualidad es muy cara",
+        "sí, confirmo"
+      ],
+      "after": [
+        "quiero cerrar mi tarjeta porque la anualidad es muy cara"
+      ],
+      "why": "Cambio de flujo decidido por el usuario (vía w1:p4, 29-09-26): en la cancelación (retention) David ya no pide confirmación; recolecta producto y motivo y deriva directo. Se quita el paso de confirmación.",
+      "afterSeeingResults": true
+    },
+    {
+      "date": "2026-09-30",
+      "caseId": "18",
+      "field": "steps",
+      "before": [
+        "quero cancelar meu cartão de crédito",
+        "o final 6770",
+        "porque não uso mais",
+        "sim, confirmo"
+      ],
+      "after": [
+        "quero cancelar meu cartão de crédito",
+        "o final 6770",
+        "porque não uso mais"
+      ],
+      "why": "Cambio de flujo decidido por el usuario (vía w1:p4, 29-09-26): en la cancelación (retention) David ya no pide confirmación; recolecta producto y motivo y deriva directo. Se quita el paso de confirmación.",
+      "afterSeeingResults": true
+    },
+    {
+      "date": "2026-09-30",
+      "caseId": "03",
+      "field": "expected.mustMatch",
+      "before": [
+        "Uber|Internet Plus|Cable TV"
+      ],
+      "after": [
+        "Uber|Internet Plus|Cable TV|¿?\\s*(te gustaría|deseas|quieres) ver (los )?(últimos |ultimos )?(10 )?movimientos"
+      ],
+      "why": "Decisión del usuario (vía w1:p4, 30-09-26): en movimientos, que David pregunte '¿Te gustaría ver los últimos 10 movimientos?' antes de mostrarlos es válido. El caso pasa si muestra los movimientos o si lo pregunta.",
+      "afterSeeingResults": true
+    },
+    {
+      "date": "2026-09-30",
+      "caseId": "09",
+      "field": "expected.mustMatch",
+      "before": [
+        "Cable TV|Teatro Nacional"
+      ],
+      "after": [
+        "Cable TV|Teatro Nacional|(deseja|gostaria de|quer) ver (os |as )?(últimos |últimas )?(10 )?(movimentos|compras|lançamentos)"
+      ],
+      "why": "Decisión del usuario (vía w1:p4, 30-09-26): en movimientos, que David pregunte '¿Te gustaría ver los últimos 10 movimientos?' antes de mostrarlos es válido. El caso pasa si muestra los movimientos o si lo pregunta.",
+      "afterSeeingResults": true
+    },
+    {
+      "date": "2026-09-30",
+      "caseId": "33",
+      "field": "expected.mustMatch",
+      "before": [
+        "Uber|Internet Plus|Cable TV"
+      ],
+      "after": [
+        "Uber|Internet Plus|Cable TV|¿?\\s*(te gustaría|deseas|quieres) ver (los )?(últimos |ultimos )?(10 )?movimientos"
+      ],
+      "why": "Decisión del usuario (vía w1:p4, 30-09-26): en movimientos, que David pregunte '¿Te gustaría ver los últimos 10 movimientos?' antes de mostrarlos es válido. El caso pasa si muestra los movimientos o si lo pregunta.",
+      "afterSeeingResults": true
     }
   ]
 }

@@ -105,6 +105,21 @@ El reporte los lista en "Cambios a los casos", y un test falla si un caso
 cambió desde ese commit sin su entrada. Así queda constancia de que ningún
 patrón se ajustó al resultado en silencio.
 
+## Set held-out
+
+`cases-holdout/` tiene 20 casos (`H01`…`H20`) escritos aparte de los 40, con
+otras redacciones y otros datos de los mismos 13 clientes. Los 40 se usan para
+corregir al agente, así que su "después" puede estar sobreajustado; el
+holdout, que el equipo del agente no ve, mide el "después" sin leakage. Tiene
+su propio registro de cambios, `case-changes-holdout.json`.
+
+```bash
+npm run eval -- --set holdout --label antes
+npm run eval:compare -- --dev-before results/<dev>.json --dev-after results/<dev-después>.json \
+  --holdout-before results/<holdout-antes>.json --holdout-after results/<holdout-después>.json \
+  --out results/comparacion.md
+```
+
 ## Formato del `.json` del reporte
 
 Lo lee el front (bloque 4):

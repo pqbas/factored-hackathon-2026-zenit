@@ -1,0 +1,24 @@
+{
+  "id": "H12",
+  "language": "pt",
+  "group": "estado-reclamo",
+  "customer": {
+    "token": "demo-mx-2",
+    "user": 4,
+    "segment": "Basic",
+    "name": "Eduardo"
+  },
+  "steps": [
+    {
+      "say": "como está minha reclamação?"
+    },
+    {
+      "say": "a mais recente"
+    }
+  ],
+  "expected": {
+    "firstIntent": "CASE_STATUS",
+    "outcome": "R",
+    "mustMatch": ["revis|an[aá]lise|abert|abiert|andamento|pendente|pendiente"]
+  }
+}

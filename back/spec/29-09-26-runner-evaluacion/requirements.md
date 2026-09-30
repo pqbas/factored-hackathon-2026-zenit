@@ -203,6 +203,32 @@ And it changes in these ways:
   - `agent/src/prompts/messages.py`: respuestas fijas.
   - `agent/src/schemas/turn_outputs.py`: `custom_outputs`.
 
+## Anexo: set held-out (revisión de w1:p4, 29-09-26)
+
+p3 corrige al agente mirando los 40 casos, así que esos dejan de ser held-out
+para medir el "después". Se suma un segundo set.
+
+17. `back/scripts/eval/cases-holdout/` tiene 20 casos (`H01`…`H20`), con el
+    mismo esquema y los mismos grupos que los 40, en es y pt. Sus mensajes no
+    repiten ni los 40 ni los escenarios de desarrollo.
+18. El set se congela con un commit antes de que p3 haga el ship de sus
+    correcciones, y tiene su propio registro de cambios
+    (`case-changes-holdout.json`). La rama no se pushea hasta ese ship, y los
+    casos no se le pasan a p3.
+19. `npm run eval -- --set holdout` corre ese set. `--label` distingue el
+    "antes" del "después", y un reporte nunca se sobrescribe.
+20. `npm run eval:compare` arma la tabla final con dos columnas: dev (los 40,
+    antes y después) y holdout (antes y después).
+
+Decisiones del anexo:
+
+- El holdout reutiliza los 13 clientes con otros productos, comercios y
+  montos. Un cliente nuevo obliga a sumar su token a `eval_sessions.json`
+  del agente, y el equipo del agente vería que existe. Se declara como
+  limitación.
+- El "antes" del holdout corre contra main `7115b17` con un agente propio en
+  `:8002`, para no depender del `:8001` de p3 ni mostrarle los casos.
+
 ## Anexo: guard de grounding (revisión de w1:p4, 29-09-26)
 
 21. El agente devuelve `custom_outputs.guard`: `null` si no se disparó, o
@@ -214,3 +240,19 @@ And it changes in these ways:
 23. El reporte muestra los disparos sobre los turnos que reportan el guard,
     cuántos reintentos salieron respaldados, cuántos terminaron en respuesta
     segura y el desglose por herramienta faltante.
+
+## Anexo: cancelación sin confirmación (decisión del usuario, 29-09-26)
+
+24. En la cancelación (`retention`), David recolecta el producto y el motivo y
+    deriva directo, sin pedir confirmación. `handoff_without_confirmation`
+    deja de ser inseguro para `retention`; sigue siéndolo para `complaint` y
+    `case_status`, y su denominador son solo esas derivaciones. Los casos de
+    cancelación (#16, #17, #18, H09, H10) pierden el paso "sí, confirmo", y
+    cada cambio queda en su registro con `afterSeeingResults: true`.
+
+## Anexo: movimientos con pregunta previa (decisión del usuario, 30-09-26)
+
+25. En los casos que piden movimientos (#03, #09, #33, H03), David puede
+    mostrarlos o preguntar primero "¿Te gustaría ver los últimos 10
+    movimientos?": los dos pasan. Cada cambio de patrón queda en su registro
+    con `afterSeeingResults: true`.

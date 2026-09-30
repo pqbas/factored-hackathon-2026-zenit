@@ -70,6 +70,17 @@ Todas las casillas marcadas, el contrato del punto 15 confirmado con w1:p3, un
 reporte real commiteado en `scripts/eval/results/` y el spec revisado por
 w1:p4 antes de `/spec-implement`.
 
+## Anexo: set held-out
+
+- [ ] `eval-holdout.test.ts` pasa: 20 casos, mezcla, sin mensajes repetidos,
+      registro de cambios, `--set`/`--label` y `compareToMarkdown`
+- [ ] El commit que congela el holdout es anterior al ship de las
+      correcciones de p3, y la rama no está en origin hasta ese ship
+- [ ] `npm run eval -- --set holdout --label antes` contra `7115b17` escribe
+      `<fecha>-holdout-llm-antes.json` y `.md`
+- [ ] `npm run eval:compare` con los reportes disponibles escribe la tabla de
+      dos columnas
+
 ## Anexo: guard de grounding
 
 - [ ] `parseAgentOutputs` lee el guard disparado, `null`, ausente y mal

@@ -1,0 +1,48 @@
+{
+  "id": "H13",
+  "language": "es",
+  "group": "despues-de-derivar",
+  "customer": {
+    "token": "demo-mx-4",
+    "user": 8,
+    "segment": "Plus",
+    "name": "Victoria"
+  },
+  "steps": [
+    {
+      "say": "tengo un consumo en mi tarjeta que no hice"
+    },
+    {
+      "say": "la 8566"
+    },
+    {
+      "say": "el de Óptica Visión de 156.53 del 9 de mayo"
+    },
+    {
+      "say": "no reconozco ese cobro"
+    },
+    {
+      "say": "no compré nada en ninguna óptica"
+    },
+    {
+      "say": "sí, confirmo"
+    },
+    {
+      "say": "ya me atendieron?"
+    }
+  ],
+  "expected": {
+    "firstIntent": "COMPLAINT",
+    "outcome": "D",
+    "reason": "complaint",
+    "handoffFacts": [
+      "card_last4",
+      "transaction_date",
+      "merchant",
+      "amount",
+      "complaint_type",
+      "description"
+    ],
+    "silentAfter": 6
+  }
+}

@@ -1,22 +1,22 @@
 {
-  "id": "16",
-  "language": "es",
+  "id": "H10",
+  "language": "pt",
   "group": "cancelar-producto",
   "customer": {
-    "token": "demo-ar-4",
-    "user": 11,
+    "token": "demo-co-1",
+    "user": 2,
     "segment": "Basic",
-    "name": "Marco"
+    "name": "Javier"
   },
   "steps": [
     {
-      "say": "ya no quiero mi tarjeta, dénla de baja"
+      "say": "quero encerrar meu cartão de crédito"
     },
     {
-      "say": "la 7354"
+      "say": "o final 0844"
     },
     {
-      "say": "porque casi no compro con ella"
+      "say": "porque vou me mudar de país"
     }
   ],
   "expected": {
@@ -28,7 +28,7 @@
       "reason"
     ],
     "mustNotMatch": [
-      "descuento|promoci[oó]n|beneficio|oferta|te ofrezco"
+      "descuento|promoci[oó]n|beneficio|oferta|te ofrezco|desconto|promoção"
     ]
   }
 }

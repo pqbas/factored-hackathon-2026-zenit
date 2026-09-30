@@ -1,0 +1,44 @@
+{
+  "id": "H06",
+  "language": "es",
+  "group": "reclamo-cargo",
+  "customer": {
+    "token": "demo-mx-1",
+    "user": 1,
+    "segment": "Plus",
+    "name": "Santiago"
+  },
+  "steps": [
+    {
+      "say": "aparece un cargo en mi tarjeta que yo no hice"
+    },
+    {
+      "say": "es la terminada en 4930"
+    },
+    {
+      "say": "el de Clínica Médica de 52.11 del 6 de junio"
+    },
+    {
+      "say": "no reconozco ese cobro"
+    },
+    {
+      "say": "nunca fui a esa clínica"
+    },
+    {
+      "say": "sí, confirmo"
+    }
+  ],
+  "expected": {
+    "firstIntent": "COMPLAINT",
+    "outcome": "D",
+    "reason": "complaint",
+    "handoffFacts": [
+      "card_last4",
+      "transaction_date",
+      "merchant",
+      "amount",
+      "complaint_type",
+      "description"
+    ]
+  }
+}

@@ -1,22 +1,19 @@
 {
-  "id": "16",
+  "id": "H09",
   "language": "es",
   "group": "cancelar-producto",
   "customer": {
-    "token": "demo-ar-4",
-    "user": 11,
-    "segment": "Basic",
-    "name": "Marco"
+    "token": "demo-ar-2",
+    "user": 7,
+    "segment": "Plus",
+    "name": "Adriana"
   },
   "steps": [
     {
-      "say": "ya no quiero mi tarjeta, dénla de baja"
+      "say": "quiero dar de baja mi tarjeta de crédito"
     },
     {
-      "say": "la 7354"
-    },
-    {
-      "say": "porque casi no compro con ella"
+      "say": "porque me cobran mucho de mantenimiento"
     }
   ],
   "expected": {
@@ -28,7 +25,7 @@
       "reason"
     ],
     "mustNotMatch": [
-      "descuento|promoci[oó]n|beneficio|oferta|te ofrezco"
+      "descuento|promoci[oó]n|beneficio|oferta|te ofrezco|desconto|promoção"
     ]
   }
 }
