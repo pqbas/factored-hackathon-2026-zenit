@@ -3,16 +3,28 @@ CANCEL_REPLY: dict[str, str] = {
     "pt": "Pronto, ficamos por aqui. Se precisar de mais alguma coisa, é só me escrever.",
 }
 
-SESSION_REJECTED: dict[str, str] = {
-    "missing": (
-        "Para ayudarte necesito que inicies sesión en la banca digital. Por "
-        "seguridad no puedo identificarte solo por lo que escribes en el chat."
-    ),
-    "invalid": (
-        "No pude verificar tu sesión. Vuelve a iniciar sesión en la banca "
-        "digital para continuar."
-    ),
-    "expired": "Tu sesión expiró. Vuelve a iniciar sesión y retomamos tu solicitud.",
+SESSION_REJECTED: dict[str, dict[str, str]] = {
+    "missing": {
+        "es": (
+            "Para ayudarte necesito que inicies sesión en la banca digital. Por "
+            "seguridad no puedo identificarte solo por lo que escribes en el chat."
+        ),
+        "pt": (
+            "Para ajudar você, preciso que entre na sua conta no banco digital. Por "
+            "segurança, não posso identificar você só pelo que escreve no chat."
+        ),
+    },
+    "invalid": {
+        "es": (
+            "No pude verificar tu sesión. Vuelve a iniciar sesión en la banca "
+            "digital para continuar."
+        ),
+        "pt": "Não consegui verificar sua sessão. Entre novamente no banco digital para continuar.",
+    },
+    "expired": {
+        "es": "Tu sesión expiró. Vuelve a iniciar sesión y retomamos tu solicitud.",
+        "pt": "Sua sessão expirou. Entre novamente e continuamos com sua solicitação.",
+    },
 }
 
 # Fixed refusals for each guardrail category classify blocks on. "other" falls

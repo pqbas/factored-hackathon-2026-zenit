@@ -38,10 +38,13 @@ _MIN_WORDS_TO_SWITCH = 3
 
 
 def conversation_language(
-    detected: str | None, text: str, earlier_texts: list[str], default: str
+    detected: str | None, text: str, earlier_texts: list[str], default: str, chosen: str | None = None
 ) -> str:
     if detected is not None and len(text.split()) >= _MIN_WORDS_TO_SWITCH:
         return detected
+    # A short message ("hola", "C", "sí") follows the language the customer picked in the chat.
+    if chosen in ("es", "pt"):
+        return chosen
     # The agent keeps no state, so earlier messages are read from the history the back sends,
     # with the local detector: Jev only classifies the last message.
     for earlier in reversed(earlier_texts):
@@ -199,6 +202,7 @@ async def classify(
         text,
         [_text(message) for message in human_messages[:-1]],
         country_language(state.get("session", {}).get("country")),
+        state.get("session", {}).get("chosen_language"),
     )
     classification = classification.model_copy(update={"language": language})
 
