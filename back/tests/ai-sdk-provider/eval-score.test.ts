@@ -435,6 +435,21 @@ test.describe('keywordIntent', () => {
   });
 });
 
+test.describe('assertLocalBase with --allow-prod', () => {
+  const app =
+    'https://dev-bank-assistant-ui-7474647867986650.aws.databricksapps.com';
+  test('a deployed App needs --allow-prod', () => {
+    expect(() => assertLocalBase(app)).toThrow(/--allow-prod/);
+    expect(() => assertLocalBase(app, true)).not.toThrow();
+  });
+  test('--allow-prod only opens https Databricks Apps', () => {
+    expect(() => assertLocalBase('https://example.com', true)).toThrow();
+    expect(() =>
+      assertLocalBase('http://x.aws.databricksapps.com', true),
+    ).toThrow();
+  });
+});
+
 test.describe('assertLocalBase', () => {
   test('accepts localhost and 127.0.0.1', () => {
     expect(() => assertLocalBase('http://localhost:3300')).not.toThrow();

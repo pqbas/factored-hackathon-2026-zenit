@@ -150,6 +150,29 @@ type ApiTurn = {
   guardAction: string | null;
 };
 
+// Against a deployed App every request goes as the CLI user, with its OAuth
+// token: the App's proxy decides who it is, and that user must be an admin.
+// Locally, customers and the admin are X-Forwarded-* headers.
+let deployedAuth: Record<string, string> | null = null;
+function cliToken(): Record<string, string> {
+  const out = execFileSync(
+    'databricks',
+    [
+      'auth',
+      'token',
+      '-p',
+      process.env.DATABRICKS_CONFIG_PROFILE ?? 'DEFAULT',
+      '-o',
+      'json',
+    ],
+    { encoding: 'utf8' },
+  );
+  return {
+    Authorization: `Bearer ${(JSON.parse(out) as { access_token: string }).access_token}`,
+  };
+}
+const adminHeaders = () => deployedAuth ?? ADMIN;
+
 // One run of a case, in a new chat as the customer's local user.
 export async function runCase(
   base: string,
@@ -158,7 +181,8 @@ export async function runCase(
   delay = 0,
 ): Promise<RunResult> {
   const chatId = randomUUID();
-  const headers = headersFor('local', evalCase.customer.user);
+  if (deployedAuth) deployedAuth = cliToken();
+  const headers = deployedAuth ?? headersFor('local', evalCase.customer.user);
   const stepReplies: StepReply[] = [];
   const sent: Array<{
     step: number;
@@ -185,6 +209,10 @@ export async function runCase(
         events: result.events,
       });
       if (delay) await new Promise((r) => setTimeout(r, delay));
+    } else if (deployedAuth) {
+      throw new Error(
+        `#${evalCase.id} has advisor steps: they need local advisor users, not a deployed App`,
+      );
     } else if ('take' in action) {
       holder = action.take;
       await advisorPost(base, advisor(holder), `${chatId}/take`, {});
@@ -198,17 +226,17 @@ export async function runCase(
   const chat = await api<{ closedAt: string | null; handoff: Handoff | null }>(
     base,
     `/api/advisor/conversations/${chatId}`,
-    ADMIN,
+    adminHeaders(),
   );
   const messages = await api<ApiMessage[]>(
     base,
     `/api/advisor/conversations/${chatId}/messages`,
-    ADMIN,
+    adminHeaders(),
   );
   const { turns: rows } = await api<{ turns: ApiTurn[] }>(
     base,
     `/api/advisor/conversations/${chatId}/turns`,
-    ADMIN,
+    adminHeaders(),
   );
 
   const observed: Observed = {
@@ -255,6 +283,7 @@ export async function runCase(
   return {
     caseId: evalCase.id,
     run,
+    chatId,
     group: evalCase.group,
     language: evalCase.language,
     segment: evalCase.customer.segment,
@@ -302,6 +331,10 @@ function commit(): string {
 export async function main(argv: string[]) {
   const args = parseArgs(argv);
   args.out ||= join(HERE, 'results');
+  const deployed = !['localhost', '127.0.0.1'].includes(
+    new URL(args.base).hostname,
+  );
+  if (deployed) deployedAuth = cliToken();
   const cases = loadCases(args.cases, args.set);
   // A report is never overwritten: the "before" must survive the "after".
   const stem = join(args.out, reportStem(args));
