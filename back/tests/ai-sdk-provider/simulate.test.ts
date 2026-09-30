@@ -156,7 +156,7 @@ test.describe('simulate: picking and flags', () => {
     const args = parseDayArgs(['--dry-run']);
     expect(args).toMatchObject({
       count: 100,
-      concurrency: 3,
+      concurrency: 1,
       dryRun: true,
     });
     expect(() => parseDayArgs(['--no-advisor-actions'])).toThrow();
