@@ -454,6 +454,6 @@ spec/30-09-26-eval-prod/.
       95.0%, 0 inseguros, p50/p95 2.0/3.7 s por turno
       (`scripts/eval/results/comparacion-prod.md`).
 
-Pendiente: borrar de la base de prod los 120 chats de prueba (lo decide el
+Shipped en PR #99. Pendiente: borrar de la base de prod los 120 chats de prueba (lo decide el
 usuario; `npm run eval:cleanup`).
 
