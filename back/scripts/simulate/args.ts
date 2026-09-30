@@ -26,7 +26,9 @@ export function parseDayArgs(argv: string[]): DayArgs {
     base: DEFAULT_BASE,
     allowProd: false,
     day: todayUtc(),
-    concurrency: 3,
+    // One conversation at a time: each turn makes several LLM calls and the
+    // workspace's Qwen QPS limit answers 429 with 3 in parallel (30-09-26).
+    concurrency: 1,
     dryRun: false,
     force: false,
     label: null,
