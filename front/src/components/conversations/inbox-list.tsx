@@ -19,7 +19,7 @@ import {
   lastActivityAt,
   rowPreview,
 } from '@/lib/advisor';
-import { avatarColor, formatListTime, getInitials, STATUS_LABEL } from '@/lib/conversations';
+import { avatarColor, avatarKeyOf, formatListTime, getInitials, STATUS_LABEL } from '@/lib/conversations';
 import { cn } from '@/lib/utils';
 
 function Row({
@@ -62,9 +62,10 @@ function Row({
       />
       <span
         aria-hidden="true"
+        data-testid="row-avatar"
         className={cn(
           'flex size-7 items-center justify-center rounded-full font-medium text-[11px] text-white',
-          avatarColor(chat.userId),
+          avatarColor(avatarKeyOf(chat)),
         )}
       >
         {getInitials(customerLabel(chat))}

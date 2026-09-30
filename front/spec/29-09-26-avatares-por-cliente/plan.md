@@ -12,7 +12,7 @@
 
 1. In `src/lib/conversations.ts`:
    - `AVATAR_COLORS` becomes 8 `bg-linear-to-b` gradients: rose, orange, amber, emerald, teal, sky, indigo and violet, with no gray.
-   - `avatarColor(key)` uses djb2 (`hash * 33 ^ char`, unsigned).
+   - `avatarColor(key)` uses FNV-1a (`Math.imul`, unsigned).
    - `avatarKeyOf({ customerId?, customerKey?, userId })` returns `customerId || customerKey || userId`.
 2. In `inbox-list.tsx` and `conversation-header.tsx`, pass `avatarKeyOf(chat)` instead of `chat.userId`.
 

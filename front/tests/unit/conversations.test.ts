@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  avatarColor,
+  avatarKeyOf,
   formatListTime,
   getInitials,
   groupByDay,
@@ -56,5 +58,21 @@ describe('formatListTime', () => {
     expect(formatListTime(localIso(28, 9, 30), NOW)).toBe('09:30');
     expect(formatListTime(localIso(27, 9, 30), NOW)).toBe('Ayer');
     expect(formatListTime(localIso(20, 9, 30), NOW)).toBe('20/09/2026');
+  });
+});
+
+describe('avatarColor and avatarKeyOf', () => {
+  it('keys by the bank customer, then the customer key, then the app user', () => {
+    expect(avatarKeyOf({ customerId: 'CUS1', customerKey: 'k', userId: 'u' })).toBe('CUS1');
+    expect(avatarKeyOf({ customerId: null, customerKey: 'k', userId: 'u' })).toBe('k');
+    expect(avatarKeyOf({ userId: 'u' })).toBe('u');
+  });
+
+  it('gives a customer always the same color, never a gray', () => {
+    expect(avatarColor('CUS000123')).toBe(avatarColor('CUS000123'));
+    const ids = ['CUS000123', 'CUS000132', 'CUS000231', 'CUS000999', 'CUS001070', 'CUS004455', 'CUS007001', 'CUS009876'];
+    const colors = ids.map((id) => avatarColor(avatarKeyOf({ customerId: id, userId: 'same-app-user' })));
+    expect(new Set(colors).size).toBeGreaterThanOrEqual(4);
+    for (const color of colors) expect(color).not.toMatch(/zinc|slate|stone|gray|neutral/);
   });
 });

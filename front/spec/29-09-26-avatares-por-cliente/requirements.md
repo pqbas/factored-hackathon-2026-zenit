@@ -23,7 +23,7 @@ And it changes in these ways:
 ## 2. Decisions
 
 - `customerId` va primero porque, cuando existe, el back arma `customerKey` con ese mismo valor (`coalesce(customerId, userEmail, userId)`). Así la fila, que trae `customerKey`, y el encabezado, que trae los campos del chat, dan el mismo color.
-- El hash pasa de sumar códigos de caracteres a djb2. Con la suma, ids parecidos como CUS000123 y CUS000132 dan el mismo color. djb2 los reparte mejor entre los 8.
+- El hash pasa de sumar códigos de caracteres a FNV-1a. Con la suma, ids parecidos como CUS000123 y CUS000132 dan el mismo color. djb2 también se probó, pero con 8 colores (una potencia de 2) deja 5 de 8 ids de ejemplo en el mismo color. FNV-1a los reparte en 5 colores.
 - Los tonos van de 500 a 600, o de 600 a 700 en los colores claros (ámbar, esmeralda, verde azulado y celeste), para que el blanco se lea bien. Siguen el estilo Notion Mail: color apagado y sin saturar.
 - El panel Contexto no tiene avatar, así que no cambia.
 

@@ -11,7 +11,7 @@ import {
   reasonTagOf,
   sectionLabel,
 } from '@/lib/advisor';
-import { avatarColor, getInitials } from '@/lib/conversations';
+import { avatarColor, avatarKeyOf, getInitials } from '@/lib/conversations';
 import { cn } from '@/lib/utils';
 
 function AssistantSwitch({
@@ -90,9 +90,10 @@ export function ConversationHeader({
         <X className="size-4" />
       </button>
       <div
+        data-testid="header-avatar"
         className={cn(
           'flex size-10 shrink-0 items-center justify-center rounded-full font-medium text-sm text-white',
-          avatarColor(chat.userId),
+          avatarColor(avatarKeyOf(chat)),
         )}
       >
         {getInitials(name)}
