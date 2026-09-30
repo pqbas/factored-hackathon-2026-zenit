@@ -192,7 +192,7 @@ def _classification(**overrides) -> Classification:
 def test_invalid_session_gets_fixed_reply_without_calling_the_llm():
     graph = _build_graph(ExplodingLLM(), None)
     result = _run(graph, "hola", session=EXPIRED_SESSION, thread_id="invalid-session-thread")
-    assert result["messages"][-1].content == SESSION_REJECTED["expired"]
+    assert result["messages"][-1].content == SESSION_REJECTED["expired"]["es"]
 
 
 def test_valid_session_gets_the_llm_reply():

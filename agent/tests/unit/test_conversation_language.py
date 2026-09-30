@@ -110,3 +110,24 @@ def test_a_three_word_message_switches_the_language():
 
 def test_without_jev_an_undetected_language_keeps_the_country_language():
     assert conversation_language(None, "Me gustaría hablar con alguien", [], "es") == "es"
+
+
+# --- The ES | PT selector of the chat (custom_inputs.language) ------------------------------
+
+def test_a_short_message_follows_the_chosen_language():
+    assert conversation_language("es", "hola", [], "es", chosen="pt") == "pt"
+    assert conversation_language(None, "C", ["Quero ver meu saldo agora"], "es", chosen="es") == "es"
+
+
+def test_a_clear_message_in_the_other_language_beats_the_selector():
+    assert conversation_language("es", "quiero saber mi saldo por favor", [], "pt", chosen="pt") == "es"
+
+
+def test_without_a_chosen_language_it_behaves_as_before():
+    earlier = ["Quero falar com um atendente"]
+    assert conversation_language("es", "Sim", earlier, "es") == "pt"
+    assert conversation_language("es", "Sim", earlier, "es", chosen=None) == "pt"
+
+
+def test_an_invalid_chosen_language_is_ignored():
+    assert conversation_language(None, "hola", [], "es", chosen="en") == "es"

@@ -213,7 +213,7 @@ def test_request_without_session_token_gets_the_sign_in_reply(client, monkeypatc
     )
 
     assert response.status_code == 200
-    assert _output_text(response.json()) == SESSION_REJECTED["missing"]
+    assert _output_text(response.json()) == SESSION_REJECTED["missing"]["es"]
     assert llm.received is None
 
 
@@ -1151,7 +1151,7 @@ def test_a_sim_token_with_lakebase_down_gets_the_session_rejected_reply_and_no_t
     response = _invoke(client, "¿cuál es mi saldo?", session_token="sim-89c98277-a0f7-4d71-a4ca-def80715b858")
 
     assert response.status_code == 200
-    assert _output_text(response.json()) == SESSION_REJECTED["invalid"]
+    assert _output_text(response.json()) == SESSION_REJECTED["invalid"]["es"]
     assert llm.received is None
 
 
@@ -1185,3 +1185,39 @@ def test_a_valid_sim_token_reaches_the_tools_with_its_own_customer(client, monke
     assert response.status_code == 200
     assert _output_text(response.json()) == FAKE_LLM_TEXT
     assert pool.queries[-1][1] == {"customer_id": "CLI-8WQ0WQXUM9LD"}
+
+
+def _invoke_with_language(client, text, language):
+    custom_inputs = {"session_token": "demo-mx-1", "language": language}
+    return client.post("/invocations", json={"input": [{"role": "user", "content": text}], "custom_inputs": custom_inputs})
+
+
+@pytest.fixture
+def greeting_jev(monkeypatch):
+    monkeypatch.setattr(main, "jev_client", JevClient(
+        api_key="test-key", url="https://api.typesafe.ai/v1/systemone", timeout=2.0,
+        transport=httpx.MockTransport(lambda request: _jev_response_for("GREETING"))))
+    monkeypatch.setattr(main, "get_chat_model", lambda: RecordingChatModel(FAKE_LLM_TEXT))
+
+
+def test_hola_with_the_pt_selector_gets_the_portuguese_greeting_and_menu(client, greeting_jev):
+    response = _invoke_with_language(client, "hola", "pt")
+    assert _output_text(response.json()) == GREETING_REPLY["pt"] + "\n\n" + MENU["pt"]
+
+
+def test_a_long_spanish_message_with_the_pt_selector_is_answered_in_spanish(client, greeting_jev):
+    response = _invoke_with_language(client, "hola, buenas noches David", "pt")
+    assert _output_text(response.json()) == GREETING_REPLY["es"] + "\n\n" + MENU["es"]
+
+
+def test_an_invalid_selector_value_is_ignored(client, greeting_jev):
+    response = _invoke_with_language(client, "hola", "en")
+    assert _output_text(response.json()) == GREETING_REPLY["es"] + "\n\n" + MENU["es"]
+
+
+def test_a_rejected_session_with_the_pt_selector_is_told_in_portuguese(client):
+    response = client.post("/invocations", json={
+        "input": [{"role": "user", "content": "oi"}],
+        "custom_inputs": {"session_token": "not-a-real-token", "language": "pt"},
+    })
+    assert _output_text(response.json()) == SESSION_REJECTED["invalid"]["pt"]

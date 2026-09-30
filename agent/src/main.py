@@ -172,7 +172,12 @@ async def streaming(
         # The back's index counts the whole history; the messages before the cut are gone.
         "conversation_start": max(0, _conversation_start(custom_inputs) - (len(history) - len(messages))),
         # handled_by says who owns the conversation now; the paused node reads it.
-        "session": {**session.as_dict(), "handled_by": custom_inputs.get("handled_by")},
+        "session": {
+            **session.as_dict(),
+            "handled_by": custom_inputs.get("handled_by"),
+            # The ES | PT selector of the chat; anything else is ignored.
+            "chosen_language": custom_inputs.get("language") if custom_inputs.get("language") in ("es", "pt") else None,
+        },
         "thread_id": thread_id,
     }
 
