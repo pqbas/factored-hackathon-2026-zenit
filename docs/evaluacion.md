@@ -5,10 +5,12 @@ agente, LLM y datos del banco). Las cifras detalladas, los reportes de cada
 corrida y el registro de cambios a los casos están en
 [`back/scripts/eval/results/comparacion.md`](../back/scripts/eval/results/comparacion.md).
 
-> **Medición offline, en local** (29–30/09/2026). El back y el agente corren en
-> local con el código de `main`; el LLM (Qwen 3 Next 80B) y los datos del banco
-> (Lakebase `bank_ro`) son los mismos que usa prod. Todavía no hay una medición
-> contra las Apps desplegadas.
+> Dos mediciones (29–30/09/2026), con el mismo LLM (Qwen 3 Next 80B) y los
+> mismos datos del banco (Lakebase `bank_ro`):
+>
+> - **Offline, en local:** back y agente corriendo en local desde `main`.
+> - **En producción:** el examen contra las Apps desplegadas en Databricks
+>   ([`comparacion-prod.md`](../back/scripts/eval/results/comparacion-prod.md)).
 
 ## 1. Cómo se mide
 
@@ -52,7 +54,24 @@ back: la contraseña se guarda sin enmascarar; David la bloquea bien.
 En los 40 de práctica: 71.7% → 95.8% de conversaciones que cumplen el flujo, y
 p50 9.0 s → 5.3 s.
 
-## 3. Qué resuelve David, por caso de uso (después)
+## 3. En producción (examen, 20 casos × 3)
+
+| Métrica | Prod, antes del fix de MLflow | **Prod, después** | Local, después |
+| --- | --- | --- | --- |
+| Conversaciones que cumplen el flujo | 53/60 (88.3%) | **57/60 (95.0%)** | 57/60 (95.0%) |
+| Resolución automática segura | 36/60 (60.0%) | **39/60 (65.0%)** | 39/60 (65.0%) |
+| Derivaciones correctas | 17/18 | **18/18** | 18/18 |
+| Resultados inseguros observados | 0 | **0** | 0 |
+| Latencia por turno p50 / p95 | 2.2 s / 3.8 s | **2.0 s / 3.7 s** | 5.2 s / 7.0 s |
+| Costo por caso resuelto solo | USD 0.0102 | **USD 0.0099** | USD 0.0109 |
+| Mismo veredicto en las 3 corridas | 16/20 | **20/20** | 20/20 |
+
+La calidad en prod es la misma que en local y la latencia es menos de la mitad:
+en local, cada turno pagaba ~2 s de autenticación por la CLI al resolver el
+experimento de MLflow, que la App no usa. La única falla (H19) es del back: la
+contraseña se guarda sin enmascarar.
+
+## 4. Qué resuelve David, por caso de uso (después)
 
 | Caso de uso | Qué hace | Práctica | Examen |
 | --- | --- | --- | --- |
@@ -68,7 +87,7 @@ Las fallas restantes: #22 (estado de un reclamo sin reclamos previos: la ficha
 de la derivación llega incompleta en 2 de 3 corridas) y #36/H19 (el back guarda
 el CVV y la contraseña sin enmascarar).
 
-## 4. Clasificador de intención (componente aprendido vs. baseline)
+## 5. Clasificador de intención (componente aprendido vs. baseline)
 
 39 mensajes etiquetados de los casos de práctica × 3 repeticiones, solo el primer mensaje, sin el holdout.
 
@@ -89,7 +108,7 @@ rápido), pero la App no puede salir a internet. Las reglas ya se usan donde son
 de alta precisión (letras del menú, confirmación, cancelación en curso,
 seguimiento del estado de un reclamo), y en esos turnos no se llama al LLM.
 
-## 5. Guard de grounding
+## 6. Guard de grounding
 
 Si David muestra datos de la cuenta sin haber llamado a la herramienta que los
 devuelve, la respuesta se detiene y se reintenta una vez forzando la
@@ -97,10 +116,12 @@ herramienta; si falla, responde "Ahora no puedo consultar esa información.".
 En la corrida "después" se disparó en 9 de 279 turnos (práctica) y 0 de 126
 (examen); los 9 reintentos trajeron los datos reales.
 
-## 6. Limitaciones
+## 7. Limitaciones
 
-- **Offline y en local.** No es una medición de producción; falta correr el
-  examen contra las Apps desplegadas.
+- **Prod medido solo con el examen:** 20 casos × 3; el resto de las cifras es
+  offline.
+- **Trazas de prod:** las trazas de MLflow no llegan desde la App (sin salida
+  al storage); las métricas por turno vienen de `TurnMetric` en el back.
 - **Muestra chica:** 60 casos. 0 inseguros observados no prueba riesgo cero.
 - **Un inseguro que el scoring no contó:** en la línea base, una corrida del
   caso #09 inventó movimientos. El chequeo de cifras inventadas solo existe en
