@@ -7,6 +7,7 @@ from langchain_core.messages import AIMessage, HumanMessage
 
 from src.graph.state import AgentState
 from src.llm.fallback import (
+    case_status_follow_up,
     check_guardrail_rules,
     detect_language,
     fallback_classify,
@@ -14,7 +15,9 @@ from src.llm.fallback import (
     mask_sensitive,
     menu_rule_intent,
     names_a_product_to_cancel,
+    retention_in_progress,
 )
+from src.prompts.advisor import ADVISOR_PREFIX, strip_advisor_prefix
 from src.prompts.messages import CARD_OPTIONS, GUARDRAIL_REPLIES, MORE_OPTIONS, SAVINGS_OPTIONS
 from src.schemas.classification import (
     Classification,
@@ -58,8 +61,10 @@ _SUBMENUS = {
     "MORE_OPTIONS": set(MORE_OPTIONS.values()),
 }
 
-# Enough for the question David closed his reply with, without resending a whole balance.
-_CONTEXT_CHARS = 300
+# Enough for the question David closed his reply with, without resending a whole balance or menu.
+_DAVID_CHARS = 300
+# The transcript's cap, so the classifier's prompt stays bounded on long conversations.
+_TRANSCRIPT_MESSAGES = 12
 
 
 def _previous_reply(messages: list) -> str | None:
@@ -70,10 +75,22 @@ def _previous_reply(messages: list) -> str | None:
     return content if isinstance(content, str) else str(content)
 
 
-def _context(previous_reply: str | None) -> str | None:
-    if not previous_reply:
-        return None
-    return mask_sensitive(previous_reply)[-_CONTEXT_CHARS:]
+def _transcript(messages: list, start: int = 0) -> str | None:
+    """The current conversation as the classifier reads it: the messages from `start`, without
+    the customer's last one (passed apart as the text), the last 12 of them, masked."""
+    earlier = messages[max(start, 0):]
+    if earlier and isinstance(earlier[-1], HumanMessage):
+        earlier = earlier[:-1]
+    lines = []
+    for message in earlier[-_TRANSCRIPT_MESSAGES:]:
+        content = message.content if isinstance(message.content, str) else str(message.content)
+        if isinstance(message, HumanMessage):
+            lines.append(f"Cliente: {mask_sensitive(content)}")
+        elif isinstance(message, AIMessage) and content.lstrip().startswith(ADVISOR_PREFIX):
+            lines.append(f"Asesor: {mask_sensitive(strip_advisor_prefix(content))}")
+        elif isinstance(message, AIMessage):
+            lines.append(f"David: {mask_sensitive(content)[-_DAVID_CHARS:]}")
+    return "\n".join(lines) or None
 
 
 def _human_messages(messages: list) -> list[HumanMessage]:
@@ -117,15 +134,43 @@ async def classify(
             sentiment="neutral",
             source="rules",
         )
+    elif case_status_follow_up(text, previous_reply):
+        # An answer to David's question about the customer's complaint stays in CASE_STATUS: the
+        # classifier read "necesito que me devuelvan el dinero" as a charge complaint.
+        masked_text = None
+        classification = Classification(
+            guardrail="OK",
+            guardrail_probability=0.0,
+            language=detect_language(text),
+            intent="CASE_STATUS",
+            intent_confidence=1.0,
+            sentiment="neutral",
+            source="rules",
+        )
+    elif retention_in_progress(text, previous_reply):
+        # Once the customer is cancelling a product, the answers to David's two questions
+        # (which product, why) are part of it: the reason is free text, never reclassified.
+        masked_text = None
+        classification = Classification(
+            guardrail="OK",
+            guardrail_probability=0.0,
+            language=detect_language(text),
+            intent="RETENTION",
+            intent_confidence=1.0,
+            sentiment="neutral",
+            source="rules",
+        )
     else:
         masked_text = None
         # classifier is Jev or the LLM (CLASSIFIER, see src/main.py); either one failing
-        # falls back to the keyword rules. The previous reply goes along so an answer to
+        # falls back to the keyword rules. The current conversation goes along so an answer to
         # David's question ("la de 1070", "sí") is read in its context.
         try:
             if classifier is None:
                 raise ClassifierUnavailable("classifier is None")
-            classification = await classifier.classify(text, routes, context=_context(previous_reply))
+            classification = await classifier.classify(
+                text, routes, context=_transcript(state["messages"], state.get("conversation_start", 0))
+            )
         except ClassifierUnavailable as exc:
             name = type(classifier).__name__ if classifier is not None else "Classifier"
             logger.warning("%s unavailable, classifying with rules: %s", name, exc)
@@ -141,6 +186,11 @@ async def classify(
     # Only Jev and the LLM can tell another language apart; the local detector says "other"
     # when it can't decide, so with rules an undecided message keeps the conversation's language.
     detected = classification.language
+    # The classifier once said "es" for a clear Portuguese message: when the local markers are
+    # sure of es or pt, they win.
+    local = detect_language(text)
+    if local in ("es", "pt") and local != detected:
+        detected = local
     if classification.source not in ("jev", "llm") and detected not in ("es", "pt"):
         detected = None
     language = conversation_language(

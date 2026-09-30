@@ -17,7 +17,15 @@ from langchain_core.tools import StructuredTool
 
 import src.main as main
 from src.llm.jev import JevClient
-from src.prompts.messages import CANCEL_REPLY, GREETING_REPLY, HANDOFF_REPLY, MENU, SESSION_REJECTED
+from src.prompts.messages import (
+    CANCEL_REPLY,
+    GREETING_REPLY,
+    HANDOFF_REPLY,
+    MENU,
+    NOT_AVAILABLE,
+    SESSION_REJECTED,
+    TOOL_DOWN,
+)
 
 # src.main loads the real .env with override=True at import time, which writes
 # into the shared process environment for the rest of the pytest session, and
@@ -41,6 +49,7 @@ def _signals(usage=None, classifier="jev"):
     return {
         "usage": usage or {"input_tokens": 0, "output_tokens": 0}, "model": main.settings.llm_endpoint,
         "prompt_version": main.prompt_version(), "classifier": classifier,
+        "guard": None,
     }
 
 
@@ -376,6 +385,44 @@ def test_the_llm_receives_only_the_last_20_messages_of_a_long_history(client, mo
 
     assert response.status_code == 200
     assert [m.content for m in llm.received[1:]] == [m["content"] for m in history[-20:]]
+
+
+@pytest.mark.parametrize(
+    ("conversation_start", "first_in_transcript"),
+    [(25, 25), (5, 18), (0, 18), ("x", 18), (-3, 18), (True, 18)],
+)
+def test_conversation_start_limits_the_transcript_the_classifier_reads(
+    client, monkeypatch, conversation_start, first_in_transcript
+):
+    states = []
+
+    def jev(request):
+        states.append(json.loads(request.content)["state"])
+        return _jev_response_for("GOODBYE")
+
+    monkeypatch.setattr(main, "get_chat_model", lambda: RecordingChatModel(FAKE_LLM_TEXT))
+    monkeypatch.setattr(
+        main, "jev_client",
+        JevClient(api_key="test-key", url="https://api.typesafe.ai/v1/systemone", timeout=2.0,
+                  transport=httpx.MockTransport(jev)),
+    )
+    history = [
+        {"role": "user" if i % 2 == 0 else "assistant", "content": f"mensaje número {i}"}
+        for i in range(31)
+    ]
+
+    response = client.post("/invocations", json={
+        "input": history,
+        "custom_inputs": {"session_token": "demo-mx-1", "conversation_start": conversation_start},
+    })
+
+    assert response.status_code == 200
+    lines = states[0].splitlines()
+    # The agent keeps the last 20 messages (indexes 11 to 30); the transcript is at most 12 of
+    # them, minus the current one (indexes 18 to 29), and never starts before conversation_start.
+    assert lines[-1] == "Cliente: mensaje número 30"
+    assert lines[0].endswith(f"mensaje número {first_in_transcript}")
+    assert len(lines) - 1 == 30 - first_in_transcript
 
 
 def test_advisor_turns_in_the_history_never_prefix_the_reply(client, monkeypatch):
@@ -988,3 +1035,78 @@ def test_a_paused_turn_and_a_gate_rejected_turn_report_zero_tokens(client, monke
     assert paused["custom_outputs"]["usage"] == {"input_tokens": 0, "output_tokens": 0}
     assert rejected["custom_outputs"]["usage"] == {"input_tokens": 0, "output_tokens": 0}
     assert paused["custom_outputs"]["classifier"] == "jev"
+
+
+def test_a_failing_tool_answers_the_fixed_text_with_no_handoff(client, monkeypatch):
+    async def failing_get_products(**kwargs):
+        raise RuntimeError("warehouse down")
+
+    get_products_tool = StructuredTool.from_function(
+        coroutine=failing_get_products, name="get_products", description="d",
+        args_schema={"type": "object", "properties": {"customer_id": {"type": "string"}}, "required": ["customer_id"]},
+        infer_schema=False,
+    )
+
+    async def fake_tools_for(schema):
+        return [get_products_tool]
+
+    monkeypatch.setattr(main, "tools_for", fake_tools_for)
+    monkeypatch.setattr(
+        main, "get_chat_model",
+        lambda: ScriptedToolChatModel([
+            AIMessage(content="", tool_calls=[{"name": "get_products", "args": {}, "id": "c1"}]),
+        ]),
+    )
+
+    body = _invoke(client, "saldo de mi tarjeta", thread_id="e2e-tool-down").json()
+
+    assert _output_text(body) == TOOL_DOWN["es"] == "Ahora no puedo consultar esa información."
+    assert body["custom_outputs"]["handoff"] is None
+
+
+def test_a_commercial_request_gets_not_available_and_the_menu(client, monkeypatch):
+    monkeypatch.setattr(
+        main, "jev_client",
+        JevClient(api_key="test-key", url="https://api.typesafe.ai/v1/systemone", timeout=2.0,
+                  transport=httpx.MockTransport(lambda request: _jev_response_for("COMMERCIAL"))),
+    )
+    llm = RecordingChatModel(FAKE_LLM_TEXT)
+    monkeypatch.setattr(main, "get_chat_model", lambda: llm)
+
+    body = _invoke(client, "quiero un préstamo", thread_id="e2e-commercial").json()
+
+    assert _output_text(body) == NOT_AVAILABLE["es"] + "\n\n" + MENU["es"]
+    assert llm.received is None
+
+
+def test_a_grounded_use_case_turn_reports_a_null_guard(client, monkeypatch):
+    monkeypatch.setattr(
+        main, "get_chat_model",
+        lambda: ScriptedToolChatModel([AIMessage(content=FAKE_LLM_TEXT)]),
+    )
+
+    body = _invoke(client, "¿cuál es el saldo de mi tarjeta?", thread_id="e2e-guard-null").json()
+
+    assert body["custom_outputs"]["use_case"] == "GENERAL_INQUIRY"
+    assert body["custom_outputs"]["guard"] is None
+
+
+def test_a_fired_guard_shows_in_custom_outputs_and_the_draft_never_reaches_the_customer(client, monkeypatch):
+    draft = "Tus movimientos: 26/02/2026 Tienda X 443.88 USD"
+    call = {"name": "get_products", "args": {}, "id": "call_1"}
+    monkeypatch.setattr(
+        main, "get_chat_model",
+        lambda: ScriptedToolChatModel([
+            AIMessage(content="", tool_calls=[call]), AIMessage(content=draft),
+            # The forced list_transactions is not bound in this fake: it answers with text again.
+            AIMessage(content=draft),
+        ]),
+    )
+
+    body = _invoke(client, "muéstrame mis movimientos", thread_id="e2e-guard-fired").json()
+
+    assert body["custom_outputs"]["guard"] == {
+        "fired": True, "missing_tool": "list_transactions", "action": "safe_reply",
+    }
+    assert "443.88" not in _output_text(body)
+    assert "443.88" not in json.dumps(body["custom_outputs"])

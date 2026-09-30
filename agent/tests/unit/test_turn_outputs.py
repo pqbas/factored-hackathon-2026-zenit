@@ -3,7 +3,7 @@ from __future__ import annotations
 from src.schemas.turn_outputs import turn_custom_outputs
 
 THRESHOLD = 0.7
-NO_SIGNALS = {"usage": None, "model": None, "prompt_version": None, "classifier": None}
+NO_SIGNALS = {"usage": None, "model": None, "prompt_version": None, "classifier": None, "guard": None}
 
 
 def _classification(**overrides) -> dict:
@@ -67,3 +67,14 @@ def test_every_turn_carries_usage_model_prompt_version_and_classifier():
         turn_custom_outputs("t1", None, None, THRESHOLD, paused=True, **signals),
     ):
         assert {key: outputs[key] for key in expected} == expected
+
+
+def test_every_turn_carries_the_guard_label_and_nothing_else_of_the_draft():
+    guard = {"fired": True, "missing_tool": "list_transactions", "action": "retried_ok"}
+    for outputs in (
+        turn_custom_outputs("t1", _classification(), "GENERAL_INQUIRY", THRESHOLD, guard=guard),
+        turn_custom_outputs("t1", None, None, THRESHOLD, guard=guard),
+        turn_custom_outputs("t1", None, None, THRESHOLD, paused=True, guard=guard),
+    ):
+        assert outputs["guard"] == guard
+    assert turn_custom_outputs("t1", _classification(), "GENERAL_INQUIRY", THRESHOLD)["guard"] is None

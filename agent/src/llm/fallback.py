@@ -4,6 +4,7 @@ import re
 import unicodedata
 from collections.abc import Iterable
 
+from src.prompts.messages import ASK_PRODUCT, ASK_REASON
 from src.schemas.classification import Classification
 
 
@@ -14,7 +15,7 @@ def normalize(text: str) -> str:
 
 _PT_MARKERS = re.compile(
     r"\b(nao|voce|obrigad[oa]|cobranca|reconheco|estorno|compra que nao|minha|meu|cartao|"
-    r"ontem|hoje|atendente|sim|oi|ola|valor|nenhum[a]?)\b"
+    r"ontem|hoje|atendente|sim|oi|ola|valor|nenhum[a]?|quanto|tenho|poupanca|quero)\b"
 )
 _ES_MARKERS = re.compile(
     r"\b(no reconozco|yo|mi|tarjeta|cargo|cobro|ayer|hoy|asesor|si|hola|monto|ninguno|"
@@ -157,14 +158,13 @@ _SUBMENU_DIGIT = re.compile(r"(?:opcion |opcao )?([12])")
 # Etapa 4, paso 6: a yes to David's confirmation question keeps its operation. Without this
 # rule a classifier read "sí" after "…pasar tu consulta a un asesor?" as HUMAN_AGENT.
 _AFFIRMATIVE = re.compile(r"(si|sim|confirmo|si,? confirmo|sim,? confirmo|correcto|claro|dale|ok|isso|esta bien|de acuerdo)")
-# David closes the collection with a fixed question, but the LLM sometimes words it its own
-# way ("¿…pasar esta consulta a un asesor?"), so any question that offers to pass the
-# operation to an advisor counts.
+# The last line of David's confirmation question has the operation's exact phrase. A line that
+# only mentions "solicitud" and "reclamo" in passing ("sua solicitação … reclamação") isn't one.
 _TO_ADVISOR = re.compile(r"(asesor|atendente)")
 _CONFIRMATIONS = (
-    (re.compile(r"(tu|sua|esta|essa) consulta"), "CASE_STATUS"),
-    (re.compile(r"(tu|sua|esta|essa) (solicitud|solicitacao)"), "RETENTION"),
-    (re.compile(r"(tu|sua|este|esta|essa) (reclamo|reclamacao)"), "COMPLAINT"),
+    (re.compile(r"(pasar tu|passar sua) consulta"), "CASE_STATUS"),
+    (re.compile(r"(pasar tu|passar sua) (solicitud|solicitacao)"), "RETENTION"),
+    (re.compile(r"(pasar tu|passar sua) (reclamo|reclamacao)"), "COMPLAINT"),
 )
 
 
@@ -187,6 +187,22 @@ def _confirmed_by(normalized_text: str, previous_reply: str | None) -> str | Non
 def is_confirmation(text: str, previous_reply: str | None) -> bool:
     """Whether the text is a yes to David's confirmation question in the previous reply."""
     return _confirmed_by(normalize(text).strip(" .!?)"), previous_reply) is not None
+
+
+_ABOUT_COMPLAINT = re.compile(r"(reclamo|reclamacao)")
+
+
+def case_status_follow_up(text: str, previous_reply: str | None) -> bool:
+    """Whether the text answers David's question about the customer's complaint (3.D2): the
+    previous reply's last line asks about the reclamo without offering an advisor. A menu letter,
+    "menú" and a cancel are not answers; their own rules catch them."""
+    if not previous_reply or not previous_reply.strip():
+        return False
+    last_line = normalize(previous_reply).strip().splitlines()[-1]
+    if "?" not in last_line or not _ABOUT_COMPLAINT.search(last_line) or _TO_ADVISOR.search(last_line):
+        return False
+    t = normalize(text).strip(" .!?)")
+    return not (_MENU_WORDS.fullmatch(t) or _MENU_LETTER.fullmatch(t) or _CANCEL.match(t))
 
 
 _LETTER_INTENTS = {"a": "CARD_OPTIONS", "b": "SAVINGS_OPTIONS", "c": "COMPLAINT", "d": "MORE_OPTIONS"}
@@ -216,3 +232,31 @@ def menu_rule_intent(text: str, previous_reply: str | None, submenus: dict[str, 
 
 def names_a_product_to_cancel(text: str) -> bool:
     return _RETENTION.search(normalize(text)) is not None
+
+
+_RETENTION_QUESTIONS = tuple(normalize(text.split("\n")[0]) for text in ASK_PRODUCT.values())
+_REASON_QUESTIONS = {normalize(text) for text in ASK_REASON.values()}
+
+
+def asked_retention_question(previous_reply: str | None) -> bool:
+    """Whether David's previous reply is one of the cancellation's own questions: the product
+    (possibly after a "no encuentro ese producto" line) or the reason."""
+    if not previous_reply:
+        return False
+    previous = normalize(previous_reply).strip()
+    if previous in _REASON_QUESTIONS:
+        return True
+    return any(previous.startswith(q) or ("\n\n" + q) in previous for q in _RETENTION_QUESTIONS)
+
+
+def retention_in_progress(text: str, previous_reply: str | None) -> bool:
+    """Whether the text answers one of the cancellation's questions, so the operation stays
+    RETENTION without the classifier. A cancel, "menú" and a menu letter keep their own rules."""
+    if not asked_retention_question(previous_reply):
+        return False
+    t = normalize(text).strip(" .!?)")
+    return not (_MENU_WORDS.fullmatch(t) or _MENU_LETTER.fullmatch(t) or _CANCEL.match(t))
+
+
+def answered_reason_question(previous_reply: str | None) -> bool:
+    return bool(previous_reply) and normalize(previous_reply).strip() in _REASON_QUESTIONS

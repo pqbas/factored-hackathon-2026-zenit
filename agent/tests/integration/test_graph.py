@@ -10,7 +10,7 @@ from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, Tool
 from psycopg_pool import PoolTimeout
 
 from lakebase_fakes import FakePool
-from src.graph.build import build_graph
+from src.graph.build import GRAPH_NODES, build_graph
 from src.llm.jev import JevUnavailable
 from src.prompts.messages import (
     CANCEL_REPLY,
@@ -20,12 +20,14 @@ from src.prompts.messages import (
     HUMAN_WITHOUT_TOPIC,
     MENU,
     MORE_OPTIONS,
+    NOT_AVAILABLE,
     OUT_OF_MENU,
     SESSION_REJECTED,
+    TOOL_DOWN,
 )
 from src.prompts.situations import SITUATIONS
 from src.schemas.classification import Classification
-from src.schemas.routing import IntentRoute
+from src.schemas.routing import IntentRoute, load_routing
 from src.tools.bank_sql import bank_tools
 
 VALID_SESSION = {"authenticated": True, "customer_id": "CLI-TEST", "reason": None}
@@ -330,17 +332,38 @@ def test_a_submenu_digit_after_more_options_is_its_option():
     assert jev.calls == 0
 
 
-def test_the_classifier_gets_the_previous_reply_as_context():
-    class ContextJev(FakeJev):
-        async def classify(self, text, routes, context=None):
-            self.context = context
-            return await super().classify(text, routes)
+class _ContextJev(FakeJev):
+    async def classify(self, text, routes, context=None):
+        self.context = context
+        return await super().classify(text, routes)
 
-    jev = ContextJev(_classification())
+
+def test_the_classifier_gets_the_conversation_so_far_as_context():
+    jev = _ContextJev(_classification())
     graph = _build_graph(_fake_llm("ok"), jev)
     history = [{"role": "user", "content": "A"}, {"role": "assistant", "content": "¿Qué quieres ver? 1) saldo 2) movimientos"}]
     _run(graph, "movimientos", history=history)
-    assert jev.context == "¿Qué quieres ver? 1) saldo 2) movimientos"
+    assert jev.context == "Cliente: A\nDavid: ¿Qué quieres ver? 1) saldo 2) movimientos"
+
+
+def test_the_classifier_never_sees_the_messages_before_conversation_start():
+    jev = _ContextJev(_classification())
+    graph = _build_graph(_fake_llm("ok"), jev)
+    history = [
+        {"role": "user", "content": "reclamo viejo"}, {"role": "assistant", "content": "resuelto"},
+        {"role": "user", "content": "hola"}, {"role": "assistant", "content": "¿en qué te ayudo?"},
+    ]
+    messages = [*history, {"role": "user", "content": "mi saldo"}]
+    asyncio.run(graph.ainvoke({
+        "messages": messages, "session": VALID_SESSION, "thread_id": "t", "conversation_start": 2,
+    }))
+    assert jev.context == "Cliente: hola\nDavid: ¿en qué te ayudo?"
+
+
+def test_the_first_message_of_a_conversation_has_no_context():
+    jev = _ContextJev(_classification())
+    _run(_build_graph(_fake_llm("ok"), jev), "hola")
+    assert jev.context is None
 
 
 def test_cancelar_mi_tarjeta_is_retention_even_if_the_classifier_says_cancel():
@@ -437,29 +460,26 @@ def test_only_the_final_aimessage_is_saved_with_no_toolmessage():
     assert not any(isinstance(m, ToolMessage) for m in result["messages"])
 
 
-def test_failing_tool_gives_the_llm_a_toolmessage_with_the_error():
+def test_failing_tool_ends_the_turn_with_the_fixed_text_and_no_handoff():
     get_products = FakeMCPTool("get_products", GET_PRODUCTS_SCHEMA, error=RuntimeError("warehouse timeout"))
     list_transactions = FakeMCPTool("list_transactions", LIST_TRANSACTIONS_SCHEMA, result=[])
     llm = ScriptedToolLLM([
         AIMessage(content="", tool_calls=[{"name": "get_products", "args": {}, "id": "call_1"}]),
-        AIMessage(content="No puedo consultar tu saldo ahora mismo"),
     ])
     jev = FakeJev(_classification(intent="GENERAL_INQUIRY"))
     graph = _build_graph(llm, jev, tools_for=_fake_tools_for(get_products, list_transactions))
 
     result = _run(graph, "¿cuál es mi saldo?")
 
-    assert result["messages"][-1].content == "No puedo consultar tu saldo ahora mismo"
-    tool_messages = [m for m in llm.received if isinstance(m, ToolMessage)]
-    assert "warehouse timeout" in tool_messages[-1].content
+    assert result["messages"][-1].content == TOOL_DOWN["es"]
+    assert result.get("handoff") is None
 
 
-def test_a_tool_in_the_sessions_fail_tools_is_not_called_and_the_llm_gets_the_error():
+def test_a_tool_in_the_sessions_fail_tools_is_not_called_and_the_turn_ends_with_the_fixed_text():
     get_products = FakeMCPTool("get_products", GET_PRODUCTS_SCHEMA, result=[{"product_last4": "1234"}])
     list_transactions = FakeMCPTool("list_transactions", LIST_TRANSACTIONS_SCHEMA, result=[])
     llm = ScriptedToolLLM([
         AIMessage(content="", tool_calls=[{"name": "get_products", "args": {}, "id": "call_1"}]),
-        AIMessage(content="No puedo consultar tu saldo ahora mismo"),
     ])
     jev = FakeJev(_classification(intent="GENERAL_INQUIRY"))
     graph = _build_graph(llm, jev, tools_for=_fake_tools_for(get_products, list_transactions))
@@ -467,9 +487,7 @@ def test_a_tool_in_the_sessions_fail_tools_is_not_called_and_the_llm_gets_the_er
     result = _run(graph, "¿cuál es mi saldo?", session={**VALID_SESSION, "fail_tools": ["get_products"]})
 
     assert get_products.calls == []
-    assert result["messages"][-1].content == "No puedo consultar tu saldo ahora mismo"
-    tool_messages = [m for m in llm.received if isinstance(m, ToolMessage)]
-    assert "SQL warehouse didn't answer" in tool_messages[-1].content
+    assert result["messages"][-1].content == TOOL_DOWN["es"]
 
 
 def test_greeting_after_general_inquiry_in_the_same_thread_has_no_tools_and_clears_use_case():
@@ -988,14 +1006,15 @@ def test_a_failing_extractor_falls_back_to_the_llm_path_and_still_replies():
     assert llm.calls == ["required"]
 
 
-def test_bank_data_that_cannot_be_read_falls_back_to_the_llm_path():
-    llm = _CollectingLLM([_partial()], replies=[AIMessage(content="Ahora mismo no puedo ver tus tarjetas.")])
+def test_bank_data_that_cannot_be_read_ends_the_collector_turn_with_the_fixed_text():
+    llm = _CollectingLLM([_partial()])
     get_products = FakeMCPTool("get_products", GET_PRODUCTS_SCHEMA, error=RuntimeError("warehouse down"))
     list_transactions = FakeMCPTool("list_transactions", LIST_TRANSACTIONS_SCHEMA, result=[])
     jev = FakeJev(_classification(intent="COMPLAINT"))
     graph = _build_graph(llm, jev, tools_for=_fake_tools_for(get_products, list_transactions))
     result = _run(graph, "C")
-    assert result["messages"][-1].content == "Ahora mismo no puedo ver tus tarjetas."
+    assert result["messages"][-1].content == TOOL_DOWN["es"]
+    assert result.get("handoff") is None
 
 
 def test_a_card_that_is_not_the_customers_is_said_and_the_real_cards_listed():
@@ -1029,30 +1048,86 @@ def test_the_charges_movements_are_fetched_only_for_a_card_that_is_the_customers
     assert list_transactions.calls == []
 
 
-def test_a_retention_turn_asks_the_reason_after_the_product_and_summarizes_when_complete():
+RETENTION_ROUTES = [*ROUTES, IntentRoute(
+    intent="RETENTION", description="Cancelar", examples=["cancelar mi tarjeta"], destination="load_context",
+    schemas=["bank_uc_consultas"], instructions="Recolecta y deriva.", handoff_reason="retention",
+)]
+
+
+def _retention_graph(llm, jev, result=None):
+    get_products = FakeMCPTool("get_products", GET_PRODUCTS_SCHEMA, result=result or _PRODUCTS_RESULT)
+    list_transactions = FakeMCPTool("list_transactions", LIST_TRANSACTIONS_SCHEMA, result=[])
+    return _build_graph(llm, jev, routes=RETENTION_ROUTES, tools_for=_fake_tools_for(get_products, list_transactions))
+
+
+def test_a_retention_turn_asks_the_reason_after_the_product_and_hands_off_when_complete():
     from src.tools.handoff import PartialRetentionCase
 
     llm = _CollectingLLM([
         PartialRetentionCase(product_last4="4930"),
-        PartialRetentionCase(product_last4="4930", reason="comisión alta"),
+        PartialRetentionCase(product_last4="4930"),
     ])
-    routes = [*ROUTES, IntentRoute(
-        intent="RETENTION", description="Cancelar", examples=["cancelar mi tarjeta"], destination="load_context",
-        schemas=["bank_uc_consultas"], instructions="Recolecta y deriva.", handoff_reason="retention",
-    )]
-    get_products = FakeMCPTool("get_products", GET_PRODUCTS_SCHEMA, result=_PRODUCTS_RESULT)
-    list_transactions = FakeMCPTool("list_transactions", LIST_TRANSACTIONS_SCHEMA, result=[])
     jev = FakeJev(_classification(intent="RETENTION"))
-    graph = _build_graph(llm, jev, routes=routes, tools_for=_fake_tools_for(get_products, list_transactions))
+    graph = _retention_graph(llm, jev)
 
     first = _run(graph, "quiero cancelar la 4930")["messages"][-1].content
-    second = _run(graph, "por la comisión", history=[
+    result = _run(graph, "por la   comisión alta", history=[
         {"role": "user", "content": "quiero cancelar la 4930"}, {"role": "assistant", "content": first},
-    ])["messages"][-1].content
+    ])
 
     assert first == "¿Por qué quieres cancelarlo?"
-    assert second.splitlines()[-1] == "¿Confirmas estos datos para pasar tu solicitud a un asesor?"
-    assert "comisión alta" in second
+    assert result["messages"][-1].content == HANDOFF_REPLY["es"]
+    assert result["handoff"]["reason"] == "retention"
+    verified = result["handoff"]["facts"]["verified_data"]
+    assert verified["product_last4"] == "4930" and verified["reason"] == "por la comisión alta"
+    assert set(verified) == {"product_type", "product_last4", "currency", "reason"}
+    # The reason turn is RETENTION by rule: Jev was only asked in the first turn.
+    assert jev.calls == 1
+
+
+def test_the_four_messages_of_a_cancellation_end_in_a_retention_handoff_without_the_classifier_on_the_answers():
+    from src.tools.handoff import PartialRetentionCase
+
+    llm = _CollectingLLM([
+        PartialRetentionCase(),
+        PartialRetentionCase(product_last4="2705"),
+        PartialRetentionCase(product_last4="2705"),
+    ])
+    jev = FakeJev(_classification(intent="RETENTION"))
+    graph = _retention_graph(llm, jev, _CARD_AND_SAVINGS_RESULT)
+    history: list = []
+    replies = []
+    for text in ("quiero cancelar un producto", "la de 2705", "es muy cara la anualidad"):
+        result = _run(graph, text, history=history)
+        replies.append(result["messages"][-1].content)
+        history += [{"role": "user", "content": text}, {"role": "assistant", "content": replies[-1]}]
+
+    assert replies[0].startswith("¿Qué producto quieres cancelar?")
+    assert replies[1] == "¿Por qué quieres cancelarlo?"
+    assert replies[2] == HANDOFF_REPLY["es"]
+    assert jev.calls == 1
+    assert result["handoff"]["facts"]["verified_data"]["reason"] == "es muy cara la anualidad"
+
+
+def test_cancelar_after_the_reasons_question_still_cancels():
+    jev = FakeJev(_classification(intent="CANCEL"))
+    graph = _retention_graph(ExplodingLLM(), jev)
+    result = _run(graph, "cancelar", history=[
+        {"role": "user", "content": "quiero cancelar la 4930"},
+        {"role": "assistant", "content": "¿Por qué quieres cancelarlo?"},
+    ])
+    assert result["classification"]["intent"] == "CANCEL"
+    assert jev.calls == 1
+
+
+def test_a_menu_letter_after_the_reasons_question_keeps_its_rule():
+    jev = FakeJev(_classification(intent="RETENTION"))
+    result = _run(_retention_graph(ExplodingLLM(), jev), "menú", history=[
+        {"role": "user", "content": "quiero cancelar la 4930"},
+        {"role": "assistant", "content": "¿Por qué quieres cancelarlo?"},
+    ])
+    assert result["classification"]["intent"] == "MENU"
+    assert jev.calls == 0
 
 
 def test_a_verified_handoff_ends_the_round_without_running_the_other_tool_calls_or_calling_the_llm_again():
@@ -1125,6 +1200,204 @@ def test_an_advisor_message_after_the_handoff_gets_a_normal_answer():
     assert result["messages"][-1].content == "De nada."
 
 
+# --- Evaluation fixes ---------------------------------------------------------------------
+
+class _ExplodingClassifier:
+    async def classify(self, text, routes, context=None):
+        raise AssertionError("the classifier must not be called for this turn")
+
+
+def test_a_follow_up_to_a_status_question_is_case_status_and_never_calls_the_classifier():
+    llm = ScriptedToolLLM([AIMessage(content="Tu reclamo está en proceso.")])
+    get_cases = FakeMCPTool("get_cases", GET_PRODUCTS_SCHEMA, result=[])
+
+    async def tools_for(schema):
+        return [get_cases]
+
+    graph = _build_graph(llm, _ExplodingClassifier(), tools_for=tools_for)
+    history = [
+        {"role": "user", "content": "quiero saber de mi reclamo"},
+        {"role": "assistant", "content": "Tienes 3 reclamos.\n\n¿Sobre cuál reclamo quieres saber?"},
+    ]
+
+    result = _run(graph, "el del 9 de octubre de 2025", history=history)
+
+    assert result["classification"]["intent"] == "CASE_STATUS"
+    assert result["classification"]["source"] == "rules"
+    assert result["messages"][-1].content == "Tu reclamo está en proceso."
+
+
+def test_a_menu_letter_after_a_status_question_still_goes_to_the_menu_rules():
+    history = [
+        {"role": "user", "content": "cómo va mi reclamo?"},
+        {"role": "assistant", "content": "Tu reclamo está en revisión.\n\n¿Necesitas algo más sobre este reclamo?"},
+    ]
+    result = _run(_build_graph(ExplodingLLM(), _ExplodingClassifier()), "menú", history=history)
+    assert result["classification"]["intent"] == "MENU"
+
+
+def test_a_portuguese_message_classified_as_spanish_is_answered_with_the_portuguese_reminder():
+    get_products = FakeMCPTool("get_products", GET_PRODUCTS_SCHEMA, result=_PRODUCTS_RESULT)
+    list_transactions = FakeMCPTool("list_transactions", LIST_TRANSACTIONS_SCHEMA, result=[])
+    llm = ScriptedToolLLM([
+        AIMessage(content="", tool_calls=[{"name": "get_products", "args": {}, "id": "c1"}]),
+        AIMessage(content="Você tem 100."),
+    ])
+    jev = FakeJev(_classification(intent="GENERAL_INQUIRY", language="es"))
+    graph = _build_graph(llm, jev, tools_for=_fake_tools_for(get_products, list_transactions))
+
+    result = _run(graph, "quanto tenho na poupança?")
+
+    assert result["classification"]["language"] == "pt"
+    assert "português" in llm.received[-1].content
+
+
+def test_a_failing_get_products_says_the_fixed_portuguese_text_and_does_not_hand_off():
+    get_products = FakeMCPTool("get_products", GET_PRODUCTS_SCHEMA, error=RuntimeError("down"))
+    list_transactions = FakeMCPTool("list_transactions", LIST_TRANSACTIONS_SCHEMA, result=[])
+    llm = ScriptedToolLLM([AIMessage(content="", tool_calls=[{"name": "get_products", "args": {}, "id": "c1"}])])
+    jev = FakeJev(_classification(intent="GENERAL_INQUIRY", language="pt"))
+    graph = _build_graph(llm, jev, tools_for=_fake_tools_for(get_products, list_transactions))
+
+    result = _run(graph, "saldo do meu cartão, por favor")
+
+    assert result["messages"][-1].content == TOOL_DOWN["pt"]
+    assert result.get("handoff") is None
+
+
+def test_a_commercial_request_gets_not_available_and_the_menu():
+    routes = [*ROUTES, IntentRoute(
+        intent="COMMERCIAL", description="Comercial", examples=["préstamo"], destination="respond"
+    )]
+    jev = FakeJev(_classification(intent="COMMERCIAL"))
+    result = _run(_build_graph(ExplodingLLM(), jev, routes=routes), "quiero un préstamo")
+    assert result["messages"][-1].content == NOT_AVAILABLE["es"] + "\n\n" + MENU["es"]
+
+
+_CARD_AND_SAVINGS_RESULT = [{"type": "text", "text": json.dumps({
+    "columns": ["product_type", "product_number_last4", "currency"],
+    "rows": [["Cuenta Ahorros", "2948", "ARS"], ["Tarjeta Crédito", "2705", "ARS"]],
+})}]
+
+
+def test_cancelling_the_card_with_the_reason_in_the_first_message_hands_off_in_that_turn():
+    from src.tools.handoff import PartialRetentionCase
+
+    llm = _CollectingLLM([PartialRetentionCase(reason="la anualidad es muy cara")])
+    jev = FakeJev(_classification(intent="RETENTION"))
+    graph = _retention_graph(llm, jev, _CARD_AND_SAVINGS_RESULT)
+
+    result = _run(graph, "quiero cerrar mi tarjeta porque la anualidad es muy cara")
+
+    assert result["messages"][-1].content == HANDOFF_REPLY["es"]
+    verified = result["handoff"]["facts"]["verified_data"]
+    assert result["handoff"]["reason"] == "retention"
+    assert verified["product_last4"] == "2705" and verified["reason"] == "la anualidad es muy cara"
+    assert verified["product_type"] == "Tarjeta Crédito" and verified["currency"] == "ARS"
+
+
+MOVEMENTS_DRAFT = "Tus movimientos:\n- 26/02/2026 Tienda X 443.88 USD Aprobado"
+
+
+# The real route, for its grounding entries.
+_REAL_INQUIRY = next(
+    route for route in load_routing("configs/routing.yaml", GRAPH_NODES) if route.intent == "GENERAL_INQUIRY"
+)
+GUARDED_ROUTES = [_REAL_INQUIRY, *ROUTES[1:]]
+
+
+def _movements_tools():
+    get_products = FakeMCPTool("get_products", GET_PRODUCTS_SCHEMA, result=[{"product_last4": "1234"}])
+    list_transactions = FakeMCPTool(
+        "list_transactions", LIST_TRANSACTIONS_SCHEMA, result=[{"merchant": "Tienda X", "amount": 443.88}]
+    )
+    return get_products, list_transactions
+
+
+def _call(name, call_id="call_1", args=None):
+    return AIMessage(content="", tool_calls=[{"name": name, "args": args or {}, "id": call_id}])
+
+
+def test_movements_after_only_get_products_get_one_forced_retry_and_pass_the_second_time():
+    get_products, list_transactions = _movements_tools()
+    llm = ScriptedToolLLM([
+        _call("get_products"),
+        AIMessage(content=MOVEMENTS_DRAFT),
+        _call("list_transactions", "call_2", {"product_last4": "1234"}),
+        AIMessage(content=MOVEMENTS_DRAFT),
+    ])
+    graph = _build_graph(llm, FakeJev(_classification(intent="GENERAL_INQUIRY")), routes=GUARDED_ROUTES,
+                         tools_for=_fake_tools_for(get_products, list_transactions))
+
+    result = _run(graph, "muéstrame mis movimientos")
+
+    assert result["messages"][-1].content == MOVEMENTS_DRAFT
+    assert len(list_transactions.calls) == 1
+    assert llm.tool_choices[-1].endswith("list_transactions")
+    assert result["guard"] == {"fired": True, "missing_tool": "list_transactions", "action": "retried_ok"}
+
+
+def test_a_second_ungrounded_answer_gets_the_tool_down_reply_and_the_draft_never_goes_out():
+    get_products, list_transactions = _movements_tools()
+    llm = ScriptedToolLLM([
+        _call("get_products"),
+        AIMessage(content=MOVEMENTS_DRAFT),
+        AIMessage(content=MOVEMENTS_DRAFT),
+    ])
+    graph = _build_graph(llm, FakeJev(_classification(intent="GENERAL_INQUIRY")), routes=GUARDED_ROUTES,
+                         tools_for=_fake_tools_for(get_products, list_transactions))
+
+    result = _run(graph, "muéstrame mis movimientos")
+
+    assert result["messages"][-1].content == TOOL_DOWN["es"]
+    assert not any(MOVEMENTS_DRAFT == getattr(m, "content", None) for m in result["messages"])
+    assert result["guard"] == {"fired": True, "missing_tool": "list_transactions", "action": "safe_reply"}
+
+
+def test_the_forced_tool_failing_gets_the_tool_down_reply():
+    get_products, _ = _movements_tools()
+    list_transactions = FakeMCPTool(
+        "list_transactions", LIST_TRANSACTIONS_SCHEMA, error=RuntimeError("warehouse timeout")
+    )
+    llm = ScriptedToolLLM([
+        _call("get_products"),
+        AIMessage(content=MOVEMENTS_DRAFT),
+        _call("list_transactions", "call_2"),
+    ])
+    graph = _build_graph(llm, FakeJev(_classification(intent="GENERAL_INQUIRY")), routes=GUARDED_ROUTES,
+                         tools_for=_fake_tools_for(get_products, list_transactions))
+
+    result = _run(graph, "muéstrame mis movimientos")
+
+    assert result["messages"][-1].content == TOOL_DOWN["es"]
+    assert result["guard"] == {"fired": True, "missing_tool": "list_transactions", "action": "safe_reply"}
+
+
+def test_grounded_movements_and_a_question_without_figures_leave_the_guard_null():
+    get_products, list_transactions = _movements_tools()
+    llm = ScriptedToolLLM([
+        _call("get_products"),
+        _call("list_transactions", "call_2", {"product_last4": "1234"}),
+        AIMessage(content=MOVEMENTS_DRAFT),
+    ])
+    graph = _build_graph(llm, FakeJev(_classification(intent="GENERAL_INQUIRY")), routes=GUARDED_ROUTES,
+                         tools_for=_fake_tools_for(get_products, list_transactions))
+
+    result = _run(graph, "muéstrame mis movimientos")
+
+    assert result["messages"][-1].content == MOVEMENTS_DRAFT
+    assert result["guard"] is None
+
+    question = "¿De cuál tarjeta? Terminadas en 1234 y 5678."
+    llm = ScriptedToolLLM([_call("get_products"), AIMessage(content=question)])
+    graph = _build_graph(llm, FakeJev(_classification(intent="GENERAL_INQUIRY")), routes=GUARDED_ROUTES,
+                         tools_for=_fake_tools_for(get_products, list_transactions))
+
+    result = _run(graph, "muéstrame mis movimientos")
+
+    assert result["messages"][-1].content == question
+    assert result["guard"] is None
+
 # --- The same turns over the Lakebase tools and a fake pool ------------------------------
 
 _LAKEBASE_PRODUCT = {
@@ -1194,8 +1467,7 @@ def test_a_lakebase_timeout_ends_in_the_tool_failure_reply_with_no_handoff_and_n
     ])
     result = _run(_lakebase_graph(llm, pool), "sí, confirmo")
 
+    # The first failing UC tool ends the turn with the fixed text, before any figure is read.
     assert result.get("handoff") is None
-    assert result["messages"][-1].content == "No puedo consultar esa información ahora."
-    tool_messages = [m.content for m in llm.received if isinstance(m, ToolMessage)]
-    assert any("couldn't get a connection" in content for content in tool_messages)
-    assert not any("329.44" in content or "Internet Plus" in content for content in tool_messages)
+    assert result["messages"][-1].content == TOOL_DOWN["es"]
+    assert "329.44" not in result["messages"][-1].content

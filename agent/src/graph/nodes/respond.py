@@ -7,10 +7,11 @@ from src.graph.state import AgentState
 from src.prompts.advisor import strip_advisor_prefix
 from src.prompts.situations import SITUATIONS, fixed_reply, situation_for
 from src.schemas.routing import IntentRoute
-from src.prompts.messages import HANDOFF_REPLY
+from src.prompts.messages import HANDOFF_REPLY, TOOL_DOWN
 from src.schemas.classification import reply_language
 from src.tools.bind_customer import bind_customer
 from src.tools.collector import CollectorUnavailable, card_to_fetch, extract_fields, next_step
+from src.tools.grounding import ungrounded
 from src.tools.handoff import HANDOFF_TOOL_NAME, handoff_tool, tool_rows, verify_case
 
 logger = logging.getLogger(__name__)
@@ -92,50 +93,93 @@ async def _respond_with_tools(
     first_llm = llm.bind_tools(tools, tool_choice=forced)
 
     messages = [SystemMessage(content=system_prompt), *state["messages"]]
-    rounds = 0
+    customer_text = _last_customer_text(state)
+    # The UC tools that returned without raising in this turn: what the grounding guard checks.
+    called_ok: set[str] = set()
+    guard: dict | None = None
     # The LLM calls the handoff before any UC tool and has made up the complaint_id; after the
     # error it wrote text instead of retrying, so the round after a failed check is forced once.
     forced_retries = 1 if route.handoff_reason else 0
     reply = await first_llm.ainvoke(messages)
-    while reply.tool_calls and rounds < _MAX_TOOL_ROUNDS:
-        messages.append(reply)
-        handoff_failed = False
-        for tool_call in reply.tool_calls:
-            if tool_call["name"] == HANDOFF_TOOL_NAME and route.handoff_reason:
-                await _fetch_missing_rows(route.handoff_reason, tool_call["args"], tools_by_name, rows_by_tool)
-                verified = verify_case(route.handoff_reason, tool_call["args"], rows_by_tool)
-                if isinstance(verified, dict):
-                    # The turn ends here: the other tool calls of this round never run and the LLM isn't called again.
-                    return _hand_off(state, route, verified, rows_by_tool)
-                # The error names only product digits and field names, never the customer's text.
-                logger.warning("Handoff not verified: %s", verified)
-                messages.append(ToolMessage(content=verified, tool_call_id=tool_call["id"]))
-                handoff_failed = True
-                continue
-            tool = tools_by_name.get(tool_call["name"])
-            try:
+    # Two passes at most: the second only runs when the guard forced the missing tool.
+    for attempt in range(2):
+        rounds = 0
+        while reply.tool_calls and rounds < _MAX_TOOL_ROUNDS:
+            messages.append(reply)
+            handoff_failed = False
+            for tool_call in reply.tool_calls:
+                if tool_call["name"] == HANDOFF_TOOL_NAME and route.handoff_reason:
+                    await _fetch_missing_rows(route.handoff_reason, tool_call["args"], tools_by_name, rows_by_tool)
+                    verified = verify_case(route.handoff_reason, tool_call["args"], rows_by_tool)
+                    if isinstance(verified, dict):
+                        # The turn ends here: the other tool calls of this round never run and the LLM isn't called again.
+                        return _hand_off(state, route, verified, rows_by_tool)
+                    # The error names only product digits and field names, never the customer's text.
+                    logger.warning("Handoff not verified: %s", verified)
+                    messages.append(ToolMessage(content=verified, tool_call_id=tool_call["id"]))
+                    handoff_failed = True
+                    continue
+                tool = tools_by_name.get(tool_call["name"])
                 if tool is None:
-                    raise ValueError(f"Unknown tool {tool_call['name']!r}")
-                result = await tool.ainvoke(tool_call["args"])
-                rows_by_tool.setdefault(tool_call["name"].split("__")[-1], []).extend(tool_rows(result))
+                    messages.append(ToolMessage(content=f"Unknown tool {tool_call['name']!r}", tool_call_id=tool_call["id"]))
+                    continue
+                try:
+                    result = await tool.ainvoke(tool_call["args"])
+                except Exception as exc:  # noqa: BLE001 - a UC tool failing ends the turn with a fixed text
+                    logger.warning("Tool %s failed: %s", tool_call["name"], type(exc).__name__)
+                    return _safe_reply(state, guard)
+                short_name = tool_call["name"].split("__")[-1]
+                called_ok.add(short_name)
+                rows_by_tool.setdefault(short_name, []).extend(tool_rows(result))
                 content = str(result)
-            except Exception as exc:  # noqa: BLE001 - surfaced to the LLM as a failed tool result
-                content = str(exc)
-            messages.append(ToolMessage(content=content, tool_call_id=tool_call["id"]))
-        rounds += 1
-        if handoff_failed and forced_retries:
-            forced_retries -= 1
-            retry_llm = llm.bind_tools(tools, tool_choice=HANDOFF_TOOL_NAME)
-            reply = await retry_llm.ainvoke(messages + reminder)
-        else:
-            reply = await bound_llm.ainvoke(messages + reminder)
-    if reply.tool_calls:
-        # Out of rounds: answer from the tool results so far instead of ending on a tool call.
-        reply = await llm.ainvoke(messages + reminder)
+                messages.append(ToolMessage(content=content, tool_call_id=tool_call["id"]))
+            rounds += 1
+            if handoff_failed and forced_retries:
+                forced_retries -= 1
+                retry_llm = llm.bind_tools(tools, tool_choice=HANDOFF_TOOL_NAME)
+                reply = await retry_llm.ainvoke(messages + reminder)
+            else:
+                reply = await bound_llm.ainvoke(messages + reminder)
+        if reply.tool_calls:
+            # Out of rounds: answer from the tool results so far instead of ending on a tool call.
+            reply = await llm.ainvoke(messages + reminder)
+
+        reply = _without_advisor_prefix(reply)
+        missing = ungrounded(route, customer_text, _text(reply), called_ok)
+        if missing is None:
+            if guard:
+                guard["action"] = "retried_ok"
+            break
+        # Kind and tool only: the draft is never logged or stored.
+        logger.warning("Grounding guard: %s shown without %s (attempt %d)", missing.kind, missing.tool, attempt + 1)
+        guard = {"fired": True, "missing_tool": missing.tool, "action": "safe_reply"}
+        forced_name = next((name for name in tools_by_name if name.split("__")[-1] == missing.tool), None)
+        if attempt == 1 or forced_name is None:
+            return _safe_reply(state, guard)
+        reply = await llm.bind_tools(tools, tool_choice=forced_name).ainvoke(messages + reminder)
 
     # Only the final AIMessage is kept in the conversation history; the tool calls and
     # results above stay in `messages` locally and are captured by the MLflow trace.
-    return {"messages": [_without_advisor_prefix(reply)]}
+    return {"messages": [reply], "guard": guard}
+
+
+def _text(reply) -> str:
+    return reply.content if isinstance(reply.content, str) else ""
+
+
+def _last_customer_text(state: AgentState) -> str:
+    for message in reversed(state["messages"]):
+        if getattr(message, "type", None) == "human":
+            return message.content if isinstance(message.content, str) else ""
+    return ""
+
+
+def _safe_reply(state: AgentState, guard: dict | None) -> dict:
+    return {"messages": [AIMessage(content=_tool_down(state))], "guard": guard}
+
+
+def _tool_down(state: AgentState) -> str:
+    return TOOL_DOWN[reply_language((state.get("classification") or {}).get("language"))]
 
 
 async def _bound_tools(state: AgentState, route: IntentRoute, tools_for) -> list:
@@ -156,11 +200,16 @@ async def _collect(state: AgentState, llm, route: IntentRoute, tools_for) -> dic
     fields = await extract_fields(llm, reason, state["messages"])
     tools_by_name = {tool.name: tool for tool in await _bound_tools(state, route, tools_for)}
     rows_by_tool: dict[str, list[dict]] = {}
-    await _fetch_missing_rows(reason, {}, tools_by_name, rows_by_tool)
+    failed = await _fetch_missing_rows(reason, {}, tools_by_name, rows_by_tool)
     if card := card_to_fetch(reason, fields, rows_by_tool):
-        await _fetch_missing_rows(reason, {"card_last4": card}, tools_by_name, rows_by_tool)
-    kind, text = next_step(reason, fields, rows_by_tool, language)
+        failed += await _fetch_missing_rows(reason, {"card_last4": card}, tools_by_name, rows_by_tool)
+    if failed:
+        logger.warning("Collector %s: fetching %s failed", reason, failed)
+        return {"messages": [AIMessage(content=_tool_down(state))]}
+    kind, text = next_step(reason, fields, rows_by_tool, language, state["messages"])
     logger.info("Collector %s: %s", reason, kind)
+    if kind == "handoff":
+        return _hand_off(state, route, text, rows_by_tool)
     return {"messages": [AIMessage(content=text)]}
 
 
@@ -187,11 +236,13 @@ def _hand_off(state: AgentState, route: IntentRoute, verified_data: dict, rows_b
     return {"messages": [AIMessage(content=HANDOFF_REPLY[reply_language(language)])], "handoff": handoff}
 
 
-async def _fetch_missing_rows(reason: str, args: dict, tools_by_name: dict, rows_by_tool: dict) -> None:
+async def _fetch_missing_rows(reason: str, args: dict, tools_by_name: dict, rows_by_tool: dict) -> list[str]:
     """Calls the UC tools a handoff is verified against when the LLM didn't in this turn: in the
-    App the LLM went straight to hand_off_to_advisor on the customer's "sí" and never recovered."""
+    App the LLM went straight to hand_off_to_advisor on the customer's "sí" and never recovered.
+    Returns the names of the tools that failed."""
     by_short_name = {name.split("__")[-1]: tool for name, tool in tools_by_name.items()}
     needed: list[tuple[str, dict]] = []
+    failed: list[str] = []
     card = args.get("card_last4")
     if reason == "case_status" and args.get("complaint_id"):
         needed.append(("get_cases", {}))
@@ -206,6 +257,7 @@ async def _fetch_missing_rows(reason: str, args: dict, tools_by_name: dict, rows
             result = await by_short_name[name].ainvoke(tool_args)
         except Exception as exc:  # noqa: BLE001 - verify_case then reports what is missing
             logger.warning("Fetching %s for a handoff failed: %s", name, type(exc).__name__)
+            failed.append(name)
             continue
         rows_by_tool.setdefault(name, []).extend(tool_rows(result))
     # Names and counts only: which rows the handoff check had, never their values.
@@ -214,3 +266,4 @@ async def _fetch_missing_rows(reason: str, args: dict, tools_by_name: dict, rows
         reason, sorted(args), [name for name, _ in needed], sorted(tools_by_name),
         {name: len(rows) for name, rows in rows_by_tool.items()},
     )
+    return failed

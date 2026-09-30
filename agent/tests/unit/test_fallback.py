@@ -2,7 +2,15 @@ from __future__ import annotations
 
 import pytest
 
-from src.llm.fallback import check_guardrail_rules, detect_language, fallback_classify, mask_sensitive
+from src.llm.fallback import (
+    case_status_follow_up,
+    check_guardrail_rules,
+    detect_language,
+    fallback_classify,
+    is_confirmation,
+    mask_sensitive,
+    retention_in_progress,
+)
 
 INTENTS = ["GENERAL_INQUIRY", "COMPLAINT", "HUMAN_AGENT", "CANCEL", "GREETING", "OUT_OF_SCOPE"]
 
@@ -162,7 +170,7 @@ def test_a_bare_cancelar_is_still_cancel():
         ("…¿Confirmas estos datos para pasar tu reclamo a un asesor?", "COMPLAINT"),
         ("…¿Confirmas estos datos para pasar tu consulta a un asesor?", "CASE_STATUS"),
         ("…Você confirma estes dados para passar sua reclamação a um atendente?", "COMPLAINT"),
-        ("Está en revisión.\n¿Necesitas que te ayude a pasar esta consulta a un asesor?", "CASE_STATUS"),
+        ("Está en revisión.\n¿Confirmas estos datos para pasar tu consulta a un asesor?", "CASE_STATUS"),
     ],
 )
 def test_a_yes_to_a_confirmation_question_keeps_its_operation(previous, intent):
@@ -181,7 +189,7 @@ def test_a_yes_to_any_other_question_is_not_a_rule():
         "…¿Confirmas estos datos para pasar tu reclamo a un asesor?",
         "…¿Confirmas estos datos para pasar tu consulta a un asesor?",
         "…Você confirma estes dados para passar sua solicitação a um atendente?",
-        "Está en revisión.\n¿Necesitas que te ayude a pasar esta consulta a un asesor?",
+        "Está en revisión.\n¿Confirmas estos datos para pasar tu consulta a un asesor?",
     ],
 )
 def test_is_confirmation_is_true_for_a_yes_to_a_confirmation_question(previous):
@@ -198,3 +206,88 @@ def test_is_confirmation_is_false_for_another_question_or_text():
     assert not is_confirmation("sí", None)
     assert not is_confirmation("no, la 4930", "¿Confirmas estos datos para pasar tu reclamo a un asesor?")
     assert not is_confirmation("C", "¿Confirmas estos datos para pasar tu reclamo a un asesor?")
+
+
+@pytest.mark.parametrize(
+    "text", ["quanto tenho na poupança?", "quero ver as últimas compras do meu cartão"]
+)
+def test_detect_language_recognizes_the_portuguese_messages_of_the_cases(text):
+    assert detect_language(text) == "pt"
+
+
+@pytest.mark.parametrize("text", ["¿cuánto tengo en mi cuenta?", "quiero ver mis movimientos"])
+def test_detect_language_keeps_spanish_messages_spanish(text):
+    assert detect_language(text) == "es"
+
+
+@pytest.mark.parametrize(
+    "previous",
+    [
+        "Você confirma que sua solicitação sobre a reclamação vai para um atendente?",
+        "¿Tu solicitud sobre el reclamo va a un asesor?",
+        "¿Quieres que pasemos esta consulta a un asesor?",
+    ],
+)
+def test_a_yes_after_a_line_without_the_exact_phrase_is_not_a_confirmation(previous):
+    assert not is_confirmation("sim", previous)
+    assert not is_confirmation("sí, confirmo", previous)
+
+
+@pytest.mark.parametrize(
+    "previous",
+    [
+        "¿Necesitas algo más sobre este reclamo?",
+        "Tienes 3 reclamos.\n\n¿Sobre cuál reclamo quieres saber?",
+        "Não encontro reclamações registradas.\n\nSobre qual cobrança é a sua reclamação? Me diga o cartão.",
+    ],
+)
+def test_case_status_follow_up_is_true_after_a_question_about_the_complaint(previous):
+    assert case_status_follow_up("el del 9 de octubre de 2025", previous)
+    assert case_status_follow_up("necesito que me devuelvan el dinero ya", previous)
+
+
+@pytest.mark.parametrize("text", ["C", "menú", "cancelar"])
+def test_case_status_follow_up_is_false_for_a_menu_letter_menu_or_cancel(text):
+    assert not case_status_follow_up(text, "¿Necesitas algo más sobre este reclamo?")
+
+
+@pytest.mark.parametrize(
+    "previous",
+    [
+        None,
+        "",
+        "Tu reclamo está abierto y en revisión.",
+        "¿Confirmas estos datos para pasar tu consulta a un asesor?",
+        "¿De qué tarjeta es el cargo?",
+    ],
+)
+def test_case_status_follow_up_is_false_without_a_question_about_the_complaint(previous):
+    assert not case_status_follow_up("la 1070", previous)
+
+
+@pytest.mark.parametrize(
+    "previous",
+    [
+        "¿Qué producto quieres cancelar?\n\n- Tarjeta Crédito terminada en 4930 (USD)",
+        "Qual produto você quer cancelar?\n\n- Cartão terminado em 4930",
+        "No encuentro ese producto entre los tuyos.\n\n¿Qué producto quieres cancelar?\n\n- x",
+        "¿Por qué quieres cancelarlo?",
+        "Por que você quer cancelá-lo?",
+    ],
+)
+def test_retention_stays_in_progress_after_one_of_its_questions(previous):
+    assert retention_in_progress("la de 4930", previous)
+    assert retention_in_progress("es que la anualidad es muy cara", previous)
+
+
+@pytest.mark.parametrize("text", ["cancelar", "olvídalo", "menú", "ver menú", "C", "a"])
+def test_retention_in_progress_leaves_cancel_menu_and_letters_to_their_rules(text):
+    assert not retention_in_progress(text, "¿Por qué quieres cancelarlo?")
+
+
+@pytest.mark.parametrize(
+    "previous",
+    [None, "", "Tu saldo es 100 USD.", "¿De qué tarjeta es el cargo?", "¿Por qué quieres cancelarlo? Cuéntame más."],
+)
+def test_retention_is_not_in_progress_after_another_reply(previous):
+    assert not retention_in_progress("la de 4930", previous)

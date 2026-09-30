@@ -100,7 +100,7 @@ async def _process_agent_astream_events(
             for node_name, node_data in event[1].items():
                 if not node_data:
                     continue
-                for key in ("classification", "use_case", "handoff", "paused"):
+                for key in ("classification", "use_case", "handoff", "paused", "guard"):
                     if key in node_data:
                         turn[key] = node_data[key]
                 if len(node_data.get("messages", [])) > 0:
@@ -146,6 +146,11 @@ async def non_streaming(request: ResponsesAgentRequest) -> ResponsesAgentRespons
     )
 
 
+def _conversation_start(custom_inputs: dict) -> int:
+    value = custom_inputs.get("conversation_start")
+    return value if isinstance(value, int) and not isinstance(value, bool) and value > 0 else 0
+
+
 @stream()
 async def streaming(
     request: ResponsesAgentRequest,
@@ -159,8 +164,11 @@ async def streaming(
     # The back owns the conversation and sends the whole history on every request
     # (docs/limites-agente-back.md); the agent keeps no state between requests.
     history = to_chat_completions_input([i.model_dump() for i in request.input])
+    messages = history[-MAX_HISTORY_MESSAGES:]
     input_state = {
-        "messages": history[-MAX_HISTORY_MESSAGES:],
+        "messages": messages,
+        # The back's index counts the whole history; the messages before the cut are gone.
+        "conversation_start": max(0, _conversation_start(custom_inputs) - (len(history) - len(messages))),
         # handled_by says who owns the conversation now; the paused node reads it.
         "session": {**session.as_dict(), "handled_by": custom_inputs.get("handled_by")},
         "thread_id": thread_id,
@@ -180,7 +188,7 @@ async def streaming(
     )
     # The turn's signals ride on its last output_item.done, so each done event is held back
     # until the next one arrives or the stream ends.
-    turn: dict = {"classification": None, "use_case": None, "handoff": None, "paused": False}
+    turn: dict = {"classification": None, "use_case": None, "handoff": None, "paused": False, "guard": None}
     last_done = None
     # The callbacks reach every LLM call inside the nodes (classifier, collector, respond, summary).
     usage = TurnUsage()
@@ -196,7 +204,7 @@ async def streaming(
     custom_outputs = turn_custom_outputs(
         thread_id, turn["classification"], turn["use_case"], settings.guardrail_threshold,
         turn["handoff"], turn["paused"], usage.totals(), settings.llm_endpoint, prompt_version(),
-        settings.classifier,
+        settings.classifier, turn["guard"],
     )
     if turn["paused"]:
         # No text item at all: the smallest event that carries custom_outputs.

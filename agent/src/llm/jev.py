@@ -38,16 +38,16 @@ class JevClient:
     async def classify(
         self, text: str, routes: list[IntentRoute], context: str | None = None
     ) -> Classification:
-        # With David's previous reply, Jev reads the customer's answer in its context; the
-        # questions below always ask about the customer's message only.
-        state = f"Asistente: {context}\nCliente: {text}" if context else text
+        # `context` is the current conversation's transcript: Jev reads the last message in it,
+        # and the guardrail, language and sentiment questions still ask about that message only.
+        state = f"{context}\nCliente: {text}" if context else text
         intent_instructions = "What is the customer asking for?"
         if context:
-            intent_instructions += (
-                " If the customer's message answers the assistant's previous message (picks an"
-                " option, gives the data asked for, or confirms), the intent is the topic of"
-                " that exchange: a reason or description given for a cancellation stays"
-                " RETENTION even if it mentions fees or charges."
+            intent_instructions = (
+                "What does the customer want now, in this conversation? The customer's last message may"
+                " continue the ongoing operation (answers David's question, picks an option, gives the"
+                " data asked for, or confirms) or change it. A reason or description given for a"
+                " cancellation stays RETENTION even if it mentions fees or charges."
             )
         body = {
             "model": "jev-latest",
@@ -55,12 +55,12 @@ class JevClient:
             "questions": {
                 "guardrail": {
                     "type": "choice",
-                    "instructions": "Does the customer's message violate any of these policies?",
+                    "instructions": "Does the customer's last message violate any of these policies?",
                     "criteria": GUARDRAIL_CATEGORIES,
                 },
                 "language": {
                     "type": "choice",
-                    "instructions": "What language is the customer's message written in?",
+                    "instructions": "What language is the customer's last message written in?",
                     "criteria": {
                         "es": "Spanish.",
                         "pt": "Portuguese.",
@@ -77,7 +77,7 @@ class JevClient:
                 },
                 "sentiment": {
                     "type": "score",
-                    "instructions": "How does the customer sound in their message?",
+                    "instructions": "How does the customer sound in their last message?",
                     "criteria": SENTIMENT_LEVELS,
                 },
             },
