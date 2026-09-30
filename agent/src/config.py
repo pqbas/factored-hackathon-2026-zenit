@@ -17,6 +17,10 @@ class Settings:
     intent_threshold: float
     routing_path: str
     uc_catalog: str
+    tools_backend: str
+    lakebase_instance: str
+    lakebase_database: str
+    bank_ro_schema: str
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -33,6 +37,11 @@ class Settings:
             intent_threshold=float(os.getenv("INTENT_THRESHOLD", "0.5")),
             routing_path=os.getenv("ROUTING_PATH", "configs/routing.yaml"),
             uc_catalog=os.getenv("UC_CATALOG", "workspace"),
+            # lakebase (default) reads bank_ro in Lakebase; mcp is the rollback to the UC functions.
+            tools_backend=os.getenv("TOOLS_BACKEND", "lakebase"),
+            lakebase_instance=os.getenv("LAKEBASE_INSTANCE", "bank-assistant-chat-db"),
+            lakebase_database=os.getenv("LAKEBASE_DATABASE", "databricks_postgres"),
+            bank_ro_schema=os.getenv("BANK_RO_SCHEMA", "bank_ro"),
         )
 
 
