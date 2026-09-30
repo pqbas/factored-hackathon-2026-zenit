@@ -401,3 +401,16 @@ Pendiente: el costo medido de un refresco (billing con ~2 h de atraso).
 
 Shipped en PR #89.
 
+---
+
+## Phase 16: El agente recibe solo la conversación actual (Complete)
+
+**Goal:** que David lea la conversación actual y no el chat entero (decisión
+del usuario, pedido de w1:p3).
+
+<!-- Spec en spec/29-09-26-conversacion-actual/. -->
+
+- [x] El `input` al agente lleva solo lo posterior al último cierre del chat
+      (todo si nunca se cerró), en vivo y en la cola.
+- [x] Un chat devuelto por el asesor sin cerrar va entero, con `[Asesor]`.
+

@@ -48,12 +48,14 @@ And it changes in these ways:
 - El corte se hace en `streamAgentTurn`, el único punto por el que pasan los
   dos caminos (en vivo y cola), con una sola consulta al último `resolvedAt`
   del chat.
-- `metadata.createdAt` llega con precisión de segundos (`formatISO`), y
-  `resolvedAt` en milisegundos.
-  - La respuesta de despedida se guarda antes del cierre, así que queda
-    fuera, que es lo correcto.
-  - Solo quedaría mal un mensaje del cliente guardado en el mismo segundo que
-    el cierre. No pasa en la práctica: el cierre llega al final del turno.
+- El corte se marca por el id del último mensaje de la conversación cerrada:
+  el más nuevo guardado hasta el último `resolvedAt`, comparado en la base
+  con precisión de milisegundos (revisión de w1:p4).
+  - Así no depende de `metadata.createdAt`, que llega redondeado al segundo.
+  - La respuesta de despedida se guarda antes del cierre y queda en la
+    conversación cerrada.
+  - Único supuesto: el reloj de la App y el de la base no difieren más que el
+    tiempo entre el cierre y el siguiente mensaje del cliente.
 - Si la consulta del último cierre falla, se manda el historial entero, como
   hoy, y se deja un warning. Mandar de más es mejor que dejar sin responder.
 - Fuera de alcance: resumir las conversaciones cerradas para el agente.

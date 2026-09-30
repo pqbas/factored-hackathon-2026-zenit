@@ -15,6 +15,7 @@ import {
   saveTurnMetric,
   hasOpenHandoff,
   cancelAgentTurns,
+  getLastClosedMessageId,
   type DBMessage,
 } from '@chat-template/db';
 import {
@@ -74,7 +75,15 @@ export async function streamAgentTurn({
   // never resent to the agent; advisor replies go out prefixed so the agent
   // can tell them apart from its own (never persisted, never shown to the
   // front).
-  const modelMessages = buildAgentHistory(messages);
+  // Only the current conversation: what follows the last close. If that
+  // can't be read, the whole chat goes, as before.
+  let closedThroughId: string | null = null;
+  try {
+    closedThroughId = await getLastClosedMessageId({ chatId });
+  } catch (error) {
+    console.warn('Unable to read the last close of chat', chatId, error);
+  }
+  const modelMessages = buildAgentHistory(messages, closedThroughId);
   const model = await myProvider.languageModel(selectedChatModel);
   return streamText({
     model,
