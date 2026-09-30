@@ -6,6 +6,9 @@ export type Lang = 'es' | 'pt';
 
 export const LANGS: Lang[] = ['es', 'pt'];
 
+// Each language by its own name, as the menu lists them.
+export const LANG_NAMES: Record<Lang, string> = { es: 'Español', pt: 'Português' };
+
 export function isLang(value: unknown): value is Lang {
   return value === 'es' || value === 'pt';
 }
@@ -143,6 +146,24 @@ const pt: Messages = {
 };
 
 export const MESSAGES: Record<Lang, Messages> = { es, pt };
+
+// The app-wide language, for code outside React (lib helpers that return
+// labels). LangProvider sets it before rendering and remounts the tree when it
+// changes, so every label is read again. Spanish until then (and in tests).
+let current: Lang = 'es';
+
+export function currentLang(): Lang {
+  return current;
+}
+
+export function setCurrentLang(lang: Lang) {
+  current = lang;
+}
+
+// The messages of the current language.
+export function tr(): Messages {
+  return MESSAGES[current];
+}
 
 // Demo customers are labelled "Name · Country".
 export function langFromCustomerLabel(label: string | null | undefined): Lang | null {

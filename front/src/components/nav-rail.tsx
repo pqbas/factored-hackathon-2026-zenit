@@ -13,7 +13,7 @@ import { useTheme } from 'next-themes';
 import { Link, useLocation } from 'react-router-dom';
 
 import { BrandMark } from '@/components/brand-mark';
-import { UserAvatar } from '@/components/user-avatar';
+import { UserMenu } from '@/components/user-menu';
 import {
   Tooltip,
   TooltipContent,
@@ -136,18 +136,7 @@ export function NavRail() {
           </TooltipTrigger>
           <TooltipContent side="right">{themeLabel}</TooltipContent>
         </Tooltip>
-        {userName && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div data-testid="user-avatar" aria-label={userName}>
-                <UserAvatar name={userName} />
-              </div>
-            </TooltipTrigger>
-            <TooltipContent side="right">
-              {session?.user?.email ?? userName}
-            </TooltipContent>
-          </Tooltip>
-        )}
+        {userName && <UserMenu name={userName} email={session?.user?.email} />}
       </TooltipProvider>
     </nav>
   );
