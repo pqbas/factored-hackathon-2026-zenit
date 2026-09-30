@@ -12,7 +12,7 @@
 --     savings account and an active loan (both must be left out), one
 --     movement per product, two interactions (one with transcript), one case.
 --   CLI-7MPS3ZOPSN4Q (Javier, demo-co-1): an active card, an active savings
---     account, a closed card, 12 movements (only 10 come back), and a second
+--     account, a closed card, 24 movements, 12 per product (10 of each come back), and a second
 --     customer sharing his card's product_id (the join must match customer_id).
 --   CLI-PROFILE-FAILS: as Santiago, but reading his contact data fails (see
 --     the customers view below).
@@ -291,7 +291,7 @@ VALUES
   ('TX-S-1', 'CLI-FLEUCGTWGAHL', 'PRD-S-CARD', '2026-06-08T15:00:51Z', 'Purchase', 'Internet Plus', 329.44, 'USD', 'Approved'),
   ('TX-S-2', 'CLI-FLEUCGTWGAHL', 'PRD-S-SAV', '2026-06-09T10:00:00Z', 'Deposit', 'Closed account', 5.00, 'USD', 'Approved'),
   ('TX-S-3', 'CLI-FLEUCGTWGAHL', 'PRD-S-LOAN', '2026-06-09T11:00:00Z', 'Payment', 'Loan', 100.00, 'USD', 'Approved');
--- 12 movements of Javier, alternating card and savings, one hour apart.
+-- 24 movements of Javier, alternating card and savings, one hour apart.
 INSERT INTO bank_ro.customer_transactions
   (transaction_id, customer_id, product_id, transaction_date, transaction_type, merchant_name, amount, currency, transaction_status)
 SELECT
@@ -299,7 +299,7 @@ SELECT
   CASE WHEN i % 2 = 0 THEN 'PRD-J-CARD' ELSE 'PRD-J-SAV' END,
   '2026-06-01T00:00:00Z'::timestamptz + (i || ' hours')::interval,
   'Purchase', 'Shop ' || i, i * 10, 'COP', 'Approved'
-FROM generate_series(1, 12) AS i;
+FROM generate_series(1, 24) AS i;
 
 -- Daniela's savings. M is the 1st of the current month (UTC).
 INSERT INTO bank_ro.customer_products
