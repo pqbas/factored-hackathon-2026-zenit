@@ -226,4 +226,50 @@ test.describe('Demo customer selector', () => {
     await expect(chat.demoCustomerSelector).toContainText('Santiago · México');
     await expect(chat.demoCustomerSelector).toBeDisabled();
   });
+
+  test('switches the chat screen between ES and PT and sends the language', async () => {
+    await mockCustomers(page);
+    await chat.createNewChat();
+    await page.evaluate(() => localStorage.removeItem('ui:lang'));
+    await page.reload();
+
+    // Spanish by default (the browser is en-US, the demo customers Spanish-speaking).
+    await expect(page.getByTestId('lang-es')).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByTestId('greeting')).toHaveText(/^Buen(os|as) \S+, \S+$/);
+    await expect(chat.multimodalInput).toHaveAttribute('placeholder', 'Mensaje');
+
+    await page.getByTestId('lang-pt').click();
+    await expect(page.getByTestId('greeting')).toHaveText(/^(Bom dia|Boa tarde|Boa noite), \S+$/);
+    await expect(page.getByTestId('suggested-action-0')).toContainText(
+      'Consultar saldo e movimentações do cartão',
+    );
+    await expect(chat.multimodalInput).toHaveAttribute('placeholder', 'Mensagem');
+    await expect(page.getByText('Nunca vamos pedir sua senha, seu PIN nem o CVV.')).toBeVisible();
+    await expect(page.getByTestId('chat-peer-status')).toContainText('Assistente virtual · Online');
+
+    // The choice survives a reload.
+    await page.reload();
+    await expect(page.getByTestId('lang-pt')).toHaveAttribute('aria-pressed', 'true');
+
+    // The card sends its Portuguese text, and the body carries the language.
+    const request = nextChatRequest(page);
+    await page.getByTestId('suggested-action-0').click();
+    const body = (await request).postDataJSON();
+    expect(body.language).toBe('pt');
+    expect(body.message.parts[0].text).toBe('Quero ver o saldo e as movimentações do meu cartão de crédito');
+
+    await page.evaluate(() => localStorage.removeItem('ui:lang'));
+  });
+
+  test('a customer from Brazil starts in Portuguese', async () => {
+    await page.route('**/api/demo-customers', (route) =>
+      route.fulfill({ json: { customers: [{ token: 'demo-br-1', label: 'Ana · Brasil' }] } }),
+    );
+    await chat.createNewChat();
+    await page.evaluate(() => localStorage.clear());
+    await page.reload();
+    await expect(page.getByTestId('lang-pt')).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByTestId('greeting')).toHaveText(/^(Bom dia|Boa tarde|Boa noite), Ana$/);
+    await page.evaluate(() => localStorage.clear());
+  });
 });

@@ -69,6 +69,7 @@ describe('handoffNotice', () => {
     expect(handoffNotice('human_queue')).toContain('Te pasamos con un asesor');
     expect(handoffNotice('human_agent')).toBe('Te atiende un asesor.');
     expect(handoffNotice('ai_agent')).toBeNull();
+    expect(handoffNotice('human_queue', 'pt')).toContain('atendente');
   });
 });
 

@@ -13,10 +13,10 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import type { DemoCustomer } from '@/hooks/use-demo-customers';
+import { useLang } from '@/contexts/LangContext';
 import { cn } from '@/lib/utils';
 
 // The chip names the bank customer the demo simulates, not the person using it.
-export const DEMO_CUSTOMER_HINT = 'Clientes del dataset sintético del hackathon: elige a cuál simular';
 
 export function DemoCustomerSelector({
   customers,
@@ -29,6 +29,7 @@ export function DemoCustomerSelector({
   onChange: (token: string) => void;
   isLocked: boolean;
 }) {
+  const { t } = useLang();
   if (customers.length === 0) return null;
   const current = customers.find((c) => c.token === token);
 
@@ -38,7 +39,7 @@ export function DemoCustomerSelector({
       data-testid="demo-customer-selector"
       disabled={isLocked}
       aria-label={
-        current ? `Cliente demo: ${current.label}. ${DEMO_CUSTOMER_HINT}` : DEMO_CUSTOMER_HINT
+        current ? `${t.demoCustomer} ${current.label}. ${t.demoCustomerHint}` : t.demoCustomerHint
       }
       className="flex h-7 max-w-72 items-center gap-1.5 rounded-full bg-secondary px-2.5 text-foreground text-xs hover:bg-accent disabled:cursor-default disabled:hover:bg-secondary"
     >
@@ -46,10 +47,10 @@ export function DemoCustomerSelector({
       <span className="truncate">
         {current ? (
           <>
-            <span className="text-muted-foreground">Cliente demo:</span> {current.label}
+            <span className="text-muted-foreground">{t.demoCustomer}</span> {current.label}
           </>
         ) : (
-          'Elegir cliente demo'
+          t.pickDemoCustomer
         )}
       </span>
       {!isLocked && <ChevronDown className="size-3 shrink-0 text-muted-foreground" />}
@@ -63,7 +64,7 @@ export function DemoCustomerSelector({
           <span className="flex">{trigger}</span>
         </TooltipTrigger>
         <TooltipContent>
-          {DEMO_CUSTOMER_HINT}. Queda fijo desde el primer mensaje del chat.
+          {t.demoCustomerHint}. {t.demoCustomerLocked}
         </TooltipContent>
       </Tooltip>
     );
@@ -75,14 +76,14 @@ export function DemoCustomerSelector({
         <TooltipTrigger asChild>
           <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
         </TooltipTrigger>
-        <TooltipContent data-testid="demo-customer-hint">{DEMO_CUSTOMER_HINT}</TooltipContent>
+        <TooltipContent data-testid="demo-customer-hint">{t.demoCustomerHint}</TooltipContent>
       </Tooltip>
       <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuLabel
           data-testid="demo-customer-dataset"
           className="font-normal text-muted-foreground text-xs"
         >
-          Dataset sintético del hackathon
+          {t.demoDataset}
         </DropdownMenuLabel>
         {customers.map((customer) => (
           <DropdownMenuItem

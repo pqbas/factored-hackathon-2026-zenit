@@ -1,19 +1,13 @@
 import type { UseChatHelpers } from '@ai-sdk/react';
-import { ASSISTANT_KIND, ASSISTANT_NAME } from '@/lib/assistant';
 import type { ChatMessage } from '@chat-template/core';
 import { motion } from 'framer-motion';
 
 import { SuggestedActions } from '@/components/suggested-actions';
+import { useLang } from '@/contexts/LangContext';
 import { useSession } from '@/contexts/SessionContext';
 import { useActiveCustomerToken } from '@/hooks/use-active-customer';
 import { useDemoCustomers } from '@/hooks/use-demo-customers';
 import { customerFirstName } from '@/lib/demo-customer-storage';
-
-function greetingForHour(hour: number): string {
-  if (hour < 12) return 'Buenos días';
-  if (hour < 19) return 'Buenas tardes';
-  return 'Buenas noches';
-}
 
 function firstName(value: string | undefined): string | null {
   if (!value) return null;
@@ -30,6 +24,7 @@ export const Greeting = ({
   sendMessage: UseChatHelpers<ChatMessage>['sendMessage'];
 }) => {
   const { session } = useSession();
+  const { t } = useLang();
   const { customers } = useDemoCustomers();
   const token = useActiveCustomerToken();
   // Greet the bank customer the chat talks as; without demo customers, the
@@ -42,7 +37,7 @@ export const Greeting = ({
           session?.user?.preferredUsername ||
           session?.user?.email,
       );
-  const greeting = greetingForHour(new Date().getHours());
+  const greeting = t.greeting(new Date().getHours());
 
   return (
     <div
@@ -66,8 +61,7 @@ export const Greeting = ({
         transition={{ delay: 0.4 }}
         className="text-base text-muted-foreground md:text-[17px]"
       >
-        Soy {ASSISTANT_NAME}, tu {ASSISTANT_KIND.toLowerCase()}. ¿En qué te puedo
-        ayudar hoy?
+        {t.intro}
       </motion.p>
       <div className="mt-8 w-full">
         <SuggestedActions chatId={chatId} sendMessage={sendMessage} />

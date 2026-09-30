@@ -6,6 +6,7 @@ import type { ChatMessage } from '@chat-template/core';
 import { CircleAlert, CreditCard, Ellipsis, PiggyBank, type LucideIcon } from 'lucide-react';
 import { softNavigateToChatId } from '@/lib/navigation';
 import { useAppConfig } from '@/contexts/AppConfigContext';
+import { useLang } from '@/contexts/LangContext';
 import { cn } from '@/lib/utils';
 
 interface SuggestedActionsProps {
@@ -14,61 +15,31 @@ interface SuggestedActionsProps {
   selectedVisibilityType?: VisibilityType;
 }
 
-interface SuggestedAction {
-  title: string;
-  description: string;
-  prompt: string;
-  icon: LucideIcon;
-  tint: string;
-}
-
 // The options of David's menu (docs/flujo-atencion.md, etapa 2): only what he
-// actually does.
-const SUGGESTED_ACTIONS: SuggestedAction[] = [
-  {
-    title: 'Consultar saldo y movimientos de tarjeta',
-    description: 'Saldo, límite y cupo disponible',
-    prompt: 'Quiero ver el saldo y los movimientos de mi tarjeta de crédito',
-    icon: CreditCard,
-    tint: 'bg-tint-green text-tint-green-foreground',
-  },
-  {
-    title: 'Cuentas de ahorro',
-    description: 'Saldo y movimientos',
-    prompt: 'Quiero ver el saldo y los movimientos de mi cuenta de ahorro',
-    icon: PiggyBank,
-    tint: 'bg-tint-blue text-tint-blue-foreground',
-  },
-  {
-    title: 'Presentar un reclamo',
-    description: 'Un cargo que no reconoces o un cobro duplicado',
-    prompt: 'Quiero presentar un reclamo por un cargo',
-    icon: CircleAlert,
-    tint: 'bg-tint-red text-tint-red-foreground',
-  },
-  {
-    title: 'Más opciones',
-    description: 'Cancelar un producto o el estado de un reclamo',
-    prompt: 'Más opciones: cancelar un producto o ver el estado de un reclamo',
-    icon: Ellipsis,
-    tint: 'bg-tint-amber text-tint-amber-foreground',
-  },
+// actually does. Texts come from the chosen language (MESSAGES.actions), in
+// this same order.
+const ACTION_STYLES: { icon: LucideIcon; tint: string }[] = [
+  { icon: CreditCard, tint: 'bg-tint-green text-tint-green-foreground' },
+  { icon: PiggyBank, tint: 'bg-tint-blue text-tint-blue-foreground' },
+  { icon: CircleAlert, tint: 'bg-tint-red text-tint-red-foreground' },
+  { icon: Ellipsis, tint: 'bg-tint-amber text-tint-amber-foreground' },
 ];
 
 function PureSuggestedActions({ chatId, sendMessage }: SuggestedActionsProps) {
   const { chatHistoryEnabled } = useAppConfig();
+  const { t } = useLang();
 
   return (
     <div
       data-testid="suggested-actions"
       className="mx-auto grid w-full max-w-[600px] gap-3 sm:grid-cols-2"
     >
-      {SUGGESTED_ACTIONS.map((action, index) => {
-        const Icon = action.icon;
+      {t.actions.map((action, index) => {
+        const { icon: Icon, tint } = ACTION_STYLES[index];
         return (
           <motion.button
             type="button"
-            key={action.title}
+            key={index}
             data-testid={`suggested-action-${index}`}
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
@@ -86,7 +57,7 @@ function PureSuggestedActions({ chatId, sendMessage }: SuggestedActionsProps) {
             <span
               className={cn(
                 'flex size-[34px] shrink-0 items-center justify-center rounded-[9px]',
-                action.tint,
+                tint,
               )}
             >
               <Icon className="size-[18px]" strokeWidth={1.8} />

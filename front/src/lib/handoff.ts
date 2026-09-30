@@ -5,6 +5,7 @@
 import type { ChatMessage } from '@chat-template/core';
 import type { Chat } from '@chat-template/db';
 
+import { type Lang, MESSAGES } from '@/lib/i18n';
 import { convertToUIMessages } from '@/lib/utils';
 
 export type HandledBy = Chat['handledBy'];
@@ -54,11 +55,9 @@ export function senderOf(
   return 'agent';
 }
 
-export function handoffNotice(handledBy: HandledBy): string | null {
-  if (handledBy === 'human_queue') {
-    return 'Te pasamos con un asesor. Te va a responder en este chat.';
-  }
-  if (handledBy === 'human_agent') return 'Te atiende un asesor.';
+export function handoffNotice(handledBy: HandledBy, lang: Lang = 'es'): string | null {
+  if (handledBy === 'human_queue') return MESSAGES[lang].handoffQueued;
+  if (handledBy === 'human_agent') return MESSAGES[lang].handoffTaken;
   return null;
 }
 
