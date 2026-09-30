@@ -51,7 +51,7 @@ test.describe('Mis productos', () => {
     await expect(page.getByText('Hola, Santiago')).toBeVisible();
     await expect(page.getByTestId('customer-profile')).toContainText('Contreras López');
     await expect(page.locator('[data-testid^="product-row-"]:not([data-testid="product-row-summary"])')).toHaveCount(2);
-    await expect(page.getByTestId('transaction-row')).toHaveCount(2);
+    await expect(page.getByTestId('overview-movements').getByTestId('transaction-row')).toHaveCount(2);
     expect(tokens).toContain('demo-mx-1');
   });
 
@@ -63,6 +63,32 @@ test.describe('Mis productos', () => {
     await expect(detail).toContainText('Tarjeta Crédito');
     await expect(detail).toContainText('de tu límite');
     await expect(detail.getByTestId('transaction-row')).toHaveCount(1);
+  });
+
+  test('the cards show as a carousel with the selected card\'s detail', async ({ page }) => {
+    await mockProducts(page, () => ({ status: 200, json: PRODUCTS }));
+    await page.goto('/products');
+    const carousel = page.getByTestId('card-carousel');
+    await expect(carousel.getByTestId('card-visual-1070')).toContainText('•••• •••• •••• 1070');
+    await expect(carousel.getByTestId('card-visual-6262')).toBeVisible();
+    await expect(carousel.getByTestId('card-dot-1')).toBeVisible();
+    // Only the last 4 digits exist: nothing that looks like a full number.
+    await expect(carousel).not.toContainText(/\d{4} \d{4}/);
+
+    const detail = page.getByTestId('card-detail');
+    await expect(detail).toContainText('Supermercado');
+    await carousel.getByTestId('card-dot-1').click();
+    await expect(carousel.getByTestId('card-visual-6262')).toHaveAttribute('aria-pressed', 'true');
+    await expect(detail).not.toContainText('Supermercado');
+
+    // The actions only open the chat with David, about that card.
+    const request = page.waitForRequest(
+      (req) => req.method() === 'POST' && new URL(req.url()).pathname === '/api/chat',
+    );
+    await detail.getByTestId('card-action-claim').click();
+    const text = (await request).postDataJSON().message.parts[0].text as string;
+    expect(text).toContain('reclamo');
+    expect(text).toContain('6262');
   });
 
   test('an expired demo customer says so', async ({ page }) => {
