@@ -1,6 +1,7 @@
 import { Bot, Check, CheckCircle2, ChevronDown, Hourglass, Inbox, UserCheck, Users } from 'lucide-react';
 import type { ReactNode } from 'react';
 
+import { useLang } from '@/contexts/LangContext';
 import { HandoffReasonIcon } from '@/components/conversations/use-case-style';
 import {
   DropdownMenu,
@@ -25,7 +26,7 @@ import {
   type InboxView,
   sameView,
   type ViewCounts,
-  DAVID_VIEW_LABEL,
+  davidViewLabel,
 } from '@/lib/advisor';
 import { HANDOFF_REASONS } from '@/lib/handoff-case';
 import { cn } from '@/lib/utils';
@@ -105,6 +106,7 @@ export function InboxViews({
   onUserChange: (userId: string | null) => void;
   counts: ViewCounts | undefined;
 }) {
+  const { t } = useLang();
   const selectedUser = users.find((u) => u.userId === userId);
   const item = (
     v: InboxView,
@@ -132,7 +134,7 @@ export function InboxViews({
     <Sidebar variant="inset" className="md:left-16">
       <SidebarHeader>
         <span className="flex h-9 items-center pl-2 font-semibold text-[15px] tracking-tight">
-          Chats
+          {t.nav.chats}
         </span>
         {isAdmin && (
           <DropdownMenu>
@@ -144,13 +146,13 @@ export function InboxViews({
               >
                 <Users className={muted} strokeWidth={1.8} />
                 <span className="flex-1 truncate text-left">
-                  {selectedUser ? (selectedUser.userEmail ?? 'Sin email') : 'Todos los usuarios'}
+                  {selectedUser ? (selectedUser.userEmail ?? t.console.noEmail) : t.console.allUsers}
                 </span>
                 <ChevronDown className="size-3 shrink-0 text-muted-foreground" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-60">
-              {[{ userId: null, userEmail: 'Todos los usuarios' }, ...users].map((user) => (
+              {[{ userId: null, userEmail: t.console.allUsers }, ...users].map((user) => (
                 <DropdownMenuItem
                   key={user.userId ?? 'all'}
                   data-testid={`user-option-${user.userId ?? 'all'}`}
@@ -163,7 +165,7 @@ export function InboxViews({
                       user.userId === userId ? 'opacity-100' : 'opacity-0',
                     )}
                   />
-                  <span className="truncate">{user.userEmail ?? 'Sin email'}</span>
+                  <span className="truncate">{user.userEmail ?? t.console.noEmail}</span>
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>
@@ -175,11 +177,11 @@ export function InboxViews({
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              {item({ kind: 'inbox' }, <Inbox className={muted} strokeWidth={1.8} />, 'Bandeja', 'view-inbox')}
+              {item({ kind: 'inbox' }, <Inbox className={muted} strokeWidth={1.8} />, t.console.inbox, 'view-inbox')}
               {item(
                 { kind: 'david' },
                 <Bot className={muted} strokeWidth={1.8} />,
-                DAVID_VIEW_LABEL,
+                davidViewLabel(),
                 'view-david',
               )}
             </SidebarMenu>
@@ -187,7 +189,7 @@ export function InboxViews({
         </SidebarGroup>
 
         <SidebarGroup>
-          <span className="px-2.5 pb-1.5 font-semibold text-[11px] text-muted-foreground">Motivo de derivación</span>
+          <span className="px-2.5 pb-1.5 font-semibold text-[11px] text-muted-foreground">{t.console.reasonFilter}</span>
           <SidebarGroupContent>
             <SidebarMenu>
               {HANDOFF_REASONS.map((r) =>
@@ -204,7 +206,7 @@ export function InboxViews({
         </SidebarGroup>
 
         <SidebarGroup>
-          <span className="px-2.5 pb-1.5 font-semibold text-[11px] text-muted-foreground">Estado</span>
+          <span className="px-2.5 pb-1.5 font-semibold text-[11px] text-muted-foreground">{t.console.stateFilter}</span>
           <SidebarGroupContent>
             <SidebarMenu>
               {item(
@@ -222,7 +224,7 @@ export function InboxViews({
               {item(
                 { kind: 'resolved' },
                 <CheckCircle2 className="size-4 shrink-0 text-tint-green-foreground" strokeWidth={1.8} />,
-                'Resueltas',
+                t.console.resolvedView,
                 'view-resolved',
               )}
             </SidebarMenu>

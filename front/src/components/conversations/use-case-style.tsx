@@ -12,7 +12,7 @@ import {
   XCircle,
 } from 'lucide-react';
 
-import { OTHER_GROUP, sectionLabel, useCaseLabelOf } from '@/lib/advisor';
+import { sectionLabel, useCaseLabelOf } from '@/lib/advisor';
 import { cn } from '@/lib/utils';
 
 // Soft label colors per use case, readable in both themes.
@@ -131,7 +131,7 @@ export function UseCaseChip({ id }: { id: string }) {
         useCaseStyle(id).chip,
       )}
     >
-      {id === OTHER_GROUP ? 'Otras' : useCaseLabelOf(id)}
+      {useCaseLabelOf(id)}
     </span>
   );
 }

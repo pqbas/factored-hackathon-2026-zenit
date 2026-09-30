@@ -1,4 +1,3 @@
-import { ASSISTANT_NAME } from '@/lib/assistant';
 import { ArrowDown, UserRound } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
@@ -17,28 +16,30 @@ import {
   isHeldByOther,
   statusOf,
 } from '@/lib/advisor';
+import { useLang } from '@/contexts/LangContext';
+import { tr, dateLocale } from '@/lib/i18n';
 import { TypingIndicator } from '@/components/typing-indicator';
 import { groupByDay, STATUS_LABEL } from '@/lib/conversations';
 import { format, parseISO } from 'date-fns';
-import { es } from 'date-fns/locale';
 
 // How far from the end the advisor has to scroll before the jump button shows.
 const SCROLL_THRESHOLD = 120;
 
 // The input's line says the state and who has the chat (the header doesn't).
 function placeholderFor(chat: AdvisorChat, me: string | undefined): string {
-  if (canReply(chat, me)) return 'Escribe al cliente…';
+  const { console: c } = tr();
+  if (canReply(chat, me)) return c.writeToCustomer;
   if (isHeldByOther(chat, me)) {
     const email = chat.assignedTo ?? '';
-    return email ? `La atiende ${email.split('@')[0]} (${email})` : 'La atiende otra persona';
+    return email ? c.heldBy(email.split('@')[0], email) : c.heldByOther;
   }
   switch (statusOf(chat)) {
     case 'waiting':
-      return 'En espera · tómala para responder';
+      return c.waitingToTake;
     case 'resolved':
-      return 'Resuelta';
+      return c.resolvedPlaceholder;
     default:
-      return `La atiende ${ASSISTANT_NAME}`;
+      return c.heldByDavid;
   }
 }
 
@@ -53,6 +54,7 @@ function ConversationDivider({ chat, active }: { chat: AdvisorChat; active: bool
   // The handoff reason if this conversation was handed off; never the
   // classifier's intent.
   const reason = chat.handoff?.reason ?? null;
+  const { t } = useLang();
   return (
     <div
       data-testid="conversation-divider"
@@ -61,7 +63,11 @@ function ConversationDivider({ chat, active }: { chat: AdvisorChat; active: bool
     >
       <span className="h-px flex-1 bg-border" />
       <span className="flex items-center gap-2 whitespace-nowrap">
-        <span>Conversación del {format(parseISO(chat.createdAt), "d MMM yyyy, HH:mm", { locale: es })}</span>
+        <span>
+          {t.console.conversationOf(
+            format(parseISO(chat.createdAt), 'd MMM yyyy, HH:mm', { locale: dateLocale() }),
+          )}
+        </span>
         {!active && reason && <HandoffReasonChip id={reason} />}
         {!active && (
           <span data-testid="divider-status" className="font-medium text-foreground/80">
@@ -124,6 +130,7 @@ export function ConversationView({
   onSend: (text: string) => Promise<boolean>;
   onClose: () => void;
 }) {
+  const { t } = useLang();
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const [awayFromBottom, setAwayFromBottom] = useState(false);
@@ -185,7 +192,7 @@ export function ConversationView({
         {awayFromBottom && (
           <button
             type="button"
-            aria-label="Ir al último mensaje"
+            aria-label={t.console.jumpToLast}
             data-testid="scroll-to-bottom"
             onClick={() =>
               bottomRef.current?.scrollIntoView({ block: 'end', behavior: 'smooth' })

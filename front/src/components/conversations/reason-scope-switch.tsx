@@ -1,4 +1,5 @@
-import { DAVID_VIEW_LABEL, type ReasonScope } from '@/lib/advisor';
+import { useLang } from '@/contexts/LangContext';
+import { davidViewLabel, type ReasonScope } from '@/lib/advisor';
 import { cn } from '@/lib/utils';
 
 // Inside a handoff reason: the handed-off chats or the ones David still
@@ -15,12 +16,13 @@ export function ReasonScopeSwitch({
   davidCount: number | undefined;
   onChange: (scope: ReasonScope) => void;
 }) {
+  const { t } = useLang();
   const options: { id: ReasonScope; label: string; count: number | undefined }[] = [
-    { id: 'inbox', label: 'Bandeja', count: inboxCount },
-    { id: 'david', label: DAVID_VIEW_LABEL, count: davidCount },
+    { id: 'inbox', label: t.console.inbox, count: inboxCount },
+    { id: 'david', label: davidViewLabel(), count: davidCount },
   ];
   return (
-    <div role="tablist" aria-label="Mostrar" className="inline-flex rounded-lg bg-secondary p-0.5">
+    <div role="tablist" aria-label={t.console.show} className="inline-flex rounded-lg bg-secondary p-0.5">
       {options.map((option) => {
         const active = option.id === scope;
         return (

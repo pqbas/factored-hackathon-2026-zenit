@@ -3,6 +3,7 @@ import { Bot, Search, UserRound } from 'lucide-react';
 
 import { HandoffReasonChip, handoffReasonStyle } from '@/components/conversations/use-case-style';
 import { ASSISTANT_NAME } from '@/lib/assistant';
+import { useLang } from '@/contexts/LangContext';
 import { SidebarToggle } from '@/components/sidebar-toggle';
 import {
   type AdvisorChat,
@@ -33,6 +34,7 @@ function Row({
   selected: boolean;
   onOpen: () => void;
 }) {
+  const { t } = useLang();
   const attention = attentionOf(chat, me);
   // The inbox API has no unread count: the dot marks chats waiting for someone.
   const waiting = !chat.closedAt && chat.handledBy === 'human_queue';
@@ -83,7 +85,7 @@ function Row({
         {holder && (
           <span
             data-testid="advisor-badge"
-            title={`Lo atiende ${chat.assignedTo ?? holder}`}
+            title={t.console.advisorHolds(chat.assignedTo ?? holder)}
             className="flex min-w-0 max-w-full items-center gap-1 rounded-md bg-secondary px-1.5 py-0.5 text-[11px] text-muted-foreground"
           >
             <UserRound className="size-3 shrink-0" strokeWidth={2} />
@@ -93,8 +95,8 @@ function Row({
         {withDavid && (
           <span
             data-testid="david-icon"
-            title={`${STATUS_LABEL.assistant}: lo atiende ${ASSISTANT_NAME}`}
-            aria-label={`${STATUS_LABEL.assistant}: lo atiende ${ASSISTANT_NAME}`}
+            title={`${STATUS_LABEL.assistant}: ${t.console.davidHandles}`}
+            aria-label={`${STATUS_LABEL.assistant}: ${t.console.davidHandles}`}
             className="flex min-w-0 max-w-full items-center gap-1 rounded-md bg-secondary px-1.5 py-0.5 text-[11px] text-muted-foreground"
           >
             <Bot className="size-3 shrink-0" strokeWidth={2} />
@@ -166,6 +168,7 @@ export function InboxList({
   // A row under the title (the reason views' Bandeja | Agente AI switch).
   toolbar?: ReactNode;
 }) {
+  const { t } = useLang();
   const grouped = grouping !== null;
   const groups =
     grouping === 'reason'
@@ -191,7 +194,7 @@ export function InboxList({
           {title}
         </h1>
         <span className="whitespace-nowrap text-muted-foreground text-sm">
-          {chats.length} {chats.length === 1 ? 'cliente' : 'clientes'}
+          {chats.length} {chats.length === 1 ? t.console.customer : t.console.customers}
         </span>
         <div className="relative ml-auto w-60">
           <Search className="absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
@@ -199,8 +202,8 @@ export function InboxList({
             type="text"
             value={query}
             onChange={(e) => onQueryChange(e.target.value)}
-            placeholder="Buscar"
-            aria-label="Buscar cliente"
+            placeholder={t.console.search}
+            aria-label={t.console.searchCustomer}
             className="h-8 w-full rounded-lg bg-secondary pr-2 pl-8 text-[13px] placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/40"
           />
         </div>
@@ -214,7 +217,7 @@ export function InboxList({
             data-testid="inbox-empty"
             className="py-10 text-center text-muted-foreground text-sm"
           >
-            {empty ?? 'No hay conversaciones en esta vista.'}
+            {empty ?? t.console.noConversationsInView}
           </p>
         )}
         {/* One grid for every row: margin | dot | avatar | name | David |
@@ -248,7 +251,7 @@ export function InboxList({
             onClick={onLoadMore}
             className="mx-3 mt-4 h-8 rounded-lg px-3 text-muted-foreground text-xs hover:bg-secondary hover:text-foreground"
           >
-            Cargar más
+            {t.console.loadMore}
           </button>
         )}
       </div>

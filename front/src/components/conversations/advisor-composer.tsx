@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
-import { QUICK_REPLIES } from '@/lib/advisor';
+import { useLang } from '@/contexts/LangContext';
 import { cn } from '@/lib/utils';
 
 export function AdvisorComposer({
@@ -18,6 +18,7 @@ export function AdvisorComposer({
   icon?: ReactNode;
   onSend: (text: string) => Promise<boolean>;
 }) {
+  const { t } = useLang();
   const [draft, setDraft] = useState('');
   const [showReplies, setShowReplies] = useState(false);
   const [sending, setSending] = useState(false);
@@ -35,7 +36,7 @@ export function AdvisorComposer({
     <div className="flex flex-col gap-2 px-4 pt-2 pb-4">
       {showReplies && !disabled && (
         <div className="flex gap-1.5 overflow-x-auto">
-          {QUICK_REPLIES.map((reply, i) => (
+          {t.console.quickReplies.map((reply, i) => (
             <button
               key={reply}
               type="button"
@@ -53,7 +54,7 @@ export function AdvisorComposer({
           type="button"
           size="icon"
           variant="secondary"
-          aria-label="Respuestas rápidas"
+          aria-label={t.console.quickRepliesLabel}
           aria-pressed={showReplies}
           disabled={disabled}
           onClick={() => setShowReplies((v) => !v)}
@@ -69,7 +70,7 @@ export function AdvisorComposer({
           <input
             value={draft}
             disabled={disabled}
-            aria-label="Mensaje al cliente"
+            aria-label={t.console.messageToCustomer}
             placeholder={placeholder}
             maxLength={4000}
             onChange={(e) => setDraft(e.target.value)}
@@ -84,7 +85,7 @@ export function AdvisorComposer({
           <Button
             type="button"
             size="icon"
-            aria-label="Enviar"
+            aria-label={t.console.send}
             onClick={handleSend}
             disabled={disabled || sending || !draft.trim()}
             className="size-[34px] shrink-0 rounded-full"

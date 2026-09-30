@@ -1,8 +1,8 @@
-import { ASSISTANT_NAME } from '@/lib/assistant';
 import { Bot, PanelRight, X } from 'lucide-react';
 
 import { handoffReasonStyle } from '@/components/conversations/use-case-style';
 import { Button } from '@/components/ui/button';
+import { useLang } from '@/contexts/LangContext';
 import {
   type AdvisorChat,
   customerLabel,
@@ -23,13 +23,14 @@ function AssistantSwitch({
   disabled: boolean;
   onToggle: () => void;
 }) {
+  const { t } = useLang();
   return (
     <button
       type="button"
       role="switch"
       aria-checked={on}
-      aria-label={`${ASSISTANT_NAME} (asistente)`}
-      title={`${ASSISTANT_NAME} (asistente)`}
+      aria-label={t.console.assistantSwitch}
+      title={t.console.assistantSwitch}
       data-testid="assistant-switch"
       disabled={disabled}
       onClick={onToggle}
@@ -73,6 +74,7 @@ export function ConversationHeader({
   onRelease: (outcome: 'returned_to_agent' | 'resolved') => void;
   onClose: () => void;
 }) {
+  const { t } = useLang();
   const status = statusOf(chat);
   const mine = isMine(chat, me);
   const tag = reasonTagOf(chat);
@@ -82,7 +84,7 @@ export function ConversationHeader({
     <header className="flex items-center gap-3 border-border border-b px-4 py-3">
       <button
         type="button"
-        aria-label="Cerrar conversación"
+        aria-label={t.console.closeConversation}
         data-testid="close-conversation"
         onClick={onClose}
         className="flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground"
@@ -131,7 +133,7 @@ export function ConversationHeader({
           )}
         >
           <PanelRight className="size-3.5" strokeWidth={1.9} />
-          Contexto
+          {t.console.contextButton}
         </button>
         {(status === 'assistant' || status === 'resolved') && (
           <AssistantSwitch on disabled={busy} onToggle={onTake} />
@@ -145,7 +147,7 @@ export function ConversationHeader({
             onClick={onTake}
             className="h-8 rounded-full px-4 text-xs"
           >
-            Tomar
+            {t.console.take}
           </Button>
         )}
         {mine && (
@@ -164,7 +166,7 @@ export function ConversationHeader({
               onClick={() => onRelease('resolved')}
               className="h-8 rounded-full px-3 text-xs"
             >
-              Resolver
+              {t.console.resolve}
             </Button>
           </>
         )}

@@ -1,8 +1,10 @@
+import { useLang } from '@/contexts/LangContext';
 import { type CustomerProfile, profileFields } from '@/lib/customer-context';
 
 // "Datos del cliente": the customer's main data as the bank has it, as a
 // record like the handed-off case's. Nothing when the bank sent none.
 export function CustomerProfileCard({ profile }: { profile: CustomerProfile | null }) {
+  const { t } = useLang();
   const fields = profileFields(profile);
   if (fields.length === 0) return null;
   return (
@@ -10,7 +12,7 @@ export function CustomerProfileCard({ profile }: { profile: CustomerProfile | nu
       data-testid="customer-profile"
       className="flex flex-col gap-2.5 rounded-xl border border-border bg-card/60 px-3.5 py-3"
     >
-      <h3 className="font-semibold text-[13px]">Datos del cliente</h3>
+      <h3 className="font-semibold text-[13px]">{t.console.customerData}</h3>
       <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1 rounded-lg bg-secondary/60 px-3 py-2.5 text-xs">
         {fields.map((field) => (
           <div key={field.key} className="contents">
