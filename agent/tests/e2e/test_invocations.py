@@ -304,6 +304,32 @@ def test_general_inquiry_calls_the_tool_with_the_sessions_customer_id(client, mo
     assert calls == [{"customer_id": "CLI-FLEUCGTWGAHL"}]  # demo-mx-1's customer_id
 
 
+def test_a_balance_turn_with_the_lakebase_backend_answers_from_the_fake_pools_rows(client, monkeypatch):
+    from decimal import Decimal
+
+    from lakebase_fakes import FakePool
+    from src.tools import tools_for as tools_for_module
+
+    pool = FakePool(products=[{
+        "product_type": "Tarjeta Crédito", "product_number_last4": "4930", "currency": "USD",
+        "current_balance": Decimal("120.50"), "credit_limit": Decimal("1000.00"), "available_credit": Decimal("879.50"),
+    }])
+    monkeypatch.setattr(tools_for_module, "settings", type("S", (), {"tools_backend": "lakebase"})())
+    monkeypatch.setattr(tools_for_module, "_lakebase_tools", tools_for_module.bank_tools(pool))
+    monkeypatch.setattr(main, "tools_for", tools_for_module.tools_for)
+    llm = ScriptedToolChatModel([
+        AIMessage(content="", tool_calls=[{"name": "get_products", "args": {}, "id": "call_1"}]),
+        AIMessage(content=FAKE_LLM_TEXT),
+    ])
+    monkeypatch.setattr(main, "get_chat_model", lambda: llm)
+
+    response = _invoke(client, "¿cuál es el saldo de mi tarjeta?", thread_id="e2e-lakebase-balance")
+
+    assert response.status_code == 200
+    assert _output_text(response.json()) == FAKE_LLM_TEXT
+    assert pool.queries[0][1] == {"customer_id": "CLI-FLEUCGTWGAHL"}  # demo-mx-1's customer_id
+
+
 def _greeting_jev():
     return JevClient(api_key="test-key", url="https://api.typesafe.ai/v1/systemone", timeout=2.0,
                      transport=httpx.MockTransport(lambda request: _jev_response_for("GREETING")))
