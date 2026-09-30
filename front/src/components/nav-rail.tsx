@@ -1,6 +1,7 @@
 import { ASSISTANT_NAME } from '@/lib/assistant';
 import {
   ChartColumn,
+  FlaskConical,
   MessageCircle,
   MessagesSquare,
   Moon,
@@ -20,7 +21,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { useSession } from '@/contexts/SessionContext';
-import { canAccess, type Section } from '@/lib/roles';
+import { canAccess, type Role, type Section } from '@/lib/roles';
 import { cn } from '@/lib/utils';
 
 interface NavItem {
@@ -29,6 +30,8 @@ interface NavItem {
   to: string;
   section: Section;
   icon: LucideIcon;
+  // Overrides label and icon for some roles.
+  byRole?: (role: Role) => { label: string; icon: LucideIcon } | null;
   isActive: (pathname: string) => boolean;
 }
 
@@ -47,6 +50,10 @@ const NAV_ITEMS: NavItem[] = [
     to: '/',
     section: 'agent',
     icon: MessageCircle,
+    // The customer's own chat; for advisors and admins it's a test tool that
+    // plays a bank customer.
+    byRole: (role) =>
+      role === 'customer' ? null : { label: 'Simulador de cliente (demo)', icon: FlaskConical },
     isActive: (pathname) => pathname === '/' || pathname.startsWith('/chat'),
   },
   {
@@ -89,14 +96,14 @@ export function NavRail() {
           (item) => !loading && canAccess(role, item.section),
         ).map((item) => {
           const active = item.isActive(pathname);
-          const Icon = item.icon;
+          const { label, icon: Icon } = item.byRole?.(role) ?? item;
           return (
             <Tooltip key={item.id}>
               <TooltipTrigger asChild>
                 <Link
                   to={item.to}
                   data-testid={`nav-${item.id}`}
-                  aria-label={item.label}
+                  aria-label={label}
                   aria-current={active ? 'page' : undefined}
                   className={cn(
                     'flex size-11 items-center justify-center rounded-[10px] text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground',
@@ -106,7 +113,7 @@ export function NavRail() {
                   <Icon className="size-5" strokeWidth={1.7} />
                 </Link>
               </TooltipTrigger>
-              <TooltipContent side="right">{item.label}</TooltipContent>
+              <TooltipContent side="right">{label}</TooltipContent>
             </Tooltip>
           );
         })}

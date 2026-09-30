@@ -93,9 +93,12 @@ test.describe('Demo customer selector', () => {
     await expect(chat.demoCustomerSelector).toContainText('Cliente demo: Santiago · México');
     await chat.demoCustomerSelector.hover();
     await expect(page.getByTestId('demo-customer-hint').first()).toContainText(
-      'Elige qué cliente del banco simular en esta demo',
+      'Clientes del dataset sintético del hackathon: elige a cuál simular',
     );
-    await chat.selectDemoCustomer('demo-co-1');
+    // The open menu says where the customers come from.
+    await chat.demoCustomerSelector.click();
+    await expect(page.getByTestId('demo-customer-dataset')).toHaveText('Dataset sintético del hackathon');
+    await page.getByTestId('demo-customer-option-demo-co-1').click();
     await expect(chat.demoCustomerSelector).toContainText('Javier · Colombia');
 
     const request = nextChatRequest(page);
