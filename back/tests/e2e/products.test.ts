@@ -104,14 +104,8 @@ test.describe('Mis productos', () => {
     await expect(carousel.getByTestId('card-visual-6262')).toHaveAttribute('aria-pressed', 'true');
     await expect(detail).not.toContainText('Supermercado');
 
-    // The actions only open the chat with David, about that card.
-    const request = page.waitForRequest(
-      (req) => req.method() === 'POST' && new URL(req.url()).pathname === '/api/chat',
-    );
-    await detail.getByTestId('card-action-claim').click();
-    const text = (await request).postDataJSON().message.parts[0].text as string;
-    expect(text).toContain('reclamo');
-    expect(text).toContain('6262');
+    // No per-card actions: the chat covers them.
+    await expect(page.locator('[data-testid^="card-action-"]')).toHaveCount(0);
   });
 
   test('savings show their estimated evolution per currency', async ({ page }) => {

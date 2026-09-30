@@ -391,13 +391,6 @@ const es = {
     myCards: 'Mis tarjetas',
     creditCard: 'Tarjeta de crédito',
     showCard: (n: number): string => `Ver tarjeta ${n}`,
-    cardActions: 'Pídeselo a David',
-    seeMovements: 'Ver movimientos',
-    claimCharge: 'Reclamar un cargo',
-    movementsPrompt: (last4: string): string =>
-      `Quiero ver los movimientos de mi tarjeta de crédito terminada en ${last4}`,
-    claimPrompt: (last4: string): string =>
-      `Quiero presentar un reclamo por un cargo de mi tarjeta de crédito terminada en ${last4}`,
     txStatuses: {
       Pending: 'Pendiente',
       Declined: 'Rechazada',
@@ -781,13 +774,6 @@ const pt: Messages = {
     myCards: 'Meus cartões',
     creditCard: 'Cartão de crédito',
     showCard: (n: number): string => `Ver cartão ${n}`,
-    cardActions: 'Peça ao David',
-    seeMovements: 'Ver movimentações',
-    claimCharge: 'Contestar uma cobrança',
-    movementsPrompt: (last4: string): string =>
-      `Quero ver as movimentações do meu cartão de crédito final ${last4}`,
-    claimPrompt: (last4: string): string =>
-      `Quero registrar uma reclamação por uma cobrança do meu cartão de crédito final ${last4}`,
     txStatuses: {
       Pending: 'Pendente',
       Declined: 'Recusada',

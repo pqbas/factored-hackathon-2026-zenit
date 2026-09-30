@@ -195,12 +195,6 @@ export function maskedCardNumber(last4: string): string {
   return `•••• •••• •••• ${last4}`;
 }
 
-// What the card's actions send to David, in the current language.
-export function cardChatPrompt(action: 'movements' | 'claim', product: { last4: string }): string {
-  const t = tr().products;
-  return action === 'movements' ? t.movementsPrompt(product.last4) : t.claimPrompt(product.last4);
-}
-
 // GET /api/products/savings-history: the savings balance per currency at the
 // end of each of the last 12 months, rebuilt by the back from the current
 // balance and the approved movements. Only today's point is real. A currency

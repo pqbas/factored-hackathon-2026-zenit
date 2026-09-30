@@ -1,13 +1,10 @@
-import { MessageCircle } from 'lucide-react';
 import { useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 
 import { CreditCardVisual } from '@/components/products/credit-card-visual';
 import { StatTile } from '@/components/products/stat-tile';
 import { TransactionList } from '@/components/products/transaction-list';
 import { useLang } from '@/contexts/LangContext';
 import {
-  cardChatPrompt,
   creditUsage,
   formatMoney,
   type Product,
@@ -17,8 +14,7 @@ import {
 import { cn } from '@/lib/utils';
 
 // "Mis tarjetas": the credit cards in a horizontal carousel (scroll-snap),
-// and the selected card's balance, limit, usage, movements and the actions
-// David can take on it.
+// and the selected card's balance, limit, usage and movements.
 export function CardCarousel({
   cards,
   transactions,
@@ -27,7 +23,6 @@ export function CardCarousel({
   transactions: Transaction[];
 }) {
   const { t } = useLang();
-  const navigate = useNavigate();
   const trackRef = useRef<HTMLDivElement>(null);
   const [index, setIndex] = useState(0);
   const card = cards[Math.min(index, cards.length - 1)];
@@ -114,23 +109,6 @@ export function CardCarousel({
             </span>
           </div>
         )}
-
-        {/* Only what David does: each action opens the chat with the request. */}
-        <div className="flex flex-wrap items-center gap-2 px-1">
-          <span className="text-muted-foreground text-xs">{t.products.cardActions}</span>
-          {(['movements', 'claim'] as const).map((action) => (
-            <button
-              key={action}
-              type="button"
-              data-testid={`card-action-${action}`}
-              onClick={() => navigate(`/?query=${encodeURIComponent(cardChatPrompt(action, card))}`)}
-              className="flex h-8 items-center gap-1.5 rounded-full bg-secondary px-3 font-medium text-[13px] transition-colors hover:bg-accent"
-            >
-              <MessageCircle className="size-3.5 text-muted-foreground" />
-              {action === 'movements' ? t.products.seeMovements : t.products.claimCharge}
-            </button>
-          ))}
-        </div>
 
         <div className="rounded-[14px] bg-card p-1.5">
           <TransactionList transactions={transactionsFor(transactions, card)} />
