@@ -473,3 +473,4 @@ usuario vía w1:p4, 30-09-26). Spec en spec/30-09-26-simulacion-diaria/.
       mensajes, derivaciones en espera) y `npm run simulate:cleanup`.
 - [x] Arreglo del test de métricas por el reinicio de `useCase` de #94.
 
+Shipped en PR #106.
