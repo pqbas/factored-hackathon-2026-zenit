@@ -180,6 +180,51 @@ test.describe('Handoff reason filter and in-progress conversation (with database
     expect(counts).toMatchObject({ total: 1, unattended: 1, resolved: 1 });
   });
 
+  test("counts: aiAgentByUseCase splits David's open chats by use case, the in-progress one per customer when grouped", async ({
+    babbageContext,
+  }) => {
+    const userId = `ai-by-case-${generateUUID()}`;
+    const withCase = async (
+      customerId: string,
+      useCase: string | null,
+      handledBy: 'ai_agent' | 'human_queue' = 'ai_agent',
+    ) => {
+      const id = await createChat({ userId, customerId, handledBy });
+      if (useCase) await updateChatAgentState({ chatId: id, useCase });
+      await new Promise((r) => setTimeout(r, 5));
+    };
+    await withCase(newCustomer('P'), 'COMPLAINT');
+    await withCase(newCustomer('Q'), 'COMPLAINT');
+    await withCase(newCustomer('R'), 'RETENTION');
+    await withCase(newCustomer('S'), null);
+    await withCase(newCustomer('T'), 'COMPLAINT', 'human_queue');
+    // One customer, an older complaint and a case status in progress.
+    const u = newCustomer('U');
+    await withCase(u, 'COMPLAINT');
+    await withCase(u, 'CASE_STATUS');
+
+    const counts = async (query: string) =>
+      (
+        await babbageContext.request.get(
+          `/api/advisor/conversations/counts?userId=${userId}${query}`,
+        )
+      ).json();
+
+    const grouped = await counts('&groupBy=customer');
+    expect(grouped.aiAgent).toBe(5);
+    expect(grouped.aiAgentByUseCase).toEqual({
+      COMPLAINT: 2,
+      RETENTION: 1,
+      CASE_STATUS: 1,
+    });
+    const flat = await counts('');
+    expect(flat.aiAgentByUseCase).toEqual({
+      COMPLAINT: 3,
+      RETENTION: 1,
+      CASE_STATUS: 1,
+    });
+  });
+
   test('counts: byHandoffReason and withAdvisor use the base of total, with and without groupBy', async ({
     babbageContext,
   }) => {

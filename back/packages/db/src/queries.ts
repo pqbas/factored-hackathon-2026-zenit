@@ -564,6 +564,8 @@ export interface ConversationCounts {
   mine: number;
   resolved: number;
   aiAgent: number;
+  // aiAgent split by the in-progress conversation's use case (only > 0).
+  aiAgentByUseCase: Record<string, number>;
   withAdvisor: number;
   byHandoffReason: Record<string, number>;
 }
@@ -599,6 +601,7 @@ export async function getConversationCounts({
     mine: 0,
     resolved: 0,
     aiAgent: 0,
+    aiAgentByUseCase: {},
     withAdvisor: 0,
     byHandoffReason: { complaint: 0, retention: 0, case_status: 0 },
   };
@@ -689,6 +692,9 @@ export async function getConversationCounts({
       counts.mine += row.mine;
       if (!byCustomer) counts.resolved += row.resolved;
       counts.aiAgent += row.aiAgent;
+      if (row.useCase && row.aiAgent > 0) {
+        counts.aiAgentByUseCase[row.useCase] = row.aiAgent;
+      }
       counts.withAdvisor += row.withAdvisor;
     }
     return counts;
