@@ -728,6 +728,17 @@ test.describe('Advisor console', () => {
     await expect(panel).toHaveCount(0);
   });
 
+  test('a customer has the same avatar color in the row and the open chat', async ({ page }) => {
+    await openConsole(page);
+    const row = page.getByTestId('conversation-row-c-waiting');
+    const rowColor = await row.getByTestId('row-avatar').getAttribute('class');
+    expect(rowColor).not.toMatch(/zinc|slate|stone|gray/);
+    await row.click();
+    const headerColor = await page.getByTestId('header-avatar').getAttribute('class');
+    const hue = (cls: string | null) => cls?.match(/from-[a-z]+-\d+/)?.[0];
+    expect(hue(headerColor)).toBe(hue(rowColor));
+  });
+
   test('Agente AI is split in sections by what David is working on', async ({ page }) => {
     await openConsole(page, 'advisor', ME, [
       ['c-offtopic', 'pedro@banco.test', { useCase: null, intent: 'OUT_OF_SCOPE' }],

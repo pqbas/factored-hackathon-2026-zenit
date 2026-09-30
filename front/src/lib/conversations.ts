@@ -33,21 +33,36 @@ export function matchesQuery(query: string, ...fields: (string | null)[]): boole
   return fields.some((field) => field && normalize(field).includes(needle));
 }
 
-// Deterministic avatar color per customer, so the same client always gets
-// the same color across renders.
+// Deterministic avatar color per bank customer, so the same customer always
+// gets the same color, in the list and in the open chat. Soft hues, no grays;
+// the lighter ones go a step darker so the white initials stay readable.
 const AVATAR_COLORS = [
-  'bg-linear-to-b from-zinc-400 to-zinc-500',
-  'bg-linear-to-b from-slate-400 to-slate-500',
-  'bg-linear-to-b from-stone-400 to-stone-500',
-  'bg-linear-to-b from-emerald-600/80 to-emerald-700/80',
-  'bg-linear-to-b from-sky-600/80 to-sky-700/80',
+  'bg-linear-to-b from-rose-500 to-rose-600',
+  'bg-linear-to-b from-orange-500 to-orange-600',
+  'bg-linear-to-b from-amber-600 to-amber-700',
+  'bg-linear-to-b from-emerald-600 to-emerald-700',
+  'bg-linear-to-b from-teal-600 to-teal-700',
+  'bg-linear-to-b from-sky-600 to-sky-700',
+  'bg-linear-to-b from-indigo-500 to-indigo-600',
+  'bg-linear-to-b from-violet-500 to-violet-600',
 ];
 
-export function avatarColor(customerId: string): string {
-  const hash = customerId
-    .split('')
-    .reduce((sum, char) => sum + char.charCodeAt(0), 0);
+export function avatarColor(key: string): string {
+  // FNV-1a: similar ids (CUS000123, CUS000132) land on different colors.
+  let hash = 2166136261;
+  for (const char of key) hash = Math.imul(hash ^ char.charCodeAt(0), 16777619) >>> 0;
   return AVATAR_COLORS[hash % AVATAR_COLORS.length];
+}
+
+// The bank customer behind a chat; the app user only when there's none (in
+// prod every evaluation chat comes from the same app user). customerId first:
+// the back builds customerKey from it when it exists.
+export function avatarKeyOf(chat: {
+  customerId?: string | null;
+  customerKey?: string | null;
+  userId: string;
+}): string {
+  return chat.customerId || chat.customerKey || chat.userId;
 }
 
 export type ConversationStatus = 'assistant' | 'waiting' | 'advisor' | 'resolved';
