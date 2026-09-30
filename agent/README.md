@@ -133,7 +133,7 @@ DEMO_SESSIONS_JSON="$(cat configs/eval_sessions.json)" CLASSIFIER=llm uv run sta
 
 ### Contra Lakebase
 
-Las herramientas leen `bank_ro` en Lakebase por defecto (`TOOLS_BACKEND=lakebase`). En local usan tu identidad de Databricks, así que hace falta `databricks auth login` y acceso a la instancia `bank-assistant-chat-db`; el detalle está en [docs/14](docs/14-herramientas-sobre-lakebase.md). `TOOLS_BACKEND=mcp` vuelve a las UC functions.
+Las herramientas leen `bank_ro` en Lakebase; no hay camino por MCP. En local usan tu identidad de Databricks, así que hace falta `databricks auth login` y acceso a la instancia `bank-assistant-chat-db`; el detalle está en [docs/14](docs/14-herramientas-sobre-lakebase.md).
 
 ```bash
 LAKEBASE_INSTANCE=bank-assistant-chat-db DEMO_SESSIONS_JSON="$(cat configs/eval_sessions.json)" CLASSIFIER=llm uv run start-server --port 8001

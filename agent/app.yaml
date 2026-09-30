@@ -9,8 +9,6 @@ env:
     value: "databricks-uc"
   - name: MLFLOW_EXPERIMENT_ID
     valueFrom: "experiment"
-  - name: DATABRICKS_WAREHOUSE_ID
-    valueFrom: "sql_warehouse"
   - name: BANK_CATALOG
     value: "workspace"
   - name: LLM_ENDPOINT
@@ -21,9 +19,7 @@ env:
     value: "llm"
   - name: JEV_API_KEY
     valueFrom: "jev_api_key"
-  # The bank data tools read bank_ro in Lakebase; TOOLS_BACKEND=mcp goes back to the UC functions.
-  - name: TOOLS_BACKEND
-    value: "lakebase"
+  # The bank data tools read bank_ro in Lakebase; there is no MCP path.
   - name: LAKEBASE_INSTANCE
     value: "bank-assistant-chat-db"
   - name: LAKEBASE_DATABASE
