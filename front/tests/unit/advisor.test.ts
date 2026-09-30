@@ -43,6 +43,7 @@ function chat(overrides: Partial<AdvisorChat> = {}): AdvisorChat {
     assignedAt: null,
     closedAt: null,
     useCase: 'UC-01',
+    intent: null,
     customerName: null,
     ...overrides,
   };
@@ -133,7 +134,7 @@ function withReason(id: string, reason: string | null): AdvisorChat {
 }
 
 describe('groupByHandoffReason', () => {
-  it('orders sections by reason, unknown ones next, and "Otros" last', () => {
+  it('orders sections by reason, unknown ones next, and "Tomada por un asesor" last', () => {
     const groups = groupByHandoffReason([
       withReason('a', null),
       withReason('b', 'case_status'),
@@ -147,9 +148,9 @@ describe('groupByHandoffReason', () => {
       ['retention', ['e']],
       ['case_status', ['b']],
       ['new_one', ['c']],
-      ['NONE', ['a']],
+      ['taken', ['a']],
     ]);
-    expect(groups.at(-1)?.label).toBe('Otros');
+    expect(groups.at(-1)?.label).toBe('Tomada por un asesor');
   });
 
   it('returns only the sections that have chats', () => {
@@ -192,10 +193,12 @@ describe('reasonTagOf', () => {
     expect(reasonTagOf(chat({ handledBy: 'human_agent', handoff: complaint }))).toBe('complaint');
   });
 
-  it("is David's case while he has it, never for Otros", () => {
+  it("is David's case while he has it, nothing without a reason yet", () => {
     expect(reasonTagOf(chat({ useCase: 'GENERAL_INQUIRY' }))).toBe('general');
     expect(reasonTagOf(chat({ useCase: 'CANCEL' }))).toBe('retention');
     expect(reasonTagOf(chat({ useCase: 'GREETING' }))).toBeNull();
+    expect(reasonTagOf(chat({ useCase: null, intent: 'GREETING' }))).toBeNull();
+    expect(reasonTagOf(chat({ useCase: null, intent: 'OUT_OF_SCOPE' }))).toBe('out_of_scope');
     // Back with David after a handoff: his case again.
     expect(reasonTagOf(chat({ useCase: 'CANCEL', handoff: complaint }))).toBe('retention');
   });
@@ -394,7 +397,7 @@ describe('holderLabel', () => {
 });
 
 describe('groupByDavidSection', () => {
-  it('sections Agente AI by what David is working on, Otros last', () => {
+  it('sections Agente AI by what David is working on, no reason yet last', () => {
     const groups = groupByDavidSection([
       chat({ id: 'a', useCase: 'GREETING' }),
       chat({ id: 'b', useCase: 'CANCEL' }),
@@ -409,7 +412,24 @@ describe('groupByDavidSection', () => {
       ['retention', 'Cancelación de producto', ['b', 'e']],
       ['case_status', 'Estado de un reclamo', ['g']],
       ['general', 'Consultas generales', ['c']],
-      ['NONE', 'Otros', ['a', 'f']],
+      ['no_reason', 'Sin motivo aún', ['a', 'f']],
+    ]);
+  });
+
+  it('puts chats without a case under Fuera de alcance or Sin motivo aún, never Otros', () => {
+    const groups = groupByDavidSection([
+      chat({ id: 'a', useCase: null, intent: 'OUT_OF_SCOPE' }),
+      chat({ id: 'b', useCase: null, intent: 'GREETING' }),
+      chat({ id: 'c', useCase: null, intent: 'COMMERCIAL' }),
+      chat({ id: 'd', useCase: null, intent: null }),
+      chat({ id: 'e', useCase: null, intent: 'HUMAN_AGENT' }),
+      // A case stays its section even after an off-topic turn.
+      chat({ id: 'f', useCase: 'COMPLAINT', intent: 'OUT_OF_SCOPE' }),
+    ]);
+    expect(groups.map((g) => [g.id, g.label, g.chats.map((c) => c.id)])).toEqual([
+      ['complaint', 'Reclamo', ['f']],
+      ['out_of_scope', 'Fuera de alcance', ['a', 'c']],
+      ['no_reason', 'Sin motivo aún', ['b', 'd', 'e']],
     ]);
   });
 });

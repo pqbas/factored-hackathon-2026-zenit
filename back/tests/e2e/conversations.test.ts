@@ -18,6 +18,7 @@ type Chat = {
   assignedAt: string | null;
   closedAt: string | null;
   useCase: string | null;
+  intent?: string | null;
   customerName?: string | null;
   customerId?: string | null;
   customerKey?: string;
@@ -38,7 +39,10 @@ type Message = {
 // An in-memory advisor API that follows the back's contract
 // (back/spec/28-09-26-consola-asesor/requirements.md §1), served in the
 // browser with page.route.
-async function mockAdvisorApi(page: Page, me: string, role: Role = 'advisor') {
+// `extra` adds chats for one test without changing the shared fixture.
+type ExtraChat = [id: string, email: string, fields: Partial<Chat>];
+
+async function mockAdvisorApi(page: Page, me: string, role: Role = 'advisor', extra: ExtraChat[] = []) {
   let seq = 0;
   const now = () => new Date(Date.UTC(2026, 8, 28, 10, 0, seq++)).toISOString();
   const chat = (id: string, email: string, extra: Partial<Chat>): Chat => ({
@@ -105,6 +109,7 @@ async function mockAdvisorApi(page: Page, me: string, role: Role = 'advisor') {
       assignedAt: now(),
     }),
     chat('c-closed', 'marta@banco.test', { closedAt: now() }),
+    ...extra.map(([id, email, fields]) => chat(id, email, fields)),
   ];
   const messages: Message[] = [];
   const say = (chatId: string, senderType: Message['senderType'], text: string, senderId: string | null = null) => {
@@ -240,9 +245,9 @@ async function mockAdvisorApi(page: Page, me: string, role: Role = 'advisor') {
   return requested;
 }
 
-async function openConsole(page: Page, role: Role = 'advisor', email = ME) {
+async function openConsole(page: Page, role: Role = 'advisor', email = ME, extra: ExtraChat[] = []) {
   await mockSessionRole(page, role, email);
-  const requested = await mockAdvisorApi(page, email, role);
+  const requested = await mockAdvisorApi(page, email, role, extra);
   await page.goto('/conversations');
   return requested;
 }
@@ -260,13 +265,15 @@ test.describe('Advisor console', () => {
     // Only the cases that need a person: David's own chat isn't here.
     await expect(rows(page)).toHaveCount(3);
     await expect(page.getByTestId('conversation-row-c-assistant')).toHaveCount(0);
-    // Sections by handoff reason; the ones without a handoff go in "Otros".
+    // Sections by handoff reason; the ones taken without a handoff go last.
     await expect(page.getByTestId('inbox-section-complaint').getByTestId('conversation-row-c-waiting')).toBeVisible();
     await expect(page.getByTestId('reason-chip-complaint')).toHaveText('Reclamo');
     await expect(page.getByTestId('inbox-section-retention')).toHaveCount(0);
-    await expect(page.getByTestId('reason-chip-NONE')).toHaveText('Otros');
-    await expect(page.getByTestId('inbox-section-NONE').getByTestId('conversation-row-c-race')).toBeVisible();
-    await expect(page.getByTestId('inbox-section-NONE').getByTestId('conversation-row-c-other')).toBeVisible();
+    await expect(page.getByTestId('reason-chip-taken')).toHaveText('Tomada por un asesor');
+    await expect(page.getByTestId('inbox-section-taken').getByTestId('conversation-row-c-race')).toBeVisible();
+    await expect(page.getByTestId('inbox-section-taken').getByTestId('conversation-row-c-other')).toBeVisible();
+    await expect(page.getByTestId('reason-chip-NONE')).toHaveCount(0);
+    await expect(page.getByText('Otros', { exact: true })).toHaveCount(0);
 
     await page.getByTestId('view-waiting').click();
     await expect(rows(page)).toHaveCount(2);
@@ -722,11 +729,24 @@ test.describe('Advisor console', () => {
   });
 
   test('Agente AI is split in sections by what David is working on', async ({ page }) => {
-    await openConsole(page);
+    await openConsole(page, 'advisor', ME, [
+      ['c-offtopic', 'pedro@banco.test', { useCase: null, intent: 'OUT_OF_SCOPE' }],
+      ['c-hello', 'ana@banco.test', { useCase: null, intent: 'GREETING' }],
+    ]);
     await page.getByTestId('view-david').click();
     const section = page.getByTestId('inbox-section-general');
     await expect(section.getByTestId('reason-chip-general')).toHaveText('Consultas generales');
     await expect(section.getByTestId('conversation-row-c-assistant')).toBeVisible();
+    // Without a case: off-topic, then no reason yet, last. Never "Otros".
+    await expect(page.getByTestId('reason-chip-out_of_scope')).toHaveText('Fuera de alcance');
+    await expect(page.getByTestId('inbox-section-out_of_scope').getByTestId('conversation-row-c-offtopic')).toBeVisible();
+    await expect(page.getByTestId('reason-chip-no_reason')).toHaveText('Sin motivo aún');
+    await expect(page.getByTestId('inbox-section-no_reason').getByTestId('conversation-row-c-hello')).toBeVisible();
+    const order = await page.locator('[data-testid^="inbox-section-"]').evaluateAll((els) =>
+      els.map((el) => el.getAttribute('data-testid')),
+    );
+    expect(order.slice(-2)).toEqual(['inbox-section-out_of_scope', 'inbox-section-no_reason']);
+    await expect(page.getByText('Otros', { exact: true })).toHaveCount(0);
     // Other views stay flat.
     await page.getByTestId('view-waiting').click();
     await expect(page.locator('[data-testid^="inbox-section-"]')).toHaveCount(0);

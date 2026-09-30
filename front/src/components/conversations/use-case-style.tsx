@@ -93,8 +93,7 @@ const NEUTRAL_SECTION_ICON: Record<string, LucideIcon> = {
 export function handoffReasonStyle(id: string) {
   const style = STYLE[REASON_STYLE[id]];
   if (style) return style;
-  const icon = NEUTRAL_SECTION_ICON[id];
-  return icon ? { ...NEUTRAL, icon } : NEUTRAL;
+  return id in NEUTRAL_SECTION_ICON ? { ...NEUTRAL, icon: NEUTRAL_SECTION_ICON[id] } : NEUTRAL;
 }
 
 export function HandoffReasonIcon({ id, className }: { id: string; className?: string }) {
