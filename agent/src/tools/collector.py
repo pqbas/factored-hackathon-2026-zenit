@@ -5,12 +5,12 @@ import logging
 import re
 from typing import Literal
 
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from pydantic import BaseModel
 
-from src.llm.fallback import normalize
+from src.llm.fallback import answered_reason_question, mask_sensitive, normalize
 from src.prompts import messages as texts
-from src.tools.handoff import PartialComplaintCase, PartialRetentionCase
+from src.tools.handoff import PartialComplaintCase, PartialRetentionCase, verify_case
 
 logger = logging.getLogger(__name__)
 
@@ -174,9 +174,10 @@ def card_to_fetch(reason: str, fields, rows_by_tool: dict) -> str | None:
 
 def next_step(
     reason: str, fields, rows_by_tool: dict[str, list[dict]], language: str = "es", messages: list | None = None
-) -> tuple[Literal["ask", "summary"], str]:
-    """The fixed question for the first missing or mismatching field of the case, or the summary
-    when every field is there and matches the bank's rows. Calls nothing."""
+) -> tuple[Literal["ask", "summary", "handoff"], str | dict]:
+    """The fixed question for the first missing or mismatching field of the case, the summary
+    when every field is there and matches the bank's rows, or, for a cancellation, the verified
+    case to hand off. Calls nothing."""
     if reason == "retention":
         return _retention_step(fields, rows_by_tool, language, messages or [])
     return _complaint_step(fields, rows_by_tool, language)
@@ -248,11 +249,23 @@ def _retention_step(fields, rows_by_tool: dict, language: str, messages: list):
     product = next((p for p in products if p["product_number_last4"] == last4), None)
     if product is None:
         return "ask", _not_found("product", language) + ask_product
-    reason = " ".join((fields.reason or "").split())
+    reason = " ".join(_reason_given(fields, messages).split())
     if not reason:
         return "ask", texts.ASK_REASON[language]
-    summary = texts.RETENTION_SUMMARY[language].format(product=_product_label(product, language), reason=reason)
-    return "summary", summary
+    # A cancellation has no summary or confirmation: with the product and the reason it is handed off.
+    verified = verify_case("retention", {"product_last4": last4, "reason": reason}, rows_by_tool)
+    if isinstance(verified, str):
+        return "ask", ask_product
+    return "handoff", verified
+
+
+def _reason_given(fields, messages: list) -> str:
+    """The customer's answer to "¿Por qué quieres cancelarlo?" as written, else the extracted reason."""
+    if len(messages) >= 2 and isinstance(messages[-2], AIMessage) and isinstance(messages[-1], HumanMessage):
+        previous = messages[-2].content
+        if answered_reason_question(previous if isinstance(previous, str) else None):
+            return mask_sensitive(_human_texts(messages[-1:])[0])
+    return fields.reason or ""
 
 
 def _not_found(what: str, language: str) -> str:

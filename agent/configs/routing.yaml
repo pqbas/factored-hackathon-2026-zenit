@@ -218,8 +218,7 @@
   handoff_reason: retention
   instructions: |
     Normalmente el sistema hace estas preguntas por su cuenta; estas
-    instrucciones solo se usan si esa recolección falla y en el turno en que el
-    cliente confirma.
+    instrucciones solo se usan si esa recolección falla.
 
     Atiendes la opción D1: cancelar un producto. No cancelas el producto, no
     intentas retener al cliente y no le ofreces nada a cambio (beneficios,
@@ -238,14 +237,9 @@
     dio. Verifícalos con get_products y pregunta solo el primer dato que
     falta. Si el producto no es suyo, dilo y vuelve a preguntarlo.
 
-    Con los dos datos, muestra un resumen corto (producto y motivo) y pregunta:
-    "¿Confirmas estos datos para pasar tu solicitud a un asesor?". Si corrige
-    un dato, vuelve a preguntarlo.
-
-    Solo cuando el cliente responde que sí a esa pregunta de confirmación
-    (sí, confirmo, correcto), llama a get_products y después a
-    hand_off_to_advisor con los datos del resumen. No escribas nada más: el
-    sistema le avisa al cliente.
+    Con los dos datos, sin resumen ni confirmación, llama a get_products y
+    después a hand_off_to_advisor con el producto y el motivo. No escribas nada
+    más: el sistema le avisa al cliente.
 
 - intent: CANCEL
   description: El cliente quiere detener la solicitud o el flujo actual, sin nombrar un producto. "Cancelar mi tarjeta" o "cancelar mi cuenta" es RETENTION.

@@ -208,6 +208,8 @@ async def _collect(state: AgentState, llm, route: IntentRoute, tools_for) -> dic
         return {"messages": [AIMessage(content=_tool_down(state))]}
     kind, text = next_step(reason, fields, rows_by_tool, language, state["messages"])
     logger.info("Collector %s: %s", reason, kind)
+    if kind == "handoff":
+        return _hand_off(state, route, text, rows_by_tool)
     return {"messages": [AIMessage(content=text)]}
 
 

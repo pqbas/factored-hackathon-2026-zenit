@@ -15,6 +15,7 @@ from src.llm.fallback import (
     mask_sensitive,
     menu_rule_intent,
     names_a_product_to_cancel,
+    retention_in_progress,
 )
 from src.prompts.messages import CARD_OPTIONS, GUARDRAIL_REPLIES, MORE_OPTIONS, SAVINGS_OPTIONS
 from src.schemas.classification import (
@@ -127,6 +128,19 @@ async def classify(
             guardrail_probability=0.0,
             language=detect_language(text),
             intent="CASE_STATUS",
+            intent_confidence=1.0,
+            sentiment="neutral",
+            source="rules",
+        )
+    elif retention_in_progress(text, previous_reply):
+        # Once the customer is cancelling a product, the answers to David's two questions
+        # (which product, why) are part of it: the reason is free text, never reclassified.
+        masked_text = None
+        classification = Classification(
+            guardrail="OK",
+            guardrail_probability=0.0,
+            language=detect_language(text),
+            intent="RETENTION",
             intent_confidence=1.0,
             sentiment="neutral",
             source="rules",

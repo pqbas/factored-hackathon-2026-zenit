@@ -9,6 +9,7 @@ from src.llm.fallback import (
     fallback_classify,
     is_confirmation,
     mask_sensitive,
+    retention_in_progress,
 )
 
 INTENTS = ["GENERAL_INQUIRY", "COMPLAINT", "HUMAN_AGENT", "CANCEL", "GREETING", "OUT_OF_SCOPE"]
@@ -262,3 +263,31 @@ def test_case_status_follow_up_is_false_for_a_menu_letter_menu_or_cancel(text):
 )
 def test_case_status_follow_up_is_false_without_a_question_about_the_complaint(previous):
     assert not case_status_follow_up("la 1070", previous)
+
+
+@pytest.mark.parametrize(
+    "previous",
+    [
+        "¿Qué producto quieres cancelar?\n\n- Tarjeta Crédito terminada en 4930 (USD)",
+        "Qual produto você quer cancelar?\n\n- Cartão terminado em 4930",
+        "No encuentro ese producto entre los tuyos.\n\n¿Qué producto quieres cancelar?\n\n- x",
+        "¿Por qué quieres cancelarlo?",
+        "Por que você quer cancelá-lo?",
+    ],
+)
+def test_retention_stays_in_progress_after_one_of_its_questions(previous):
+    assert retention_in_progress("la de 4930", previous)
+    assert retention_in_progress("es que la anualidad es muy cara", previous)
+
+
+@pytest.mark.parametrize("text", ["cancelar", "olvídalo", "menú", "ver menú", "C", "a"])
+def test_retention_in_progress_leaves_cancel_menu_and_letters_to_their_rules(text):
+    assert not retention_in_progress(text, "¿Por qué quieres cancelarlo?")
+
+
+@pytest.mark.parametrize(
+    "previous",
+    [None, "", "Tu saldo es 100 USD.", "¿De qué tarjeta es el cargo?", "¿Por qué quieres cancelarlo? Cuéntame más."],
+)
+def test_retention_is_not_in_progress_after_another_reply(previous):
+    assert not retention_in_progress("la de 4930", previous)

@@ -4,6 +4,7 @@ import re
 import unicodedata
 from collections.abc import Iterable
 
+from src.prompts.messages import ASK_PRODUCT, ASK_REASON
 from src.schemas.classification import Classification
 
 
@@ -231,3 +232,31 @@ def menu_rule_intent(text: str, previous_reply: str | None, submenus: dict[str, 
 
 def names_a_product_to_cancel(text: str) -> bool:
     return _RETENTION.search(normalize(text)) is not None
+
+
+_RETENTION_QUESTIONS = tuple(normalize(text.split("\n")[0]) for text in ASK_PRODUCT.values())
+_REASON_QUESTIONS = {normalize(text) for text in ASK_REASON.values()}
+
+
+def asked_retention_question(previous_reply: str | None) -> bool:
+    """Whether David's previous reply is one of the cancellation's own questions: the product
+    (possibly after a "no encuentro ese producto" line) or the reason."""
+    if not previous_reply:
+        return False
+    previous = normalize(previous_reply).strip()
+    if previous in _REASON_QUESTIONS:
+        return True
+    return any(previous.startswith(q) or ("\n\n" + q) in previous for q in _RETENTION_QUESTIONS)
+
+
+def retention_in_progress(text: str, previous_reply: str | None) -> bool:
+    """Whether the text answers one of the cancellation's questions, so the operation stays
+    RETENTION without the classifier. A cancel, "menú" and a menu letter keep their own rules."""
+    if not asked_retention_question(previous_reply):
+        return False
+    t = normalize(text).strip(" .!?)")
+    return not (_MENU_WORDS.fullmatch(t) or _MENU_LETTER.fullmatch(t) or _CANCEL.match(t))
+
+
+def answered_reason_question(previous_reply: str | None) -> bool:
+    return bool(previous_reply) and normalize(previous_reply).strip() in _REASON_QUESTIONS

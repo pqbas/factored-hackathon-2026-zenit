@@ -1027,30 +1027,86 @@ def test_the_charges_movements_are_fetched_only_for_a_card_that_is_the_customers
     assert list_transactions.calls == []
 
 
-def test_a_retention_turn_asks_the_reason_after_the_product_and_summarizes_when_complete():
+RETENTION_ROUTES = [*ROUTES, IntentRoute(
+    intent="RETENTION", description="Cancelar", examples=["cancelar mi tarjeta"], destination="load_context",
+    schemas=["bank_uc_consultas"], instructions="Recolecta y deriva.", handoff_reason="retention",
+)]
+
+
+def _retention_graph(llm, jev, result=None):
+    get_products = FakeMCPTool("get_products", GET_PRODUCTS_SCHEMA, result=result or _PRODUCTS_RESULT)
+    list_transactions = FakeMCPTool("list_transactions", LIST_TRANSACTIONS_SCHEMA, result=[])
+    return _build_graph(llm, jev, routes=RETENTION_ROUTES, tools_for=_fake_tools_for(get_products, list_transactions))
+
+
+def test_a_retention_turn_asks_the_reason_after_the_product_and_hands_off_when_complete():
     from src.tools.handoff import PartialRetentionCase
 
     llm = _CollectingLLM([
         PartialRetentionCase(product_last4="4930"),
-        PartialRetentionCase(product_last4="4930", reason="comisión alta"),
+        PartialRetentionCase(product_last4="4930"),
     ])
-    routes = [*ROUTES, IntentRoute(
-        intent="RETENTION", description="Cancelar", examples=["cancelar mi tarjeta"], destination="load_context",
-        schemas=["bank_uc_consultas"], instructions="Recolecta y deriva.", handoff_reason="retention",
-    )]
-    get_products = FakeMCPTool("get_products", GET_PRODUCTS_SCHEMA, result=_PRODUCTS_RESULT)
-    list_transactions = FakeMCPTool("list_transactions", LIST_TRANSACTIONS_SCHEMA, result=[])
     jev = FakeJev(_classification(intent="RETENTION"))
-    graph = _build_graph(llm, jev, routes=routes, tools_for=_fake_tools_for(get_products, list_transactions))
+    graph = _retention_graph(llm, jev)
 
     first = _run(graph, "quiero cancelar la 4930")["messages"][-1].content
-    second = _run(graph, "por la comisión", history=[
+    result = _run(graph, "por la   comisión alta", history=[
         {"role": "user", "content": "quiero cancelar la 4930"}, {"role": "assistant", "content": first},
-    ])["messages"][-1].content
+    ])
 
     assert first == "¿Por qué quieres cancelarlo?"
-    assert second.splitlines()[-1] == "¿Confirmas estos datos para pasar tu solicitud a un asesor?"
-    assert "comisión alta" in second
+    assert result["messages"][-1].content == HANDOFF_REPLY["es"]
+    assert result["handoff"]["reason"] == "retention"
+    verified = result["handoff"]["facts"]["verified_data"]
+    assert verified["product_last4"] == "4930" and verified["reason"] == "por la comisión alta"
+    assert set(verified) == {"product_type", "product_last4", "currency", "reason"}
+    # The reason turn is RETENTION by rule: Jev was only asked in the first turn.
+    assert jev.calls == 1
+
+
+def test_the_four_messages_of_a_cancellation_end_in_a_retention_handoff_without_the_classifier_on_the_answers():
+    from src.tools.handoff import PartialRetentionCase
+
+    llm = _CollectingLLM([
+        PartialRetentionCase(),
+        PartialRetentionCase(product_last4="2705"),
+        PartialRetentionCase(product_last4="2705"),
+    ])
+    jev = FakeJev(_classification(intent="RETENTION"))
+    graph = _retention_graph(llm, jev, _CARD_AND_SAVINGS_RESULT)
+    history: list = []
+    replies = []
+    for text in ("quiero cancelar un producto", "la de 2705", "es muy cara la anualidad"):
+        result = _run(graph, text, history=history)
+        replies.append(result["messages"][-1].content)
+        history += [{"role": "user", "content": text}, {"role": "assistant", "content": replies[-1]}]
+
+    assert replies[0].startswith("¿Qué producto quieres cancelar?")
+    assert replies[1] == "¿Por qué quieres cancelarlo?"
+    assert replies[2] == HANDOFF_REPLY["es"]
+    assert jev.calls == 1
+    assert result["handoff"]["facts"]["verified_data"]["reason"] == "es muy cara la anualidad"
+
+
+def test_cancelar_after_the_reasons_question_still_cancels():
+    jev = FakeJev(_classification(intent="CANCEL"))
+    graph = _retention_graph(ExplodingLLM(), jev)
+    result = _run(graph, "cancelar", history=[
+        {"role": "user", "content": "quiero cancelar la 4930"},
+        {"role": "assistant", "content": "¿Por qué quieres cancelarlo?"},
+    ])
+    assert result["classification"]["intent"] == "CANCEL"
+    assert jev.calls == 1
+
+
+def test_a_menu_letter_after_the_reasons_question_keeps_its_rule():
+    jev = FakeJev(_classification(intent="RETENTION"))
+    result = _run(_retention_graph(ExplodingLLM(), jev), "menú", history=[
+        {"role": "user", "content": "quiero cancelar la 4930"},
+        {"role": "assistant", "content": "¿Por qué quieres cancelarlo?"},
+    ])
+    assert result["classification"]["intent"] == "MENU"
+    assert jev.calls == 0
 
 
 def test_a_verified_handoff_ends_the_round_without_running_the_other_tool_calls_or_calling_the_llm_again():
@@ -1203,38 +1259,20 @@ _CARD_AND_SAVINGS_RESULT = [{"type": "text", "text": json.dumps({
 })}]
 
 
-def test_cancelling_the_card_with_the_reason_given_summarizes_and_the_yes_hands_off():
+def test_cancelling_the_card_with_the_reason_in_the_first_message_hands_off_in_that_turn():
     from src.tools.handoff import PartialRetentionCase
 
-    llm = _CollectingLLM(
-        [PartialRetentionCase(reason="la anualidad es muy cara")],
-        replies=[AIMessage(content="", tool_calls=[{
-            "name": "hand_off_to_advisor", "id": "c1",
-            "args": {"product_last4": "2705", "reason": "la anualidad es muy cara"},
-        }])],
-    )
-    routes = [*ROUTES, IntentRoute(
-        intent="RETENTION", description="Cancelar", examples=["cancelar mi tarjeta"], destination="load_context",
-        schemas=["bank_uc_consultas"], instructions="Recolecta y deriva.", handoff_reason="retention",
-    )]
-    get_products = FakeMCPTool("get_products", GET_PRODUCTS_SCHEMA, result=_CARD_AND_SAVINGS_RESULT)
-    list_transactions = FakeMCPTool("list_transactions", LIST_TRANSACTIONS_SCHEMA, result=[])
+    llm = _CollectingLLM([PartialRetentionCase(reason="la anualidad es muy cara")])
     jev = FakeJev(_classification(intent="RETENTION"))
-    graph = _build_graph(llm, jev, routes=routes, tools_for=_fake_tools_for(get_products, list_transactions))
+    graph = _retention_graph(llm, jev, _CARD_AND_SAVINGS_RESULT)
 
-    text = "quiero cerrar mi tarjeta porque la anualidad es muy cara"
-    first = _run(graph, text)["messages"][-1].content
-    assert first.splitlines()[-1] == "¿Confirmas estos datos para pasar tu solicitud a un asesor?"
-    assert "2705" in first and "2948" not in first
-
-    result = _run(graph, "sí, confirmo", history=[
-        {"role": "user", "content": text}, {"role": "assistant", "content": first},
-    ])
+    result = _run(graph, "quiero cerrar mi tarjeta porque la anualidad es muy cara")
 
     assert result["messages"][-1].content == HANDOFF_REPLY["es"]
     verified = result["handoff"]["facts"]["verified_data"]
     assert result["handoff"]["reason"] == "retention"
     assert verified["product_last4"] == "2705" and verified["reason"] == "la anualidad es muy cara"
+    assert verified["product_type"] == "Tarjeta Crédito" and verified["currency"] == "ARS"
 
 
 MOVEMENTS_DRAFT = "Tus movimientos:\n- 26/02/2026 Tienda X 443.88 USD Aprobado"
