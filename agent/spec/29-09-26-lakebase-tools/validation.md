@@ -14,7 +14,10 @@
 - [ ] `bind_customer` discards the LLM's `customer_id` on a Lakebase tool
 - [ ] `tools_for` returns the Lakebase tools by default and the MCP ones with `TOOLS_BACKEND=mcp`
 
+- [ ] An unresponsive Lakebase (timeout) makes the tool raise within the timeout
+
 #### Integration
+- [ ] A Lakebase timeout during a turn ends in the tool-failure reply, with no handoff and no figures
 
 - [ ] A balance turn and a verified complaint handoff work with the Lakebase tools over a fake pool
 

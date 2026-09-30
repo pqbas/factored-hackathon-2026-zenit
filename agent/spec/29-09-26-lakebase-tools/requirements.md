@@ -22,7 +22,7 @@ And it changes in these ways:
 
 5. Each tool runs one fixed, parameterized SQL query against `bank_ro` in Lakebase. The LLM never writes SQL, and the only values bound are the session's `customer_id` and the `product_last4` the LLM passes.
 6. The agent connects to Lakebase with its Databricks identity through an OAuth-token Postgres pool: the App's service principal in prod, and the developer locally. The Postgres role has only `USAGE` on `bank_ro` and `SELECT` on its three tables.
-7. A failing query raises like any tool failure today, so the tool-down reply and `fail_tools` keep working.
+7. A failing or slow query raises like any tool failure today, so the tool-down reply ("Ahora no puedo consultar esa información." once eval-fixes merges) and `fail_tools` keep working. The pool has a short connect timeout (5 s) and each query a short `statement_timeout` (5 s), so an unresponsive Lakebase fails fast instead of hanging the turn.
 8. The managed MCP and UC function path is no longer used at runtime. It stays in the code behind `TOOLS_BACKEND=mcp` as a rollback, while `lakebase` is the default. The UC functions stay in UC, documented as the governed definition the SQL mirrors.
 
 ## 2. Decisions
