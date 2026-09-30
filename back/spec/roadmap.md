@@ -438,3 +438,22 @@ arrastrar el de una conversación cerrada.
       se cumplía).
 
 Shipped en PR #94.
+
+---
+
+## Phase 18: El examen contra producción (Complete)
+
+**Goal:** medir en prod la precisión, el p50 y el p95 con el holdout (pedido
+explícito del usuario vía w1:p4, 30-09-26). Spec en
+spec/30-09-26-eval-prod/.
+
+- [x] `npm run eval --allow-prod` contra la App desplegada, con el token OAuth
+      del usuario; `eval:cleanup` borra los chats de prueba por id (PR #97).
+- [x] Tokens demo de la evaluación en los `app.yaml` de prod (PR #97).
+- [x] Holdout 20×3 en prod, antes y después del fix de MLflow: pasan 88.3% y
+      95.0%, 0 inseguros, p50/p95 2.0/3.7 s por turno
+      (`scripts/eval/results/comparacion-prod.md`).
+
+Shipped en PR #99. Pendiente: borrar de la base de prod los 120 chats de prueba (lo decide el
+usuario; `npm run eval:cleanup`).
+
