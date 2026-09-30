@@ -60,6 +60,8 @@ flowchart TB
 
 Dashed arrows are designed but not built yet ([docs/agent_architecture.md](docs/agent_architecture.md)).
 
+The agent and the back read the bank's data from read-only Lakebase synced tables (`bank_ro`), not from the SQL warehouse: lineage, freshness policy and cost in [docs/datos-banco-lakebase.md](docs/datos-banco-lakebase.md).
+
 | Layer | Choice | Why |
 |---|---|---|
 | Agent control flow | LangGraph graph routed by code (`dispute/graph.py`) | Every transition is named, testable and auditable. LLM output never picks the next step. |

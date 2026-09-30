@@ -16,8 +16,6 @@ from src.tools.handoff import PartialComplaintCase, PartialRetentionCase
 CONFIRM = {
     ("complaint", "es"): "¿Confirmas estos datos para pasar tu reclamo a un asesor?",
     ("complaint", "pt"): "Você confirma estes dados para passar sua reclamação a um atendente?",
-    ("retention", "es"): "¿Confirmas estos datos para pasar tu solicitud a un asesor?",
-    ("retention", "pt"): "Você confirma estes dados para passar sua solicitação a um atendente?",
 }
 
 PRODUCTS = [
@@ -192,12 +190,36 @@ def test_retention_asks_the_reason_after_the_product():
 
 
 @pytest.mark.parametrize("language", ["es", "pt"])
-def test_a_complete_retention_gets_the_summary_ending_in_the_exact_confirmation_question(language):
+def test_a_complete_retention_is_handed_off_without_a_summary(language):
     fields = PartialRetentionCase(product_last4="1070", reason="comisión muy alta")
-    kind, text = _step(fields, language, reason="retention")
-    assert kind == "summary"
-    assert text.splitlines()[-1] == CONFIRM[("retention", language)]
-    assert "1070" in text and "comisión muy alta" in text
+    kind, verified = _step(fields, language, reason="retention")
+    assert kind == "handoff"
+    assert verified == {
+        "product_type": "Tarjeta Crédito", "product_last4": "1070", "currency": "PEN", "reason": "comisión muy alta",
+    }
+
+
+@pytest.mark.parametrize(
+    ("question", "language"), [("¿Por qué quieres cancelarlo?", "es"), ("Por que você quer cancelá-lo?", "pt")]
+)
+def test_the_reason_is_the_answer_to_the_reasons_question_as_written(question, language):
+    messages = [AIMessage(content=question), HumanMessage(content="  no me gusta   nada, mi CVV es 123 ")]
+    fields = PartialRetentionCase(product_last4="1070", reason="algo que el extractor resumió")
+    kind, verified = next_step("retention", fields, ROWS, language, messages)
+    assert kind == "handoff"
+    assert verified["reason"] == "no me gusta nada, mi [DATO OCULTO]"
+
+
+def test_the_reason_answer_is_masked():
+    messages = [AIMessage(content="¿Por qué quieres cancelarlo?"), HumanMessage(content="porque mi contraseña es abc123")]
+    _, verified = next_step("retention", PartialRetentionCase(product_last4="1070"), ROWS, "es", messages)
+    assert "abc123" not in verified["reason"]
+
+
+def test_a_reason_the_extractor_found_is_used_when_the_reason_was_not_just_asked():
+    messages = [AIMessage(content="otra cosa"), HumanMessage(content="quiero cerrarla, es cara")]
+    fields = PartialRetentionCase(product_last4="1070", reason="es cara")
+    assert next_step("retention", fields, ROWS, "es", messages)[1]["reason"] == "es cara"
 
 
 def test_retention_without_products_is_left_to_the_llm():
@@ -284,3 +306,48 @@ def test_the_partial_schemas_have_the_cases_fields_all_optional():
     assert set(PartialRetentionCase.model_fields) == {"product_last4", "reason"}
     with pytest.raises(ValueError):
         PartialComplaintCase(complaint_type="whatever")
+
+
+CARDS_AND_SAVINGS = [
+    {"product_type": "Cuenta Ahorros", "product_number_last4": "2948", "currency": "ARS"},
+    {"product_type": "Cuenta Ahorros", "product_number_last4": "3953", "currency": "ARS"},
+    {"product_type": "Tarjeta Crédito", "product_number_last4": "2705", "currency": "ARS"},
+]
+
+
+def _closing(text, rows):
+    from src.tools.collector import next_step as step
+
+    fields = PartialRetentionCase(reason="la anualidad es muy cara")
+    return step("retention", fields, {"get_products": rows}, "es", [HumanMessage(content=text)])
+
+
+def test_retention_takes_the_only_card_when_the_customer_names_cards():
+    kind, verified = _closing("quiero cerrar mi tarjeta porque la anualidad es muy cara", CARDS_AND_SAVINGS)
+    assert kind == "handoff"
+    assert verified["product_last4"] == "2705" and verified["reason"] == "la anualidad es muy cara"
+
+
+def test_retention_takes_the_only_savings_account_when_the_customer_names_an_account():
+    rows = [CARDS_AND_SAVINGS[0], CARDS_AND_SAVINGS[2]]
+    kind, verified = _closing("cerrar mi cuenta", rows)
+    assert kind == "handoff" and verified["product_last4"] == "2948"
+
+
+def test_retention_lists_only_the_cards_when_there_are_several():
+    rows = [*CARDS_AND_SAVINGS, {"product_type": "Tarjeta Crédito", "product_number_last4": "7788", "currency": "ARS"}]
+    kind, text = _closing("quiero cerrar mi tarjeta", rows)
+    assert kind == "ask"
+    assert "2705" in text and "7788" in text
+    assert "2948" not in text and "3953" not in text
+
+
+def test_retention_lists_all_products_when_the_customer_names_no_kind():
+    kind, text = _closing("quiero cerrar un producto", CARDS_AND_SAVINGS)
+    assert kind == "ask"
+    assert all(last4 in text for last4 in ("2948", "3953", "2705"))
+
+
+def test_retention_lists_the_savings_accounts_for_a_portuguese_conta():
+    kind, text = _closing("quero fechar minha conta", CARDS_AND_SAVINGS)
+    assert kind == "ask" and "2948" in text and "3953" in text and "2705" not in text

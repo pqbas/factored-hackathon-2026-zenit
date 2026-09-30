@@ -85,6 +85,13 @@ GREETING_REPLY: dict[str, str] = {
     "pt": "Olá! Sou o David, seu assistente virtual do banco.",
 }
 
+# 3.D2 with no complaints on record: said together with "No encuentro reclamos registrados."
+# The question mentions the reclamo, so the answer stays in CASE_STATUS (fallback.case_status_follow_up).
+ASK_CASE_CHARGE: dict[str, str] = {
+    "es": "¿Sobre qué cargo es tu reclamo? Dime la tarjeta, la fecha y el comercio o el monto.",
+    "pt": "Sobre qual cobrança é a sua reclamação? Me diga o cartão, a data e o comércio ou o valor.",
+}
+
 # 3.A and 3.B, step 2: what the customer wants from the product they picked by its letter.
 CARD_OPTIONS: dict[str, str] = {
     "es": "¿Qué quieres ver de tu tarjeta de crédito?\n\n1) Saldo, límite y cupo disponible\n2) Movimientos",
@@ -105,6 +112,18 @@ MORE_OPTIONS: dict[str, str] = {
 OUT_OF_MENU: dict[str, str] = {
     "es": "No puedo ayudarte con eso por aquí.",
     "pt": "Não posso ajudar com isso por aqui.",
+}
+
+# A UC tool failed: code writes this, since the LLM paraphrased it.
+TOOL_DOWN: dict[str, str] = {
+    "es": "Ahora no puedo consultar esa información.",
+    "pt": "Agora não consigo consultar essa informação.",
+}
+
+# Loans, debit card, payment date, minimum payment, total debt and transfers: no tool returns them.
+NOT_AVAILABLE: dict[str, str] = {
+    "es": "Esa consulta todavía no está disponible en este chat.",
+    "pt": "Essa consulta ainda não está disponível neste chat.",
 }
 
 # A request for a person without an operation: David asks what it's about, through the menu.

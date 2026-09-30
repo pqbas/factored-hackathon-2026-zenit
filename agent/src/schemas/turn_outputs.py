@@ -14,12 +14,17 @@ def turn_custom_outputs(
     model: str | None = None,
     prompt_version: str | None = None,
     classifier: str | None = None,
+    guard: dict | None = None,
 ) -> dict:
     """The signals the back stores for each turn (docs/limites-agente-back.md). Only labels,
     never message text, so no sensitive data can leave through them."""
     # Tokens summed over the turn's LLM calls (None when none reported usage), the configured
     # model and classifier, and the hash of the prompt files: the evaluation runner's signals.
-    signals = {"usage": usage, "model": model, "prompt_version": prompt_version, "classifier": classifier}
+    # guard is { fired, missing_tool, action } when the grounding guard stopped a reply, else None.
+    signals = {
+        "usage": usage, "model": model, "prompt_version": prompt_version, "classifier": classifier,
+        "guard": guard,
+    }
     if classification is None:
         # The gate rejected the session: nothing was classified.
         return {

@@ -88,6 +88,42 @@ test.describe('buildAgentHistory', () => {
   });
 });
 
+test.describe('buildAgentHistory with the last closed message', () => {
+  const chat = [
+    textMessage({ id: 'm1', text: 'primera consulta' }),
+    textMessage({ id: 'm2', role: 'assistant', text: 'Hasta luego.' }),
+    textMessage({ id: 'm3', text: 'nueva consulta' }),
+    textMessage({
+      id: 'm4',
+      role: 'assistant',
+      text: 'Ya lo veo.',
+      metadata: {
+        createdAt: new Date().toISOString(),
+        senderType: 'human_agent',
+      },
+    } as Partial<ChatMessage> & { text: string }),
+    textMessage({
+      id: 'm5',
+      text: 'bloqueado',
+      metadata: { createdAt: new Date().toISOString(), blocked: true },
+    } as Partial<ChatMessage> & { text: string }),
+  ];
+  const texts = (messages: ChatMessage[]) =>
+    messages.map((m) => (m.parts[0] as { text: string }).text);
+
+  test('keeps only what follows the closed message, filter and prefix still applied', () => {
+    expect(texts(buildAgentHistory(chat, 'm2'))).toEqual([
+      'nueva consulta',
+      '[Asesor] Ya lo veo.',
+    ]);
+  });
+
+  test('without a close, or with an id not in the list, sends everything', () => {
+    expect(buildAgentHistory(chat, null)).toHaveLength(4);
+    expect(buildAgentHistory(chat, 'missing')).toHaveLength(4);
+  });
+});
+
 test.describe('isPaused', () => {
   test('is false only for the agent with no open handoff', () => {
     expect(isPaused({ handledBy: 'ai_agent', hasOpenHandoff: false })).toBe(

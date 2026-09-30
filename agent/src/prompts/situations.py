@@ -4,6 +4,7 @@ from src.prompts.messages import (
     HUMAN_WITHOUT_TOPIC,
     MENU,
     MORE_OPTIONS,
+    NOT_AVAILABLE,
     OUT_OF_MENU,
     SAVINGS_OPTIONS,
 )
@@ -14,8 +15,6 @@ SITUATIONS: dict[str, str] = {
     "goodbye": "El cliente se despide. Despídete con cordialidad y cierra la conversación.",
 }
 
-# Intents the chat can't serve (§3, regla 6): a short line, then the menu. Never a handoff.
-_OUT_OF_MENU_INTENTS = {"OUT_OF_SCOPE", "COMMERCIAL"}
 # Menu letters that open a submenu instead of a use case (etapa 2 and 3.A, 3.B, D).
 _SUBMENU_INTENTS = {
     "CARD_OPTIONS": "card_options",
@@ -39,6 +38,9 @@ def situation_for(classification: dict, intent_threshold: float) -> str:
         return "goodbye"
     if intent == "HUMAN_AGENT":
         return "human_without_topic"
+    # Out-of-menu requests (§3, regla 6) get a short line, then the menu. Never a handoff.
+    if intent == "COMMERCIAL":
+        return "not_available"
     return "out_of_menu"
 
 
@@ -48,6 +50,7 @@ def fixed_reply(situation: str, language: str | None) -> str | None:
     lead = {
         "greeting": GREETING_REPLY,
         "out_of_menu": OUT_OF_MENU,
+        "not_available": NOT_AVAILABLE,
         "human_without_topic": HUMAN_WITHOUT_TOPIC,
     }
     submenus = {"card_options": CARD_OPTIONS, "savings_options": SAVINGS_OPTIONS, "more_options": MORE_OPTIONS}

@@ -60,8 +60,10 @@ en `routing.yaml`. El grafo principal no cambia.
 
 Parcial. UC-01 corre sobre el schema `bank_uc_consultas` (`get_products` y
 `list_transactions`, SQL en `uc/bank_uc_consultas.sql`), expuesto por el MCP
-administrado. `src/tools/mcp_client.py` carga sus herramientas una vez por
-proceso y `respond` las llama envueltas con `bind_customer`.
+administrado. Ese camino ya no se usa: las herramientas leen `bank_ro` en
+Lakebase con SQL fijo (docs/14), y `respond` las llama envueltas con
+`bind_customer`. Las UC functions quedan como la definición gobernada que ese
+SQL replica.
 
 Pendiente: los permisos (`EXECUTE` solo para el agente) y el despliegue, en la
 Phase 8; el resto de casos de uso, en sus fases.
