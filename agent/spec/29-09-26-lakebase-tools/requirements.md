@@ -46,3 +46,10 @@ And it changes in these ways:
   - `bank_ro.customer_products`, `bank_ro.customer_transactions` and `bank_ro.customer_cases` are synced 1:1 from `workspace.bank_gold` in snapshot mode, and exist in UC as `workspace.bank_ro.<table>`;
   - the primary keys are composite and start with `customer_id`: `(customer_id, product_id)`, `(customer_id, transaction_id)`, `(customer_id, complaint_id)`. Every query filters by `customer_id`, so the PK index serves them, and a hand-made index wouldn't survive a snapshot refresh;
   - the App's service principal gets only `USAGE` on `bank_ro` and `SELECT` on the three tables. Locally, pcubasm1 owns the instance and can't be limited to SELECT.
+
+## 4. Annex: MCP off for good
+
+The user's decision, taken at the prod deploy: MCP stays off permanently.
+
+9. The App can't use the managed MCP path, not even if Lakebase fails. `src/tools/mcp_client.py` and `TOOLS_BACKEND` are removed. If Lakebase fails, David gives the tool-failure reply.
+10. The agent App loses the UC function resources (`EXECUTE`) and the SQL warehouse resource; the agent code used neither. The schema-level `EXECUTE` on `bank_uc_consultas` granted by hand to the App's service principal (`scripts/grant_app.sql`) is revoked.

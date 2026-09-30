@@ -22,7 +22,7 @@ Las UC functions detrás del MCP administrado corren en serverless a través de 
 - La conexión es un pool `AsyncLakebasePool` de `databricks_ai_bridge`, que renueva el token OAuth. Hay un pool por proceso, se abre en la primera consulta y tiene máximo 4 conexiones.
 - Un Lakebase que no responde falla rápido: 5 s de timeout al conectar, 5 s de espera de conexión en el pool y `statement_timeout` de 5 s por consulta. La herramienta lanza, y el turno sigue el comportamiento normal de una herramienta caída: sin derivación y sin cifras.
 - El agente sigue sin estado y solo lee.
-- `TOOLS_BACKEND=mcp` conserva el camino anterior como rollback sin desplegar código nuevo. Se elimina después del hackathon.
+- El camino por el MCP administrado se eliminó por decisión del usuario: la App no puede usarlo ni aunque Lakebase falle. Si Lakebase no responde, David da la respuesta de herramienta caída. La App tampoco tiene ya los recursos de las UC functions ni la warehouse.
 
 ## 14.4 Linaje de los datos
 
@@ -40,7 +40,7 @@ Las tablas son `customer_products`, `customer_transactions` y `customer_cases`, 
 
 1. Iniciar sesión con `databricks auth login` (o tener `DATABRICKS_HOST` y `DATABRICKS_TOKEN`).
 2. Verificar que `bank_ro` existe en la instancia, cosa que hace el script del back.
-3. Levantar el agente con el comando de la sección "Contra Lakebase" del README. Para volver a las UC functions, `TOOLS_BACKEND=mcp`.
+3. Levantar el agente con el comando de la sección "Contra Lakebase" del README.
 
 ## 14.7 Fuera de alcance
 
