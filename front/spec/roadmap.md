@@ -505,3 +505,14 @@ Shipped en PR #104.
 Spec: `spec/30-09-26-motivo-bandeja-agente/`.
 
 Shipped en PR #108. El contador de Agente AI aparece cuando el back mande `aiAgentByUseCase`.
+
+---
+
+## Phase 27: Simulador de cliente
+
+**Goal:** que en la demo se entienda que chatear con David desde la consola es una herramienta de prueba.
+
+- [ ] "Simulador de cliente (demo)" para asesor y admin; el cliente mantiene "David (asistente virtual)".
+- [ ] El selector de cliente demo explica que son clientes del dataset sintético del hackathon.
+
+Spec: `spec/30-09-26-simulador-cliente/`.
