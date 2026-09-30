@@ -25,6 +25,7 @@ import {
   CONTEXT_HEADER_USER_ID,
   CONTEXT_HEADER_SESSION_TOKEN,
   CONTEXT_HEADER_HANDLED_BY,
+  CONTEXT_HEADER_LANGUAGE,
   getAndClearAgentOutputs,
   StreamCache,
 } from '@chat-template/core';
@@ -59,6 +60,7 @@ export async function streamAgentTurn({
   userId,
   sessionToken,
   handledBy = 'ai_agent',
+  language,
   messages,
   selectedChatModel = 'chat-model',
   onUsage,
@@ -67,6 +69,8 @@ export async function streamAgentTurn({
   userId: string;
   sessionToken?: string | null;
   handledBy?: string;
+  // The language the customer picked (es | pt), if any.
+  language?: string | null;
   messages: ChatMessage[];
   selectedChatModel?: string;
   onUsage?: (usage: LanguageModelUsage) => void;
@@ -93,6 +97,7 @@ export async function streamAgentTurn({
       [CONTEXT_HEADER_USER_ID]: userId,
       ...(sessionToken ? { [CONTEXT_HEADER_SESSION_TOKEN]: sessionToken } : {}),
       [CONTEXT_HEADER_HANDLED_BY]: handledBy,
+      ...(language ? { [CONTEXT_HEADER_LANGUAGE]: language } : {}),
     },
     onFinish: ({ usage }) => onUsage?.(usage),
     // An unavailable agent is expected (the turn gets queued), not an error.

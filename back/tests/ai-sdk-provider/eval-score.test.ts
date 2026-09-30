@@ -105,7 +105,16 @@ test.describe('observedOutcome', () => {
 
   test('a fixed reply in es and pt is F', () => {
     expect(
-      observedOutcome({ handoff: null, lastReply: SESSION_REJECTED.expired }),
+      observedOutcome({
+        handoff: null,
+        lastReply: SESSION_REJECTED.expired.es,
+      }),
+    ).toBe('F');
+    expect(
+      observedOutcome({
+        handoff: null,
+        lastReply: SESSION_REJECTED.expired.pt,
+      }),
     ).toBe('F');
     expect(
       observedOutcome({

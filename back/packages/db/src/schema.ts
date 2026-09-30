@@ -109,6 +109,8 @@ export const agentTurn = createTable('AgentTurn', {
   messageId: uuid('messageId').notNull(),
   userId: text('userId').notNull(),
   sessionToken: varchar('sessionToken', { length: 256 }),
+  // The language the customer picked for this turn (es | pt), if any.
+  language: varchar('language', { length: 8 }),
   status: varchar('status', {
     enum: ['pending', 'done', 'discarded', 'expired'],
   })

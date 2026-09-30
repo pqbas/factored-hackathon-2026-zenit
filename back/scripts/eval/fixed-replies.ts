@@ -5,12 +5,18 @@
 // silently: update this file with the agent's.
 
 export const SESSION_REJECTED = {
-  missing:
-    'Para ayudarte necesito que inicies sesión en la banca digital. Por seguridad no puedo identificarte solo por lo que escribes en el chat.',
-  invalid:
-    'No pude verificar tu sesión. Vuelve a iniciar sesión en la banca digital para continuar.',
-  expired:
-    'Tu sesión expiró. Vuelve a iniciar sesión y retomamos tu solicitud.',
+  missing: {
+    es: 'Para ayudarte necesito que inicies sesión en la banca digital. Por seguridad no puedo identificarte solo por lo que escribes en el chat.',
+    pt: 'Para ajudar você, preciso que entre na sua conta no banco digital. Por segurança, não posso identificar você só pelo que escreve no chat.',
+  },
+  invalid: {
+    es: 'No pude verificar tu sesión. Vuelve a iniciar sesión en la banca digital para continuar.',
+    pt: 'Não consegui verificar sua sessão. Entre novamente no banco digital para continuar.',
+  },
+  expired: {
+    es: 'Tu sesión expiró. Vuelve a iniciar sesión y retomamos tu solicitud.',
+    pt: 'Sua sessão expirou. Entre novamente e continuamos com sua solicitação.',
+  },
 } as const;
 
 export const GUARDRAIL_REPLIES = {
@@ -45,7 +51,7 @@ const normalize = (text: string) => text.replace(/\s+/g, ' ').trim();
 
 const FIXED = new Set(
   [
-    ...Object.values(SESSION_REJECTED),
+    ...Object.values(SESSION_REJECTED).flatMap((r) => [r.es, r.pt]),
     ...Object.values(GUARDRAIL_REPLIES).flatMap((r) => Object.values(r)),
     ...Object.values(CANCEL_REPLY),
   ].map(normalize),

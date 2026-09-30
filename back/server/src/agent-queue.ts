@@ -73,6 +73,7 @@ async function askAgent(
     userId: turn.userId,
     sessionToken: turn.sessionToken,
     handledBy,
+    language: turn.language,
     messages,
   });
   let text = '';

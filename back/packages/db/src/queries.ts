@@ -1378,17 +1378,20 @@ export async function enqueueAgentTurn({
   messageId,
   userId,
   sessionToken,
+  language,
 }: {
   chatId: string;
   messageId: string;
   userId: string;
   sessionToken?: string | null;
+  language?: string | null;
 }) {
   await (await ensureDb()).insert(agentTurn).values({
     chatId,
     messageId,
     userId,
     sessionToken: sessionToken ?? null,
+    language: language ?? null,
   });
 }
 
