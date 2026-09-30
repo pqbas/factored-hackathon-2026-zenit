@@ -11,6 +11,10 @@ env:
     valueFrom: "experiment"
   - name: BANK_CATALOG
     value: "workspace"
+  # No MLflow tracing in the App: it has no egress to the storage traces upload to, so every
+  # export failed and retried. Observability is pending (Langfuse or LangSmith, see docs/15).
+  - name: AGENT_TRACING
+    value: "off"
   - name: LLM_ENDPOINT
     value: "databricks-qwen3-next-80b-a3b-instruct"
   # The App has no egress to api.typesafe.ai (Premium plan: no serverless network policies),

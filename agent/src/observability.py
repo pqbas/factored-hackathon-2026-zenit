@@ -20,3 +20,13 @@ def pin_mlflow_experiment() -> str | None:
         logger.warning("Could not pin the MLflow experiment: %s", type(exc).__name__)
         return None
     return experiment_id
+
+
+def configure_tracing(enabled: bool) -> None:
+    """Tracing on: LangChain autolog with the experiment pinned. Off (the App: it can't reach the
+    storage the traces upload to, so every export failed and retried): no traces at all."""
+    if not enabled:
+        mlflow.tracing.disable()
+        return
+    mlflow.langchain.autolog()
+    pin_mlflow_experiment()

@@ -33,7 +33,7 @@ from src.llm.chat import get_chat_model  # noqa: E402
 from src.llm.jev import JevClient  # noqa: E402
 from src.llm.llm_classifier import LLMClassifier  # noqa: E402
 from src.llm.usage import TurnUsage  # noqa: E402
-from src.observability import pin_mlflow_experiment  # noqa: E402
+from src.observability import configure_tracing  # noqa: E402
 from src.prompts.advisor import AdvisorPrefixStreamFilter  # noqa: E402
 from src.prompts.version import prompt_version  # noqa: E402
 from src.schemas.routing import load_routing  # noqa: E402
@@ -50,8 +50,7 @@ _src_handler = logging.StreamHandler()
 _src_handler.setFormatter(logging.Formatter("%(levelname)s %(name)s: %(message)s"))
 _src_logger.addHandler(_src_handler)
 
-mlflow.langchain.autolog()
-pin_mlflow_experiment()
+configure_tracing(settings.tracing_enabled)
 
 # Loaded once at import so a bad routing.yaml fails at startup, not on the first request.
 routes = load_routing(settings.routing_path, GRAPH_NODES)
@@ -158,7 +157,8 @@ async def streaming(
     request: ResponsesAgentRequest,
 ) -> AsyncGenerator[ResponsesAgentStreamEvent, None]:
     thread_id = _thread_id(request)
-    mlflow.update_current_trace(metadata={"mlflow.trace.session": thread_id})
+    if settings.tracing_enabled:
+        mlflow.update_current_trace(metadata={"mlflow.trace.session": thread_id})
 
     custom_inputs = dict(request.custom_inputs or {})
     # Identity is resolved from the trusted session token on every turn, never from chat text.
@@ -219,7 +219,9 @@ server = AgentServer("ResponsesAgent", enable_chat_proxy=False)  # UI lives in .
 
 # Define the app as a module level variable to enable multiple workers
 app = server.app  # noqa: F841
-setup_mlflow_git_based_version_tracking()
+if settings.tracing_enabled:
+    # Links traces to a LoggedModel of the git commit; without tracing it only costs REST calls.
+    setup_mlflow_git_based_version_tracking()
 
 
 def main():

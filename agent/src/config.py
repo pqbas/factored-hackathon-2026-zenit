@@ -7,6 +7,7 @@ from dataclasses import dataclass
 @dataclass(frozen=True)
 class Settings:
     llm_endpoint: str
+    tracing_enabled: bool
     demo_sessions_json: str | None
     classifier: str
     classifier_timeout_seconds: float
@@ -25,6 +26,8 @@ class Settings:
     def from_env(cls) -> "Settings":
         return cls(
             llm_endpoint=os.getenv("LLM_ENDPOINT", "databricks-qwen3-next-80b-a3b-instruct"),
+            # MLflow tracing (on by default); the App turns it off: see docs/15.
+            tracing_enabled=os.getenv("AGENT_TRACING", "on").strip().lower() not in ("off", "false", "0"),
             demo_sessions_json=os.getenv("DEMO_SESSIONS_JSON"),
             # jev (default) or llm: the App can't reach Jev, so it classifies with the LLM.
             classifier=os.getenv("CLASSIFIER", "jev"),

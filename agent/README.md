@@ -75,6 +75,8 @@ Cada decisión técnica tiene su propio documento en [`docs/`](docs/):
 - [Herramientas sobre Lakebase](docs/14-herramientas-sobre-lakebase.md): por qué
   las herramientas de datos del banco leen `bank_ro` en Lakebase y no las UC
   functions, con el costo medido y cómo correrlo en local.
+- [Observabilidad](docs/15-observabilidad.md): por qué la App de prod no genera trazas
+  de MLflow y qué queda pendiente.
 
 ### Grafo principal
 
