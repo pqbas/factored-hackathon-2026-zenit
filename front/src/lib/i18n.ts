@@ -78,6 +78,19 @@ const es = {
   deleting: 'Eliminando conversación…',
   deleted: 'Conversación eliminada',
   deleteFailed: 'No se pudo eliminar la conversación',
+  nav: {
+    products: 'Mis productos',
+    agent: `${ASSISTANT_NAME} (asistente virtual)`,
+    simulator: 'Simulador de cliente (demo)',
+    chats: 'Chats',
+    metrics: 'Métricas',
+    lightMode: 'Cambiar a modo claro',
+    darkMode: 'Cambiar a modo oscuro',
+    mainMenu: 'Menú principal',
+    noAccess: 'Sin acceso',
+    noAccessBody: 'Tu rol no puede ver esta sección.',
+    talkTo: `Hablar con ${ASSISTANT_NAME}`,
+  },
 };
 
 export type Messages = typeof es;
@@ -143,6 +156,19 @@ const pt: Messages = {
   deleting: 'Excluindo conversa…',
   deleted: 'Conversa excluída',
   deleteFailed: 'Não foi possível excluir a conversa',
+  nav: {
+    products: 'Meus produtos',
+    agent: `${ASSISTANT_NAME} (assistente virtual)`,
+    simulator: 'Simulador de cliente (demo)',
+    chats: 'Chats',
+    metrics: 'Métricas',
+    lightMode: 'Mudar para o modo claro',
+    darkMode: 'Mudar para o modo escuro',
+    mainMenu: 'Menu principal',
+    noAccess: 'Sem acesso',
+    noAccessBody: 'Seu perfil não pode ver esta seção.',
+    talkTo: `Falar com ${ASSISTANT_NAME}`,
+  },
 };
 
 export const MESSAGES: Record<Lang, Messages> = { es, pt };
