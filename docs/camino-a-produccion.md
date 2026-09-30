@@ -132,3 +132,28 @@ límite. Un banco con cientos de conversaciones simultáneas necesita:
   responde; faltan los reintentos con espera creciente.
 - **Una prueba de carga** antes de operar: conversaciones concurrentes,
   tasa de 429 y p95 bajo carga.
+
+## 5. Arquitectura objetivo e identidades
+
+El prototipo corre todo en Databricks Apps. En producción, las
+responsabilidades se separan según quién usa cada parte y con qué identidad:
+
+```text
+Canal del cliente (web/app del banco)   ──API + OAuth──►  Agente David (servicio)
+  identidad: la del banco para clientes                    │
+                                                           ▼
+Consola interna (asesores, supervisores) ─────────►  Back (conversaciones, derivaciones)
+  identidad: SSO corporativo (Microsoft Entra ID)          │
+                                                           ▼
+          Datos: Unity Catalog → Lakebase (bank_ro) · LLM en Model Serving
+```
+
+| Parte | Dónde vive en producción | Identidad |
+| --- | --- | --- |
+| Canal del cliente | Fuera de Databricks: la web o la app del banco | La del banco para clientes, que ya autentica en su banca digital. Databricks Apps solo autentica usuarios del workspace, que los clientes no tienen. |
+| Consola interna | Puede seguir en Databricks Apps | SSO corporativo: Databricks se integra con Microsoft Entra ID, así que los asesores entran con su cuenta del banco, y los roles salen de sus grupos. |
+| Agente | Servicio detrás de una API, en Databricks o fuera | Service principal con OAuth M2M; recibe la identidad del cliente desde el canal, nunca del mensaje. |
+| Datos y LLM | Databricks | Service principals con permisos mínimos (solo lectura en `bank_ro`). |
+
+En el prototipo, el cliente se simula con sesiones demo dentro de la misma App
+("Simulador de cliente"), y el admin puede verlo todo para la demo.
