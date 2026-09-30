@@ -132,9 +132,12 @@ test.describe('/api/advisor/metrics (with database)', () => {
       { data: { outcome: 'resolved' } },
     );
 
-    // The customer writes again: the chat reopens with David and no human.
+    // The customer writes again: the chat reopens with David and no human,
+    // and a new conversation without a case until the agent classifies one.
     await postChatMessage(adaContext, chatId, 'una cosa más');
     expect((await getChatById({ id: chatId }))?.hadHuman).toBe(false);
+    expect((await getChatById({ id: chatId }))?.useCase).toBeNull();
+    await updateChatAgentState({ chatId, useCase });
     await sayGoodbye(adaContext, chatId);
 
     const { row } = await metricsFor(adaContext, useCase);

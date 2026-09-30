@@ -59,6 +59,20 @@ test.describe('Customer context in the console (with database)', () => {
     expect((await getChatById({ id: expired }))?.customerId).toBeNull();
   });
 
+  test('a chat with a live sim- token keeps its customer; an expired one does not', async ({
+    adaContext,
+  }) => {
+    const live = generateUUID();
+    await postChatMessage(adaContext, live, 'sim-live-0001');
+    expect((await getChatById({ id: live }))?.customerId).toBe(
+      'CLI-7MPS3ZOPSN4Q',
+    );
+
+    const expired = generateUUID();
+    await postChatMessage(adaContext, expired, 'sim-expired-0001');
+    expect((await getChatById({ id: expired }))?.customerId).toBeNull();
+  });
+
   test('advisor and admin read the context; transcripts come masked', async ({
     adaContext,
     babbageContext,

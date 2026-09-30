@@ -44,7 +44,7 @@ import { isAgentUnavailableError } from '@chat-template/ai-sdk-providers';
 import { ChatSDKError } from '@chat-template/core/errors';
 import { generateTitleFromUserMessage } from '../title';
 import { toCustomerChat } from '../customer-view';
-import { findDemoCustomer, tokenForCustomerId } from '../demo-customers';
+import { resolveSessionCustomer, tokenForCustomerId } from '../demo-customers';
 import { resolveCustomerName } from '../customer-name';
 import {
   persistAgentReply,
@@ -122,7 +122,7 @@ chatRouter.post('/', requireAuth, async (req: Request, res: Response) => {
 
     // The session's bank customer, kept on the chat for the console.
     const sessionCustomer = sessionToken
-      ? findDemoCustomer(sessionToken)
+      ? await resolveSessionCustomer(sessionToken)
       : undefined;
     const customerId =
       sessionCustomer && !sessionCustomer.expired

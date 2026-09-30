@@ -9,7 +9,7 @@ import { getChats, isDatabaseAvailable } from '@chat-template/db';
 import { ChatSDKError } from '@chat-template/core/errors';
 
 import { toCustomerChat } from '../customer-view';
-import { findDemoCustomer } from '../demo-customers';
+import { resolveSessionCustomer } from '../demo-customers';
 
 export const historyRouter: RouterType = Router();
 
@@ -58,7 +58,9 @@ historyRouter.get('/', requireAuth, async (req: Request, res: Response) => {
 
   // An unknown or expired token lists nothing rather than failing: the
   // history doesn't depend on the session still being valid.
-  const customer = sessionToken ? findDemoCustomer(sessionToken) : undefined;
+  const customer = sessionToken
+    ? await resolveSessionCustomer(sessionToken)
+    : undefined;
   if (sessionToken && (!customer || customer.expired)) {
     return res.json({ chats: [], hasMore: false });
   }

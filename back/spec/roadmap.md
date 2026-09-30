@@ -457,3 +457,20 @@ spec/30-09-26-eval-prod/.
 Shipped en PR #99. Pendiente: borrar de la base de prod los 120 chats de prueba (lo decide el
 usuario; `npm run eval:cleanup`).
 
+---
+
+## Phase 19: Simulación diaria de tráfico en prod (Complete)
+
+**Goal:** que prod se vea con tráfico real para la demo: 100 conversaciones
+por día de clientes reales, sin repetir clientes entre días (pedido del
+usuario vía w1:p4, 30-09-26). Spec en spec/30-09-26-simulacion-diaria/.
+
+- [x] Sesiones de la simulación en `bank_sessions.sim_sessions`, con tokens
+      aleatorios `sim-` por cliente y día, de solo lectura para el agente y el
+      back, que fallan cerrado. El back resuelve `sim-` en el chat, los
+      productos y el historial.
+- [x] `npm run simulate:day` (mezcla del call center, ~20% pt, de 2 a 4
+      mensajes, derivaciones en espera) y `npm run simulate:cleanup`.
+- [x] Arreglo del test de métricas por el reinicio de `useCase` de #94.
+
+Shipped en PR #106.

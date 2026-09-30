@@ -7,7 +7,7 @@ import {
 import { ChatSDKError } from '@chat-template/core/errors';
 import { authMiddleware, requireAuth } from '../middleware/auth';
 import { getRole } from '../roles';
-import { findDemoCustomer } from '../demo-customers';
+import { resolveSessionCustomer } from '../demo-customers';
 import { getCustomerProfile, getProducts, getTransactions } from '../bank-data';
 
 export const productsRouter: RouterType = Router();
@@ -34,7 +34,7 @@ productsRouter.get('/', requireAuth, async (req: Request, res: Response) => {
     return res.status(response.status).json(response.json);
   }
 
-  const customer = findDemoCustomer(token);
+  const customer = await resolveSessionCustomer(token);
   if (!customer || customer.expired) {
     const response = new ChatSDKError('unauthorized:chat').toResponse();
     return res.status(response.status).json({
