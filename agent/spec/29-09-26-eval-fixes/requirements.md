@@ -86,3 +86,42 @@ The user rejected building the movements in code: David shouldn't become ever mo
 - The data kinds and their tools live in `routing.yaml`, next to the route's instructions, so adding a kind is a config change.
 - Possible later hardening, out of scope here: also check that every figure in the reply appears in the tool results of the turn. That catches a made-up amount even when the right tool was called. It is noted, not built.
 - The use-case turns already don't stream deltas (silent-after-handoff), so an ungrounded reply can be stopped before the customer sees anything.
+
+## 5. Annex: cancellation without confirmation (resolves scenario 05)
+
+The user's decision. Cancelling a product becomes simpler than the other flows.
+
+17. Once RETENTION is detected, the operation stays fixed. While David's previous reply is one of the cancellation's own questions (`ASK_PRODUCT`, `ASK_REASON`), the next message is RETENTION without calling the classifier. The exceptions are "cancelar"/"olvídalo" and "menú", which keep working through their rules.
+18. David only collects two things:
+    - the product: he takes it when the customer has one of the kind they named, and asks which one when there are several (Group 2);
+    - the reason.
+19. The reason is free text, taken as the customer wrote it (masked), never judged or reclassified. It is the customer's answer to "¿Por qué quieres cancelarlo?", or, when it came in the first message (#17), what the collector extracts from it.
+20. As soon as David has the product and the reason, he answers "Te comunico con un asesor, que ya tiene los datos de tu caso." and hands off as `retention`, with no summary or confirmation step. `custom_outputs.handoff` has the same shape, with `product_last4` and `reason` in `verified_data`.
+21. Complaint (3.C) and complaint status (3.D2) keep their confirmation.
+
+## 6. Annex: the classifier reads the current conversation
+
+The user's decision. The classifier decides the current intent of the conversation, not of the last message on its own.
+
+22. The classifier (LLM or Jev) gets the current conversation: every message since the conversation opened or reopened, the customer's and David's, not earlier conversations of the same chat that were already resolved. It classifies what the customer wants now.
+23. Where the current conversation starts:
+    - The back sends `custom_inputs.conversation_start`: the index in `input` of the first message of the current conversation. That is the first message after the chat's last close (`closedAt` / `ResolutionEvent`), or 0 if it never closed. This part is w1:p1's.
+    - Without it, the agent uses the whole history it received (at most 20 messages, as today).
+24. The transcript is capped so the prompt stays bounded:
+    - the last 12 messages of the current conversation;
+    - David's messages cut to their last 300 characters, since menus and lists are long;
+    - masked like today's context.
+25. The guardrail (sensitive data, prompt injection) still judges only the customer's last message.
+26. The deterministic rules stay before the classifier (menu letters, "menú", the confirmation, the complaint-status follow-up, the fixed cancellation), because they are free and exact.
+
+### Answers to w1:p4's questions
+
+- What the back sends today: the whole chat, every message except system notices and blocked turns (`buildAgentHistory` in `back/server/src/agent-turn.ts`), with advisor messages prefixed "[Asesor]". Earlier conversations of the same chat are included: a chat that closed and reopened keeps its old messages.
+  - The agent can't tell where the current one starts. The close and reopen notices are system messages the back filters out, and the Responses input carries no timestamps.
+  - The agent keeps the last 20 (`MAX_HISTORY_MESSAGES`).
+  - Hence requirement 23.
+- Jev takes a free-text `state` and questions with instructions. The transcript goes in as `state` ("Cliente: …\nDavid: …"), and the intent question becomes "What does the customer want now, in this conversation?". The guardrail question keeps asking about the last message.
+- Measured cost, with scenario 04's conversation (7 turns, 1,934 characters of transcript), 5 calls each with the LLM classifier:
+  - about +700 input tokens per classification;
+  - median latency from 3.09 s to 3.36 s, about +0.3 s.
+  - A turn with tools already uses 15,000 to 20,000 input tokens, so this is about +4% per turn. For Jev, the cost is its own per-call price, and the text is longer.

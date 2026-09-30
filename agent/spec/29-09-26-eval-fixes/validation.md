@@ -42,3 +42,12 @@ All boxes checked, w1:p1's rerun shows the 12 fixed with no regressions, and mer
 - [ ] E2E: `custom_outputs.guard` is `null` on a grounded turn and set on a fired one
 - [ ] Manual, local :8001: #33 over 5 runs never shows movements that `list_transactions` didn't return; any time the guard fires, `custom_outputs.guard` shows it
 - [ ] w1:p1's runner counts `guard` firings per case
+
+## Annex: cancellation without confirmation (Group 8) and the conversation classifier (Group 9)
+
+- [ ] Scenario 05 hands off 5/5 as `retention` with `CLASSIFIER=llm`, with no summary or confirmation step
+- [ ] #17 hands off in its first turn, with the reason from the first message
+- [ ] "cancelar" and "menú" after a cancellation question still work
+- [ ] The classifier gets the current conversation's transcript (unit and integration), never the messages before `conversation_start`
+- [ ] Scenarios 04, 06 and 10 still hand off with `CLASSIFIER=llm`
+- [ ] w1:p1's back sends `conversation_start` (their spec)

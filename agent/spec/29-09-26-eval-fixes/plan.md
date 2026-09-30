@@ -108,3 +108,41 @@
     - unit: `required_kinds` and `ungrounded` (movements without `list_transactions` fire; balance with `get_products` doesn't; a question without figures doesn't);
     - integration: a scripted LLM that answers movements after only `get_products` gets the forced retry, and with a good second answer `guard.action == "retried_ok"`; with a bad one, `TOOL_DOWN` and `safe_reply`;
     - e2e: `custom_outputs.guard` over `/invocations` is `null` on a grounded turn.
+
+---
+
+## Group 8: Cancellation without confirmation
+
+25. `src/llm/fallback.py`: `retention_in_progress(text, previous_reply) -> bool`. It is true when the previous reply starts with `ASK_PRODUCT` or equals `ASK_REASON` (es or pt), and the text isn't a CANCEL, "menú" or menu letter rule match. `src/graph/nodes/classify.py` applies it after the menu rules, as RETENTION with `source="rules"`.
+26. `src/tools/collector.py`, `_retention_step`: with the product and the reason, return `("handoff", verified)` instead of the summary. The reason is the customer's reply to `ASK_REASON` taken as written (masked, whitespace collapsed) when the previous reply was `ASK_REASON`; otherwise the extracted one.
+27. `src/graph/nodes/respond.py`, `_collect`:
+    - on `"handoff"`, run `verify_case("retention", …)` against the rows already fetched and return `_hand_off(...)`;
+    - if the check fails, fall back to asking the product again.
+28. `configs/routing.yaml`, RETENTION instructions (used only when the collector is unavailable): no summary or confirmation; call `hand_off_to_advisor` once the product and reason are known.
+
+## Group 9: The classifier reads the current conversation
+
+29. `src/main.py`: pass `custom_inputs.conversation_start` (int, default 0) into the state. `src/graph/state.py` gets `conversation_start: int`.
+30. `src/graph/nodes/classify.py`: `_transcript(messages, start)`:
+    - the messages from `start`, minus the offset of the 20-message cut, the last 12 of them;
+    - "Cliente: …" and "David: …" lines, with David's cut to the last 300 characters, masked;
+    - `[Asesor]` messages kept as "Asesor: …".
+
+    The transcript replaces `context=_context(previous_reply)` in the classifier call.
+31. `src/llm/llm_classifier.py`: the system prompt gets "The conversation so far" with the transcript, and asks for the current intent of the conversation. The last message may continue the ongoing operation or change it. The guardrail keeps judging only the last message.
+32. `src/llm/jev.py`: `state` is the transcript with the last message, and the intent question asks what the customer wants now in the conversation. The guardrail question keeps asking about the last message.
+33. w1:p1 (back): send `custom_inputs.conversation_start`. Until then, the default (0) uses the whole received history.
+
+## Group 10: Tests for groups 8 and 9
+
+34. Unit:
+    - `retention_in_progress`;
+    - `_retention_step` handoff with a verbatim reason;
+    - `_transcript` start, cap, masking and David truncation;
+    - the LLM classifier's and Jev's prompts include the transcript.
+35. Integration:
+    - scenario 05's four messages end in a `retention` handoff without a summary, and the reason turn never calls the classifier;
+    - #17's first message hands off directly;
+    - "cancelar" after `ASK_REASON` still cancels;
+    - a conversation with messages before `conversation_start` doesn't show them to the classifier.
+36. E2E: `custom_inputs.conversation_start` over `/invocations` limits the transcript.
