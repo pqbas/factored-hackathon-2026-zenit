@@ -238,6 +238,16 @@ async function main(args: DayArgs) {
         )}\n`,
       );
 
+    // An interrupted run keeps what it did: simulate:cleanup needs it.
+    const onSignal = (signal: NodeJS.Signals) => {
+      flush({ partial: true, interrupted: signal });
+      console.error(`\nInterrupted (${signal}): wrote ${file}`);
+      process.exit(130);
+    };
+    process.once('SIGINT', onSignal);
+    process.once('SIGTERM', onSignal);
+    flush({ partial: true });
+
     try {
       let done = 0;
       await pool(
@@ -246,6 +256,7 @@ async function main(args: DayArgs) {
         async ({ p, token }) => {
           const result = await runConversation(args.base, ids, p, token);
           results.push(result);
+          flush({ partial: true });
           done++;
           if (done % 10 === 0 || done === plan.length) {
             console.log(`  ${done}/${plan.length} conversations`);
