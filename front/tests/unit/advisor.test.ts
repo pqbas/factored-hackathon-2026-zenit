@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 
 import {
   type AdvisorChat,
@@ -28,8 +28,11 @@ import {
   toBubble,
   reasonTagOf,
   rowPreview,
+  sectionLabel,
   shortSummary,
 } from '@/lib/advisor';
+import { STATUS_LABEL } from '@/lib/conversations';
+import { setCurrentLang } from '@/lib/i18n';
 
 const ME = 'babbage@example.com';
 
@@ -490,5 +493,20 @@ describe('shortSummary and rowPreview', () => {
     expect(rowPreview({ ...chat({ ...taken, handoff: { ...handoff, summary: null } }), lastMessage: last })).toBe('');
     // Back with David: the last message.
     expect(rowPreview({ ...chat({ handoff, hasHandoff: false }), lastMessage: last })).toBe('sí, confirmo');
+  });
+});
+
+describe('labels in the current language', () => {
+  afterEach(() => setCurrentLang('es'));
+
+  it('reads Spanish by default', () => {
+    expect(sectionLabel('complaint')).toBe('Reclamo');
+    expect(STATUS_LABEL.waiting).toBe('En espera');
+  });
+
+  it('follows the language set at call time', () => {
+    setCurrentLang('pt');
+    expect(sectionLabel('complaint')).toBe('Reclamação');
+    expect(STATUS_LABEL.waiting).toBe('Em espera');
   });
 });

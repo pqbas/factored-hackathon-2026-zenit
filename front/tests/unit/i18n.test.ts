@@ -36,3 +36,31 @@ describe('MESSAGES', () => {
     expect(MESSAGES.pt.greeting(15)).toBe('Boa tarde');
   });
 });
+
+describe('MESSAGES', () => {
+  // Every key of es exists in pt at every level, and arrays have the same length.
+  function sameShape(a: unknown, b: unknown, path: string): string[] {
+    if (Array.isArray(a) || Array.isArray(b)) {
+      if (!Array.isArray(a) || !Array.isArray(b)) return [path];
+      const rest = a.flatMap((item, i) => (i < b.length ? sameShape(item, b[i], `${path}[${i}]`) : []));
+      return a.length === b.length ? rest : [path, ...rest];
+    }
+    if (typeof a === 'object' && a !== null) {
+      if (typeof b !== 'object' || b === null) return [path];
+      const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
+      return [...keys].flatMap((key) => {
+        if (!(key in a) || !(key in b)) return [`${path}.${key}`];
+        return sameShape(
+          (a as Record<string, unknown>)[key],
+          (b as Record<string, unknown>)[key],
+          `${path}.${key}`,
+        );
+      });
+    }
+    return typeof a === typeof b ? [] : [path];
+  }
+
+  it('has the same keys in es and pt at every level', () => {
+    expect(sameShape(MESSAGES.es, MESSAGES.pt, 'messages')).toEqual([]);
+  });
+});
