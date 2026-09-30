@@ -92,10 +92,30 @@ export interface AgentOutputs {
   handoff?: AgentHandoff | null;
   // The agent was called on a conversation it no longer owns and stayed quiet.
   paused?: boolean;
+  // Tokens the turn used across every LLM call (classifier, reply, summary).
+  usage?: { inputTokens: number; outputTokens: number };
+  model?: string | null;
+  promptVersion?: string | null;
+  // The agent's configured CLASSIFIER ('llm' or 'jev').
+  classifier?: string | null;
+  // The grounding guard: null when it didn't fire; undefined when the agent
+  // doesn't report it.
+  guard?: AgentGuard | null;
+}
+
+export interface AgentGuard {
+  fired: boolean;
+  // The tool that returns the data David showed without calling it.
+  missingTool: string | null;
+  // retried_ok: retried forcing the tool; safe_reply: "Ahora no puedo…".
+  action: string | null;
 }
 
 const stringOrNull = (value: unknown) =>
   typeof value === 'string' || value === null ? value : undefined;
+
+const isCount = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isInteger(value) && value >= 0;
 
 const isObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -115,6 +135,28 @@ export function parseAgentOutputs(raw: unknown): AgentOutputs {
     };
   }
 
+  // A malformed usage is dropped whole: half a count would skew the cost.
+  const usage =
+    isObject(raw.usage) &&
+    isCount(raw.usage.input_tokens) &&
+    isCount(raw.usage.output_tokens)
+      ? {
+          inputTokens: raw.usage.input_tokens,
+          outputTokens: raw.usage.output_tokens,
+        }
+      : undefined;
+
+  let guard: AgentGuard | null | undefined;
+  if (raw.guard === null) {
+    guard = null;
+  } else if (isObject(raw.guard) && typeof raw.guard.fired === 'boolean') {
+    guard = {
+      fired: raw.guard.fired,
+      missingTool: stringOrNull(raw.guard.missing_tool) ?? null,
+      action: stringOrNull(raw.guard.action) ?? null,
+    };
+  }
+
   return {
     useCase: stringOrNull(raw.use_case),
     intent: stringOrNull(raw.intent),
@@ -122,6 +164,11 @@ export function parseAgentOutputs(raw: unknown): AgentOutputs {
     blocked: typeof raw.blocked === 'boolean' ? raw.blocked : undefined,
     handoff,
     paused: typeof raw.paused === 'boolean' ? raw.paused : undefined,
+    usage,
+    model: stringOrNull(raw.model),
+    promptVersion: stringOrNull(raw.prompt_version),
+    classifier: stringOrNull(raw.classifier),
+    guard,
   };
 }
 

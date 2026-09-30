@@ -10,6 +10,7 @@ import {
   integer,
   pgSchema,
   uniqueIndex,
+  index,
 } from 'drizzle-orm/pg-core';
 import type { LanguageModelV3Usage } from '@ai-sdk/provider';
 import type { User as SharedUser } from '@chat-template/utils';
@@ -144,3 +145,43 @@ export const handoff = createTable(
 );
 
 export type Handoff = InferSelectModel<typeof handoff>;
+
+// One row per agent turn that gets saved: how long the customer waited and
+// what the agent reported (custom_outputs). Feeds the latency and cost in
+// /api/advisor/metrics and the evaluation runner (scripts/eval). Tokens are
+// null when the agent didn't send usage: unknown, never zero.
+export const turnMetric = createTable(
+  'TurnMetric',
+  {
+    id: uuid('id').primaryKey().notNull().defaultRandom(),
+    chatId: uuid('chatId')
+      .notNull()
+      .references(() => chat.id),
+    // The customer message this turn answers.
+    messageId: uuid('messageId'),
+    // 'queue' turns wait for the agent to come back: their duration doesn't
+    // measure the agent.
+    source: varchar('source', { enum: ['live', 'queue'] }).notNull(),
+    startedAt: timestamp('startedAt').notNull(),
+    durationMs: integer('durationMs').notNull(),
+    intent: varchar('intent', { length: 128 }),
+    useCase: varchar('useCase', { length: 128 }),
+    language: varchar('language', { length: 16 }),
+    blocked: boolean('blocked').notNull().default(false),
+    handoffReason: varchar('handoffReason', { length: 64 }),
+    inputTokens: integer('inputTokens'),
+    outputTokens: integer('outputTokens'),
+    model: varchar('model', { length: 128 }),
+    promptVersion: varchar('promptVersion', { length: 64 }),
+    classifier: varchar('classifier', { length: 32 }),
+    // The grounding guard: null when the agent doesn't report it, false when
+    // it didn't fire.
+    guardFired: boolean('guardFired'),
+    guardMissingTool: varchar('guardMissingTool', { length: 64 }),
+    guardAction: varchar('guardAction', { length: 32 }),
+    createdAt: timestamp('createdAt').notNull().defaultNow(),
+  },
+  (t) => [index('TurnMetric_createdAt').on(t.createdAt)],
+);
+
+export type TurnMetric = InferSelectModel<typeof turnMetric>;

@@ -1,0 +1,24 @@
+{
+  "id": "04",
+  "language": "es",
+  "group": "consultas",
+  "customer": {
+    "token": "demo-ar-2",
+    "user": 7,
+    "segment": "Plus",
+    "name": "Adriana"
+  },
+  "steps": [
+    {
+      "say": "hola"
+    },
+    {
+      "say": "quiero ver mi cupo disponible"
+    }
+  ],
+  "expected": {
+    "firstIntent": "GREETING",
+    "outcome": "R",
+    "mustMatch": ["11[.,\\s]?605[.,\\s]?892"]
+  }
+}

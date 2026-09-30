@@ -12,6 +12,7 @@ import {
   updateChatAgentState,
   updateChatLastContextById,
   openHandoff,
+  saveTurnMetric,
   hasOpenHandoff,
   cancelAgentTurns,
   type DBMessage,
@@ -101,11 +102,17 @@ export async function persistAgentReply({
   customerMessageId,
   reply,
   usage,
+  startedAt,
+  source,
 }: {
   chatId: string;
   customerMessageId?: string;
   reply: Pick<DBMessage, 'id' | 'role' | 'parts'>;
   usage?: LanguageModelUsage;
+  // When the customer's message arrived, and whether the agent answered it
+  // live or from the queue: TurnMetric's duration runs from startedAt.
+  startedAt: Date;
+  source: 'live' | 'queue';
 }): Promise<boolean> {
   const freshChat = await getChatById({ id: chatId });
   const agentOutputs = getAndClearAgentOutputs(chatId);
@@ -139,6 +146,30 @@ export async function persistAgentReply({
         senderId: null,
       },
     ],
+  });
+
+  await saveTurnMetric({
+    chatId,
+    messageId: customerMessageId ?? null,
+    source,
+    startedAt,
+    durationMs: Date.now() - startedAt.getTime(),
+    intent: agentOutputs?.intent ?? null,
+    useCase: agentOutputs?.useCase ?? null,
+    language: agentOutputs?.language ?? null,
+    blocked,
+    handoffReason: agentOutputs?.handoff?.reason ?? null,
+    inputTokens: agentOutputs?.usage?.inputTokens ?? null,
+    outputTokens: agentOutputs?.usage?.outputTokens ?? null,
+    model: agentOutputs?.model ?? null,
+    promptVersion: agentOutputs?.promptVersion ?? null,
+    classifier: agentOutputs?.classifier ?? null,
+    guardFired:
+      agentOutputs?.guard === undefined
+        ? null
+        : agentOutputs.guard !== null && agentOutputs.guard.fired,
+    guardMissingTool: agentOutputs?.guard?.missingTool ?? null,
+    guardAction: agentOutputs?.guard?.action ?? null,
   });
 
   if (usage) {

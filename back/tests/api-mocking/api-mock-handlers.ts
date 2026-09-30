@@ -1,6 +1,7 @@
 import { http, HttpResponse } from 'msw';
 import {
   createMockStreamResponse,
+  mockSSE,
   mockMcpApprovalRequestStream,
   mockMcpApprovalApprovedStream,
   mockMcpApprovalDeniedStream,
@@ -17,11 +18,7 @@ import { TEST_PROMPTS } from '../prompts/routes';
  * State machine for MCP approval flow.
  * This tracks the state of approval requests across multiple API calls.
  */
-type McpApprovalState =
-  | 'idle'
-  | 'awaiting-approval'
-  | 'approved'
-  | 'denied';
+type McpApprovalState = 'idle' | 'awaiting-approval' | 'approved' | 'denied';
 
 let mcpApprovalState: McpApprovalState = 'idle';
 const MCP_REQUEST_ID = '__fake_mcp_request_id__';
@@ -277,6 +274,55 @@ export const AGENT_OUTPUTS = {
       facts: null,
     },
   },
+  // A plain answer with the turn's token usage, model and classifier.
+  usage: {
+    thread_id: 'mock',
+    use_case: 'GENERAL_INQUIRY',
+    intent: 'GENERAL_INQUIRY',
+    language: 'es',
+    blocked: false,
+    handoff: null,
+    usage: { input_tokens: 1200, output_tokens: 300 },
+    model: 'mock-model',
+    prompt_version: 'mock-prompt-v1',
+    classifier: 'llm',
+  },
+  // The grounding guard fired: David showed movements without calling
+  // list_transactions and the retry forcing it came out backed (the shape of
+  // a real agent event, 29-09-26).
+  guardFired: {
+    thread_id: 'mock',
+    use_case: 'GENERAL_INQUIRY',
+    intent: 'GENERAL_INQUIRY',
+    language: 'es',
+    blocked: false,
+    handoff: null,
+    paused: false,
+    usage: { input_tokens: 36592, output_tokens: 2280 },
+    model: 'mock-model',
+    prompt_version: 'mock-prompt-v1',
+    classifier: 'llm',
+    guard: {
+      fired: true,
+      missing_tool: 'list_transactions',
+      action: 'retried_ok',
+    },
+  },
+  // The guard ran and didn't fire.
+  guardNull: {
+    thread_id: 'mock',
+    use_case: 'GENERAL_INQUIRY',
+    intent: 'GENERAL_INQUIRY',
+    language: 'es',
+    blocked: false,
+    handoff: null,
+    paused: false,
+    usage: { input_tokens: 19528, output_tokens: 624 },
+    model: 'mock-model',
+    prompt_version: 'mock-prompt-v1',
+    classifier: 'llm',
+    guard: null,
+  },
   // The agent was called on a conversation it doesn't own and says nothing.
   paused: {
     thread_id: 'mock',
@@ -326,17 +372,20 @@ export const handlers = [
   // Mock chat completions (FMAPI - llm/v1/chat)
   // Use RegExp for better URL matching - matches any URL ending with /chat/completions,
   // with or without an endpoint-name segment before it (the title-model call has none).
-  http.post(/\/serving-endpoints\/(?:[^/]+\/)?chat\/completions$/, async (req) => {
-    const body = await req.request.clone().json();
-    captureRequestContext(req.request.url, body);
-    if ((body as { stream?: boolean })?.stream) {
-      return createMockStreamResponse(
-        TEST_PROMPTS.SKY.OUTPUT_STREAM.responseSSE,
-      );
-    } else {
-      return HttpResponse.json(TEST_PROMPTS.SKY.OUTPUT_TITLE.response);
-    }
-  }),
+  http.post(
+    /\/serving-endpoints\/(?:[^/]+\/)?chat\/completions$/,
+    async (req) => {
+      const body = await req.request.clone().json();
+      captureRequestContext(req.request.url, body);
+      if ((body as { stream?: boolean })?.stream) {
+        return createMockStreamResponse(
+          TEST_PROMPTS.SKY.OUTPUT_STREAM.responseSSE,
+        );
+      } else {
+        return HttpResponse.json(TEST_PROMPTS.SKY.OUTPUT_TITLE.response);
+      }
+    },
+  ),
 
   // Mock responses endpoint (agent/v1/responses)
   // URL pattern: {host}/serving-endpoints/responses
@@ -383,10 +432,16 @@ export const handlers = [
     // matching custom_outputs, as the real agent does on each turn.
     const agentOutputs = agentOutputsFor(body);
     if (isStreaming && agentOutputs) {
+      // Exactly what the agent streams for a paused turn: one
+      // response.in_progress event with custom_outputs, then [DONE].
       if (agentOutputs === AGENT_OUTPUTS.paused) {
-        return createMockStreamResponse(
-          mockResponsesApiMultiTextStream([], agentOutputs),
-        );
+        return createMockStreamResponse([
+          mockSSE({
+            type: 'response.in_progress',
+            custom_outputs: agentOutputs,
+          }),
+          'data: [DONE]',
+        ]);
       }
       if (agentOutputs === AGENT_OUTPUTS.complaintThenText) {
         return createMockStreamResponse(
@@ -443,34 +498,153 @@ export const handlers = [
     // doesn't.
     if (statement.includes('interaction_history')) {
       return table(
-        ['interaction_id', 'interaction_date', 'interaction_type', 'channel', 'contact_reason', 'was_resolved', 'was_escalated', 'detected_sentiment', 'transcript_id', 'process_date', 'customer_text', 'agent_text', 'detected_language', 'detected_intents', 'main_topics'],
         [
-          ['INT-1', '2026-04-23T06:01:09.000Z', 'Inbound Call', 'Phone', 'Transaccional', 'true', 'false', 'Neutral', 'TRS-1', '2026-04-22', 'Mi tarjeta es 4111 1111 1111 1111 y el cvv 123', 'Gracias, ya lo reviso.', 'es', 'consulta_general', 'Queja'],
-          ['INT-2', '2026-04-04T04:02:46.000Z', 'Outbound Call', 'Phone', 'Transaccional', 'true', 'false', 'Neutral', null, null, null, null, null, null, null],
+          'interaction_id',
+          'interaction_date',
+          'interaction_type',
+          'channel',
+          'contact_reason',
+          'was_resolved',
+          'was_escalated',
+          'detected_sentiment',
+          'transcript_id',
+          'process_date',
+          'customer_text',
+          'agent_text',
+          'detected_language',
+          'detected_intents',
+          'main_topics',
+        ],
+        [
+          [
+            'INT-1',
+            '2026-04-23T06:01:09.000Z',
+            'Inbound Call',
+            'Phone',
+            'Transaccional',
+            'true',
+            'false',
+            'Neutral',
+            'TRS-1',
+            '2026-04-22',
+            'Mi tarjeta es 4111 1111 1111 1111 y el cvv 123',
+            'Gracias, ya lo reviso.',
+            'es',
+            'consulta_general',
+            'Queja',
+          ],
+          [
+            'INT-2',
+            '2026-04-04T04:02:46.000Z',
+            'Outbound Call',
+            'Phone',
+            'Transaccional',
+            'true',
+            'false',
+            'Neutral',
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+          ],
         ] as string[][],
       );
     }
     if (statement.includes('customer_cases')) {
       return table(
-        ['case_type', 'category', 'creation_date', 'claimed_amount', 'currency', 'priority', 'status', 'resolution'],
-        [['Reclamo', 'Cobro indebido', '2026-03-01T10:00:00.000Z', '120.50', 'USD', 'Alta', 'Cerrado', 'Reembolso']],
+        [
+          'case_type',
+          'category',
+          'creation_date',
+          'claimed_amount',
+          'currency',
+          'priority',
+          'status',
+          'resolution',
+        ],
+        [
+          [
+            'Reclamo',
+            'Cobro indebido',
+            '2026-03-01T10:00:00.000Z',
+            '120.50',
+            'USD',
+            'Alta',
+            'Cerrado',
+            'Reembolso',
+          ],
+        ],
       );
     }
     if (statement.includes('customer_360')) {
       return table(
-        ['first_name', 'last_name', 'country', 'city', 'segment', 'customer_status', 'registration_date', 'preferred_channel', 'email', 'mobile_phone'],
-        [['Santiago', 'Contreras López', 'México', 'Tijuana', 'Plus', 'Active', '2022-07-03T18:46:46.000Z', 'Phone', 'santiago.contreras357@gmail.com', '']],
+        [
+          'first_name',
+          'last_name',
+          'country',
+          'city',
+          'segment',
+          'customer_status',
+          'registration_date',
+          'preferred_channel',
+          'email',
+          'mobile_phone',
+        ],
+        [
+          [
+            'Santiago',
+            'Contreras López',
+            'México',
+            'Tijuana',
+            'Plus',
+            'Active',
+            '2022-07-03T18:46:46.000Z',
+            'Phone',
+            'santiago.contreras357@gmail.com',
+            '',
+          ],
+        ],
       );
     }
     if (statement.includes('get_products')) {
       return table(
-        ['product_type', 'product_number_last4', 'currency', 'current_balance', 'credit_limit', 'available_credit'],
+        [
+          'product_type',
+          'product_number_last4',
+          'currency',
+          'current_balance',
+          'credit_limit',
+          'available_credit',
+        ],
         [['Tarjeta Crédito', '1070', 'USD', '3332.62', '8672.72', '5340.10']],
       );
     }
     return table(
-      ['transaction_date', 'product_type', 'product_number_last4', 'transaction_type', 'merchant_name', 'amount', 'currency', 'transaction_status'],
-      [['2026-06-08T15:00:51.000Z', 'Tarjeta Crédito', '4930', 'Purchase', 'Internet Plus', '329.44', 'USD', 'Approved']],
+      [
+        'transaction_date',
+        'product_type',
+        'product_number_last4',
+        'transaction_type',
+        'merchant_name',
+        'amount',
+        'currency',
+        'transaction_status',
+      ],
+      [
+        [
+          '2026-06-08T15:00:51.000Z',
+          'Tarjeta Crédito',
+          '4930',
+          'Purchase',
+          'Internet Plus',
+          '329.44',
+          'USD',
+          'Approved',
+        ],
+      ],
     );
   }),
 

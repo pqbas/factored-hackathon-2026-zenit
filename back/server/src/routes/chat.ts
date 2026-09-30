@@ -68,6 +68,7 @@ chatRouter.use(authMiddleware);
  * Streaming continues normally, but no chat/message persistence occurs.
  */
 chatRouter.post('/', requireAuth, async (req: Request, res: Response) => {
+  const startedAt = new Date();
   const dbAvailable = isDatabaseAvailable();
   if (!dbAvailable) {
     console.log('[Chat] Running in ephemeral mode - no persistence');
@@ -407,6 +408,8 @@ chatRouter.post('/', requireAuth, async (req: Request, res: Response) => {
             customerMessageId: message?.id,
             reply: responseMessage,
             usage: finalUsage,
+            startedAt,
+            source: 'live',
           });
         } else {
           getAndClearAgentOutputs(id);

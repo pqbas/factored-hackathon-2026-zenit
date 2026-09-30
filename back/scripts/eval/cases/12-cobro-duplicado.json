@@ -1,0 +1,38 @@
+{
+  "id": "12",
+  "language": "es",
+  "group": "reclamo-cargo",
+  "customer": {
+    "token": "demo-co-1",
+    "user": 2,
+    "segment": "Basic",
+    "name": "Javier"
+  },
+  "steps": [
+    {
+      "say": "me cobraron dos veces en el supermercado"
+    },
+    {
+      "say": "fue en Super Ahorro, con la tarjeta 4885, de 157559.29 el 11 de mayo"
+    },
+    {
+      "say": "me lo cobraron dos veces, quiero que lo revisen"
+    },
+    {
+      "say": "sí, confirmo"
+    }
+  ],
+  "expected": {
+    "firstIntent": "COMPLAINT",
+    "outcome": "D",
+    "reason": "complaint",
+    "handoffFacts": [
+      "card_last4",
+      "transaction_date",
+      "merchant",
+      "amount",
+      "complaint_type",
+      "description"
+    ]
+  }
+}

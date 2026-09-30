@@ -222,6 +222,26 @@ test.describe('/api/advisor/metrics (with database)', () => {
     ).toBe(1);
   });
 
+  test('keeps the resolution fields and adds latency and cost next to them', async ({
+    adaContext,
+  }) => {
+    const { body } = await metricsFor(adaContext, 'NONE');
+    for (const field of ['total', 'aiContained', 'human', 'assisted']) {
+      expect(typeof body[field]).toBe('number');
+    }
+    expect(Array.isArray(body.byDay)).toBe(true);
+    expect(typeof body.byUseCase).toBe('object');
+    expect(Object.keys(body.latency).sort()).toEqual(['p50Ms', 'p95Ms', 'turns']);
+    expect(Object.keys(body.cost).sort()).toEqual([
+      'assumptions',
+      'estimatedUsd',
+      'inputTokens',
+      'outputTokens',
+      'perConversationUsd',
+      'turnsWithUsage',
+    ]);
+  });
+
   test('bad dates get 400; advisors and customers get 403', async ({
     adaContext,
     babbageContext,

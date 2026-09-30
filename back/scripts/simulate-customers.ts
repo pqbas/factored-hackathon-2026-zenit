@@ -101,11 +101,15 @@ export function headersFor(
   };
 }
 
-// Reads the UI message stream (SSE) to the end and joins the text deltas.
-async function readReply(response: Response): Promise<string> {
+// Reads the UI message stream (SSE) to the end: the text deltas joined and the
+// type of every part (data-agent-pending, error, ...).
+async function readStream(
+  response: Response,
+): Promise<{ reply: string; events: string[] }> {
   const body = await response.text();
   let text = '';
   const errors: string[] = [];
+  const events: string[] = [];
   for (const line of body.split('\n')) {
     if (!line.startsWith('data: ') || line === 'data: [DONE]') continue;
     try {
@@ -115,6 +119,7 @@ async function readReply(response: Response): Promise<string> {
         errorText?: string;
         data?: unknown;
       };
+      events.push(event.type);
       if (event.type === 'text-delta' && event.delta) text += event.delta;
       if (event.type === 'error') errors.push(event.errorText ?? 'error');
       if (event.type === 'data-error') errors.push(String(event.data));
@@ -122,8 +127,10 @@ async function readReply(response: Response): Promise<string> {
       // Not JSON: ignore.
     }
   }
-  if (!text && errors.length) return `[error] ${errors.join('; ')}`;
-  return text.trim() || '[sin respuesta]';
+  if (!text && errors.length) {
+    return { reply: `[error] ${errors.join('; ')}`, events };
+  }
+  return { reply: text.trim() || '[sin respuesta]', events };
 }
 
 export function statusOf(chat: ChatState | null): string {
@@ -132,6 +139,52 @@ export function statusOf(chat: ChatState | null): string {
   if (chat.handledBy === 'human_queue') return 'En espera';
   if (chat.handledBy === 'human_agent') return 'Con asesor';
   return 'Con AI';
+}
+
+// One customer message through POST /api/chat, read to the end of the stream.
+// durationMs runs from the POST to the last byte; events are the types of the
+// stream's parts (data-agent-pending shows the agent was down). messageId is
+// the customer message's id, which TurnMetric.messageId points to.
+export async function sendMessage(
+  base: string,
+  headers: Record<string, string>,
+  chatId: string,
+  text: string,
+  sessionToken: string,
+): Promise<{
+  reply: string;
+  durationMs: number;
+  events: string[];
+  messageId: string;
+}> {
+  const messageId = randomUUID();
+  const started = performance.now();
+  const response = await fetch(`${base}/api/chat`, {
+    method: 'POST',
+    headers: { ...headers, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      id: chatId,
+      message: {
+        id: messageId,
+        role: 'user',
+        parts: [{ type: 'text', text }],
+      },
+      selectedChatModel: 'chat-model',
+      selectedVisibilityType: 'private',
+      sessionToken,
+    }),
+  });
+  if (!response.ok) {
+    const reply = `[HTTP ${response.status}] ${(await response.text()).slice(0, 200)}`;
+    return {
+      reply,
+      durationMs: performance.now() - started,
+      events: [],
+      messageId,
+    };
+  }
+  const { reply, events } = await readStream(response);
+  return { reply, durationMs: performance.now() - started, events, messageId };
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -147,24 +200,13 @@ export async function runScenario(
   console.log(`    chat ${chatId} · sessionToken ${scenario.sessionToken}`);
 
   for (const text of scenario.messages) {
-    const response = await fetch(`${base}/api/chat`, {
-      method: 'POST',
-      headers: { ...headers, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        id: chatId,
-        message: {
-          id: randomUUID(),
-          role: 'user',
-          parts: [{ type: 'text', text }],
-        },
-        selectedChatModel: 'chat-model',
-        selectedVisibilityType: 'private',
-        sessionToken: scenario.sessionToken,
-      }),
-    });
-    const reply = response.ok
-      ? await readReply(response)
-      : `[HTTP ${response.status}] ${(await response.text()).slice(0, 200)}`;
+    const { reply } = await sendMessage(
+      base,
+      headers,
+      chatId,
+      text,
+      scenario.sessionToken,
+    );
     console.log(`  Cliente: ${text}`);
     console.log(`  David:   ${reply.replace(/\n+/g, '\n           ')}`);
     if (delay) await sleep(delay);

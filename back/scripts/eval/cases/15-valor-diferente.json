@@ -1,0 +1,39 @@
+{
+  "id": "15",
+  "language": "pt",
+  "group": "reclamo-cargo",
+  "customer": {
+    "token": "demo-co-2",
+    "user": 6,
+    "segment": "Plus",
+    "name": "Gustavo"
+  },
+  "steps": [
+    {
+      "say": "o valor cobrado é diferente do que paguei"
+    },
+    {
+      "say": "no cartão final 0126, o do Restaurante El Buen Sabor de 750943.44 de 24 de abril"
+    },
+    {
+      "say": "eu paguei 500000"
+    },
+    {
+      "say": "sim, confirmo"
+    }
+  ],
+  "expected": {
+    "firstIntent": "COMPLAINT",
+    "outcome": "D",
+    "reason": "complaint",
+    "handoffFacts": [
+      "card_last4",
+      "transaction_date",
+      "merchant",
+      "amount",
+      "complaint_type",
+      "description"
+    ],
+    "mustMatch": ["transferir|atendente"]
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "id": "25",
+  "language": "es",
+  "group": "ambiguos-fuera-de-alcance",
+  "customer": {
+    "token": "demo-mx-1",
+    "user": 1,
+    "segment": "Plus",
+    "name": "Santiago"
+  },
+  "steps": [
+    {
+      "say": "quiero hablar con una persona"
+    }
+  ],
+  "expected": {
+    "firstIntent": "HUMAN_AGENT",
+    "outcome": "A",
+    "mustMatch": [
+      "Tengo estas opciones|Tenho estas opções|Cuéntame qué necesitas"
+    ]
+  }
+}
