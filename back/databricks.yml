@@ -3,11 +3,96 @@
 bundle:
   name: bank-assistant-back
 
+variables:
+  bank_ro_pipeline_id:
+    description: "The snapshot pipeline of the bank_ro synced tables (created with the first one)"
+    default: e2caac30-d15e-4b79-ae2a-4090cc039612
+
 resources:
   database_instances:
     chat_lakebase:
       name: bank-assistant-chat-db
       capacity: CU_1
+
+  # Read-only copies of the bank tables the agent and the back read, in the
+  # Postgres schema bank_ro (docs/datos-banco-lakebase.md). Snapshot mode,
+  # refreshed on demand (scripts/bank-ro/refresh.sh), all in one pipeline.
+  # They were created with scripts/bank-ro/create.sh: before the next
+  # `bundle deploy`, bind them (`databricks bundle deployment bind
+  # bank_ro_<table> workspace.bank_ro.<table>`) so it doesn't create them again.
+  synced_database_tables:
+    bank_ro_customer_360:
+      name: workspace.bank_ro.customer_360
+      database_instance_name: ${resources.database_instances.chat_lakebase.name}
+      logical_database_name: databricks_postgres
+      spec:
+        source_table_full_name: workspace.bank_gold.customer_360
+        primary_key_columns: [customer_id]
+        scheduling_policy: SNAPSHOT
+        create_database_objects_if_missing: true
+        new_pipeline_spec:
+          storage_catalog: workspace
+          storage_schema: bank_ro
+    bank_ro_customers:
+      name: workspace.bank_ro.customers
+      database_instance_name: ${resources.database_instances.chat_lakebase.name}
+      logical_database_name: databricks_postgres
+      spec:
+        source_table_full_name: workspace.bank_silver.customers
+        primary_key_columns: [customer_id]
+        scheduling_policy: SNAPSHOT
+        create_database_objects_if_missing: true
+        existing_pipeline_id: ${var.bank_ro_pipeline_id}
+    bank_ro_customer_cases:
+      name: workspace.bank_ro.customer_cases
+      database_instance_name: ${resources.database_instances.chat_lakebase.name}
+      logical_database_name: databricks_postgres
+      spec:
+        source_table_full_name: workspace.bank_gold.customer_cases
+        primary_key_columns: [customer_id, complaint_id]
+        scheduling_policy: SNAPSHOT
+        create_database_objects_if_missing: true
+        existing_pipeline_id: ${var.bank_ro_pipeline_id}
+    bank_ro_call_transcripts:
+      name: workspace.bank_ro.call_transcripts
+      database_instance_name: ${resources.database_instances.chat_lakebase.name}
+      logical_database_name: databricks_postgres
+      spec:
+        source_table_full_name: workspace.bank_silver.call_transcripts
+        primary_key_columns: [customer_id, transcript_id]
+        scheduling_policy: SNAPSHOT
+        create_database_objects_if_missing: true
+        existing_pipeline_id: ${var.bank_ro_pipeline_id}
+    bank_ro_customer_products:
+      name: workspace.bank_ro.customer_products
+      database_instance_name: ${resources.database_instances.chat_lakebase.name}
+      logical_database_name: databricks_postgres
+      spec:
+        source_table_full_name: workspace.bank_gold.customer_products
+        primary_key_columns: [customer_id, product_id]
+        scheduling_policy: SNAPSHOT
+        create_database_objects_if_missing: true
+        existing_pipeline_id: ${var.bank_ro_pipeline_id}
+    bank_ro_interaction_history:
+      name: workspace.bank_ro.interaction_history
+      database_instance_name: ${resources.database_instances.chat_lakebase.name}
+      logical_database_name: databricks_postgres
+      spec:
+        source_table_full_name: workspace.bank_gold.interaction_history
+        primary_key_columns: [customer_id, interaction_id]
+        scheduling_policy: SNAPSHOT
+        create_database_objects_if_missing: true
+        existing_pipeline_id: ${var.bank_ro_pipeline_id}
+    bank_ro_customer_transactions:
+      name: workspace.bank_ro.customer_transactions
+      database_instance_name: ${resources.database_instances.chat_lakebase.name}
+      logical_database_name: databricks_postgres
+      spec:
+        source_table_full_name: workspace.bank_gold.customer_transactions
+        primary_key_columns: [customer_id, transaction_id]
+        scheduling_policy: SNAPSHOT
+        create_database_objects_if_missing: true
+        existing_pipeline_id: ${var.bank_ro_pipeline_id}
 
   apps:
     bank_assistant_ui:
