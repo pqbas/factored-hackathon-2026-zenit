@@ -51,14 +51,16 @@ export function ActionCard({
       exit={{ opacity: 0, y: 12 }}
       transition={{ delay: 0.05 * index }}
       onClick={onClick}
-      className="flex items-center gap-3 rounded-[14px] bg-card px-4 py-3.5 text-left transition-colors hover:bg-secondary"
+      title={title}
+      className="flex h-[4.5rem] min-w-0 items-center gap-3 rounded-[14px] bg-card px-4 text-left transition-colors hover:bg-secondary"
     >
       <span className={cn('flex size-[34px] shrink-0 items-center justify-center rounded-[9px]', tint)}>
         <Icon className="size-[18px]" strokeWidth={1.8} />
       </span>
-      <span className="flex flex-col">
-        <span className="font-medium text-sm">{title}</span>
-        <span className="text-muted-foreground text-xs">{description}</span>
+      {/* One line each, so every card has the same height and alignment. */}
+      <span className="flex min-w-0 flex-col">
+        <span className="truncate font-medium text-sm">{title}</span>
+        <span className="truncate text-muted-foreground text-xs">{description}</span>
       </span>
     </motion.button>
   );

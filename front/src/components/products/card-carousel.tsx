@@ -29,28 +29,42 @@ export function CardCarousel({
   const money = (amount: number) => formatMoney(amount, card.currency);
   const usage = creditUsage(card);
 
+  // The card a dot or a click is scrolling to: until it's in view, the
+  // scroll doesn't move the selection.
+  const scrollingTo = useRef<number | null>(null);
+
   function show(next: number) {
     setIndex(next);
+    scrollingTo.current = next;
     const item = trackRef.current?.children[next] as HTMLElement | undefined;
     item?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
   }
 
-  // The card nearest to the track's center is the selected one.
+  // Swiping moves the selection to the card at the left edge, unless the
+  // selected card is still fully in view (several cards fit on wide screens).
   function onScroll() {
     const track = trackRef.current;
     if (!track) return;
-    const center = track.scrollLeft + track.clientWidth / 2;
+    const left = track.scrollLeft;
+    const right = left + track.clientWidth;
+    const items = Array.from(track.children) as HTMLElement[];
+    const inView = (el: HTMLElement | undefined) =>
+      !!el && el.offsetLeft >= left - 1 && el.offsetLeft + el.offsetWidth <= right + 1;
+    if (scrollingTo.current !== null) {
+      if (inView(items[scrollingTo.current])) scrollingTo.current = null;
+      return;
+    }
+    if (inView(items[index])) return;
     let nearest = 0;
     let best = Number.POSITIVE_INFINITY;
-    Array.from(track.children).forEach((child, i) => {
-      const el = child as HTMLElement;
-      const distance = Math.abs(el.offsetLeft + el.offsetWidth / 2 - center);
+    items.forEach((el, i) => {
+      const distance = Math.abs(el.offsetLeft - left);
       if (distance < best) {
         best = distance;
         nearest = i;
       }
     });
-    if (nearest !== index) setIndex(nearest);
+    setIndex(nearest);
   }
 
   return (
@@ -59,10 +73,15 @@ export function CardCarousel({
       <div
         ref={trackRef}
         onScroll={onScroll}
-        className="-mx-6 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth px-6 pt-1 pb-2 [scrollbar-width:none] md:-mx-10 md:px-10 [&::-webkit-scrollbar]:hidden"
+        className="relative flex snap-x snap-mandatory gap-3 overflow-x-auto overflow-y-hidden scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         {cards.map((c, i) => (
-          <div key={`${c.productType}-${c.last4}`} className="w-[85%] shrink-0 snap-center sm:w-80">
+          // As wide as a column of the 3-column grids around it, so the cards
+          // line up with them; the next one peeks inside the content width.
+          <div
+            key={`${c.productType}-${c.last4}`}
+            className="w-[85%] shrink-0 snap-start sm:w-[calc((100%-0.75rem)/2)] lg:w-[calc((100%-1.5rem)/3)]"
+          >
             <CreditCardVisual product={c} selected={i === index} onSelect={() => show(i)} />
           </div>
         ))}
@@ -97,7 +116,7 @@ export function CardCarousel({
           )}
         </div>
         {usage !== null && card.creditLimit !== null && (
-          <div className="flex flex-col gap-1.5 px-1">
+          <div className="flex flex-col gap-1.5">
             <progress
               value={Math.round(usage * 100)}
               max={100}

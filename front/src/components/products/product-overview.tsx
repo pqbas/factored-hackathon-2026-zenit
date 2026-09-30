@@ -45,7 +45,7 @@ export function ProductOverview({
       <QuickActions />
 
       {/* Only the tiles that apply to what the customer has. */}
-      <div className="grid gap-3 sm:grid-cols-[repeat(auto-fit,minmax(12rem,1fr))]">
+      <div className="grid gap-3 sm:grid-cols-3">
         {hasSavings && (
           <StatTile label={t.products.availableInAccounts} value={money(totals.available)} />
         )}
