@@ -4,16 +4,16 @@ La fase está lista para mergear cuando se cumple todo lo que sigue.
 
 ## Automated Tests
 
-- [ ] `npm run test:with-db` (base nueva, migrada) y `npm run test:ephemeral`
+- [x] `npm run test:with-db` (base nueva, migrada) y `npm run test:ephemeral`
       en 0
-- [ ] `npx tsc --noEmit` y `npm run build:server` en 0
+- [x] `npx tsc --noEmit` y `npm run build:server` en 0
 
 ### Specific test coverage required
 
 #### End-to-end
 
-- [ ] Un turno sin caso conserva el caso de la conversación
-- [ ] Reabrir un chat cerrado deja `useCase` en `null` hasta el próximo caso
+- [x] Un turno sin caso conserva el caso de la conversación
+- [x] Reabrir un chat cerrado deja `useCase` en `null` hasta el próximo caso
       real, y el `ResolutionEvent` de la conversación cerrada conserva el suyo
 
 ## Definition of Done

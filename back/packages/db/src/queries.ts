@@ -839,7 +839,9 @@ export async function reopenChat({ chatId }: { chatId: string }) {
   try {
     return await (await ensureDb())
       .update(chat)
-      .set({ closedAt: null, hadHuman: false })
+      // A new conversation starts without a use case: the console shows the one
+      // in progress, and the closed one keeps its own in its ResolutionEvent.
+      .set({ closedAt: null, hadHuman: false, useCase: null })
       .where(eq(chat.id, chatId));
   } catch (_error) {
     throw new ChatSDKError('bad_request:database', 'Failed to reopen chat');

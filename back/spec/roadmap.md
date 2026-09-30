@@ -415,3 +415,19 @@ del usuario, pedido de w1:p3).
 - [x] Un chat devuelto por el asesor sin cerrar va entero, con `[Asesor]`.
 
 Shipped en PR #90.
+
+---
+
+## Phase 17: El caso de uso es el de la conversación en curso (Complete)
+
+**Goal:** que la consola muestre el caso de la conversación en curso, sin
+arrastrar el de una conversación cerrada.
+
+<!-- Pedido del usuario vía w1:p4, 30-09-26. Spec en
+     spec/30-09-26-caso-por-conversacion/. -->
+
+- [x] Reabrir un chat cerrado reinicia `useCase`; el `ResolutionEvent` de la
+      conversación cerrada conserva el suyo.
+- [x] Dentro de una conversación, un turno sin caso no pisa el caso real (ya
+      se cumplía).
+
