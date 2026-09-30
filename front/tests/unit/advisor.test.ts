@@ -297,6 +297,7 @@ describe('view counts', () => {
       advisor: 4,
       resolved: 0,
       reasons: { complaint: 3, retention: 0 },
+      davidByReason: {},
     });
     expect(parseCounts(null)).toEqual({
       inbox: 0,
@@ -305,6 +306,7 @@ describe('view counts', () => {
       advisor: 0,
       resolved: 0,
       reasons: {},
+      davidByReason: {},
     });
   });
 

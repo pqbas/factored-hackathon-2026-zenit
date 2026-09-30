@@ -180,8 +180,16 @@ async function mockAdvisorApi(page: Page, me: string, role: Role = 'advisor', ex
         const reason = c.handoff?.reason as string | undefined;
         if (reason) byHandoffReason[reason] = (byHandoffReason[reason] ?? 0) + 1;
       }
+      // David's open chats per use case (the reason views' Agente AI option).
+      const aiAgentByUseCase: Record<string, number> = {};
+      for (const c of ongoing) {
+        if (c.handledBy === 'ai_agent' && c.useCase) {
+          aiAgentByUseCase[c.useCase] = (aiAgentByUseCase[c.useCase] ?? 0) + 1;
+        }
+      }
       return route.fulfill({
         json: {
+          aiAgentByUseCase,
           total: human.length,
           aiAgent: ongoing.length - human.length,
           byHandoffReason,
@@ -198,6 +206,7 @@ async function mockAdvisorApi(page: Page, me: string, role: Role = 'advisor', ex
         (c) =>
           (!q.get('userId') || c.userId === q.get('userId')) &&
           (!q.get('handoffReason') || c.handoff?.reason === q.get('handoffReason')) &&
+          (!q.get('useCase') || c.useCase === q.get('useCase')) &&
           (q.get('handledBy')
             ? c.handledBy === q.get('handledBy')
             : q.get('status') === 'closed' || c.handledBy !== 'ai_agent'),
@@ -737,6 +746,42 @@ test.describe('Advisor console', () => {
     const headerColor = await page.getByTestId('header-avatar').getAttribute('class');
     const hue = (cls: string | null) => cls?.match(/from-[a-z]+-\d+/)?.[0];
     expect(hue(headerColor)).toBe(hue(rowColor));
+  });
+
+  test('a reason view switches between the handed-off chats and the ones David still handles', async ({ page }) => {
+    const requested = await openConsole(page, 'advisor', ME, [
+      ['c-collecting', 'pedro@banco.test', { useCase: 'COMPLAINT', title: 'Reclamo en curso' }],
+    ]);
+    await page.getByTestId('view-reason-complaint').click();
+    // Bandeja by default: the handed-off complaint, as before.
+    await expect(page.getByTestId('scope-inbox')).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByTestId('scope-inbox-count')).toHaveText('1');
+    await expect(page.getByTestId('scope-david-count')).toHaveText('1');
+    await expect(page.getByTestId('conversation-row-c-waiting')).toBeVisible();
+    await expect(page.getByTestId('conversation-row-c-collecting')).toHaveCount(0);
+
+    await page.getByTestId('scope-david').click();
+    await expect(page.getByTestId('conversation-row-c-collecting')).toBeVisible();
+    await expect(page.getByTestId('conversation-row-c-waiting')).toHaveCount(0);
+    expect(requested.some((r) => r.includes('handledBy=ai_agent') && r.includes('useCase=COMPLAINT'))).toBe(true);
+    await expect(page).toHaveURL(/reason=complaint&scope=david/);
+    // The sidebar still counts the Bandeja.
+    await expect(page.getByTestId('view-reason-complaint-count')).toHaveText('1');
+
+    // A reload keeps the reason and the option.
+    await page.reload();
+    await expect(page.getByTestId('scope-david')).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByTestId('conversation-row-c-collecting')).toBeVisible();
+
+    // Nothing for David in another reason: its own message.
+    await page.getByTestId('view-reason-case_status').click();
+    await expect(page.getByTestId('scope-inbox')).toHaveAttribute('aria-selected', 'true');
+    await page.getByTestId('scope-david').click();
+    await expect(page.getByTestId('inbox-empty-reason-david')).toBeVisible();
+
+    // Another view drops the params.
+    await page.getByTestId('view-inbox').click();
+    await expect(page).not.toHaveURL(/reason=/);
   });
 
   test('Agente AI is split in sections by what David is working on', async ({ page }) => {
