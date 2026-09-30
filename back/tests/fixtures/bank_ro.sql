@@ -318,3 +318,23 @@ INSERT INTO bank_ro.customer_cases
 VALUES
   ('CAS-1', 'CLI-FLEUCGTWGAHL', '2026-03-01T10:00:00Z', 'Reclamo', 'Cobro indebido', 120.50, 'USD', 'Alta', 'Cerrado', 'Reembolso'),
   ('CAS-F1', 'CLI-PROFILE-FAILS', '2026-03-01T10:00:00Z', 'Reclamo', 'Cobro indebido', 120.50, 'USD', 'Alta', 'Cerrado', 'Reembolso');
+
+-- Simulation sessions (scripts/simulate/sessions.sql, without grants): one
+-- live session and one expired, both of Javier.
+DROP SCHEMA IF EXISTS bank_sessions CASCADE;
+CREATE SCHEMA bank_sessions;
+
+CREATE TABLE bank_sessions.sim_sessions (
+  token text PRIMARY KEY CHECK (token LIKE 'sim-%'),
+  customer_id text NOT NULL,
+  country text,
+  expires_at timestamptz NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  day date NOT NULL
+);
+CREATE INDEX sim_sessions_customer ON bank_sessions.sim_sessions (customer_id);
+
+INSERT INTO bank_sessions.sim_sessions (token, customer_id, country, expires_at, day)
+VALUES
+  ('sim-live-0001', 'CLI-7MPS3ZOPSN4Q', 'Colombia', '2099-01-01T00:00:00Z', '2098-12-31'),
+  ('sim-expired-0001', 'CLI-7MPS3ZOPSN4Q', 'Colombia', '2020-01-01T00:00:00Z', '2019-12-31');

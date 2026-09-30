@@ -130,6 +130,37 @@ test.describe('/api/products', () => {
     expect((await expired.json()).reason).toBe('expired');
   });
 
+  test('a live sim- session resolves to its customer', async ({
+    adaContext,
+  }) => {
+    const response = await adaContext.request.get(
+      '/api/products?sessionToken=sim-live-0001',
+    );
+    expect(response.status()).toBe(200);
+    const body = await response.json();
+    expect(body.customer).toEqual({
+      customerId: 'CLI-7MPS3ZOPSN4Q',
+      firstName: 'Javier',
+      lastName: 'Ortiz Vega',
+    });
+    expect(body.products).toHaveLength(2);
+  });
+
+  test('an expired or unknown sim- session is rejected like an unknown token', async ({
+    adaContext,
+  }) => {
+    const unknown = await adaContext.request.get(
+      '/api/products?sessionToken=nope',
+    );
+    for (const token of ['sim-expired-0001', 'sim-does-not-exist']) {
+      const response = await adaContext.request.get(
+        `/api/products?sessionToken=${token}`,
+      );
+      expect(response.status()).toBe(unknown.status());
+      expect(await response.json()).toEqual(await unknown.json());
+    }
+  });
+
   test('an advisor gets 403; a customer gets the data', async ({
     babbageContext,
     curieContext,
