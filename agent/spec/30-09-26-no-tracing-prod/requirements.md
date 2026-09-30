@@ -4,7 +4,7 @@ In prod, no trace ever reaches MLflow. The v3 export uploads each trace to a Dat
 
 ## 1. Functional requirements
 
-1. With `AGENT_TRACING=off` (set in `app.yaml`), the agent doesn't enable LangChain autolog, doesn't pin the experiment, and calls `mlflow.tracing.disable()`, so it never tries to upload a trace. It also skips `update_current_trace` and the git-based `LoggedModel` setup.
+1. With `AGENT_TRACING=off` (set in `app.yaml`), the agent doesn't enable LangChain autolog, doesn't pin the experiment, and calls `mlflow.tracing.disable()`, so it never tries to upload a trace. It also skips `update_current_trace` (in `main.py` and the `classify.*` tags in `classify.py`) and the git-based `LoggedModel` setup, so MLflow logs no "No active trace found" warning.
 2. Without the variable (the default, `on`), local runs keep today's tracing: autolog with the experiment pinned once (#98).
 3. Turns behave the same either way.
 
