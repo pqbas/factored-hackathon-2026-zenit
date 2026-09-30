@@ -557,3 +557,13 @@ Shipped en PR #115.
 Spec: `spec/30-09-26-tarjetas-visuales/`.
 
 Shipped en PR #116.
+
+---
+
+## Phase 32: Evolución de tus ahorros
+
+**Goal:** que el cliente vea cómo evolucionó su ahorro en el último año.
+
+- [ ] Gráfico de línea por moneda en Mis productos, 12 meses, con el saldo de hoy destacado y rotulado como estimado.
+
+Spec: `spec/30-09-26-evolucion-ahorros/`.
