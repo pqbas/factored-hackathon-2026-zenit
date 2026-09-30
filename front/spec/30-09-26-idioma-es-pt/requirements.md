@@ -31,13 +31,14 @@ And it changes in these ways:
 
 - Un diccionario propio (`src/lib/i18n.ts`) y un contexto (`useLang`), sin librería. Son dos idiomas y unas 60 cadenas; una librería de i18n no aporta nada a este tamaño.
 - Solo la pantalla del chat. La consola del asesor y las métricas son herramientas internas en español, como pidió w1:p4. Mis productos queda para después, igual que los textos del back (mensajes de sistema) y los de las respuestas de David.
+- Hoy ningún cliente demo es de Brasil (México, Colombia y Argentina), así que en la práctica el idioma por defecto sale del navegador. La regla por país se deja lista para cuando se sume un cliente brasileño.
 - El país del cliente demo se lee de su etiqueta ("Santiago · México"), porque la lista de clientes demo no trae otro campo de país.
 - Las tarjetas envían el mensaje en el idioma elegido. Así el clasificador de David ya ve portugués aunque el back todavía no mande el idioma.
 - El selector de idioma no se bloquea con el primer mensaje, a diferencia del cliente demo: cambiar de idioma a mitad de chat es válido.
 
 ## 3. Context
 
-- Pedido de w1:p4 (30/09). Contrato propuesto a w1:p1 y w1:p3: `language` en el body → `custom_inputs.language`.
+- Pedido de w1:p4 (30/09). Contrato acordado con w1:p3 (OK el 30/09) y propuesto a w1:p1: `language` en el body → `custom_inputs.language`. En el agente: un mensaje de 3 palabras o más, con idioma claro, gana; si no, gana el idioma elegido.
 - Textos:
   - `greeting.tsx`, `suggested-actions.tsx`, `multimodal-input.tsx`;
   - `chat-header.tsx`, `demo-customer-selector.tsx`, `agent-unavailable.tsx`;

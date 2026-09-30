@@ -1,5 +1,4 @@
 import type { UIMessage } from 'ai';
-import { ASSISTANT_NAME } from '@/lib/assistant';
 import {
   useRef,
   useEffect,
@@ -31,6 +30,7 @@ import type { VisibilityType } from './visibility-selector';
 import type { Attachment, ChatMessage } from '@chat-template/core';
 import { softNavigateToChatId } from '@/lib/navigation';
 import { useAppConfig } from '@/contexts/AppConfigContext';
+import { useLang } from '@/contexts/LangContext';
 
 function PureMultimodalInput({
   chatId,
@@ -60,6 +60,7 @@ function PureMultimodalInput({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { width } = useWindowSize();
   const { chatHistoryEnabled } = useAppConfig();
+  const { t } = useLang();
 
   const adjustHeight = useCallback(() => {
     if (textareaRef.current) {
@@ -249,7 +250,7 @@ function PureMultimodalInput({
         onSubmit={(event) => {
           event.preventDefault();
           if (status !== 'ready') {
-            toast.error(`Espera a que ${ASSISTANT_NAME} termine de responder.`);
+            toast.error(t.waitForReply);
           } else {
             submitForm();
           }
@@ -292,7 +293,7 @@ function PureMultimodalInput({
           <PromptInputTextarea
             data-testid="multimodal-input"
             ref={textareaRef}
-            placeholder="Mensaje"
+            placeholder={t.placeholder}
             value={input}
             onChange={handleInput}
             minHeight={34}
@@ -322,7 +323,7 @@ function PureMultimodalInput({
       </PromptInput>
       <p className="-mt-2 flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground">
         <LockIcon className="size-3" strokeWidth={2} />
-        Nunca te pediremos tu contraseña, tu NIP ni el CVV.
+        {t.securityNotice}
       </p>
     </div>
   );

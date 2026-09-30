@@ -24,6 +24,7 @@ import { ChatTransport } from '../lib/ChatTransport';
 import type { ClientSession } from '@chat-template/auth';
 import { softNavigateToChatId } from '@/lib/navigation';
 import { useAppConfig } from '@/contexts/AppConfigContext';
+import { useLang } from '@/contexts/LangContext';
 import { useDemoCustomers } from '@/hooks/use-demo-customers';
 import { useHandoff } from '@/hooks/use-handoff';
 import {
@@ -92,6 +93,11 @@ export function Chat({
   );
   const customerTokenRef = useRef(customerToken);
   customerTokenRef.current = customerToken;
+  // The chosen language goes with every message, for David to answer in it
+  // when the message doesn't make it clear (custom_inputs.language).
+  const { lang } = useLang();
+  const langRef = useRef(lang);
+  langRef.current = lang;
   useEffect(() => {
     if (customerToken === null && customers.length > 0) {
       const picked = pickDefaultToken(customers, getLastCustomerToken());
@@ -194,6 +200,7 @@ export function Chat({
             nextMessageId: generateUUID(),
             // Never an empty string: the back rejects it.
             ...(sessionToken ? { sessionToken } : {}),
+            language: langRef.current,
             // Send previous messages when:
             // 1. Database is disabled (ephemeral mode) - always need client-side messages
             // 2. Continuation request (tool results) - tool result only exists client-side
@@ -340,7 +347,7 @@ export function Chat({
     setMessages,
     enabled: chatHistoryEnabled,
   });
-  const notice = handoffNotice(handledBy);
+  const notice = handoffNotice(handledBy, lang);
 
   const [searchParams] = useSearchParams();
   const query = searchParams.get('query');

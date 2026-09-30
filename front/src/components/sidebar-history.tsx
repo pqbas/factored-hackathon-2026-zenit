@@ -31,6 +31,7 @@ import { ChatItem } from './sidebar-history-item';
 import useSWRInfinite, { unstable_serialize } from 'swr/infinite';
 import { getActiveCustomerToken } from '@/lib/demo-customer-storage';
 import { useActiveCustomerToken } from '@/hooks/use-active-customer';
+import { useLang } from '@/contexts/LangContext';
 import { LoaderIcon } from 'lucide-react';
 
 type GroupedChats = {
@@ -140,6 +141,7 @@ function ChatDateGroup({
 
 export function SidebarHistory({ user }: { user?: ClientUser | null }) {
   const { setOpenMobile } = useSidebar();
+  const { t } = useLang();
   const { id } = useParams();
 
   const {
@@ -167,7 +169,7 @@ export function SidebarHistory({ user }: { user?: ClientUser | null }) {
     });
 
     toast.promise(deletePromise, {
-      loading: 'Eliminando conversación…',
+      loading: t.deleting,
       success: () => {
         mutate((chatHistories) => {
           if (chatHistories) {
@@ -178,9 +180,9 @@ export function SidebarHistory({ user }: { user?: ClientUser | null }) {
           }
         });
 
-        return 'Conversación eliminada';
+        return t.deleted;
       },
-      error: 'No se pudo eliminar la conversación',
+      error: t.deleteFailed,
     });
 
     setShowDeleteDialog(false);
@@ -257,7 +259,7 @@ export function SidebarHistory({ user }: { user?: ClientUser | null }) {
                           data-testid="chat-history-empty"
                           className="px-2 py-4 text-muted-foreground text-xs"
                         >
-                          Todavía no hay conversaciones.
+                          {t.noConversations}
                         </p>
                       );
                     }
@@ -267,35 +269,35 @@ export function SidebarHistory({ user }: { user?: ClientUser | null }) {
                     return (
                       <div className="flex flex-col gap-4">
                         <ChatDateGroup
-                          label="Hoy"
+                          label={t.today}
                           chats={groupedChats.today}
                           activeId={id}
                           onDelete={onDeleteChat}
                           setOpenMobile={setOpenMobile}
                         />
                         <ChatDateGroup
-                          label="Ayer"
+                          label={t.yesterday}
                           chats={groupedChats.yesterday}
                           activeId={id}
                           onDelete={onDeleteChat}
                           setOpenMobile={setOpenMobile}
                         />
                         <ChatDateGroup
-                          label="Últimos 7 días"
+                          label={t.last7Days}
                           chats={groupedChats.lastWeek}
                           activeId={id}
                           onDelete={onDeleteChat}
                           setOpenMobile={setOpenMobile}
                         />
                         <ChatDateGroup
-                          label="Últimos 30 días"
+                          label={t.last30Days}
                           chats={groupedChats.lastMonth}
                           activeId={id}
                           onDelete={onDeleteChat}
                           setOpenMobile={setOpenMobile}
                         />
                         <ChatDateGroup
-                          label="Anteriores"
+                          label={t.older}
                           chats={groupedChats.older}
                           activeId={id}
                           onDelete={onDeleteChat}
@@ -319,7 +321,7 @@ export function SidebarHistory({ user }: { user?: ClientUser | null }) {
                   <div className="animate-spin">
                     <LoaderIcon />
                   </div>
-                  <div>Cargando…</div>
+                  <div>{t.loading}</div>
                 </div>
               )}
             </>
@@ -329,16 +331,15 @@ export function SidebarHistory({ user }: { user?: ClientUser | null }) {
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar esta conversación?</AlertDialogTitle>
+            <AlertDialogTitle>{t.deleteTitle}</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta acción no se puede deshacer. La conversación se borrará de
-              forma permanente.
+              {t.deleteDescription}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel>{t.cancel}</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete}>
-              Eliminar
+              {t.delete}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

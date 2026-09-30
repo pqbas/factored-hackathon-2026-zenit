@@ -3,6 +3,7 @@ import React, { memo, useState } from 'react';
 import { UserRound } from 'lucide-react';
 import { BrandMark } from './brand-mark';
 import { senderOf } from '@/lib/handoff';
+import { useLang } from '@/contexts/LangContext';
 import { Response } from './elements/response';
 import { MessageContent } from './elements/message';
 import {
@@ -68,6 +69,7 @@ const PurePreviewMessage = ({
   const [showErrors, setShowErrors] = useState(false);
   // Advisor replies are role 'assistant' too; senderType tells them apart.
   const isAdvisor = senderOf(message) === 'advisor';
+  const { t } = useLang();
   // David is streaming but no text arrived yet (e.g. a slow data query).
   const awaitingText =
     isLoading &&
@@ -160,7 +162,7 @@ const PurePreviewMessage = ({
               data-testid="advisor-label"
               className="-mb-2 font-semibold text-muted-foreground text-xs"
             >
-              Asesor
+              {t.advisor}
             </span>
           )}
           {awaitingText && <TypingIndicator className="text-muted-foreground" />}

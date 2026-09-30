@@ -1,5 +1,7 @@
 import { useNavigate } from 'react-router-dom';
-import { ASSISTANT_KIND, ASSISTANT_NAME } from '@/lib/assistant';
+import { ASSISTANT_NAME } from '@/lib/assistant';
+import { useLang } from '@/contexts/LangContext';
+import { LangSwitch } from '@/components/lang-switch';
 import { useWindowSize } from 'usehooks-ts';
 
 import { SidebarToggle } from '@/components/sidebar-toggle';
@@ -35,15 +37,16 @@ export function ChatHeader({
   // The agent is unavailable and the customer's turn waits in the queue.
   agentPending?: boolean;
 }) {
+  const { t } = useLang();
   // Who is on the other side of the chat right now.
   const peer =
     handledBy === 'human_agent'
-      ? { name: 'Asesor', status: 'Te atiende una persona' }
+      ? { name: t.advisor, status: t.advisorAttending }
       : handledBy === 'human_queue'
-        ? { name: 'Asesor', status: 'Esperando a un asesor' }
+        ? { name: t.advisor, status: t.advisorWaiting }
         : {
             name: ASSISTANT_NAME,
-            status: `${ASSISTANT_KIND} · ${agentPending ? 'No disponible' : 'En línea'}`,
+            status: `${t.assistantKind} · ${agentPending ? t.unavailable : t.online}`,
           };
   const unavailable = handledBy === 'ai_agent' && agentPending;
   const navigate = useNavigate();
@@ -59,7 +62,7 @@ export function ChatHeader({
         {(!open || windowWidth < 768) && (
           <Button
             variant="ghost"
-            aria-label="Nueva conversación"
+            aria-label={t.newChat}
             className="size-8 rounded-[7px] p-0 text-muted-foreground"
             onClick={() => {
               navigate('/');
@@ -68,6 +71,9 @@ export function ChatHeader({
             <PlusIcon />
           </Button>
         )}
+        <div className="ml-1">
+          <LangSwitch />
+        </div>
       </div>
 
       <div className="flex flex-col items-center leading-tight">
@@ -104,11 +110,11 @@ export function ChatHeader({
               <TooltipTrigger asChild>
                 <div className="flex items-center gap-1.5 text-[11px]">
                   <CloudOffIcon className="size-3.5" />
-                  <span className="hidden sm:inline">Sin guardar</span>
+                  <span className="hidden sm:inline">{t.notSaved}</span>
                 </div>
               </TooltipTrigger>
               <TooltipContent>
-                <p>El historial está desactivado: esta conversación no se guarda</p>
+                <p>{t.historyOff}</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>

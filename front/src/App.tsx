@@ -1,6 +1,7 @@
 import { Navigate, Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from '@/components/theme-provider';
 import { SessionProvider } from '@/contexts/SessionContext';
+import { LangProvider } from '@/contexts/LangContext';
 import { AppConfigProvider } from '@/contexts/AppConfigContext';
 import { DataStreamProvider } from '@/components/data-stream-provider';
 import { Toaster } from 'sonner';
@@ -23,50 +24,52 @@ function App() {
       disableTransitionOnChange
     >
       <SessionProvider>
-        <AppConfigProvider>
-          <DataStreamProvider>
-            <Toaster position="top-center" />
-            <Routes>
-              <Route path="/" element={<RootLayout />}>
-                <Route element={<AppShell />}>
-                  <Route element={<ChatLayout />}>
-                    <Route index element={<NewChatPage />} />
-                    <Route path="chat/:id" element={<ChatPage />} />
+        <LangProvider>
+          <AppConfigProvider>
+            <DataStreamProvider>
+              <Toaster position="top-center" />
+              <Routes>
+                <Route path="/" element={<RootLayout />}>
+                  <Route element={<AppShell />}>
+                    <Route element={<ChatLayout />}>
+                      <Route index element={<NewChatPage />} />
+                      <Route path="chat/:id" element={<ChatPage />} />
+                    </Route>
+                    <Route
+                      path="conversations"
+                      element={
+                        <RequireSection section="chats">
+                          <ConversationsPage />
+                        </RequireSection>
+                      }
+                    />
+                    {/* The admin view became Chats (the admin supervises there). */}
+                    <Route
+                      path="admin"
+                      element={<Navigate to="/conversations" replace />}
+                    />
+                    <Route
+                      path="metrics"
+                      element={
+                        <RequireSection section="metrics">
+                          <MetricsPage />
+                        </RequireSection>
+                      }
+                    />
+                    <Route
+                      path="products"
+                      element={
+                        <RequireSection section="products">
+                          <ProductsPage />
+                        </RequireSection>
+                      }
+                    />
                   </Route>
-                  <Route
-                    path="conversations"
-                    element={
-                      <RequireSection section="chats">
-                        <ConversationsPage />
-                      </RequireSection>
-                    }
-                  />
-                  {/* The admin view became Chats (the admin supervises there). */}
-                  <Route
-                    path="admin"
-                    element={<Navigate to="/conversations" replace />}
-                  />
-                  <Route
-                    path="metrics"
-                    element={
-                      <RequireSection section="metrics">
-                        <MetricsPage />
-                      </RequireSection>
-                    }
-                  />
-                  <Route
-                    path="products"
-                    element={
-                      <RequireSection section="products">
-                        <ProductsPage />
-                      </RequireSection>
-                    }
-                  />
                 </Route>
-              </Route>
-            </Routes>
-          </DataStreamProvider>
-        </AppConfigProvider>
+              </Routes>
+            </DataStreamProvider>
+          </AppConfigProvider>
+        </LangProvider>
       </SessionProvider>
     </ThemeProvider>
   );
