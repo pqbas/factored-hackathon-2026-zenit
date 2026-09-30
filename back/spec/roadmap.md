@@ -414,3 +414,4 @@ del usuario, pedido de w1:p3).
       (todo si nunca se cerró), en vivo y en la cola.
 - [x] Un chat devuelto por el asesor sin cerrar va entero, con `[Asesor]`.
 
+Shipped en PR #90.
