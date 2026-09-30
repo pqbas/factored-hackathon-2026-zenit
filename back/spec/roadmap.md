@@ -399,3 +399,5 @@ lectura en Lakebase, sin la warehouse ni el MCP, para bajar el costo.
 
 Pendiente: el costo medido de un refresco (billing con ~2 h de atraso).
 
+Shipped en PR #89.
+
