@@ -37,7 +37,7 @@ from src.prompts.advisor import AdvisorPrefixStreamFilter  # noqa: E402
 from src.prompts.version import prompt_version  # noqa: E402
 from src.schemas.routing import load_routing  # noqa: E402
 from src.schemas.turn_outputs import turn_custom_outputs  # noqa: E402
-from src.tools.mcp_client import tools_for  # noqa: E402
+from src.tools.tools_for import tools_for  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
