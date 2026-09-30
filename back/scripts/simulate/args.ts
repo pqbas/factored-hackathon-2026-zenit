@@ -10,7 +10,6 @@ export type DayArgs = {
   allowProd: boolean;
   day: string;
   concurrency: number;
-  advisorActions: boolean;
   dryRun: boolean;
   force: boolean;
   label: string | null;
@@ -28,7 +27,6 @@ export function parseDayArgs(argv: string[]): DayArgs {
     allowProd: false,
     day: todayUtc(),
     concurrency: 3,
-    advisorActions: true,
     dryRun: false,
     force: false,
     label: null,
@@ -45,8 +43,6 @@ export function parseDayArgs(argv: string[]): DayArgs {
     else if (flag === '--allow-prod') args.allowProd = true;
     else if (flag === '--day') args.day = value();
     else if (flag === '--concurrency') args.concurrency = Number(value());
-    else if (flag === '--no-advisor-actions') args.advisorActions = false;
-    else if (flag === '--advisor-actions') args.advisorActions = true;
     else if (flag === '--dry-run') args.dryRun = true;
     else if (flag === '--force') args.force = true;
     else if (flag === '--label') args.label = value();

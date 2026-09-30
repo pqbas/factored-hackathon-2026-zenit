@@ -14,7 +14,7 @@ npm run simulate:day -- --count 100 --base https://<app>.databricksapps.com --al
 ```
 
 Flags: `--count` (100), `--base` (http://localhost:3300), `--allow-prod`,
-`--day YYYY-MM-DD` (today, UTC), `--concurrency` (3), `--no-advisor-actions`,
+`--day YYYY-MM-DD` (today, UTC), `--concurrency` (3),
 `--dry-run`, `--force` (run even if the cost upper bound passes 3 USD),
 `--label <name>` (write `runs/<day>-<name>.json` when `runs/<day>.json`
 exists: a day is never overwritten).
@@ -29,10 +29,10 @@ What it does:
 3. Runs the conversations (2 to 4 messages, ~20% in Portuguese; the dataset
    has no Brazil customers, so those are Mexican, Colombian and Argentine
    customers writing in Portuguese).
-4. On the handoffs, as the CLI admin: ~40% taken and resolved, ~20% taken and
-   returned to David, ~20% taken only, ~20% left waiting.
+4. Handoffs are left waiting in the queue (Bandeja): no take, release or
+   resolve. Goodbyes that David closes stay resolved by the AI.
 5. Writes `runs/<day>.json` (per conversation: customer, motive, language,
-   chatId, token, handoff, advisor action, per-turn times and tokens) and
+   chatId, token, handoff, per-turn times and tokens) and
    prints the summary with the estimated cost.
 
 Lakebase access (pick customers, write sessions) uses the CLI identity

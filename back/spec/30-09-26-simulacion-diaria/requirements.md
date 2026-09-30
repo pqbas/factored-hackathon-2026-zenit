@@ -42,17 +42,14 @@ And it changes in these ways:
      reales del cliente (últimos 4 de la tarjeta, comercio, monto, fecha).
    - Una parte se despide ("gracias, eso es todo") para que haya resueltas
      por la IA.
-5. Después de las conversaciones, las derivaciones se reparten para que la
-   consola se vea viva:
-   - ~40% se toma y se resuelve;
-   - ~20% se toma y se devuelve a David;
-   - ~20% se toma y queda con asesor;
-   - ~20% queda en espera.
+5. Las derivaciones no se tocan: todas quedan en espera en la Bandeja
+   (decisión del usuario, opción B). No hay tomas, devoluciones ni
+   resoluciones de asesor.
 6. Todo queda en un registro del día, `scripts/simulate/runs/<fecha>.json`,
    con cliente, motivo, idioma, `chatId`, resultado, duración y tokens de
    cada turno. El resumen trae:
    - cuántas por caso;
-   - derivadas y resueltas;
+   - derivadas (todas en espera) y resueltas por la IA;
    - p50/p95 por turno del runner y del back;
    - costo con `server/src/pricing.ts`.
 7. `npm run simulate:cleanup -- --day <fecha> --base <url> --allow-prod`
@@ -77,10 +74,9 @@ And it changes in these ways:
   - No hay secreto que repartir, a diferencia de HMAC (acordado con w1:p3).
   - Los tokens son aleatorios, así que nadie puede fabricar la sesión de
     otro cliente.
-- Las tomas, devoluciones y resoluciones las hace el usuario admin de la CLI,
-  no asesor1/asesor2. En prod, el proxy de la App identifica al usuario real
-  y no se puede actuar como otro. La consola muestra al admin como asesor.
-  Pendiente de confirmar con w1:p4.
+- Las derivaciones no se tocan: todas quedan en espera en la Bandeja
+  (decisión del usuario, opción B). No hay tomas, devoluciones ni
+  resoluciones de asesor.
 - Las conversaciones se marcan por su `chatId` en el registro del día y por
   el token `sim-`. Todas van como el usuario de la CLI, y el título lo genera
   el back. No hay backdating: las fechas son las reales de la corrida.

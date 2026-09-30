@@ -468,23 +468,3 @@ export function buildPlan(assignments: Assignment[], seed: string): PlanItem[] {
     return { index, motive, language, customer, messages, goodbye };
   });
 }
-
-export type AdvisorAction = 'resolved' | 'returned_to_agent' | 'taken' | 'none';
-
-// ~40% take + resolve, ~20% take + return to David, ~20% take only, ~20%
-// left waiting; deterministic by seed. Exact proportions over `n` handoffs.
-export function planAdvisorActions(n: number, seed: string): AdvisorAction[] {
-  const rng = seededRandom(`${seed}:advisor`);
-  const shares: Array<[AdvisorAction, number]> = [
-    ['resolved', 0.4],
-    ['returned_to_agent', 0.2],
-    ['taken', 0.2],
-    ['none', 0.2],
-  ];
-  const actions: AdvisorAction[] = [];
-  for (const [action, share] of shares) {
-    for (let i = 0; i < Math.round(n * share); i++) actions.push(action);
-  }
-  while (actions.length < n) actions.push('none');
-  return shuffle(rng, actions.slice(0, n));
-}

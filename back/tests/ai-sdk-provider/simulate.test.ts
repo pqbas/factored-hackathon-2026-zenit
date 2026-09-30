@@ -5,7 +5,6 @@ import {
   buildPlan,
   MOTIVE_SHARES,
   MOTIVES,
-  planAdvisorActions,
   type Assignment,
   type Motive,
   type SimCustomer,
@@ -139,19 +138,7 @@ test.describe('simulate: templates', () => {
   });
 });
 
-test.describe('simulate: advisor actions and picking', () => {
-  test('advisor actions are 40/20/20/20 and deterministic', () => {
-    const actions = planAdvisorActions(50, '2026-09-30');
-    expect(actions).toHaveLength(50);
-    const count = (a: string) => actions.filter((x) => x === a).length;
-    expect(count('resolved')).toBe(20);
-    expect(count('returned_to_agent')).toBe(10);
-    expect(count('taken')).toBe(10);
-    expect(count('none')).toBe(10);
-    expect(planAdvisorActions(50, '2026-09-30')).toEqual(actions);
-    expect(planAdvisorActions(3, 'x')).toHaveLength(3);
-  });
-
+test.describe('simulate: picking and flags', () => {
   test('assign gives each customer one motive and reports shortfalls', () => {
     const plain = { ...customer(0), charge: null, cases: [], cardLast4: null };
     const quotas = { ...allocateMix(10) } as Record<Motive, number>;
@@ -170,10 +157,9 @@ test.describe('simulate: advisor actions and picking', () => {
     expect(args).toMatchObject({
       count: 100,
       concurrency: 3,
-      advisorActions: true,
       dryRun: true,
     });
-    expect(parseDayArgs(['--no-advisor-actions']).advisorActions).toBe(false);
+    expect(() => parseDayArgs(['--no-advisor-actions'])).toThrow();
     expect(runFileName('2026-09-30', null)).toBe('2026-09-30.json');
     expect(runFileName('2026-09-30', 'b')).toBe('2026-09-30-b.json');
     expect(() =>

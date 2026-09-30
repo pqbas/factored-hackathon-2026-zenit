@@ -12,8 +12,8 @@
 
 - [ ] Con el agente de w1:p3 desplegado, `simulate:day --count 100` contra
       prod termina y escribe `runs/<fecha>.json`
-- [ ] La consola de prod muestra conversaciones en espera, con asesor,
-      resueltas por humano y por la IA, y devueltas a David
+- [ ] La consola de prod muestra las derivaciones en espera en la Bandeja y
+      resueltas por la IA; ninguna tomada por un asesor
 - [ ] `simulate:cleanup` sobre un día de prueba borra sus chats y sus
       sesiones
 - [ ] El costo del día queda por debajo de USD 3

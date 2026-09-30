@@ -37,8 +37,8 @@
 6. `scripts/simulate/day.ts` (`simulate:day`):
    - `--count`, `--base`, `--allow-prod` (mismo guard del eval), `--day`
      (hoy por defecto) y `--concurrency` (3);
-   - inserta las sesiones, corre las conversaciones, aplica los pasos de
-     asesor a las derivaciones (como admin), lee `/turns`;
+   - inserta las sesiones, corre las conversaciones (las derivaciones
+     quedan en espera, sin pasos de asesor), lee `/turns`;
    - escribe `runs/<fecha>.json` e imprime el resumen;
    - aborta si la estimación de costo pasa de USD 3.
 7. `scripts/simulate/cleanup.ts` (`simulate:cleanup`): borra los chats del

@@ -1,6 +1,6 @@
 import { estimateCostUsd } from '../../server/src/pricing';
 import { percentile } from '../eval/score';
-import type { AdvisorAction, Language, Motive } from './conversations';
+import type { Language, Motive } from './conversations';
 
 // The run record and its summary. No import.meta.
 
@@ -21,8 +21,6 @@ export type ConversationRecord = {
   token: string;
   handoffReason: string | null;
   handledBy: string | null;
-  advisorAction: AdvisorAction | 'failed' | null;
-  advisorError?: string;
   closed: boolean;
   error?: string;
   turns: TurnRecord[];
@@ -31,12 +29,9 @@ export type ConversationRecord = {
 export type Summary = {
   conversations: number;
   perMotive: Record<string, number>;
+  // Every handoff stays waiting in the queue.
   handedOff: number;
   resolvedByAi: number;
-  resolvedByHuman: number;
-  returned: number;
-  withAdvisor: number;
-  waiting: number;
   runnerMs: { p50: number | null; p95: number | null };
   backMs: { p50: number | null; p95: number | null };
   estimatedCostUsd: number | null;
@@ -65,14 +60,6 @@ export function summarize(records: ConversationRecord[]): Summary {
     perMotive,
     handedOff: handed.length,
     resolvedByAi: records.filter((r) => r.closed && !r.handoffReason).length,
-    resolvedByHuman: handed.filter((r) => r.advisorAction === 'resolved')
-      .length,
-    returned: handed.filter((r) => r.advisorAction === 'returned_to_agent')
-      .length,
-    withAdvisor: handed.filter((r) => r.advisorAction === 'taken').length,
-    waiting: handed.filter(
-      (r) => r.advisorAction === 'none' || r.advisorAction === 'failed',
-    ).length,
     runnerMs: {
       p50: percentile(
         turns.map((t) => t.runnerMs),

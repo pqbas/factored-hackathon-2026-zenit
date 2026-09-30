@@ -1,7 +1,7 @@
 /**
  * One day of simulated traffic: `count` real bank customers, one conversation
- * each, against the back (locally or a deployed App), then advisor actions on
- * the handoffs so the console looks alive.
+ * each, against the back (locally or a deployed App). Handoffs are left waiting
+ * in the queue: the simulation takes and releases nothing.
  *
  *   npm run simulate:day -- --count 100 --base <url> --allow-prod
  *   npm run simulate:day -- --count 5 --dry-run     # the plan, nothing sent
@@ -19,11 +19,9 @@ import { sendMessage } from '../simulate-customers';
 import { type DayArgs, endOfDayUtc, parseDayArgs, runFileName } from './args';
 import { identities, openLakebase } from './common';
 import {
-  type AdvisorAction,
   allocateMix,
   buildPlan,
   type PlanItem,
-  planAdvisorActions,
   seededRandom,
 } from './conversations';
 import { pickCustomers } from './pick';
@@ -71,28 +69,6 @@ async function get<T>(
   return (await response.json()) as T;
 }
 
-async function advisorPost(
-  base: string,
-  headers: Record<string, string>,
-  chatId: string,
-  action: 'take' | 'release',
-  data: unknown,
-) {
-  const response = await fetch(
-    `${base}/api/advisor/conversations/${chatId}/${action}`,
-    {
-      method: 'POST',
-      headers: { ...headers, 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    },
-  );
-  if (!response.ok) {
-    throw new Error(
-      `POST ${action} -> HTTP ${response.status} ${(await response.text()).slice(0, 200)}`,
-    );
-  }
-}
-
 type ChatView = {
   closedAt: string | null;
   handledBy?: string | null;
@@ -124,7 +100,6 @@ async function runConversation(
     token,
     handoffReason: null,
     handledBy: null,
-    advisorAction: null,
     closed: false,
     turns: [],
   };
@@ -278,7 +253,7 @@ async function main(args: DayArgs) {
         },
       );
 
-      // Handoffs, then what the advisors do with them.
+      // Handoffs stay in the queue: no advisor takes or releases them.
       for (const r of results) {
         try {
           await readState(args.base, ids, r.record);
@@ -287,44 +262,6 @@ async function main(args: DayArgs) {
             error instanceof Error ? error.message : String(error);
         }
       }
-      const handed = results.filter((r) => r.record.handoffReason);
-      const actions = args.advisorActions
-        ? planAdvisorActions(handed.length, args.day)
-        : handed.map((): AdvisorAction => 'none');
-      await pool(
-        handed.map((r, i) => ({ r, action: actions[i] })),
-        args.concurrency,
-        async ({ r, action }) => {
-          r.record.advisorAction = action;
-          try {
-            if (action !== 'none') {
-              await advisorPost(
-                args.base,
-                ids.admin(),
-                r.record.chatId,
-                'take',
-                {},
-              );
-            }
-            if (action === 'resolved' || action === 'returned_to_agent') {
-              await advisorPost(
-                args.base,
-                ids.admin(),
-                r.record.chatId,
-                'release',
-                {
-                  outcome: action,
-                },
-              );
-            }
-          } catch (error) {
-            r.record.advisorAction = 'failed';
-            r.record.advisorError =
-              error instanceof Error ? error.message : String(error);
-          }
-        },
-      );
-
       // Turn metrics of the back.
       for (const r of results) {
         try {
