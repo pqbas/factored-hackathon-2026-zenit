@@ -104,14 +104,22 @@ test.describe('Mis productos', () => {
     await expect(carousel.getByTestId('card-visual-6262')).toHaveAttribute('aria-pressed', 'true');
     await expect(detail).not.toContainText('Supermercado');
 
-    // The actions only open the chat with David, about that card.
+    // No per-card actions: the chat covers them.
+    await expect(page.locator('[data-testid^="card-action-"]')).toHaveCount(0);
+  });
+
+  test('the quick actions open the chat with their message', async ({ page }) => {
+    await mockProducts(page, () => ({ status: 200, json: PRODUCTS }));
+    await page.goto('/products');
+    const actions = page.getByTestId('quick-actions');
+    await expect(actions).toContainText('¿Qué quieres hacer?');
+    await expect(actions.locator('[data-testid^="quick-action-"]')).toHaveCount(5);
+    await expect(actions.getByTestId('quick-action-4')).toContainText('Ver movimientos');
     const request = page.waitForRequest(
       (req) => req.method() === 'POST' && new URL(req.url()).pathname === '/api/chat',
     );
-    await detail.getByTestId('card-action-claim').click();
-    const text = (await request).postDataJSON().message.parts[0].text as string;
-    expect(text).toContain('reclamo');
-    expect(text).toContain('6262');
+    await actions.getByTestId('quick-action-4').click();
+    expect((await request).postDataJSON().message.parts[0].text).toBe('Quiero ver mis últimos movimientos');
   });
 
   test('savings show their estimated evolution per currency', async ({ page }) => {

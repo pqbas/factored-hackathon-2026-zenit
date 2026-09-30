@@ -11,7 +11,6 @@ import {
   type Transaction,
   transactionLabel,
   transactionsFor,
-  cardChatPrompt,
   savingsTransactions,
   parseSavingsHistory,
   savingsWithoutSeries,
@@ -93,11 +92,6 @@ describe('card visuals', () => {
   it('gives each card a stable color, never a gray', () => {
     expect(cardColor(card)).toBe(cardColor(card));
     expect(cardColor(card)).not.toMatch(/zinc|slate|stone|gray|neutral/);
-  });
-
-  it("asks David about that card", () => {
-    expect(cardChatPrompt('claim', card)).toContain('1070');
-    expect(cardChatPrompt('movements', card)).toContain('1070');
   });
 });
 
