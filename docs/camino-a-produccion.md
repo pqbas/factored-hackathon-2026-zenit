@@ -110,9 +110,10 @@ simulación).
   se superó su límite de consultas por segundo. Muchos turnos terminaron en
   "David no está disponible". La corrida se cortó y se borraron sus 49 chats
   y sus sesiones simuladas.
-- **Segundo intento, de a una conversación:** en curso. Con 30 de 100
-  conversaciones: p50 2.9 s y p95 6.9 s por turno, 5 errores y ningún
-  "no disponible".
+- **Segundo intento, de a una conversación:** 100 de 100 conversaciones.
+  Por turno, p50 2.5 s y p95 6.0 s (runner, 268 turnos); p50 1.9 s y p95
+  5.3 s (back). 6 turnos terminaron en "David no está disponible" por el 429,
+  aun corriendo de a una conversación. Costo estimado: USD 1.12.
 
 ### Qué significa para producción
 
