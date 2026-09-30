@@ -1,3 +1,4 @@
+import { useLang } from '@/contexts/LangContext';
 import { ProductIcon } from '@/components/products/product-icon';
 import { DetailRow } from '@/components/products/stat-tile';
 import { TransactionList } from '@/components/products/transaction-list';
@@ -28,6 +29,7 @@ export function ProductDetail({
   product: Product;
   transactions: Transaction[];
 }) {
+  const { t } = useLang();
   const kind = productKind(product);
   const usage = creditUsage(product);
   const money = (amount: number) => formatMoney(amount, product.currency);
@@ -50,39 +52,39 @@ export function ProductDetail({
 
       <div className="flex flex-col gap-3 rounded-[14px] bg-card px-5 py-5">
         <span className="text-muted-foreground text-sm">
-          {kind === 'credit' ? 'Saldo utilizado' : 'Saldo disponible'}
+          {kind === 'credit' ? t.products.balanceUsed : t.products.balanceAvailable}
         </span>
         <span className="font-semibold text-4xl tabular-nums tracking-tight">
           {money(product.currentBalance)}
         </span>
         {usage !== null && product.creditLimit !== null && (
           <div className="flex flex-col gap-1.5">
-            <ProgressBar value={usage} label="Uso del límite" />
+            <ProgressBar value={usage} label={t.products.limitUsage} />
             <span className="text-muted-foreground text-xs">
-              Usas el {Math.round(usage * 100)}% de tu límite de {money(product.creditLimit)}
+              {t.products.usage(Math.round(usage * 100), money(product.creditLimit))}
               {product.availableCredit !== null &&
-                ` · Disponible ${money(product.availableCredit)}`}
+                t.products.availableSuffix(money(product.availableCredit))}
             </span>
           </div>
         )}
       </div>
 
       <section className="flex flex-col gap-2">
-        <h2 className="px-1 font-semibold text-[15px]">Detalles</h2>
+        <h2 className="px-1 font-semibold text-[15px]">{t.products.details}</h2>
         <div className="divide-y divide-border rounded-[14px] bg-card px-4 py-1">
-          <DetailRow label="Número" value={`•• ${product.last4}`} />
-          <DetailRow label="Moneda" value={product.currency} />
+          <DetailRow label={t.products.number} value={`•• ${product.last4}`} />
+          <DetailRow label={t.products.currency} value={product.currency} />
           {product.creditLimit !== null && (
-            <DetailRow label="Límite de crédito" value={money(product.creditLimit)} />
+            <DetailRow label={t.products.creditLimit} value={money(product.creditLimit)} />
           )}
           {product.availableCredit !== null && (
-            <DetailRow label="Cupo disponible" value={money(product.availableCredit)} />
+            <DetailRow label={t.products.availableCredit} value={money(product.availableCredit)} />
           )}
         </div>
       </section>
 
       <section className="flex flex-col gap-2">
-        <h2 className="px-1 font-semibold text-[15px]">Movimientos recientes</h2>
+        <h2 className="px-1 font-semibold text-[15px]">{t.products.recentMovements}</h2>
         <div className="rounded-[14px] bg-card p-1.5">
           <TransactionList transactions={movements} />
         </div>
