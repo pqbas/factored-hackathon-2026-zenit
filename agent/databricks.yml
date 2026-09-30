@@ -35,9 +35,18 @@ resources:
           sql_warehouse:
             id: '07ca55766c9c5097'
             permission: 'CAN_USE'
-        # UC-01 general inquiries (agent/uc/bank_uc_consultas.sql), read through the
-        # managed MCP server. The functions read bank_gold.* as the caller, so the app's
-        # service principal also needs USE CATALOG/SCHEMA and SELECT (scripts/grant_app.sql).
+        # Lakebase instance the bank data tools read (schema bank_ro, synced from bank_gold).
+        # The app's service principal gets a Postgres role and connects with an OAuth token;
+        # the Postgres grants (USAGE on bank_ro, SELECT on its tables) are made by the back's script.
+        - name: 'database'
+          database:
+            instance_name: 'bank-assistant-chat-db'
+            database_name: 'databricks_postgres'
+            permission: 'CAN_CONNECT_AND_CREATE'
+        # Rollback path (TOOLS_BACKEND=mcp): UC-01 general inquiries (agent/uc/bank_uc_consultas.sql),
+        # read through the managed MCP server. The functions read bank_gold.* as the caller, so the
+        # app's service principal also needs USE CATALOG/SCHEMA and SELECT (scripts/grant_app.sql).
+        # With TOOLS_BACKEND=lakebase they are not called.
         - name: 'uc_consultas_get_products'
           uc_securable:
             securable_full_name: 'workspace.bank_uc_consultas.get_products'

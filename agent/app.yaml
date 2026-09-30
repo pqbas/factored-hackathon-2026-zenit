@@ -21,3 +21,10 @@ env:
     value: "llm"
   - name: JEV_API_KEY
     valueFrom: "jev_api_key"
+  # The bank data tools read bank_ro in Lakebase; TOOLS_BACKEND=mcp goes back to the UC functions.
+  - name: TOOLS_BACKEND
+    value: "lakebase"
+  - name: LAKEBASE_INSTANCE
+    value: "bank-assistant-chat-db"
+  - name: LAKEBASE_DATABASE
+    value: "databricks_postgres"
