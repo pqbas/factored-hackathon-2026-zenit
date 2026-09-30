@@ -4,7 +4,7 @@
 import type { Chat, DBMessage } from '@chat-template/db';
 
 import { ASSISTANT_NAME } from '@/lib/assistant';
-import { type AgentHandoff, HANDOFF_REASONS, handoffReasonLabel, NO_HANDOFF_GROUP } from '@/lib/handoff-case';
+import { type AgentHandoff, HANDOFF_REASONS, handoffReasonLabel } from '@/lib/handoff-case';
 import { type ConversationStatus, STATUS_LABEL } from '@/lib/conversations';
 
 // Row types from @chat-template/db as they arrive over JSON: dates are strings.
@@ -27,6 +27,9 @@ export type AdvisorChat = OverJson<
     | 'assignedAt'
     | 'closedAt'
     | 'useCase'
+    // The last intent David classified (OUT_OF_SCOPE, GREETING…); says why
+    // a chat without a case is there.
+    | 'intent'
     // The bank customer behind the chat (e.g. "Javier Molina Morales"); null
     // without a customer session or until the warehouse answers.
     | 'customerName'
@@ -256,15 +259,21 @@ export function reasonTagOf(chat: AdvisorChat): string | null {
   if (isHandedOff(chat)) return chat.handoff?.reason || null;
   if (chat.handledBy !== 'ai_agent') return null;
   const id = davidSectionOf(chat);
-  return id === NO_HANDOFF_GROUP ? null : id;
+  return id === NO_REASON_SECTION ? null : id;
 }
 
 // Inbox sections: the three handoff reasons in HANDOFF_REASONS order, then
-// unknown ones, then "Otros" (no handoff). Chats keep their order (newest
+// unknown ones, then "Tomada por un asesor" (taken without a handoff). Chats keep their order (newest
 // first) inside each section.
 // Agente AI has no handoff yet: its sections follow what David is working on
 // (the ongoing conversation's use case), named like the Bandeja's reasons.
+// Without a case, the last intent says whether it was off-topic or there's
+// no reason yet (a greeting, the menu).
 export const GENERAL_SECTION = 'general';
+export const OUT_OF_SCOPE_SECTION = 'out_of_scope';
+export const NO_REASON_SECTION = 'no_reason';
+export const TAKEN_SECTION = 'taken';
+const OUT_OF_SCOPE_INTENTS = ['OUT_OF_SCOPE', 'COMMERCIAL'];
 const DAVID_SECTION_OF: Record<string, string> = {
   COMPLAINT: 'complaint',
   RETENTION: 'retention',
@@ -272,10 +281,19 @@ const DAVID_SECTION_OF: Record<string, string> = {
   CASE_STATUS: 'case_status',
   GENERAL_INQUIRY: GENERAL_SECTION,
 };
-const DAVID_SECTIONS = ['complaint', 'retention', 'case_status', GENERAL_SECTION, NO_HANDOFF_GROUP];
+const DAVID_SECTIONS = [
+  'complaint',
+  'retention',
+  'case_status',
+  GENERAL_SECTION,
+  OUT_OF_SCOPE_SECTION,
+  NO_REASON_SECTION,
+];
 
 export function davidSectionOf(chat: AdvisorChat): string {
-  return (chat.useCase && DAVID_SECTION_OF[chat.useCase]) || NO_HANDOFF_GROUP;
+  const byCase = chat.useCase && DAVID_SECTION_OF[chat.useCase];
+  if (byCase) return byCase;
+  return chat.intent && OUT_OF_SCOPE_INTENTS.includes(chat.intent) ? OUT_OF_SCOPE_SECTION : NO_REASON_SECTION;
 }
 
 export function groupByDavidSection<T extends AdvisorChat>(
@@ -294,8 +312,10 @@ export function groupByDavidSection<T extends AdvisorChat>(
 }
 
 export function sectionLabel(id: string): string {
-  if (id === NO_HANDOFF_GROUP) return 'Otros';
   if (id === GENERAL_SECTION) return 'Consultas generales';
+  if (id === OUT_OF_SCOPE_SECTION) return 'Fuera de alcance';
+  if (id === NO_REASON_SECTION) return 'Sin motivo aún';
+  if (id === TAKEN_SECTION) return 'Tomada por un asesor';
   return handoffReasonLabel(id);
 }
 
@@ -304,20 +324,20 @@ export function groupByHandoffReason<T extends AdvisorChat>(
 ): { id: string; label: string; chats: T[] }[] {
   const groups = new Map<string, T[]>();
   for (const chat of chats) {
-    const id = chat.handoff?.reason || NO_HANDOFF_GROUP;
+    const id = chat.handoff?.reason || TAKEN_SECTION;
     groups.set(id, [...(groups.get(id) ?? []), chat]);
   }
   const known: string[] = HANDOFF_REASONS.map((r) => r.id);
   const order = [
     ...known,
-    ...[...groups.keys()].filter((id) => !known.includes(id) && id !== NO_HANDOFF_GROUP),
-    NO_HANDOFF_GROUP,
+    ...[...groups.keys()].filter((id) => !known.includes(id) && id !== TAKEN_SECTION),
+    TAKEN_SECTION,
   ];
   return order
     .filter((id) => groups.has(id))
     .map((id) => ({
       id,
-      label: id === NO_HANDOFF_GROUP ? 'Otros' : handoffReasonLabel(id),
+      label: sectionLabel(id),
       chats: groups.get(id) ?? [],
     }));
 }

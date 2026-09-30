@@ -468,3 +468,16 @@ Shipped en PR #82.
 Spec: `spec/29-09-26-datos-del-cliente/`.
 
 Shipped en PR #82.
+
+---
+
+## Phase 23: Secciones con nombre real (Complete)
+
+**Goal:** que ningún chat de la consola caiga en "Otros": cada uno en una sección que diga por qué está ahí.
+
+- [x] Agente AI: "Fuera de alcance" (OUT_OF_SCOPE, COMMERCIAL) y "Sin motivo aún" en lugar de "Otros".
+- [x] Bandeja: "Tomada por un asesor" en lugar de "Otros".
+
+Spec: `spec/29-09-26-secciones-sin-otros/`.
+
+Shipped en PR #93.
