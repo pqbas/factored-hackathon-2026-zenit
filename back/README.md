@@ -45,8 +45,11 @@ but has some [known limitations](#known-limitations) for other use cases. Work i
 
 The chat (API + built UI from `../front`) runs as the Databricks App
 `dev-bank-assistant-ui`, with its own Lakebase instance
-(`bank-assistant-chat-db`) and the SQL warehouse as app resources
-(`databricks.yml`). It calls the agent app through `API_PROXY` (`app.yaml`).
+(`bank-assistant-chat-db`) as its app resource (`databricks.yml`). It reads the
+bank's data from read-only synced tables in that same instance (Postgres
+schema `bank_ro`, see [docs/datos-banco-lakebase.md](../docs/datos-banco-lakebase.md)),
+not from the SQL warehouse. It calls the agent app through `API_PROXY`
+(`app.yaml`).
 
 ### Deploy
 
@@ -66,18 +69,21 @@ One-time grants for the app's service principal (its `service_principal_client_i
 from `databricks apps get dev-bank-assistant-ui`):
 
 - `CAN_USE` on the agent app (`agent-banking-assistant`), granted from the agent side.
-- On the bank data, as a workspace admin, run `scripts/uc-grants.sh
-  <sp-application-id>` (it applies every grant below through the SQL
-  warehouse; grants are idempotent):
+- On the bank data: `bank_ro` and its grants are set up once with
+  `scripts/bank-ro/` (as the Lakebase instance's owner):
 
-  ```sql
-  GRANT USE CATALOG ON CATALOG workspace TO `<sp-application-id>`;
-  GRANT USE SCHEMA, SELECT ON SCHEMA workspace.bank_gold TO `<sp-application-id>`;
-  GRANT USE SCHEMA, EXECUTE ON SCHEMA workspace.bank_uc_consultas TO `<sp-application-id>`;
-  GRANT USE SCHEMA ON SCHEMA workspace.bank_silver TO `<sp-application-id>`;
-  GRANT SELECT ON TABLE workspace.bank_silver.call_transcripts TO `<sp-application-id>`;
-  GRANT SELECT ON TABLE workspace.bank_silver.customers TO `<sp-application-id>`;
+  ```bash
+  # Once: check the primary keys on the warehouse (check-keys.sql), then
+  scripts/bank-ro/create.sh     # the 7 synced tables, first sync and grants
+  # After each update of the gold tables (no scheduled refresh):
+  scripts/bank-ro/refresh.sh    # snapshot refresh + grants again
+  scripts/bank-ro/test-freshness.sh  # proof that a refresh brings changes
   ```
+
+  `grants.sql` gives the back's and the agent's service principals `USAGE` on
+  `bank_ro` and `SELECT` on their tables, nothing else. The synced tables are
+  also declared in `databricks.yml`; bind them before the next deploy (see the
+  comment there).
 
 ### Turn it on and off (cost)
 
@@ -94,7 +100,9 @@ databricks database update-database-instance bank-assistant-chat-db stopped --st
 databricks apps start dev-bank-assistant-ui
 ```
 
-The SQL warehouse stops by itself after 10 minutes idle.
+The back no longer uses the SQL warehouse. Locally, chats stay in the Docker
+Postgres and the bank's data is read from Lakebase with your Databricks
+identity: set `BANK_PGHOST` to the instance's host (`.env.example`).
 
 ## Running Locally
 

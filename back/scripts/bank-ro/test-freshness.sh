@@ -18,6 +18,8 @@ PROFILE="${1:-DEFAULT}"
 INSTANCE=bank-assistant-chat-db
 WAREHOUSE="${DATABRICKS_WAREHOUSE_ID:-07ca55766c9c5097}"
 UC_SCHEMA=workspace.bank_ro_test
+# The Delta source and its synced table (a synced table needs its own name).
+SOURCE="$UC_SCHEMA.fixture_source"
 TABLE="$UC_SCHEMA.fixture"
 
 # One SQL statement on the warehouse; fails if it doesn't succeed.
@@ -91,12 +93,12 @@ trap cleanup EXIT
 FAILED=0
 echo "== Step 1: fixture with F-1 = v1, F-2 = v1, first sync"
 warehouse "CREATE SCHEMA IF NOT EXISTS $UC_SCHEMA COMMENT 'TEST FIXTURE for scripts/bank-ro/test-freshness.sh'"
-warehouse "CREATE OR REPLACE TABLE $TABLE (id STRING NOT NULL, value STRING, updated_at TIMESTAMP) COMMENT 'TEST FIXTURE: synthetic rows, not bank data'"
-warehouse "INSERT INTO $TABLE VALUES ('F-1', 'v1', current_timestamp()), ('F-2', 'v1', current_timestamp())"
+warehouse "CREATE OR REPLACE TABLE $SOURCE (id STRING NOT NULL, value STRING, updated_at TIMESTAMP) COMMENT 'TEST FIXTURE: synthetic rows, not bank data'"
+warehouse "INSERT INTO $SOURCE VALUES ('F-1', 'v1', current_timestamp()), ('F-2', 'v1', current_timestamp())"
 databricks database create-synced-database-table -p "$PROFILE" -o json --json "$(jq -nc \
-  --arg n "$TABLE" --arg i "$INSTANCE" \
+  --arg n "$TABLE" --arg s "$SOURCE" --arg i "$INSTANCE" \
   '{name: $n, database_instance_name: $i, logical_database_name: "databricks_postgres",
-    spec: {source_table_full_name: $n, primary_key_columns: ["id"],
+    spec: {source_table_full_name: $s, primary_key_columns: ["id"],
            scheduling_policy: "SNAPSHOT", create_database_objects_if_missing: true,
            new_pipeline_spec: {storage_catalog: "workspace", storage_schema: "bank_ro_test"}}}')" >/dev/null
 sleep 20
@@ -105,8 +107,8 @@ check "rows after the first sync" "$(postgres 'SELECT count(*) FROM bank_ro_test
 check "F-1 after the first sync" "$(postgres "SELECT value FROM bank_ro_test.fixture WHERE id = 'F-1'")" v1
 
 echo "== Step 2: F-1 = v2 and a new F-3 in Delta, then a refresh"
-warehouse "UPDATE $TABLE SET value = 'v2', updated_at = current_timestamp() WHERE id = 'F-1'"
-warehouse "INSERT INTO $TABLE VALUES ('F-3', 'v1', current_timestamp())"
+warehouse "UPDATE $SOURCE SET value = 'v2', updated_at = current_timestamp() WHERE id = 'F-1'"
+warehouse "INSERT INTO $SOURCE VALUES ('F-3', 'v1', current_timestamp())"
 START=$(date +%s)
 databricks pipelines start-update "$(pipeline_id)" -p "$PROFILE" >/dev/null
 sleep 10
