@@ -64,18 +64,18 @@ GUARDRAIL_REPLIES: dict[str, dict[str, str]] = {
 MENU: dict[str, str] = {
     "es": (
         "Tengo estas opciones para ayudarte:\n\n"
-        "A) Tarjeta de crédito: saldo, límite, cupo disponible y movimientos\n"
-        "B) Cuentas de ahorro: saldo y movimientos\n"
-        "C) Reclamos: un cargo que no reconoces, un cobro duplicado o un monto distinto\n"
-        "D) Más opciones: cancelar un producto, estado de un reclamo\n\n"
+        "- **A)** Tarjeta de crédito: saldo, límite, cupo disponible y movimientos\n"
+        "- **B)** Cuentas de ahorro: saldo y movimientos\n"
+        "- **C)** Reclamos: un cargo que no reconoces, un cobro duplicado o un monto distinto\n"
+        "- **D)** Más opciones: cancelar un producto, estado de un reclamo\n\n"
         "Escribe la letra de tu elección o cuéntame tu consulta."
     ),
     "pt": (
         "Tenho estas opções para ajudar você:\n\n"
-        "A) Cartão de crédito: saldo, limite, limite disponível e movimentações\n"
-        "B) Contas poupança: saldo e movimentações\n"
-        "C) Reclamações: uma cobrança que você não reconhece, uma cobrança duplicada ou um valor diferente\n"
-        "D) Mais opções: cancelar um produto, status de uma reclamação\n\n"
+        "- **A)** Cartão de crédito: saldo, limite, limite disponível e movimentações\n"
+        "- **B)** Contas poupança: saldo e movimentações\n"
+        "- **C)** Reclamações: uma cobrança que você não reconhece, uma cobrança duplicada ou um valor diferente\n"
+        "- **D)** Mais opções: cancelar um produto, status de uma reclamação\n\n"
         "Escreva a letra da sua escolha ou me conte sua dúvida."
     ),
 }
@@ -94,18 +94,18 @@ ASK_CASE_CHARGE: dict[str, str] = {
 
 # 3.A and 3.B, step 2: what the customer wants from the product they picked by its letter.
 CARD_OPTIONS: dict[str, str] = {
-    "es": "¿Qué quieres ver de tu tarjeta de crédito?\n\n1) Saldo, límite y cupo disponible\n2) Movimientos",
-    "pt": "O que você quer ver do seu cartão de crédito?\n\n1) Saldo, limite e limite disponível\n2) Movimentações",
+    "es": "¿Qué quieres ver de tu tarjeta de crédito?\n\n- **1)** Saldo, límite y cupo disponible\n- **2)** Movimientos",
+    "pt": "O que você quer ver do seu cartão de crédito?\n\n- **1)** Saldo, limite e limite disponível\n- **2)** Movimentações",
 }
 
 SAVINGS_OPTIONS: dict[str, str] = {
-    "es": "¿Qué quieres ver de tus cuentas de ahorro?\n\n1) Saldo\n2) Movimientos",
-    "pt": "O que você quer ver das suas contas poupança?\n\n1) Saldo\n2) Movimentações",
+    "es": "¿Qué quieres ver de tus cuentas de ahorro?\n\n- **1)** Saldo\n- **2)** Movimientos",
+    "pt": "O que você quer ver das suas contas poupança?\n\n- **1)** Saldo\n- **2)** Movimentações",
 }
 
 MORE_OPTIONS: dict[str, str] = {
-    "es": "¿Qué necesitas?\n\n1) Cancelar un producto\n2) Ver el estado de un reclamo",
-    "pt": "Do que você precisa?\n\n1) Cancelar um produto\n2) Ver o status de uma reclamação",
+    "es": "¿Qué necesitas?\n\n- **1)** Cancelar un producto\n- **2)** Ver el estado de un reclamo",
+    "pt": "Do que você precisa?\n\n- **1)** Cancelar um produto\n- **2)** Ver o status de uma reclamação",
 }
 
 # §3, regla 6: anything outside the menu gets one short line and the menu again, never a handoff.
