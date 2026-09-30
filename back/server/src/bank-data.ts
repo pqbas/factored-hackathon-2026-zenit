@@ -65,7 +65,11 @@ async function getProfile(customerId: string) {
       preferredChannel: blankToNull(record.preferred_channel ?? null),
     };
   } catch (error) {
-    console.error('[customer-context] Profile unavailable for', customerId, error);
+    console.error(
+      '[customer-context] Profile unavailable for',
+      customerId,
+      error,
+    );
     return null;
   }
 }
