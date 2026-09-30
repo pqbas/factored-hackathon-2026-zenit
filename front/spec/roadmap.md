@@ -493,3 +493,13 @@ Shipped en PR #93.
 Spec: `spec/29-09-26-avatares-por-cliente/`.
 
 Shipped en PR #104.
+
+---
+
+## Phase 25: Bandeja o Agente AI dentro de cada motivo
+
+**Goal:** que en cada motivo el asesor vea también los casos que David todavía está atendiendo.
+
+- [ ] Selector "Bandeja | Agente AI" con contador en Reclamo, Cancelación de producto y Estado de un reclamo, recordado en la URL.
+
+Spec: `spec/30-09-26-motivo-bandeja-agente/`.
