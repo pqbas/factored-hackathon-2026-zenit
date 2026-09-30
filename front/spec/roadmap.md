@@ -593,3 +593,13 @@ Shipped en PR #119.
 Spec: `spec/30-09-26-accesos-rapidos/`.
 
 Shipped en PR #120.
+
+---
+
+## Phase 35: Alineación en Mis productos
+
+**Goal:** que el resumen se lea como una sola grilla, sin cortes ni desalineaciones.
+
+- [ ] Accesos rápidos de igual altura, totales en 3 columnas, carrusel dentro del contenido, número y moneda en la misma línea base, barra de uso alineada.
+
+Spec: `spec/30-09-26-alineacion-productos/`.

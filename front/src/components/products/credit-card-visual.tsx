@@ -25,7 +25,8 @@ export function CreditCardVisual({
       className={cn(
         'relative flex aspect-[1.586] w-full flex-col justify-between overflow-hidden rounded-2xl p-4 text-left sm:p-5 text-white shadow-md transition-transform',
         cardColor(product),
-        selected ? 'ring-2 ring-ring ring-offset-2 ring-offset-background' : 'opacity-90 hover:opacity-100',
+        // Inset: an outer ring would be clipped by the carousel's edges.
+        selected ? 'ring-2 ring-white/70 ring-inset' : 'opacity-90 hover:opacity-100',
       )}
     >
       {/* A soft sheen, like a card's finish. */}
@@ -34,8 +35,8 @@ export function CreditCardVisual({
         <BrandMark size={32} className="bg-white/20 shadow-none" />
         <span className="font-medium text-sm text-white/90">{t.products.creditCard}</span>
       </span>
-      <span className="relative flex items-end justify-between gap-3">
-        <span className="min-w-0 whitespace-nowrap font-mono text-xs sm:text-[15px] sm:tracking-wider">
+      <span className="relative flex items-baseline justify-between gap-3">
+        <span className="min-w-0 truncate whitespace-nowrap font-mono text-xs xl:text-[15px] xl:tracking-wider">
           {maskedCardNumber(product.last4)}
         </span>
         <span className="shrink-0 font-semibold text-sm text-white/90">{product.currency}</span>
