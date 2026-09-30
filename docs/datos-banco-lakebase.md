@@ -74,7 +74,7 @@ en Postgres) y la borra al final.
 | Lectura de datos del agente | MCP de UC functions: ~USD 10/h con uso continuo (USD 110 acumulados) | Lakebase: sin costo adicional por consulta |
 | Lectura de datos del back | SQL warehouse: USD 2.8/h encendida | Lakebase: sin costo adicional por consulta |
 | Base | Lakebase CU_1: USD 0.18/h (ya se pagaba por los chats) | la misma instancia, sin cambio de tamaño |
-| Refresco | — | pendiente de medir, por refresco completo (209 s, serverless) |
+| Refresco | — | USD 0.13 por refresco completo de las siete tablas (0.361 DBU de serverless a 0.35 USD/DBU, 209 s) |
 | Almacenamiento | — | 2.1 GB en `bank_ro` (costo pendiente de medir) |
 
 - La instancia sigue en CU_1. El tamaño de Lakebase fija el cómputo, y el
@@ -83,12 +83,14 @@ en Postgres) y la borra al final.
 - `shared_buffers` es de 455 MB. Las consultas por cliente leen pocas páginas
   por el índice de la PK.
 - El costo de un refresco sale de `system.billing.usage` para el pipeline
-  `e2caac30-d15e-4b79-ae2a-4090cc039612`, con los precios de
-  `system.billing.list_prices`. Está pendiente de medir: el billing llega con
-  unas 2 h de atraso y se agrega cuando aparezca el cargo.
-- El costo de crear las tablas está pendiente de medir. Fueron dos runs:
-  - una primera carga de `customer_360`;
-  - el refresco completo de las siete.
+  `e2caac30-d15e-4b79-ae2a-4090cc039612` (SKU
+  `PREMIUM_JOBS_SERVERLESS_COMPUTE_US_WEST_OREGON`), con los precios de
+  `system.billing.list_prices`. El refresco completo (update `8c53f122`)
+  midió 0.361 DBU, es decir USD 0.13. Refrescar una vez por cada actualización
+  del gold cuesta menos que dos minutos de la warehouse encendida.
+- Crear las tablas costó USD 0.18 en total, en dos runs:
+  - una primera carga de `customer_360` (0.140 DBU, USD 0.05);
+  - el refresco completo de las siete (0.361 DBU, USD 0.13).
 
 ## Limitaciones
 

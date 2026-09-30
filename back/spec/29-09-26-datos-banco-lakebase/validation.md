@@ -54,9 +54,8 @@ La fase está lista para mergear cuando se cumple todo lo que sigue.
 - [x] Una consulta de movimientos por cliente sobre
       `bank_ro.customer_transactions` usa el índice de la PK (`EXPLAIN`)
 - [x] `docs/datos-banco-lakebase.md` tiene frescura, linaje y la prueba
-- [ ] Seguimiento: el costo medido de un refresco (pipeline `e2caac30` en
-      `system.billing.usage`), pendiente porque el billing llega con ~2 h de
-      atraso; se agrega en un commit chico después del merge
+- [x] Seguimiento: el costo medido de un refresco (pipeline `e2caac30` en
+      `system.billing.usage`): 0.361 DBU, USD 0.13
 
 ## Definition of Done
 

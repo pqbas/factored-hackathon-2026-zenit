@@ -403,7 +403,7 @@ lectura en Lakebase, sin la warehouse ni el MCP, para bajar el costo.
       casos de `bank_ro`, y deja de usar la warehouse.
 - [x] Frescura, linaje y prueba de refresco en `docs/datos-banco-lakebase.md`.
 
-Pendiente: el costo medido de un refresco (billing con ~2 h de atraso).
+Costo medido de un refresco completo: 0.361 DBU, USD 0.13.
 
 Shipped en PR #89.
 
