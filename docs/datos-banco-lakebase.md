@@ -74,8 +74,8 @@ en Postgres) y la borra al final.
 | Lectura de datos del agente | MCP de UC functions: ~USD 10/h con uso continuo (USD 110 acumulados) | Lakebase: sin costo adicional por consulta |
 | Lectura de datos del back | SQL warehouse: USD 2.8/h encendida | Lakebase: sin costo adicional por consulta |
 | Base | Lakebase CU_1: USD 0.18/h (ya se pagaba por los chats) | la misma instancia, sin cambio de tamaño |
-| Refresco | — | REFRESH_COST por refresco completo (209 s, serverless) |
-| Almacenamiento | — | 2.1 GB en `bank_ro` (STORAGE_COST) |
+| Refresco | — | pendiente de medir, por refresco completo (209 s, serverless) |
+| Almacenamiento | — | 2.1 GB en `bank_ro` (costo pendiente de medir) |
 
 - La instancia sigue en CU_1. El tamaño de Lakebase fija el cómputo, y el
   almacenamiento se cobra aparte, así que los 2.1 GB nuevos no obligan a
@@ -84,8 +84,9 @@ en Postgres) y la borra al final.
   por el índice de la PK.
 - El costo de un refresco sale de `system.billing.usage` para el pipeline
   `e2caac30-d15e-4b79-ae2a-4090cc039612`, con los precios de
-  `system.billing.list_prices`.
-- Crear las tablas costó CREATE_COST en total, en dos runs:
+  `system.billing.list_prices`. Está pendiente de medir: el billing llega con
+  unas 2 h de atraso y se agrega cuando aparezca el cargo.
+- El costo de crear las tablas está pendiente de medir. Fueron dos runs:
   - una primera carga de `customer_360`;
   - el refresco completo de las siete.
 
