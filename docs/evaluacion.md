@@ -70,16 +70,24 @@ el CVV y la contraseña sin enmascarar).
 
 ## 4. Clasificador de intención (componente aprendido vs. baseline)
 
-39 mensajes etiquetados de los casos de práctica × 3 repeticiones.
+39 mensajes etiquetados de los casos de práctica × 3 repeticiones, solo el primer mensaje, sin el holdout.
 
 | Clasificador | Exactitud | p50 | p95 | Nota |
 | --- | --- | --- | --- | --- |
-| Reglas de palabras clave (baseline) | 66.7% | ~0 s | ~0 s | |
+| Reglas de palabras clave (baseline) | 66.7% | ~0 s | ~0 s | Fallan en "mi reclamo" (estado) por el orden de las palabras clave |
+| Reglas primero + Qwen si no están seguras | 82.1% | — | — | 33% de los mensajes llega al LLM |
 | Jev | **92.3%** | **0.28 s** | **0.38 s** | No usable en prod: la App no tiene salida a internet |
 | GPT-OSS 20B | 88.9% | 2.9 s | 4.6 s | 10% supera el timeout de 4 s |
 | Llama 3.1 8B | 87.2% | 2.5 s | 4.7 s | 6% supera el timeout de 4 s |
 | Gemma 3 12B | 0% | — | — | No devuelve la salida estructurada |
-| Qwen 3 Next 80B (prod) | pendiente | | | |
+| **Qwen 3 Next 80B (prod)** | **94.9%** | 2.72 s | **3.26 s** | 2% supera 4 s; 0 errores de salida |
+
+Se mantiene Qwen: es el más exacto y el más estable en la cola. Los modelos
+chicos no bajan la latencia, porque el piso de ~2.5 s es del endpoint y no del
+tamaño del modelo. Jev sería lo mejor (más exacto que los chicos y 10 veces más
+rápido), pero la App no puede salir a internet. Las reglas ya se usan donde son
+de alta precisión (letras del menú, confirmación, cancelación en curso,
+seguimiento del estado de un reclamo), y en esos turnos no se llama al LLM.
 
 ## 5. Guard de grounding
 
