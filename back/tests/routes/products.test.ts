@@ -188,3 +188,94 @@ test.describe('/api/products', () => {
     }
   });
 });
+
+// 'YYYY-MM' (UTC) of the month `back` months before now.
+const monthsBack = (back: number) => {
+  const now = new Date();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - back, 1))
+    .toISOString()
+    .slice(0, 7);
+};
+
+test.describe('/api/products/savings-history', () => {
+  test("rebuilds Daniela's ARS savings; the USD one goes negative and is left out", async ({
+    adaContext,
+  }) => {
+    const response = await adaContext.request.get(
+      '/api/products/savings-history?sessionToken=demo-ar-1',
+    );
+    expect(response.status()).toBe(200);
+    // Two ARS accounts (1000 + 500); a 300 transfer out in M-2 and a 200
+    // deposit in M-1. The declined, closed-account and older movements
+    // don't count.
+    expect(await response.json()).toEqual({
+      estimated: true,
+      series: [
+        {
+          currency: 'ARS',
+          current: 1500,
+          points: Array.from({ length: 12 }, (_, i) => {
+            const back = 11 - i;
+            const balance = back >= 3 ? 1600 : back === 2 ? 1300 : 1500;
+            return { month: monthsBack(back), balance };
+          }),
+        },
+      ],
+    });
+  });
+
+  test('a flat series without movements in the window; [] without savings', async ({
+    adaContext,
+  }) => {
+    // Javier's savings movements are of 2026-06 (fixed dates): only checked
+    // to be the current balance at the end of the series.
+    const javier = await (
+      await adaContext.request.get(
+        '/api/products/savings-history?sessionToken=demo-co-1',
+      )
+    ).json();
+    expect(javier.series).toHaveLength(1);
+    expect(javier.series[0].currency).toBe('COP');
+    expect(javier.series[0].current).toBe(900.5);
+    expect(javier.series[0].points.at(-1)).toEqual({
+      month: monthsBack(0),
+      balance: 900.5,
+    });
+
+    // Santiago's only savings account is closed.
+    const santiago = await adaContext.request.get(
+      '/api/products/savings-history?sessionToken=demo-mx-1',
+    );
+    expect(santiago.status()).toBe(200);
+    expect(await santiago.json()).toEqual({ estimated: true, series: [] });
+  });
+
+  test('rejects like /api/products and resolves a live sim- session', async ({
+    adaContext,
+    babbageContext,
+  }) => {
+    const path = '/api/products/savings-history';
+    expect((await adaContext.request.get(path)).status()).toBe(400);
+
+    const unknown = await adaContext.request.get(`${path}?sessionToken=nope`);
+    expect(unknown.status()).toBe(401);
+    expect((await unknown.json()).reason).toBe('invalid');
+
+    const expired = await adaContext.request.get(
+      `${path}?sessionToken=demo-expired`,
+    );
+    expect(expired.status()).toBe(401);
+    expect((await expired.json()).reason).toBe('expired');
+
+    expect(
+      (
+        await babbageContext.request.get(`${path}?sessionToken=demo-mx-1`)
+      ).status(),
+    ).toBe(403);
+
+    const sim = await (
+      await adaContext.request.get(`${path}?sessionToken=sim-live-0001`)
+    ).json();
+    expect(sim.series.map((s: any) => s.currency)).toEqual(['COP']);
+  });
+});
