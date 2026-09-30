@@ -1,3 +1,4 @@
+import postgres from 'postgres';
 import { expect, test } from '../fixtures';
 import { generateUUID } from '@chat-template/core';
 import {
@@ -322,5 +323,40 @@ test.describe('Conversation state (with database)', () => {
 
     await (await postChatMessage(adaContext, chatId, 'una cosa más')).text();
     expect((await getChatById({ id: chatId }))?.closedAt).toBeNull();
+  });
+
+  test('a reopened chat starts its new conversation without a use case', async ({
+    adaContext,
+  }) => {
+    const chatId = generateUUID();
+    const send = async (text: string) =>
+      (await postChatMessage(adaContext, chatId, text)).text();
+    const useCase = async () => (await getChatById({ id: chatId }))?.useCase;
+
+    await send('[agent-outputs:state] cuál es mi saldo?');
+    await send('[agent-outputs:greeting] gracias');
+    expect(await useCase()).toBe('GENERAL_INQUIRY');
+
+    await send('[agent-outputs:goodbye] no gracias, eso es todo');
+    await expect
+      .poll(async () => (await getChatById({ id: chatId }))?.closedAt)
+      .not.toBeNull();
+    expect(await useCase()).toBe('GENERAL_INQUIRY');
+
+    // The customer writes again: a new conversation, without the old case
+    // until the agent classifies one.
+    await send('[agent-outputs:greeting] hola otra vez');
+    expect((await getChatById({ id: chatId }))?.closedAt).toBeNull();
+    expect(await useCase()).toBeNull();
+
+    await send('[agent-outputs:complaint] no reconozco un cargo');
+    expect(await useCase()).toBe('COMPLAINT');
+
+    const sql = postgres(process.env.POSTGRES_URL as string);
+    const events = await sql`
+      select "useCase" from ai_chatbot."ResolutionEvent"
+      where "chatId" = ${chatId} order by "resolvedAt"`;
+    await sql.end();
+    expect(events.map((e) => e.useCase)).toEqual(['GENERAL_INQUIRY']);
   });
 });
