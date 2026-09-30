@@ -134,4 +134,25 @@ describe('savingsTransactions', () => {
     });
     expect(savingsTransactions([tx('Cuenta Ahorro', '1'), tx('Tarjeta Crédito', '2')], products)).toEqual([tx('Cuenta Ahorro', '1')]);
   });
+
+  it('keeps the 10 most recent across accounts', () => {
+    const products = [
+      { productType: 'Cuenta Ahorro', last4: '1', currency: 'USD', currentBalance: 1, creditLimit: null, availableCredit: null },
+      { productType: 'Cuenta Ahorro', last4: '3', currency: 'USD', currentBalance: 1, creditLimit: null, availableCredit: null },
+    ];
+    const txs = Array.from({ length: 16 }, (_, i) => ({
+      date: `2026-09-${String(i + 1).padStart(2, '0')}T00:00:00.000Z`,
+      productType: 'Cuenta Ahorro',
+      last4: i % 2 ? '1' : '3',
+      type: 'Deposit',
+      merchant: null,
+      amount: 1,
+      currency: 'USD',
+      status: 'Approved',
+    }));
+    const kept = savingsTransactions(txs, products);
+    expect(kept).toHaveLength(10);
+    expect(kept[0].date).toBe('2026-09-16T00:00:00.000Z');
+    expect(kept[9].date).toBe('2026-09-07T00:00:00.000Z');
+  });
 });

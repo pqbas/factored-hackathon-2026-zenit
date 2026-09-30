@@ -137,13 +137,14 @@ export function creditUsage(product: Product): number | null {
   return Math.min(1, Math.max(0, product.currentBalance / product.creditLimit));
 }
 
-// The movements of the savings accounts only (card movements show under
-// their card).
+// The 10 most recent movements of the savings accounts (card movements show
+// under their card). The back sends up to 10 per product.
 export function savingsTransactions(transactions: Transaction[], products: Product[]): Transaction[] {
   const savings = products.filter((p) => productKind(p) === 'savings');
-  return transactions.filter((tx) =>
-    savings.some((p) => p.productType === tx.productType && p.last4 === tx.last4),
-  );
+  return transactions
+    .filter((tx) => savings.some((p) => p.productType === tx.productType && p.last4 === tx.last4))
+    .sort((a, b) => b.date.localeCompare(a.date))
+    .slice(0, 10);
 }
 
 export function transactionsFor(transactions: Transaction[], product?: Product): Transaction[] {
