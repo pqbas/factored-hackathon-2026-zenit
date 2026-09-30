@@ -75,3 +75,24 @@ por lotes. Lakebase suma otro atraso, el tiempo entre refrescos.
   - Las consultas que no toleran atraso (un saldo para aprobar algo, una
     compra de hace minutos en un reclamo) van directo a la API del core
     bancario en tiempo real, no a una copia analítica.
+
+## 3. Observabilidad
+
+Hoy la App del agente en prod corre **sin tracing**: MLflow intentaba subir cada
+traza a un storage de S3 al que la App no tiene salida, y fallaba en segundo
+plano. Por eso quedó apagado en prod; en local sigue activo.
+
+De prod queda registrado:
+
+- la conversación completa, en la base del back;
+- por turno, en `TurnMetric`: duración, intención, caso de uso, idioma,
+  tokens, modelo, versión del prompt y disparos del guard;
+- la derivación, con motivo, resumen y ficha verificada;
+- los logs de cada App.
+
+No queda el paso a paso de cada turno: qué herramienta se llamó, con qué
+parámetros y qué devolvió.
+
+Pendiente: elegir una herramienta de trazas. Se evaluarán Langfuse o
+LangSmith (free tier), o una tabla de trazas propia en Lakebase. La elección
+depende de si la App se migra a AWS.
