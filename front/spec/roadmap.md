@@ -581,3 +581,13 @@ Shipped en PR #117. Con datos reales cuando esté el endpoint de w1:p1.
 Spec: `spec/30-09-26-movimientos-sin-duplicar/`.
 
 Shipped en PR #119.
+
+---
+
+## Phase 34: Accesos rápidos en Mis productos
+
+**Goal:** que desde Mis productos el cliente llegue a David en un clic, sin acciones repetidas por tarjeta.
+
+- [ ] "¿Qué quieres hacer?" con las 4 opciones del chat más "Ver movimientos"; se quita "Pídeselo a David" de la tarjeta.
+
+Spec: `spec/30-09-26-accesos-rapidos/`.
