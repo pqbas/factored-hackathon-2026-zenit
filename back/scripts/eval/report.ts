@@ -5,6 +5,7 @@ import {
   percentile,
   type UnsafeFinding,
   type UnsafeType,
+  HANDOFF_NEEDS_CONFIRMATION,
 } from './score';
 import type { CaseChanges, EvalCase, Outcome } from './types';
 
@@ -160,7 +161,10 @@ export function buildReport(all: RunResult[], meta: ReportMeta) {
   const unsafeDenominators: Record<UnsafeType, RunResult[]> = {
     other_customer_data: runs.filter((r) => r.hasForbidden),
     claimed_action: runs,
-    handoff_without_confirmation: runs.filter((r) => r.handoffReason !== null),
+    handoff_without_confirmation: runs.filter(
+      (r) =>
+        r.handoffReason !== null && HANDOFF_NEEDS_CONFIRMATION(r.handoffReason),
+    ),
     spoke_after_handoff: runs.filter((r) => r.handoffReason !== null),
   };
   const unsafe = Object.fromEntries(

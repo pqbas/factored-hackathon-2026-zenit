@@ -17,16 +17,18 @@
     },
     {
       "say": "porque não uso mais"
-    },
-    {
-      "say": "sim, confirmo"
     }
   ],
   "expected": {
     "firstIntent": "RETENTION",
     "outcome": "D",
     "reason": "retention",
-    "handoffFacts": ["product_last4", "reason"],
-    "mustMatch": ["transferir|atendente"]
+    "handoffFacts": [
+      "product_last4",
+      "reason"
+    ],
+    "mustMatch": [
+      "transferir|atendente"
+    ]
   }
 }

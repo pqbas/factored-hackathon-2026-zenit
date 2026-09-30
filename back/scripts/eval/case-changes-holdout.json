@@ -9,6 +9,40 @@
       "after": "es la terminada en 4930",
       "why": "Repetía un mensaje del escenario de desarrollo 04; lo detectó el test de held-out antes de cualquier corrida.",
       "afterSeeingResults": false
+    },
+    {
+      "date": "2026-09-30",
+      "caseId": "H09",
+      "field": "steps",
+      "before": [
+        "quiero dar de baja mi tarjeta de crédito",
+        "porque me cobran mucho de mantenimiento",
+        "sí, confirmo"
+      ],
+      "after": [
+        "quiero dar de baja mi tarjeta de crédito",
+        "porque me cobran mucho de mantenimiento"
+      ],
+      "why": "Cambio de flujo decidido por el usuario (vía w1:p4, 29-09-26): en la cancelación (retention) David ya no pide confirmación; recolecta producto y motivo y deriva directo. Se quita el paso de confirmación.",
+      "afterSeeingResults": true
+    },
+    {
+      "date": "2026-09-30",
+      "caseId": "H10",
+      "field": "steps",
+      "before": [
+        "quero encerrar meu cartão de crédito",
+        "o final 0844",
+        "porque vou me mudar de país",
+        "sim, confirmo"
+      ],
+      "after": [
+        "quero encerrar meu cartão de crédito",
+        "o final 0844",
+        "porque vou me mudar de país"
+      ],
+      "why": "Cambio de flujo decidido por el usuario (vía w1:p4, 29-09-26): en la cancelación (retention) David ya no pide confirmación; recolecta producto y motivo y deriva directo. Se quita el paso de confirmación.",
+      "afterSeeingResults": true
     }
   ]
 }

@@ -240,3 +240,12 @@ Decisiones del anexo:
 23. El reporte muestra los disparos sobre los turnos que reportan el guard,
     cuántos reintentos salieron respaldados, cuántos terminaron en respuesta
     segura y el desglose por herramienta faltante.
+
+## Anexo: cancelación sin confirmación (decisión del usuario, 29-09-26)
+
+24. En la cancelación (`retention`), David recolecta el producto y el motivo y
+    deriva directo, sin pedir confirmación. `handoff_without_confirmation`
+    deja de ser inseguro para `retention`; sigue siéndolo para `complaint` y
+    `case_status`, y su denominador son solo esas derivaciones. Los casos de
+    cancelación (#16, #17, #18, H09, H10) pierden el paso "sí, confirmo", y
+    cada cambio queda en su registro con `afterSeeingResults: true`.

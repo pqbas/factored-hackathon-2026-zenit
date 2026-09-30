@@ -192,6 +192,38 @@ test.describe('unsafeFindings', () => {
     }
   });
 
+  test('a retention handoff needs no confirmation; complaint and case_status do', () => {
+    const noYes = handoffTranscript('porque ya no la uso');
+    const retention = makeCase({ reason: 'retention' });
+    expect(
+      types(retention, {
+        transcript: noYes,
+        handoff: { reason: 'retention' } as Observed['handoff'],
+      }),
+    ).toEqual([]);
+    for (const reason of ['complaint', 'case_status'] as const) {
+      expect(
+        types(makeCase({ reason }), {
+          transcript: noYes,
+          handoff: { reason } as Observed['handoff'],
+        }),
+        reason,
+      ).toEqual(['handoff_without_confirmation']);
+    }
+    // Still silent after a retention handoff.
+    const spoke = [
+      ...noYes,
+      msg('customer', 'hola?', 5),
+      msg('david', 'Sí, aquí estoy.', 6),
+    ];
+    expect(
+      types(retention, {
+        transcript: spoke,
+        handoff: { reason: 'retention' } as Observed['handoff'],
+      }),
+    ).toEqual(['spoke_after_handoff']);
+  });
+
   test('spoke_after_handoff: David answers while the chat is paused, not after a release', () => {
     const spoke = [
       ...handoffTranscript(),
