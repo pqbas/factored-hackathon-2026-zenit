@@ -378,6 +378,12 @@ Línea base 40×3 (clasificador llm, prompt 68747d24cacf) en
 Shipped en PR #86 (merge `a77e94f8`). El guard de grounding del agente
 (`custom_outputs.guard`) queda en `TurnMetric` y en el reporte: PR #87.
 
+Anexos: set held-out de 20 casos (congelado antes de las correcciones del
+agente), `--set`/`--label`, `eval:compare`, cancelación sin confirmación y
+movimientos con pregunta previa. Corrida después (agente main `d4559fa`):
+dev 95.8% y holdout 95.0% de corridas que pasan, 0 inseguros
+(`scripts/eval/results/comparacion.md`). Shipped en PR #HOLDOUT.
+
 ---
 
 ## Phase 15: Datos del banco desde Lakebase (Complete)
