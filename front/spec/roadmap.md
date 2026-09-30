@@ -496,10 +496,12 @@ Shipped en PR #104.
 
 ---
 
-## Phase 25: Bandeja o Agente AI dentro de cada motivo
+## Phase 25: Bandeja o Agente AI dentro de cada motivo (Complete)
 
 **Goal:** que en cada motivo el asesor vea también los casos que David todavía está atendiendo.
 
-- [ ] Selector "Bandeja | Agente AI" con contador en Reclamo, Cancelación de producto y Estado de un reclamo, recordado en la URL.
+- [x] Selector "Bandeja | Agente AI" con contador en Reclamo, Cancelación de producto y Estado de un reclamo, recordado en la URL.
 
 Spec: `spec/30-09-26-motivo-bandeja-agente/`.
+
+Shipped en PR #108. El contador de Agente AI aparece cuando el back mande `aiAgentByUseCase`.
