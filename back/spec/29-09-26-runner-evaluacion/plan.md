@@ -265,6 +265,7 @@
 
 ---
 
+<<<<<<< HEAD
 ## Anexo: set held-out
 
 25. `back/scripts/eval/cases-holdout/H01…H20-*.json`, con datos del
@@ -281,3 +282,18 @@
     su mezcla, ningún mensaje repetido de los 40 ni de los escenarios, el
     registro de cambios, `--set`/`--label`/`reportStem` y
     `compareToMarkdown`.
+=======
+## Anexo: guard de grounding
+
+30. `providers-server.ts`: `AgentGuard` y `guard` en `parseAgentOutputs`
+    (`null`, objeto con `fired` booleano, o `undefined`).
+31. `schema.ts`: `guardFired`, `guardMissingTool`, `guardAction` en
+    `TurnMetric` (migración 0012). `persistAgentReply` los guarda.
+32. `scripts/eval/report.ts`: `guardMetrics` en `metrics.guard` y la sección
+    "Guard de grounding" del `.md`; `run.ts` los lee de `/turns`.
+33. Tests: `agent-outputs.test.ts` (fired, null, ausente, mal formado),
+    `turn-metrics.test.ts` (los tres estados guardados, con los marcadores
+    `[agent-outputs:guardFired]` y `[agent-outputs:guardNull]`, tomados de
+    eventos reales del agente) y `eval-score.test.ts` (numeradores y
+    denominadores del guard).
+>>>>>>> origin/main

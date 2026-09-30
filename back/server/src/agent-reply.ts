@@ -164,6 +164,12 @@ export async function persistAgentReply({
     model: agentOutputs?.model ?? null,
     promptVersion: agentOutputs?.promptVersion ?? null,
     classifier: agentOutputs?.classifier ?? null,
+    guardFired:
+      agentOutputs?.guard === undefined
+        ? null
+        : agentOutputs.guard !== null && agentOutputs.guard.fired,
+    guardMissingTool: agentOutputs?.guard?.missingTool ?? null,
+    guardAction: agentOutputs?.guard?.action ?? null,
   });
 
   if (usage) {

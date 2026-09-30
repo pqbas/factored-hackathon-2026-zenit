@@ -80,3 +80,12 @@ w1:p4 antes de `/spec-implement`.
       `<fecha>-holdout-llm-antes.json` y `.md`
 - [ ] `npm run eval:compare` con los reportes disponibles escribe la tabla de
       dos columnas
+
+## Anexo: guard de grounding
+
+- [ ] `parseAgentOutputs` lee el guard disparado, `null`, ausente y mal
+      formado
+- [ ] `TurnMetric` guarda el guard disparado, no disparado (`false`) y no
+      reportado (`null`)
+- [ ] El reporte muestra disparos sobre turnos que lo reportan, reintentos
+      respaldados, respuestas seguras y desglose por herramienta

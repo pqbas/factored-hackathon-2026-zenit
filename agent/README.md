@@ -72,6 +72,9 @@ Cada decisión técnica tiene su propio documento en [`docs/`](docs/):
   LLM lo vea.
 - [Estructura del agente](docs/13-estructura-del-agente.md): carpetas y
   módulos del código.
+- [Herramientas sobre Lakebase](docs/14-herramientas-sobre-lakebase.md): por qué
+  las herramientas de datos del banco leen `bank_ro` en Lakebase y no las UC
+  functions, con el costo medido y cómo correrlo en local.
 
 ### Grafo principal
 
@@ -126,6 +129,14 @@ Los tokens de los casos de evaluación están en `configs/eval_sessions.json` (s
 
 ```bash
 DEMO_SESSIONS_JSON="$(cat configs/eval_sessions.json)" CLASSIFIER=llm uv run start-server --port 8001
+```
+
+### Contra Lakebase
+
+Las herramientas leen `bank_ro` en Lakebase por defecto (`TOOLS_BACKEND=lakebase`). En local usan tu identidad de Databricks, así que hace falta `databricks auth login` y acceso a la instancia `bank-assistant-chat-db`; el detalle está en [docs/14](docs/14-herramientas-sobre-lakebase.md). `TOOLS_BACKEND=mcp` vuelve a las UC functions.
+
+```bash
+LAKEBASE_INSTANCE=bank-assistant-chat-db DEMO_SESSIONS_JSON="$(cat configs/eval_sessions.json)" CLASSIFIER=llm uv run start-server --port 8001
 ```
 
 ## Pendientes

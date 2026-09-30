@@ -2,10 +2,14 @@ from __future__ import annotations
 
 import asyncio
 import json
+from datetime import datetime, timezone
+from decimal import Decimal
 
 from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
+from psycopg_pool import PoolTimeout
 
+from lakebase_fakes import FakePool
 from src.graph.build import build_graph
 from src.llm.jev import JevUnavailable
 from src.prompts.messages import (
@@ -22,6 +26,7 @@ from src.prompts.messages import (
 from src.prompts.situations import SITUATIONS
 from src.schemas.classification import Classification
 from src.schemas.routing import IntentRoute
+from src.tools.bank_sql import bank_tools
 
 VALID_SESSION = {"authenticated": True, "customer_id": "CLI-TEST", "reason": None}
 EXPIRED_SESSION = {"authenticated": False, "customer_id": None, "reason": "expired"}
@@ -1118,3 +1123,79 @@ def test_an_advisor_message_after_the_handoff_gets_a_normal_answer():
 
     assert result["paused"] is False
     assert result["messages"][-1].content == "De nada."
+
+
+# --- The same turns over the Lakebase tools and a fake pool ------------------------------
+
+_LAKEBASE_PRODUCT = {
+    "product_type": "Tarjeta Crédito", "product_number_last4": "4930", "currency": "USD",
+    "current_balance": Decimal("120.50"), "credit_limit": Decimal("1000.00"), "available_credit": Decimal("879.50"),
+}
+_LAKEBASE_TRANSACTION = {
+    "transaction_date": datetime(2026, 6, 8, 15, 0, 51, tzinfo=timezone.utc), "product_type": "Tarjeta Crédito",
+    "product_number_last4": "4930", "transaction_type": "Purchase", "merchant_name": "Internet Plus",
+    "amount": Decimal("329.44"), "currency": "USD", "transaction_status": "Approved",
+}
+
+
+def _lakebase_tools_for(pool):
+    tools = bank_tools(pool)
+
+    async def tools_for(schema):
+        return tools
+
+    return tools_for
+
+
+def _lakebase_graph(llm, pool, intent="COMPLAINT"):
+    return _build_graph(llm, FakeJev(_classification(intent=intent)), tools_for=_lakebase_tools_for(pool))
+
+
+def test_a_balance_turn_answers_from_the_lakebase_rows():
+    pool = FakePool(products=[_LAKEBASE_PRODUCT])
+    llm = ScriptedToolLLM([
+        AIMessage(content="", tool_calls=[{"name": "get_products", "args": {"customer_id": "CLI-OTHER"}, "id": "c1"}]),
+        AIMessage(content="Tienes 879.50 USD disponibles"),
+    ])
+    result = _run(_lakebase_graph(llm, pool, intent="GENERAL_INQUIRY"), "¿cuál es mi saldo?")
+
+    assert result["messages"][-1].content == "Tienes 879.50 USD disponibles"
+    assert pool.queries[0][1] == {"customer_id": "CLI-TEST"}
+    tool_message = [m for m in llm.received if isinstance(m, ToolMessage)][-1]
+    assert "879.50" in tool_message.content
+
+
+def test_a_confirmed_and_verified_complaint_is_handed_off_over_lakebase():
+    pool = FakePool(products=[_LAKEBASE_PRODUCT], transactions=[_LAKEBASE_TRANSACTION])
+    llm = _SummarizingToolLLM([
+        AIMessage(content="", tool_calls=[
+            {"name": "get_products", "args": {}, "id": "c1"},
+            {"name": "list_transactions", "args": {"product_last4": "4930"}, "id": "c2"},
+        ]),
+        AIMessage(content="", tool_calls=[{"name": "hand_off_to_advisor", "args": _CASE, "id": "c3"}]),
+    ])
+    result = _run(_lakebase_graph(llm, pool), "sí, confirmo")
+
+    assert result["messages"][-1].content == HANDOFF_REPLY["es"]
+    assert result["handoff"]["reason"] == "complaint"
+    assert result["handoff"]["facts"]["verified_data"]["merchant"] == "Internet Plus"
+    assert pool.queries[1][1] == {"customer_id": "CLI-TEST", "product_last4": "4930"}
+
+
+def test_a_lakebase_timeout_ends_in_the_tool_failure_reply_with_no_handoff_and_no_figures():
+    pool = FakePool(error=PoolTimeout("couldn't get a connection after 5.00 sec"))
+    llm = _SummarizingToolLLM([
+        AIMessage(content="", tool_calls=[
+            {"name": "get_products", "args": {}, "id": "c1"},
+            {"name": "list_transactions", "args": {"product_last4": "4930"}, "id": "c2"},
+        ]),
+        AIMessage(content="", tool_calls=[{"name": "hand_off_to_advisor", "args": _CASE, "id": "c3"}]),
+        AIMessage(content="No puedo consultar esa información ahora."),
+    ])
+    result = _run(_lakebase_graph(llm, pool), "sí, confirmo")
+
+    assert result.get("handoff") is None
+    assert result["messages"][-1].content == "No puedo consultar esa información ahora."
+    tool_messages = [m.content for m in llm.received if isinstance(m, ToolMessage)]
+    assert any("couldn't get a connection" in content for content in tool_messages)
+    assert not any("329.44" in content or "Internet Plus" in content for content in tool_messages)

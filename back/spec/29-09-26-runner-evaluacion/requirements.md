@@ -203,6 +203,7 @@ And it changes in these ways:
   - `agent/src/prompts/messages.py`: respuestas fijas.
   - `agent/src/schemas/turn_outputs.py`: `custom_outputs`.
 
+<<<<<<< HEAD
 ## Anexo: set held-out (revisión de w1:p4, 29-09-26)
 
 p3 corrige al agente mirando los 40 casos, así que esos dejan de ser held-out
@@ -228,3 +229,16 @@ Decisiones del anexo:
   limitación.
 - El "antes" del holdout corre contra main `7115b17` con un agente propio en
   `:8002`, para no depender del `:8001` de p3 ni mostrarle los casos.
+=======
+## Anexo: guard de grounding (revisión de w1:p4, 29-09-26)
+
+21. El agente devuelve `custom_outputs.guard`: `null` si no se disparó, o
+    `{ fired, missing_tool, action }` si David mostró datos de la cuenta sin
+    llamar a la herramienta que los devuelve (`action`: `retried_ok` o
+    `safe_reply`). Viene en todos los turnos.
+22. `TurnMetric` guarda `guardFired` (`null` si el agente no lo reporta,
+    `false` si no se disparó), `guardMissingTool` y `guardAction`.
+23. El reporte muestra los disparos sobre los turnos que reportan el guard,
+    cuántos reintentos salieron respaldados, cuántos terminaron en respuesta
+    segura y el desglose por herramienta faltante.
+>>>>>>> origin/main
