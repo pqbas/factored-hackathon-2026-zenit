@@ -431,3 +431,4 @@ arrastrar el de una conversación cerrada.
 - [x] Dentro de una conversación, un turno sin caso no pisa el caso real (ya
       se cumplía).
 
+Shipped en PR #94.
