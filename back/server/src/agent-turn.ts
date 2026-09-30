@@ -7,8 +7,18 @@ const ADVISOR_PREFIX = '[Asesor] ';
 // blocked turns, and prefixes the advisor's own replies so the agent can tell
 // them apart from its own. Built fresh for each request, never persisted and
 // never shown to the front.
-export function buildAgentHistory(messages: ChatMessage[]): ChatMessage[] {
+//
+// With closedThroughId (the last message of the last closed conversation),
+// only what comes after it goes: the agent reads the current conversation.
+export function buildAgentHistory(
+  messages: ChatMessage[],
+  closedThroughId: string | null = null,
+): ChatMessage[] {
+  const boundary = closedThroughId
+    ? messages.findIndex((m) => m.id === closedThroughId)
+    : -1;
   return messages
+    .slice(boundary + 1)
     .filter((m) => m.role !== 'system' && m.metadata?.blocked !== true)
     .map((m) => {
       if (m.metadata?.senderType !== 'human_agent') return m;
