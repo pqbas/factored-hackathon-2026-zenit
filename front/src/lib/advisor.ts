@@ -107,10 +107,22 @@ export const DAVID_VIEW_LABEL = 'Agente AI';
 
 // What the inbox shows: the open cases that need a person, one handoff reason,
 // the chats David handles on his own, or a state.
+export type ReasonScope = 'inbox' | 'david';
+
+// The use case David works each handoff reason under (the back only stores
+// these four as a case: GENERAL_INQUIRY, COMPLAINT, CASE_STATUS, RETENTION).
+export const REASON_USE_CASE: Record<string, string> = {
+  complaint: 'COMPLAINT',
+  retention: 'RETENTION',
+  case_status: 'CASE_STATUS',
+};
+
 export type InboxView =
   | { kind: 'inbox' }
   | { kind: 'david' }
-  | { kind: 'reason'; reason: string }
+  // scope: the handed-off chats (inbox, the default) or the ones David still
+  // handles with the same use case.
+  | { kind: 'reason'; reason: string; scope?: ReasonScope }
   | { kind: 'waiting' }
   | { kind: 'advisor' }
   | { kind: 'resolved' };
@@ -122,13 +134,30 @@ export function viewUrl(
   // One row per customer: views filter on each customer's latest conversation.
   const params = new URLSearchParams({ limit: String(INBOX_PAGE_SIZE), groupBy: 'customer' });
   params.set('status', view.kind === 'resolved' ? 'closed' : 'open');
-  if (view.kind === 'reason') params.set('handoffReason', view.reason);
+  if (view.kind === 'reason' && view.scope === 'david') {
+    params.set('handledBy', 'ai_agent');
+    params.set('useCase', REASON_USE_CASE[view.reason] ?? view.reason);
+  } else if (view.kind === 'reason') {
+    params.set('handoffReason', view.reason);
+  }
   if (view.kind === 'waiting') params.set('handledBy', 'human_queue');
   if (view.kind === 'david') params.set('handledBy', 'ai_agent');
   if (view.kind === 'advisor') params.set('handledBy', 'human_agent');
   if (userId) params.set('userId', userId);
   if (startingAfter) params.set('starting_after', startingAfter);
   return `${BASE}?${params.toString()}`;
+}
+
+// Only the reason views live in the URL (?reason=complaint&scope=david).
+export function viewFromParams(params: URLSearchParams): InboxView {
+  const reason = params.get('reason');
+  if (!reason || !(reason in REASON_USE_CASE)) return { kind: 'inbox' };
+  return { kind: 'reason', reason, scope: params.get('scope') === 'david' ? 'david' : 'inbox' };
+}
+
+export function viewParams(view: InboxView): Record<string, string> {
+  if (view.kind !== 'reason') return {};
+  return view.scope === 'david' ? { reason: view.reason, scope: 'david' } : { reason: view.reason };
 }
 
 export function sameView(a: InboxView, b: InboxView): boolean {
@@ -505,6 +534,9 @@ export interface ViewCounts {
   advisor: number;
   resolved: number;
   reasons: Record<string, number>;
+  // David's open chats per reason's use case; empty while the back doesn't
+  // send aiAgentByUseCase (the option then shows no count).
+  davidByReason: Record<string, number>;
 }
 
 // Counters count customers, like the rows.
@@ -525,6 +557,7 @@ export function parseCounts(body: unknown): ViewCounts {
     total?: unknown;
     aiAgent?: unknown;
     byHandoffReason?: Record<string, unknown>;
+    aiAgentByUseCase?: Record<string, unknown>;
     unattended?: unknown;
     withAdvisor?: unknown;
     resolved?: unknown;
@@ -539,6 +572,14 @@ export function parseCounts(body: unknown): ViewCounts {
     advisor: n(raw.withAdvisor),
     resolved: n(raw.resolved),
     reasons,
+    davidByReason: raw.aiAgentByUseCase
+      ? Object.fromEntries(
+          Object.entries(REASON_USE_CASE).map(([reason, useCase]) => [
+            reason,
+            n(raw.aiAgentByUseCase?.[useCase]),
+          ]),
+        )
+      : {},
   };
 }
 

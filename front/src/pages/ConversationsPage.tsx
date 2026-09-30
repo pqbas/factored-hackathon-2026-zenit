@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import useSWR from 'swr';
 import useSWRInfinite from 'swr/infinite';
+import { useSearchParams } from 'react-router-dom';
 
 import { InboxList } from '@/components/conversations/inbox-list';
 import { InboxViews } from '@/components/conversations/inbox-views';
+import { ReasonScopeSwitch } from '@/components/conversations/reason-scope-switch';
 import { ConversationView } from '@/components/conversations/conversation-view';
 import { CustomerContextPanel } from '@/components/conversations/customer-context-panel';
 import { toast } from '@/components/toast';
@@ -24,6 +26,8 @@ import {
   fetchCounts,
   fetchUsers,
   viewUrl,
+  viewFromParams,
+  viewParams,
   mergeMessages,
   POLL_MS,
   releaseConversation,
@@ -103,7 +107,8 @@ export default function ConversationsPage() {
   const me = session?.user?.email;
   // Both attend; the admin also supervises every user's chats.
   const isAdmin = role === 'admin';
-  const [view, setView] = useState<InboxView>({ kind: 'inbox' });
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [view, setView] = useState<InboxView>(() => viewFromParams(searchParams));
   const [userId, setUserId] = useState<string | null>(null);
   const { data: users } = useSWR(isAdmin ? '/api/advisor/users' : null, fetchUsers, {
     revalidateOnFocus: false,
@@ -158,6 +163,7 @@ export default function ConversationsPage() {
   function openView(next: InboxView) {
     setView(next);
     setSelected(null);
+    setSearchParams(viewParams(next), { replace: true });
   }
 
   // An empty inbox means nobody needs a person; say what David has instead.
@@ -180,6 +186,10 @@ export default function ConversationsPage() {
             </button>
           </>
         )}
+      </span>
+    ) : view.kind === 'reason' && view.scope === 'david' && !query ? (
+      <span data-testid="inbox-empty-reason-david">
+        {ASSISTANT_NAME} no atiende ningún caso de este motivo ahora.
       </span>
     ) : undefined;
 
@@ -341,6 +351,16 @@ export default function ConversationsPage() {
               hasMore={hasMore}
               empty={pages ? inboxEmpty : undefined}
               onLoadMore={() => setSize(size + 1)}
+              toolbar={
+                view.kind === 'reason' ? (
+                  <ReasonScopeSwitch
+                    scope={view.scope ?? 'inbox'}
+                    inboxCount={counts?.reasons[view.reason] ?? 0}
+                    davidCount={counts?.davidByReason[view.reason]}
+                    onChange={(scope) => openView({ ...view, scope })}
+                  />
+                ) : undefined
+              }
             />
           </div>
           {current && (

@@ -13,6 +13,8 @@ import {
   rowText,
   sameView,
   viewUrl,
+  viewFromParams,
+  viewParams,
   isHeldByOther,
   isDavidReplying,
   groupByDavidSection,
@@ -94,6 +96,39 @@ describe('canReply and isHeldByOther', () => {
     expect(isHeldByOther(held, ME)).toBe(true);
     expect(isHeldByOther(held, 'ada@example.com')).toBe(false);
     expect(isHeldByOther(chat(), ME)).toBe(false);
+  });
+});
+
+describe('reason scope', () => {
+  it("asks for David's open chats with the reason's use case", () => {
+    const url = viewUrl({ kind: 'reason', reason: 'complaint', scope: 'david' });
+    expect(url).toContain('handledBy=ai_agent');
+    expect(url).toContain('useCase=COMPLAINT');
+    expect(url).not.toContain('handoffReason');
+    expect(viewUrl({ kind: 'reason', reason: 'retention', scope: 'inbox' })).toContain('handoffReason=retention');
+  });
+
+  it("counts David's chats per reason only when the back sends them", () => {
+    expect(parseCounts({ aiAgentByUseCase: { COMPLAINT: 2, RETENTION: 1 } }).davidByReason).toEqual({
+      complaint: 2,
+      retention: 1,
+      case_status: 0,
+    });
+    expect(parseCounts({}).davidByReason).toEqual({});
+  });
+
+  it('keeps the reason view in the URL, and nothing else', () => {
+    const view = { kind: 'reason', reason: 'complaint', scope: 'david' } as const;
+    expect(viewParams(view)).toEqual({ reason: 'complaint', scope: 'david' });
+    expect(viewFromParams(new URLSearchParams(viewParams(view)))).toEqual(view);
+    expect(viewParams({ kind: 'reason', reason: 'complaint' })).toEqual({ reason: 'complaint' });
+    expect(viewFromParams(new URLSearchParams('reason=complaint'))).toEqual({
+      kind: 'reason',
+      reason: 'complaint',
+      scope: 'inbox',
+    });
+    expect(viewFromParams(new URLSearchParams('reason=nope'))).toEqual({ kind: 'inbox' });
+    expect(viewParams({ kind: 'david' })).toEqual({});
   });
 });
 

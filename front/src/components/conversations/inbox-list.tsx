@@ -148,6 +148,7 @@ export function InboxList({
   hasMore,
   onLoadMore,
   empty,
+  toolbar,
 }: {
   title: string;
   // One per customer, with their latest conversation.
@@ -162,6 +163,8 @@ export function InboxList({
   onLoadMore: () => void;
   // Replaces the generic empty message.
   empty?: ReactNode;
+  // A row under the title (the reason views' Bandeja | Agente AI switch).
+  toolbar?: ReactNode;
 }) {
   const grouped = grouping !== null;
   const groups =
@@ -202,6 +205,8 @@ export function InboxList({
           />
         </div>
       </div>
+
+      {toolbar && <div className="px-6 pb-2">{toolbar}</div>}
 
       <div className="flex-1 overflow-y-auto px-3 pt-1.5 pb-6">
         {chats.length === 0 && (
