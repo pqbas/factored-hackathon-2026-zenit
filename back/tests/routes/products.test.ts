@@ -40,7 +40,7 @@ test.describe('/api/products', () => {
     });
   });
 
-  test('only the active cards and savings accounts, and the latest 10 movements', async ({
+  test('only the active cards and savings accounts, and the latest 10 movements of each', async ({
     adaContext,
   }) => {
     const response = await adaContext.request.get(
@@ -75,18 +75,25 @@ test.describe('/api/products', () => {
         },
       ]),
     );
-    // 12 movements, the 10 most recent (12..3), newest first. The other
-    // customer sharing the card's product_id doesn't add rows (last4 7777).
+    // 24 movements, 12 per product (card: even, savings: odd): the 10 most
+    // recent of each (24..5), newest first. The other customer sharing the
+    // card's product_id doesn't add rows (last4 7777).
     expect(body.transactions.map((t: any) => t.merchant)).toEqual(
-      Array.from({ length: 10 }, (_, i) => `Shop ${12 - i}`),
+      Array.from({ length: 20 }, (_, i) => `Shop ${24 - i}`),
     );
+    expect(
+      body.transactions.filter((t: any) => t.last4 === '3001'),
+    ).toHaveLength(10);
+    expect(
+      body.transactions.filter((t: any) => t.last4 === '5002'),
+    ).toHaveLength(10);
     expect(body.transactions[0]).toEqual({
-      date: '2026-06-01T12:00:00.000Z',
+      date: '2026-06-02T00:00:00.000Z',
       productType: 'Tarjeta Crédito',
       last4: '3001',
       type: 'Purchase',
-      merchant: 'Shop 12',
-      amount: 120,
+      merchant: 'Shop 24',
+      amount: 240,
       currency: 'COP',
       status: 'Approved',
     });

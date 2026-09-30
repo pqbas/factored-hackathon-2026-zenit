@@ -95,18 +95,25 @@ export async function getProducts(customerId: string) {
   }));
 }
 
+// The latest 10 movements of each active card and savings account (not 10 in
+// total: "Mis productos" shows each card's own), newest first.
 export async function getTransactions(customerId: string) {
   const rows = await bankQuery(
-    `SELECT t.transaction_date, p.product_type, p.product_number_last4, t.transaction_type,
-       t.merchant_name, t.amount, t.currency, t.transaction_status
-     FROM bank_ro.customer_transactions t
-     JOIN bank_ro.customer_products p
-       ON t.product_id = p.product_id AND t.customer_id = p.customer_id
-     WHERE t.customer_id = $1
-       AND p.product_type IN ('Tarjeta Crédito', 'Cuenta Ahorro')
-       AND p.product_status = 'Active'
-     ORDER BY t.transaction_date DESC
-     LIMIT 10`,
+    `SELECT transaction_date, product_type, product_number_last4, transaction_type,
+       merchant_name, amount, currency, transaction_status
+     FROM (
+       SELECT t.transaction_date, p.product_type, p.product_number_last4, t.transaction_type,
+         t.merchant_name, t.amount, t.currency, t.transaction_status,
+         row_number() OVER (PARTITION BY t.product_id ORDER BY t.transaction_date DESC) AS n
+       FROM bank_ro.customer_transactions t
+       JOIN bank_ro.customer_products p
+         ON t.product_id = p.product_id AND t.customer_id = p.customer_id
+       WHERE t.customer_id = $1
+         AND p.product_type IN ('Tarjeta Crédito', 'Cuenta Ahorro')
+         AND p.product_status = 'Active'
+     ) latest
+     WHERE n <= 10
+     ORDER BY transaction_date DESC`,
     [customerId],
   );
   return rows.map((row) => ({

@@ -492,3 +492,14 @@ hace w1:p6. Spec en spec/30-09-26-evolucion-ahorros/.
 Deuda: `sessionToken` en la URL termina en los logs, igual que en
 `/api/products`.
 
+---
+
+## Phase 21: Movimientos por producto en /api/products (Complete)
+
+**Goal:** cada tarjeta de "Mis productos" muestra sus propios movimientos
+(bug de w1:p4, 30-09-26: la 1070 de Santiago salía vacía). Spec en
+spec/30-09-26-movimientos-por-producto/.
+
+- [x] `transactions` trae los últimos 10 de cada producto activo, no 10 en
+      total. La forma es la misma, en una lista plana por fecha descendente.
+
