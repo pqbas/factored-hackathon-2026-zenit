@@ -605,3 +605,15 @@ Shipped en PR #120.
 Spec: `spec/30-09-26-alineacion-productos/`.
 
 Shipped en PR #121.
+
+---
+
+## Phase 36: Movimientos por producto en Mis productos (Complete)
+
+**Goal:** que cada tarjeta y cada cuenta muestren sus propios movimientos.
+
+- [x] Cada tarjeta muestra sus últimos 10 (el back devuelve 10 por producto); "Movimientos de tus cuentas" muestra los 10 más recientes.
+
+Spec: `spec/30-09-26-movimientos-por-producto/`.
+
+Shipped en PR #122 (con el cambio de /api/products de w1:p1).
