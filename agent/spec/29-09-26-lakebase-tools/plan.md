@@ -29,7 +29,7 @@
 ## Group 2: App resources and docs
 
 5. `databricks.yml`:
-   - Add a `database` resource to the agent App (`instance_name` and `database_name` as confirmed with w1:p1, `permission: CAN_CONNECT_AND_CREATE`).
+   - Add a `database` resource to the agent App (`instance_name: bank-assistant-chat-db`, `database_name: databricks_postgres`, `permission: CAN_CONNECT_AND_CREATE`).
    - Keep the UC function resources and comments, marking them as the rollback path.
 6. `app.yaml`: `TOOLS_BACKEND=lakebase`, `LAKEBASE_INSTANCE`, `LAKEBASE_DATABASE`.
 7. `README.md` and `agent/docs/` (one decision doc, linked from the README):

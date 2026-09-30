@@ -40,4 +40,9 @@ And it changes in these ways:
 - `src/tools/mcp_client.py` (`tools_for`), `src/tools/bind_customer.py`, `src/tools/handoff.py` (`tool_rows`);
 - `src/graph/nodes/respond.py` (`_bound_tools`), `src/main.py`, `src/config.py`;
 - `agent/databricks.yml`, `agent/app.yaml`;
-- To confirm with w1:p1: the instance name and database (assumed `bank-assistant-chat-db` / `databricks_postgres`), the schema `bank_ro`, and the tables `customer_products`, `customer_transactions` and `customer_cases`, synced 1:1 from `workspace.bank_gold`.
+- Confirmed with w1:p1:
+  - the instance is `bank-assistant-chat-db` (CU_1, PG16) and the database `databricks_postgres`;
+  - the Postgres schema `bank_ro` is separate from the chat's `ai_chatbot`;
+  - `bank_ro.customer_products`, `bank_ro.customer_transactions` and `bank_ro.customer_cases` are synced 1:1 from `workspace.bank_gold` in snapshot mode, and exist in UC as `workspace.bank_ro.<table>`;
+  - the primary keys are composite and start with `customer_id`: `(customer_id, product_id)`, `(customer_id, transaction_id)`, `(customer_id, complaint_id)`. Every query filters by `customer_id`, so the PK index serves them, and a hand-made index wouldn't survive a snapshot refresh;
+  - the App's service principal gets only `USAGE` on `bank_ro` and `SELECT` on the three tables. Locally, pcubasm1 owns the instance and can't be limited to SELECT.
