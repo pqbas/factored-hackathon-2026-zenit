@@ -1,0 +1,1 @@
+ALTER TABLE "ai_chatbot"."AgentTurn" ADD COLUMN "language" varchar(8);

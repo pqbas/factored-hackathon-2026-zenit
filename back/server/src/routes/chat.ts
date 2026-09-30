@@ -94,13 +94,20 @@ chatRouter.post('/', requireAuth, async (req: Request, res: Response) => {
       selectedChatModel,
       selectedVisibilityType,
       sessionToken,
+      language: requestedLanguage,
     }: {
       id: string;
       message?: ChatMessage;
       selectedChatModel: string;
       selectedVisibilityType: VisibilityType;
       sessionToken?: string;
+      language?: string;
     } = requestBody;
+    // The customer's pick in the chat (ES | PT); anything else is ignored.
+    const language =
+      requestedLanguage === 'es' || requestedLanguage === 'pt'
+        ? requestedLanguage
+        : null;
 
     const session = req.session;
     if (!session) {
@@ -242,9 +249,7 @@ chatRouter.post('/', requireAuth, async (req: Request, res: Response) => {
                 (p) =>
                   p.type === 'dynamic-tool' &&
                   (p.state === 'output-denied' ||
-                    ('approval' in p &&
-                      (p.approval)?.approved ===
-                        false)),
+                    ('approval' in p && p.approval?.approved === false)),
               ),
           );
 
@@ -302,6 +307,7 @@ chatRouter.post('/', requireAuth, async (req: Request, res: Response) => {
         messageId: message.id,
         userId: session.user.email ?? session.user.id,
         sessionToken,
+        language,
       });
       const pendingStream = createUIMessageStream({
         execute: async ({ writer }) => {
@@ -328,6 +334,7 @@ chatRouter.post('/', requireAuth, async (req: Request, res: Response) => {
       userId: session.user.email ?? session.user.id,
       sessionToken,
       handledBy: chat?.handledBy ?? 'ai_agent',
+      language,
       messages: uiMessages,
       selectedChatModel,
       onUsage: (usage) => {
@@ -392,6 +399,7 @@ chatRouter.post('/', requireAuth, async (req: Request, res: Response) => {
             messageId: message.id,
             userId: session.user.email ?? session.user.id,
             sessionToken,
+            language,
           });
           streamCache.clearActiveStream(id);
           return;
