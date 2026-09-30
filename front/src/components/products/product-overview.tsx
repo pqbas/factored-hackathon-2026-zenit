@@ -1,5 +1,6 @@
 import { useLang } from '@/contexts/LangContext';
 import { CardCarousel } from '@/components/products/card-carousel';
+import { QuickActions } from '@/components/products/quick-actions';
 import { SavingsChart } from '@/components/products/savings-chart';
 import { DetailRow, StatTile } from '@/components/products/stat-tile';
 import { TransactionList } from '@/components/products/transaction-list';
@@ -40,6 +41,8 @@ export function ProductOverview({
           {products.length} {products.length === 1 ? t.products.activeProduct : t.products.activeProducts}
         </p>
       </div>
+
+      <QuickActions />
 
       {/* Only the tiles that apply to what the customer has. */}
       <div className="grid gap-3 sm:grid-cols-[repeat(auto-fit,minmax(12rem,1fr))]">

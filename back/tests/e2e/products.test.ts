@@ -108,6 +108,20 @@ test.describe('Mis productos', () => {
     await expect(page.locator('[data-testid^="card-action-"]')).toHaveCount(0);
   });
 
+  test('the quick actions open the chat with their message', async ({ page }) => {
+    await mockProducts(page, () => ({ status: 200, json: PRODUCTS }));
+    await page.goto('/products');
+    const actions = page.getByTestId('quick-actions');
+    await expect(actions).toContainText('¿Qué quieres hacer?');
+    await expect(actions.locator('[data-testid^="quick-action-"]')).toHaveCount(5);
+    await expect(actions.getByTestId('quick-action-4')).toContainText('Ver movimientos');
+    const request = page.waitForRequest(
+      (req) => req.method() === 'POST' && new URL(req.url()).pathname === '/api/chat',
+    );
+    await actions.getByTestId('quick-action-4').click();
+    expect((await request).postDataJSON().message.parts[0].text).toBe('Quiero ver mis últimos movimientos');
+  });
+
   test('savings show their estimated evolution per currency', async ({ page }) => {
     const withSavings = {
       ...PRODUCTS,

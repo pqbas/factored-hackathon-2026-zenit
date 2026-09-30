@@ -1,6 +1,5 @@
 import { motion } from 'framer-motion';
 import {
-  ArrowLeftRight,
   CircleAlert,
   CreditCard,
   Ellipsis,
@@ -24,12 +23,6 @@ export const ACTION_STYLES: { icon: LucideIcon; tint: string }[] = [
 export const MOVEMENTS_STYLE = {
   icon: List,
   tint: 'bg-sky-500/15 text-sky-600 dark:text-sky-300',
-};
-
-// MOCKUP: transfers aren't something David does yet.
-export const TRANSFER_STYLE = {
-  icon: ArrowLeftRight,
-  tint: 'bg-violet-500/15 text-violet-600 dark:text-violet-300',
 };
 
 export function ActionCard({
