@@ -572,10 +572,12 @@ Shipped en PR #117. Con datos reales cuando esté el endpoint de w1:p1.
 
 ---
 
-## Phase 33: Movimientos sin duplicar en Mis productos
+## Phase 33: Movimientos sin duplicar en Mis productos (Complete)
 
 **Goal:** que cada movimiento aparezca una sola vez en el resumen.
 
-- [ ] Movimientos de tarjeta solo bajo la tarjeta seleccionada; "Movimientos de tus cuentas" solo con los de ahorro, oculto sin cuentas de ahorro.
+- [x] Movimientos de tarjeta solo bajo la tarjeta seleccionada; "Movimientos de tus cuentas" solo con los de ahorro, oculto sin cuentas de ahorro.
 
 Spec: `spec/30-09-26-movimientos-sin-duplicar/`.
+
+Shipped en PR #119.
