@@ -26,6 +26,7 @@
     "seed:console": "tsx scripts/seed-console.ts",
     "eval": "tsx scripts/eval/run.ts",
     "eval:compare": "tsx scripts/eval/compare.ts",
+    "eval:cleanup": "tsx scripts/eval/cleanup.ts",
     "db:studio": "drizzle-kit studio",
     "db:push": "drizzle-kit push",
     "db:pull": "drizzle-kit pull",

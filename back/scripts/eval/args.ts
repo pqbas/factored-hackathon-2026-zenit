@@ -19,6 +19,8 @@ export type Args = {
   cases: string[] | null;
   runs: number;
   base: string;
+  // Run against a deployed App (https://*.databricksapps.com).
+  allowProd: boolean;
   classifier: string;
   out: string;
   delay: number;
@@ -31,6 +33,7 @@ export function parseArgs(argv: string[]): Args {
     cases: null,
     runs: 3,
     base: DEFAULT_BASE,
+    allowProd: false,
     classifier: 'llm',
     out: '',
     delay: 0,
@@ -49,6 +52,7 @@ export function parseArgs(argv: string[]): Args {
     else if (flag === '--delay') args.delay = Number(value());
     else if (flag === '--set') args.set = value() as EvalSet;
     else if (flag === '--label') args.label = value();
+    else if (flag === '--allow-prod') args.allowProd = true;
     else throw new Error(`Unknown flag: ${flag}`);
   }
   if (!(args.set in SETS)) throw new Error('--set must be dev or holdout');
@@ -59,7 +63,7 @@ export function parseArgs(argv: string[]): Args {
     throw new Error('--runs must be a positive integer');
   }
   // Before anything else: nothing is sent to a base that isn't local.
-  assertLocalBase(args.base);
+  assertLocalBase(args.base, args.allowProd);
   return args;
 }
 

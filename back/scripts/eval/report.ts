@@ -36,6 +36,8 @@ export type TurnRecord = {
 export type RunResult = {
   caseId: string;
   run: number;
+  // The chat the run wrote, so a run against a deployed App can be cleaned up.
+  chatId?: string;
   group: string;
   language: EvalCase['language'];
   segment: EvalCase['customer']['segment'];
