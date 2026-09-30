@@ -521,11 +521,13 @@ Shipped en PR #111.
 
 ---
 
-## Phase 28: Idioma ES | PT en el chat del cliente
+## Phase 28: Idioma ES | PT en el chat del cliente (Complete)
 
 **Goal:** que un cliente de Brasil use el chat en portugués y David le responda en ese idioma.
 
-- [ ] Selector "ES | PT" en el header del chat; todos los textos de la pantalla del chat en ES y PT; la elección se recuerda.
-- [ ] Cada mensaje lleva el idioma elegido al back (`language`), para que David lo use.
+- [x] Selector "ES | PT" en el header del chat; todos los textos de la pantalla del chat en ES y PT; la elección se recuerda.
+- [x] Cada mensaje lleva el idioma elegido al back (`language`), para que David lo use.
 
 Spec: `spec/30-09-26-idioma-es-pt/`.
+
+Shipped en PR #113. David responde en el idioma elegido cuando el back (w1:p1) pase `language` al agente; el agente ya lo lee (PR #112).
