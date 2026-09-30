@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { findSimCustomer } from './sim-sessions';
 
 export type DemoCustomer = {
   token: string;
@@ -69,6 +70,18 @@ export function getDemoCustomers(): DemoCustomer[] {
 // The customer behind a session token, or undefined for an unknown token.
 export function findDemoCustomer(token: string): DemoCustomer | undefined {
   return getDemoCustomers().find((c) => c.token === token);
+}
+
+// The customer behind a session token: a demo token first, then a live
+// simulation session. Undefined when neither knows it.
+export async function resolveSessionCustomer(
+  token: string,
+): Promise<DemoCustomer | undefined> {
+  const demo = findDemoCustomer(token);
+  if (demo) return demo;
+  const sim = await findSimCustomer(token);
+  if (!sim) return undefined;
+  return { token, label: 'Simulación', customerId: sim.customerId };
 }
 
 // The first live demo token of a customer id, or undefined.
