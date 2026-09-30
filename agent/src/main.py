@@ -33,6 +33,7 @@ from src.llm.chat import get_chat_model  # noqa: E402
 from src.llm.jev import JevClient  # noqa: E402
 from src.llm.llm_classifier import LLMClassifier  # noqa: E402
 from src.llm.usage import TurnUsage  # noqa: E402
+from src.observability import pin_mlflow_experiment  # noqa: E402
 from src.prompts.advisor import AdvisorPrefixStreamFilter  # noqa: E402
 from src.prompts.version import prompt_version  # noqa: E402
 from src.schemas.routing import load_routing  # noqa: E402
@@ -50,6 +51,7 @@ _src_handler.setFormatter(logging.Formatter("%(levelname)s %(name)s: %(message)s
 _src_logger.addHandler(_src_handler)
 
 mlflow.langchain.autolog()
+pin_mlflow_experiment()
 
 # Loaded once at import so a bad routing.yaml fails at startup, not on the first request.
 routes = load_routing(settings.routing_path, GRAPH_NODES)
