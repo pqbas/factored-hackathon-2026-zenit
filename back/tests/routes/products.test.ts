@@ -1,6 +1,6 @@
 import { expect, test } from '../fixtures';
 
-// The SQL warehouse is mocked by MSW (tests/api-mocking/api-mock-handlers.ts).
+// The bank's data is the bank_ro fixture (tests/fixtures/bank_ro.sql).
 test.describe('/api/products', () => {
   test("returns the session customer's name, products and movements", async ({
     adaContext,
@@ -29,7 +29,7 @@ test.describe('/api/products', () => {
         {
           date: '2026-06-08T15:00:51.000Z',
           productType: 'Tarjeta Crédito',
-          last4: '4930',
+          last4: '1070',
           type: 'Purchase',
           merchant: 'Internet Plus',
           amount: 329.44,
@@ -37,6 +37,78 @@ test.describe('/api/products', () => {
           status: 'Approved',
         },
       ],
+    });
+  });
+
+  test('only the active cards and savings accounts, and the latest 10 movements', async ({
+    adaContext,
+  }) => {
+    const response = await adaContext.request.get(
+      '/api/products?sessionToken=demo-co-1',
+    );
+    expect(response.status()).toBe(200);
+    const body = await response.json();
+    expect(body.customer).toEqual({
+      customerId: 'CLI-7MPS3ZOPSN4Q',
+      firstName: 'Javier',
+      lastName: 'Ortiz Vega',
+    });
+    // The closed card is left out; the savings account has no available credit.
+    expect(body.products).toHaveLength(2);
+    expect(body.products).toEqual(
+      expect.arrayContaining([
+        {
+          productType: 'Tarjeta Crédito',
+          last4: '3001',
+          currency: 'COP',
+          currentBalance: 1200,
+          creditLimit: 5000,
+          availableCredit: 3800,
+        },
+        {
+          productType: 'Cuenta Ahorro',
+          last4: '5002',
+          currency: 'COP',
+          currentBalance: 900.5,
+          creditLimit: null,
+          availableCredit: null,
+        },
+      ]),
+    );
+    // 12 movements, the 10 most recent (12..3), newest first. The other
+    // customer sharing the card's product_id doesn't add rows (last4 7777).
+    expect(body.transactions.map((t: any) => t.merchant)).toEqual(
+      Array.from({ length: 10 }, (_, i) => `Shop ${12 - i}`),
+    );
+    expect(body.transactions[0]).toEqual({
+      date: '2026-06-01T12:00:00.000Z',
+      productType: 'Tarjeta Crédito',
+      last4: '3001',
+      type: 'Purchase',
+      merchant: 'Shop 12',
+      amount: 120,
+      currency: 'COP',
+      status: 'Approved',
+    });
+    expect(body.transactions.map((t: any) => t.last4)).not.toContain('7777');
+  });
+
+  test('a customer the bank has no data for gets empty lists, not an error', async ({
+    adaContext,
+  }) => {
+    // demo-mx-2 (CLI-0IY07CEBUL79) isn't in the fixture.
+    const response = await adaContext.request.get(
+      '/api/products?sessionToken=demo-mx-2',
+    );
+    expect(response.status()).toBe(200);
+    expect(await response.json()).toEqual({
+      customer: {
+        customerId: 'CLI-0IY07CEBUL79',
+        firstName: null,
+        lastName: null,
+      },
+      products: [],
+      transactions: [],
     });
   });
 

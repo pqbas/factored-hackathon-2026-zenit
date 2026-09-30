@@ -77,7 +77,7 @@ test.describe('Customer context in the console (with database)', () => {
         firstName: 'Santiago',
         lastName: 'Contreras López',
       });
-      // Blank columns from the bank come as null (the mock's mobile_phone is '').
+      // Blank columns from the bank come as null (the fixture's mobile_phone is '').
       expect(body.profile).toEqual({
         customerId: 'CLI-FLEUCGTWGAHL',
         country: 'México',
@@ -311,6 +311,41 @@ test.describe('Customer context in the console (with database)', () => {
     }
   });
 
+  test('a customer with no products, interactions or cases gets empty lists', async ({
+    babbageContext,
+  }) => {
+    const chatId = generateUUID();
+    await saveChat({
+      id: chatId,
+      userId: `${babbageContext.name}-id`,
+      title: 'Nothing to show',
+      visibility: 'private',
+      customerId: 'CLI-EMPTY',
+    });
+
+    const response = await babbageContext.request.get(
+      `/api/advisor/conversations/${chatId}/customer-context`,
+    );
+    expect(response.status()).toBe(200);
+    const body = await response.json();
+    expect(body.customer).toEqual({
+      customerId: 'CLI-EMPTY',
+      firstName: 'Ana',
+      lastName: 'Sin Datos',
+    });
+    expect(body.interactions).toEqual([]);
+    expect(body.transcripts).toEqual([]);
+    expect(body.cases).toEqual([]);
+    expect(body.profile).toMatchObject({
+      customerId: 'CLI-EMPTY',
+      country: 'Perú',
+      products: [],
+      contact: { email: null, mobilePhone: null },
+    });
+  });
+
+  // The fixture's `customers` view raises when it reads CLI-PROFILE-FAILS's
+  // contact data (tests/fixtures/bank_ro.sql), so only the profile query fails.
   test('a failing profile query gives profile null and keeps the rest', async ({
     babbageContext,
   }) => {

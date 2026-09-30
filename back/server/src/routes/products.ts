@@ -16,7 +16,7 @@ productsRouter.use(authMiddleware);
 
 /**
  * GET /api/products?sessionToken= - The session customer's active products and
- * latest movements, read from the bank's warehouse. Customer or admin only
+ * latest movements, read from the bank's data in Lakebase. Customer or admin only
  * (the advisor doesn't see "Mis productos").
  */
 productsRouter.get('/', requireAuth, async (req: Request, res: Response) => {

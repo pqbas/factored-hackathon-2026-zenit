@@ -236,7 +236,7 @@ advisorRouter.get(
 
 /**
  * GET /api/advisor/conversations/:id/customer-context - The chat's bank
- * customer as seen from the warehouse (past contacts, call transcripts,
+ * customer as seen from Lakebase (bank_ro) (past contacts, call transcripts,
  * cases). 204 when the chat has no customer.
  */
 advisorRouter.get(

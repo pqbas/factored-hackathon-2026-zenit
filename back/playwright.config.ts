@@ -1,4 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
+import { execFileSync } from 'node:child_process';
 import { config } from 'dotenv';
 
 /**
@@ -19,6 +20,14 @@ import { config } from 'dotenv';
  *
  * Run both modes sequentially: npm test
  * Run specific mode: npm run test:with-db or npm run test:ephemeral
+ *
+ * The bank's data (bank_ro, read by server/src/bank-data.ts) never touches
+ * Lakebase in tests, in either mode: the test server gets BANK_POSTGRES_URL,
+ * a Postgres database that this config fills with tests/fixtures/bank_ro.sql
+ * (dropped and recreated on each run). Default: the database bank_fixture of
+ * the Docker Postgres on 127.0.0.1:55432 (created if missing); set
+ * BANK_POSTGRES_URL to use another one. It is independent of POSTGRES_URL, so
+ * ephemeral mode (no chats database) still reads the bank.
  */
 
 // Determine which mode to run (default: with-db)
@@ -54,6 +63,19 @@ if (TEST_MODE === 'with-db') {
   }
 
   console.log('✓ Database configuration found, tests will use database');
+}
+
+// Fill the bank's fixture database once, in the main process (the workers load
+// this config too, and TEST_WORKER_INDEX is only set in them).
+const BANK_POSTGRES_URL =
+  process.env.BANK_POSTGRES_URL ||
+  'postgresql://postgres:postgres@127.0.0.1:55432/bank_fixture';
+if (!process.env.TEST_WORKER_INDEX) {
+  execFileSync(
+    process.execPath,
+    ['node_modules/tsx/dist/cli.mjs', 'tests/fixtures/apply-bank-fixture.ts'],
+    { env: { ...process.env, BANK_POSTGRES_URL }, stdio: 'inherit' },
+  );
 }
 
 // Not 3000/3001: those are the Vite and Express dev servers, and
@@ -133,7 +155,7 @@ export default defineConfig({
       DATABRICKS_CLIENT_ID: 'mock-value',
       DATABRICKS_CLIENT_SECRET: 'mock-value',
       DATABRICKS_HOST: 'mock-value',
-      DATABRICKS_WAREHOUSE_ID: 'mock-warehouse',
+      BANK_POSTGRES_URL,
       // The agent queue worker, fast enough for tests.
       AGENT_QUEUE_INTERVAL_MS: '200',
       AGENT_QUEUE_BACKOFF_MS: '100',
