@@ -1,6 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
 import { config } from 'dotenv';
+import { reapOrphanBrowsers } from './tests/reap-orphan-browsers';
 
 /**
  * Dual-Mode Testing Configuration
@@ -71,6 +72,10 @@ const BANK_POSTGRES_URL =
   process.env.BANK_POSTGRES_URL ||
   'postgresql://postgres:postgres@127.0.0.1:55432/bank_fixture';
 if (!process.env.TEST_WORKER_INDEX) {
+  // A run cut short (Ctrl+C, a crash, a reboot mid-run) can leave headless
+  // browsers behind; reap them before starting new ones.
+  const reaped = reapOrphanBrowsers();
+  if (reaped) console.log(`Reaped ${reaped} orphaned Playwright browser(s)`);
   execFileSync(
     process.execPath,
     ['node_modules/tsx/dist/cli.mjs', 'tests/fixtures/apply-bank-fixture.ts'],
@@ -93,10 +98,13 @@ export default defineConfig({
   /* Fail the build on CI if you accidentally left test.only in the source code. */
   forbidOnly: !!process.env.CI,
   retries: 3,
-  /* Opt out of parallel tests on CI. */
-  workers: process.env.CI ? 2 : 8,
-  /* Reporter to use. See https://playwright.dev/docs/test-reporters */
-  reporter: 'html',
+  /* Two workers: each one runs its own headless browser, and several
+   * worktrees often run the suite at once (8 per run ran a laptop out of
+   * memory, 30-09-26). PW_WORKERS overrides it. */
+  workers: Number(process.env.PW_WORKERS) || 2,
+  /* Reporter to use. See https://playwright.dev/docs/test-reporters. Never
+   * open the report: on a failure it would leave a server running. */
+  reporter: [['html', { open: 'never' }]],
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
