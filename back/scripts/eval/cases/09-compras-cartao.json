@@ -16,7 +16,11 @@
   "expected": {
     "firstIntent": "GENERAL_INQUIRY",
     "outcome": "R",
-    "mustMatch": ["Cable TV|Teatro Nacional"],
-    "mustNotMatch": ["\\b(tus movimientos|tienes)\\b"]
+    "mustMatch": [
+      "Cable TV|Teatro Nacional|(deseja|gostaria de|quer) ver (os |as )?(últimos |últimas )?(10 )?(movimentos|compras|lançamentos)"
+    ],
+    "mustNotMatch": [
+      "\\b(tus movimientos|tienes)\\b"
+    ]
   }
 }

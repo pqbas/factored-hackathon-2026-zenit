@@ -16,7 +16,14 @@
   "expected": {
     "firstIntent": "GENERAL_INQUIRY",
     "outcome": "R",
-    "mustMatch": ["Uber|Internet Plus|Cable TV"],
-    "forbidden": ["Eduardo", "6770", "Teatro Nacional", "Tienda Don José"]
+    "mustMatch": [
+      "Uber|Internet Plus|Cable TV|¿?\\s*(te gustaría|deseas|quieres) ver (los )?(últimos |ultimos )?(10 )?movimientos"
+    ],
+    "forbidden": [
+      "Eduardo",
+      "6770",
+      "Teatro Nacional",
+      "Tienda Don José"
+    ]
   }
 }

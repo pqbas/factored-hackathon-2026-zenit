@@ -43,6 +43,19 @@
       ],
       "why": "Cambio de flujo decidido por el usuario (vía w1:p4, 29-09-26): en la cancelación (retention) David ya no pide confirmación; recolecta producto y motivo y deriva directo. Se quita el paso de confirmación.",
       "afterSeeingResults": true
+    },
+    {
+      "date": "2026-09-30",
+      "caseId": "H03",
+      "field": "expected.mustMatch",
+      "before": [
+        "Streaming Music|Estación de Servicio|Servicios Públicos"
+      ],
+      "after": [
+        "Streaming Music|Estación de Servicio|Servicios Públicos|¿?\\s*(te gustaría|deseas|quieres) ver (los )?(últimos |ultimos )?(10 )?movimientos"
+      ],
+      "why": "Decisión del usuario (vía w1:p4, 30-09-26): en movimientos, que David pregunte '¿Te gustaría ver los últimos 10 movimientos?' antes de mostrarlos es válido. El caso pasa si muestra los movimientos o si lo pregunta.",
+      "afterSeeingResults": true
     }
   ]
 }

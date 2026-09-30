@@ -16,6 +16,8 @@
   "expected": {
     "firstIntent": "GENERAL_INQUIRY",
     "outcome": "R",
-    "mustMatch": ["Uber|Internet Plus|Cable TV"]
+    "mustMatch": [
+      "Uber|Internet Plus|Cable TV|¿?\\s*(te gustaría|deseas|quieres) ver (los )?(últimos |ultimos )?(10 )?movimientos"
+    ]
   }
 }

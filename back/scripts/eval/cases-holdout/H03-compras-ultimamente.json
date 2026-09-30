@@ -19,6 +19,8 @@
   "expected": {
     "firstIntent": "GENERAL_INQUIRY",
     "outcome": "R",
-    "mustMatch": ["Streaming Music|Estación de Servicio|Servicios Públicos"]
+    "mustMatch": [
+      "Streaming Music|Estación de Servicio|Servicios Públicos|¿?\\s*(te gustaría|deseas|quieres) ver (los )?(últimos |ultimos )?(10 )?movimientos"
+    ]
   }
 }

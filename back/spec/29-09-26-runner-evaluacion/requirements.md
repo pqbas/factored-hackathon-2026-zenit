@@ -249,3 +249,10 @@ Decisiones del anexo:
     `case_status`, y su denominador son solo esas derivaciones. Los casos de
     cancelación (#16, #17, #18, H09, H10) pierden el paso "sí, confirmo", y
     cada cambio queda en su registro con `afterSeeingResults: true`.
+
+## Anexo: movimientos con pregunta previa (decisión del usuario, 30-09-26)
+
+25. En los casos que piden movimientos (#03, #09, #33, H03), David puede
+    mostrarlos o preguntar primero "¿Te gustaría ver los últimos 10
+    movimientos?": los dos pasan. Cada cambio de patrón queda en su registro
+    con `afterSeeingResults: true`.
