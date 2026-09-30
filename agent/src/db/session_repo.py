@@ -1,10 +1,17 @@
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
 from src.config import settings
+from src.db.sim_sessions import lookup_sim_session
+
+logger = logging.getLogger(__name__)
+
+# The daily traffic simulation's tokens live in Lakebase (spec 30-09-26-sim-sessions).
+_SIM_PREFIX = "sim-"
 
 # Default fixture: real customers of the organizer's dataset (Active, no open cases, recent purchases).
 _DEFAULT_SESSIONS = {
@@ -38,17 +45,41 @@ def _sessions() -> dict[str, dict]:
     return json.loads(raw) if raw else _DEFAULT_SESSIONS
 
 
-def resolve_session(custom_inputs: dict | None, now: datetime | None = None) -> Session:
+async def resolve_session(custom_inputs: dict | None, now: datetime | None = None, pool=None) -> Session:
     now = now or datetime.now(timezone.utc)
     # No fallback identity: a request without a token never gets a customer's data.
     token = (custom_inputs or {}).get("session_token")
     if not token:
         return Session(False, reason="missing")
-    entry = _sessions().get(str(token))
-    if not entry:
+    token = str(token)
+    entry = _sessions().get(token)
+    if entry:
+        expires = datetime.fromisoformat(entry["expires_at"].replace("Z", "+00:00"))
+        if expires <= now:
+            return Session(False, reason="expired")
+        return Session(True, customer_id=entry["customer_id"], country=entry.get("country"),
+            fail_tools=tuple(entry.get("fail_tools", ())))
+    if not token.startswith(_SIM_PREFIX):
         return Session(False, reason="invalid")
-    expires = datetime.fromisoformat(entry["expires_at"].replace("Z", "+00:00"))
+    return await _resolve_sim_session(token, now, pool)
+
+
+async def _resolve_sim_session(token: str, now: datetime, pool) -> Session:
+    if pool is None:
+        from src.tools.lakebase import LazyLakebasePool
+
+        pool = LazyLakebasePool()
+    try:
+        row = await lookup_sim_session(pool, token)
+    except Exception as exc:  # noqa: BLE001 - fail closed: no lookup, no session
+        # The type only: the token is a credential and never goes to the logs.
+        logger.warning("Simulated session lookup failed: %s", type(exc).__name__)
+        return Session(False, reason="invalid")
+    if row is None:
+        return Session(False, reason="invalid")
+    expires = row["expires_at"]
+    if expires.tzinfo is None:
+        expires = expires.replace(tzinfo=timezone.utc)
     if expires <= now:
         return Session(False, reason="expired")
-    return Session(True, customer_id=entry["customer_id"], country=entry.get("country"),
-        fail_tools=tuple(entry.get("fail_tools", ())))
+    return Session(True, customer_id=row["customer_id"], country=row.get("country"))

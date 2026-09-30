@@ -162,7 +162,7 @@ async def streaming(
 
     custom_inputs = dict(request.custom_inputs or {})
     # Identity is resolved from the trusted session token on every turn, never from chat text.
-    session = resolve_session(custom_inputs)
+    session = await resolve_session(custom_inputs)
     # The back owns the conversation and sends the whole history on every request
     # (docs/limites-agente-back.md); the agent keeps no state between requests.
     history = to_chat_completions_input([i.model_dump() for i in request.input])

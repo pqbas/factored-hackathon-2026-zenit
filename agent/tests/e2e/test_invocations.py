@@ -1126,3 +1126,62 @@ def test_a_turn_with_tracing_off_produces_no_trace(client, monkeypatch):
         assert mlflow.get_last_active_trace_id() == before
     finally:
         mlflow.tracing.enable()
+
+
+def _sim_pool_factory(monkeypatch, pool):
+    import src.tools.lakebase as lakebase
+
+    monkeypatch.setattr(lakebase, "LazyLakebasePool", lambda: pool)
+
+
+def test_a_sim_token_with_lakebase_down_gets_the_session_rejected_reply_and_no_tool(client, monkeypatch):
+    from psycopg_pool import PoolTimeout
+
+    from lakebase_fakes import FakePool
+
+    _sim_pool_factory(monkeypatch, FakePool(error=PoolTimeout("couldn't get a connection after 5.00 sec")))
+
+    async def _no_tools(schema):
+        raise AssertionError("a rejected session must never reach the tools")
+
+    monkeypatch.setattr(main, "tools_for", _no_tools)
+    llm = RecordingChatModel(FAKE_LLM_TEXT)
+    monkeypatch.setattr(main, "get_chat_model", lambda: llm)
+
+    response = _invoke(client, "¿cuál es mi saldo?", session_token="sim-89c98277-a0f7-4d71-a4ca-def80715b858")
+
+    assert response.status_code == 200
+    assert _output_text(response.json()) == SESSION_REJECTED["invalid"]
+    assert llm.received is None
+
+
+def test_a_valid_sim_token_reaches_the_tools_with_its_own_customer(client, monkeypatch):
+    from datetime import datetime, timedelta, timezone
+    from decimal import Decimal
+
+    from lakebase_fakes import FakePool
+    from src.tools import tools_for as tools_for_module
+
+    token = "sim-89c98277-a0f7-4d71-a4ca-def80715b858"
+    pool = FakePool(
+        products=[{
+            "product_type": "Tarjeta Crédito", "product_number_last4": "1234", "currency": "COP",
+            "current_balance": Decimal("10.00"), "credit_limit": Decimal("100.00"), "available_credit": Decimal("90.00"),
+        }],
+        sim_sessions={token: {"customer_id": "CLI-8WQ0WQXUM9LD", "country": "Colombia",
+                              "expires_at": datetime.now(timezone.utc) + timedelta(hours=1)}},
+    )
+    _sim_pool_factory(monkeypatch, pool)
+    monkeypatch.setattr(tools_for_module, "_lakebase_tools", tools_for_module.bank_tools(pool))
+    monkeypatch.setattr(main, "tools_for", tools_for_module.tools_for)
+    llm = ScriptedToolChatModel([
+        AIMessage(content="", tool_calls=[{"name": "get_products", "args": {}, "id": "call_1"}]),
+        AIMessage(content=FAKE_LLM_TEXT),
+    ])
+    monkeypatch.setattr(main, "get_chat_model", lambda: llm)
+
+    response = _invoke(client, "¿cuál es el saldo de mi tarjeta?", session_token=token)
+
+    assert response.status_code == 200
+    assert _output_text(response.json()) == FAKE_LLM_TEXT
+    assert pool.queries[-1][1] == {"customer_id": "CLI-8WQ0WQXUM9LD"}
