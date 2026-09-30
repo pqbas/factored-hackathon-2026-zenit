@@ -21,6 +21,7 @@ class Settings:
     lakebase_instance: str
     lakebase_database: str
     bank_ro_schema: str
+    sim_sessions_table: str
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -43,6 +44,8 @@ class Settings:
             lakebase_instance=os.getenv("LAKEBASE_INSTANCE", "bank-assistant-chat-db"),
             lakebase_database=os.getenv("LAKEBASE_DATABASE", "databricks_postgres"),
             bank_ro_schema=os.getenv("BANK_RO_SCHEMA", "bank_ro"),
+            # The daily simulation's sessions (sim- tokens), written by the back's script.
+            sim_sessions_table=os.getenv("SIM_SESSIONS_TABLE", "bank_sessions.sim_sessions"),
         )
 
 
