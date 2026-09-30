@@ -25,9 +25,6 @@ export const HANDOFF_REASONS = [
   { id: 'case_status', label: 'Estado de un reclamo' },
 ] as const;
 
-// Section id for conversations without a handoff.
-export const NO_HANDOFF_GROUP = 'NONE';
-
 export function handoffReasonLabel(reason: string | null | undefined): string {
   if (!reason) return 'Caso derivado';
   return HANDOFF_REASONS.find((r) => r.id === reason)?.label ?? reason;

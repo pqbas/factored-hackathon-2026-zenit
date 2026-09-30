@@ -1,4 +1,5 @@
 import {
+  Ban,
   CircleAlert,
   CircleHelp,
   ClipboardList,
@@ -6,6 +7,7 @@ import {
   HandCoins,
   HeartHandshake,
   type LucideIcon,
+  MessageCircle,
   UserRound,
   XCircle,
 } from 'lucide-react';
@@ -78,10 +80,21 @@ const REASON_STYLE: Record<string, keyof typeof STYLE> = {
   case_status: 'CASE_STATUS',
   // Agente AI's "Consultas generales" section.
   general: 'GENERAL_INQUIRY',
+  // Bandeja's "Tomada por un asesor": like "Pidió un asesor".
+  taken: 'HUMAN_AGENT',
+};
+
+// Agente AI's sections without a case: neutral, each with its own icon.
+const NEUTRAL_SECTION_ICON: Record<string, LucideIcon> = {
+  out_of_scope: Ban,
+  no_reason: MessageCircle,
 };
 
 export function handoffReasonStyle(id: string) {
-  return STYLE[REASON_STYLE[id]] ?? NEUTRAL;
+  const style = STYLE[REASON_STYLE[id]];
+  if (style) return style;
+  const icon = NEUTRAL_SECTION_ICON[id];
+  return icon ? { ...NEUTRAL, icon } : NEUTRAL;
 }
 
 export function HandoffReasonIcon({ id, className }: { id: string; className?: string }) {
