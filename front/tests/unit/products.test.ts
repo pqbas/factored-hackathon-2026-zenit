@@ -12,6 +12,8 @@ import {
   transactionLabel,
   transactionsFor,
   cardChatPrompt,
+  parseSavingsHistory,
+  savingsWithoutSeries,
   cardColor,
   maskedCardNumber,
 } from '@/lib/products';
@@ -95,5 +97,33 @@ describe('card visuals', () => {
   it("asks David about that card", () => {
     expect(cardChatPrompt('claim', card)).toContain('1070');
     expect(cardChatPrompt('movements', card)).toContain('1070');
+  });
+});
+
+describe('savings history', () => {
+  it('keeps valid series, points sorted by month, and drops junk', () => {
+    const series = parseSavingsHistory({
+      estimated: true,
+      series: [
+        { currency: 'USD', current: 2500, points: [{ month: '2026-09', balance: 2500 }, { month: '2026-04', balance: 16000 }, { month: 'bad', balance: 1 }] },
+        { currency: 'COP', points: [] },
+        { nope: true },
+      ],
+    });
+    expect(series).toEqual([
+      { currency: 'USD', current: 2500, points: [{ month: '2026-04', balance: 16000 }, { month: '2026-09', balance: 2500 }] },
+    ]);
+    expect(parseSavingsHistory(null)).toEqual([]);
+  });
+
+  it('lists the savings currencies without a series, with their balance', () => {
+    const products = [
+      { productType: 'Cuenta Ahorro', last4: '1', currency: 'USD', currentBalance: 100, creditLimit: null, availableCredit: null },
+      { productType: 'Cuenta Ahorro', last4: '2', currency: 'COP', currentBalance: 50, creditLimit: null, availableCredit: null },
+      { productType: 'Cuenta Ahorro', last4: '3', currency: 'COP', currentBalance: 25, creditLimit: null, availableCredit: null },
+      { productType: 'Tarjeta Crédito', last4: '4', currency: 'ARS', currentBalance: 9, creditLimit: 10, availableCredit: 1 },
+    ];
+    const series = [{ currency: 'USD', current: 100, points: [{ month: '2026-09', balance: 100 }] }];
+    expect(savingsWithoutSeries(products, series)).toEqual([{ currency: 'COP', current: 75 }]);
   });
 });

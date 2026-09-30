@@ -91,6 +91,53 @@ test.describe('Mis productos', () => {
     expect(text).toContain('6262');
   });
 
+  test('savings show their estimated evolution per currency', async ({ page }) => {
+    const withSavings = {
+      ...PRODUCTS,
+      products: [
+        ...PRODUCTS.products,
+        { productType: 'Cuenta Ahorro', last4: '5500', currency: 'USD', currentBalance: 2500, creditLimit: null, availableCredit: null },
+        { productType: 'Cuenta Ahorro', last4: '7700', currency: 'MXN', currentBalance: 900, creditLimit: null, availableCredit: null },
+      ],
+    };
+    await mockProducts(page, () => ({ status: 200, json: withSavings }));
+    const months = Array.from({ length: 12 }, (_, i) => `2025-${String(10 + i).padStart(2, '0')}`).map((m, i) =>
+      i < 3 ? m : `2026-${String(i - 2).padStart(2, '0')}`,
+    );
+    await page.route('**/api/products/savings-history**', (route) =>
+      route.fulfill({
+        json: {
+          estimated: true,
+          // MXN went negative when rebuilt: no series for it.
+          series: [{ currency: 'USD', current: 2500, points: months.map((month, i) => ({ month, balance: i < 7 ? 16000 : 2500 })) }],
+        },
+      }),
+    );
+    await page.goto('/products');
+    const section = page.getByTestId('savings-evolution');
+    await expect(section).toContainText('Evolución de tus ahorros');
+    await expect(section.getByTestId('savings-estimated')).toHaveText('Saldo estimado a partir de tus movimientos');
+    await expect(section.getByTestId('savings-chart-USD').locator('[data-testid^="savings-point-"]')).toHaveCount(12);
+    await expect(section.getByTestId('savings-chart-USD')).toContainText('$2,500.00');
+    await expect(section.getByTestId('savings-current-MXN')).toContainText('Sin estimación del historial');
+  });
+
+  test('without the savings history the page still works', async ({ page }) => {
+    const withSavings = {
+      ...PRODUCTS,
+      products: [
+        ...PRODUCTS.products,
+        { productType: 'Cuenta Ahorro', last4: '5500', currency: 'USD', currentBalance: 2500, creditLimit: null, availableCredit: null },
+      ],
+    };
+    await mockProducts(page, () => ({ status: 200, json: withSavings }));
+    await page.route('**/api/products/savings-history**', (route) => route.fulfill({ status: 502, json: {} }));
+    await page.goto('/products');
+    await expect(page.getByText('Hola, Santiago')).toBeVisible();
+    await expect(page.getByTestId('card-carousel')).toBeVisible();
+    await expect(page.getByTestId('savings-evolution')).toHaveCount(0);
+  });
+
   test('an expired demo customer says so', async ({ page }) => {
     await mockProducts(page, (token) =>
       token === 'demo-expired'

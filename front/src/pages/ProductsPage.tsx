@@ -133,6 +133,7 @@ export default function ProductsPage() {
     content = (
       <div className="flex-1 overflow-y-auto">
         <ProductOverview
+          sessionToken={token ?? ''}
           customer={data.customer}
           products={data.products}
           transactions={data.transactions}

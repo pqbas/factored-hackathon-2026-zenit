@@ -191,3 +191,61 @@ export function cardChatPrompt(action: 'movements' | 'claim', product: { last4: 
   const t = tr().products;
   return action === 'movements' ? t.movementsPrompt(product.last4) : t.claimPrompt(product.last4);
 }
+
+// GET /api/products/savings-history: the savings balance per currency at the
+// end of each of the last 12 months, rebuilt by the back from the current
+// balance and the approved movements. Only today's point is real. A currency
+// whose rebuild went negative has no series.
+export interface SavingsPoint {
+  month: string; // 'YYYY-MM'
+  balance: number;
+}
+
+export interface SavingsSeries {
+  currency: string;
+  current: number;
+  points: SavingsPoint[];
+}
+
+export function parseSavingsHistory(body: unknown): SavingsSeries[] {
+  const raw = (body ?? {}) as { series?: unknown };
+  if (!Array.isArray(raw.series)) return [];
+  return raw.series.flatMap((item): SavingsSeries[] => {
+    const s = (item ?? {}) as { currency?: unknown; current?: unknown; points?: unknown };
+    if (typeof s.currency !== 'string' || !Array.isArray(s.points)) return [];
+    const points = s.points
+      .filter(
+        (p): p is SavingsPoint =>
+          typeof p?.month === 'string' && /^\d{4}-\d{2}$/.test(p.month) && typeof p?.balance === 'number',
+      )
+      .sort((a, b) => a.month.localeCompare(b.month));
+    if (points.length === 0) return [];
+    const current = typeof s.current === 'number' ? s.current : points[points.length - 1].balance;
+    return [{ currency: s.currency, current, points }];
+  });
+}
+
+export async function fetchSavingsHistory(sessionToken: string): Promise<SavingsSeries[]> {
+  const res = await fetch(
+    `/api/products/savings-history?sessionToken=${encodeURIComponent(sessionToken)}`,
+    { credentials: 'include' },
+  );
+  if (!res.ok) throw new ProductsRequestError('failed');
+  return parseSavingsHistory(await res.json());
+}
+
+// Savings currencies the history has no series for: only their current
+// balance, from the products.
+export function savingsWithoutSeries(
+  products: Product[],
+  series: SavingsSeries[],
+): { currency: string; current: number }[] {
+  const totals = new Map<string, number>();
+  for (const p of products) {
+    if (productKind(p) !== 'savings') continue;
+    totals.set(p.currency, (totals.get(p.currency) ?? 0) + p.currentBalance);
+  }
+  return [...totals]
+    .filter(([currency]) => !series.some((s) => s.currency === currency))
+    .map(([currency, current]) => ({ currency, current }));
+}

@@ -1,5 +1,6 @@
 import { useLang } from '@/contexts/LangContext';
 import { CardCarousel } from '@/components/products/card-carousel';
+import { SavingsChart } from '@/components/products/savings-chart';
 import { DetailRow, StatTile } from '@/components/products/stat-tile';
 import { TransactionList } from '@/components/products/transaction-list';
 import {
@@ -15,10 +16,13 @@ export function ProductOverview({
   customer,
   products,
   transactions,
+  sessionToken,
 }: {
   customer: ProductsCustomer;
   products: Product[];
   transactions: Transaction[];
+  // The demo customer's token, for the savings history.
+  sessionToken: string;
 }) {
   const { t } = useLang();
   const totals = summarizeProducts(products);
@@ -52,6 +56,8 @@ export function ProductOverview({
           </>
         )}
       </div>
+
+      {hasSavings && <SavingsChart sessionToken={sessionToken} products={products} />}
 
       {hasCards && <CardCarousel cards={cards} transactions={transactions} />}
 
