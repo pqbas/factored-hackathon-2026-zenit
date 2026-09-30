@@ -1,22 +1,24 @@
-import { ASSISTANT_NAME } from '@/lib/assistant';
 import { UseCaseChip, useCaseStyle } from '@/components/conversations/use-case-style';
+import { useLang } from '@/contexts/LangContext';
+import { intlLocale } from '@/lib/i18n';
 import { containmentPct, type UseCaseRow } from '@/lib/metrics';
 import { cn } from '@/lib/utils';
 
 // One bar per use case, in the console's colors: its length is the case's
 // closures, the solid part the ones David closed on his own.
 export function UseCaseBreakdown({ rows }: { rows: UseCaseRow[] }) {
+  const { t } = useLang();
   const max = Math.max(1, ...rows.map((r) => r.total));
 
   return (
     <section className="flex min-h-0 flex-col gap-3.5 rounded-2xl bg-secondary/50 px-5 py-4.5">
       <div className="flex items-baseline gap-2.5">
-        <h2 className="font-semibold text-[15px]">Por caso de uso</h2>
+        <h2 className="font-semibold text-[15px]">{t.metrics.byUseCase}</h2>
         <span className="ml-auto flex items-center gap-1.5 text-[11px] text-muted-foreground">
           <span className="h-2 w-2.5 rounded-xs bg-muted-foreground" />
-          por la IA
+          {t.metrics.byAi}
           <span className="ml-1.5 h-2 w-2.5 rounded-xs bg-muted-foreground/30" />
-          con asesor
+          {t.metrics.withAdvisor}
         </span>
       </div>
       <div className="flex flex-col gap-3">
@@ -44,7 +46,7 @@ export function UseCaseBreakdown({ rows }: { rows: UseCaseRow[] }) {
                 <rect width={ai} height="10" className={fill} />
               </svg>
               <span data-testid="use-case-total" className="text-right font-semibold text-[13px]">
-                {row.total.toLocaleString('es')}
+                {row.total.toLocaleString(intlLocale())}
               </span>
               <span data-testid="use-case-pct" className="text-right text-muted-foreground text-xs">
                 {containmentPct(row)}%
@@ -54,7 +56,7 @@ export function UseCaseBreakdown({ rows }: { rows: UseCaseRow[] }) {
         })}
       </div>
       <p className="mt-auto text-[11px] text-muted-foreground">
-        La barra es el total de resoluciones del caso; la parte llena, las que {ASSISTANT_NAME} cerró solo.
+        {t.metrics.barNote}
       </p>
     </section>
   );
