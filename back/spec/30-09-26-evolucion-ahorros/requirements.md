@@ -36,6 +36,10 @@ estimada: solo el punto de hoy es real.
   movimientos, la línea mensual se lee mejor.
 - La consulta trae solo los movimientos de la ventana. La reconstrucción es
   una función pura, en TS.
+- `sessionToken` va en la query, como en `/api/products`, por consistencia
+  (revisión de w1:p4). Queda como deuda: en producción el token no debería
+  ir en la URL, porque termina en los logs. Arreglarlo en todas las rutas
+  del cliente a la vez.
 - Fuera de alcance: saldos por cuenta (se suma por moneda) y otras zonas
   horarias.
 

@@ -1,5 +1,6 @@
 import { bankQuery, type BankRow as Row } from './bank-db';
 import { maskSensitive } from './mask';
+import { buildSavingsHistory, savingsWindowStart } from './savings-history';
 
 // Reads the bank's data from the read-only `bank_ro` schema of Lakebase (synced
 // tables of bank_gold / bank_silver, see scripts/bank-ro/). The products and
@@ -118,6 +119,47 @@ export async function getTransactions(customerId: string) {
     currency: row.currency,
     status: row.transaction_status,
   }));
+}
+
+// The session customer's savings, month by month (spec/30-09-26-evolucion-ahorros):
+// today's balance of the active savings accounts and their approved movements
+// of the window, rebuilt backwards in buildSavingsHistory.
+export async function getSavingsHistory(customerId: string, now = new Date()) {
+  const [accounts, movements] = await Promise.all([
+    bankQuery(
+      `SELECT currency, current_balance
+       FROM bank_ro.customer_products
+       WHERE customer_id = $1
+         AND product_type = 'Cuenta Ahorro'
+         AND product_status = 'Active'`,
+      [customerId],
+    ),
+    bankQuery(
+      `SELECT t.transaction_date, t.transaction_type, t.amount, p.currency
+       FROM bank_ro.customer_transactions t
+       JOIN bank_ro.customer_products p
+         ON t.product_id = p.product_id AND t.customer_id = p.customer_id
+       WHERE t.customer_id = $1
+         AND p.product_type = 'Cuenta Ahorro'
+         AND p.product_status = 'Active'
+         AND t.transaction_status = 'Approved'
+         AND t.transaction_date >= $2`,
+      [customerId, savingsWindowStart(now).toISOString()],
+    ),
+  ]);
+  return buildSavingsHistory(
+    accounts.map((row) => ({
+      currency: row.currency ?? '',
+      balance: toNumber(row.current_balance) ?? 0,
+    })),
+    movements.map((row) => ({
+      currency: row.currency ?? '',
+      date: row.transaction_date ?? '',
+      type: row.transaction_type ?? '',
+      amount: toNumber(row.amount) ?? 0,
+    })),
+    now,
+  );
 }
 
 const toBoolean = (value: string | null) =>

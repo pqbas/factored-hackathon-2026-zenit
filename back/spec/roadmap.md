@@ -474,3 +474,21 @@ usuario vía w1:p4, 30-09-26). Spec en spec/30-09-26-simulacion-diaria/.
 - [x] Arreglo del test de métricas por el reinicio de `useCase` de #94.
 
 Shipped en PR #106.
+
+---
+
+## Phase 20: Evolución de los ahorros del cliente (Complete)
+
+**Goal:** que "Mis productos" muestre cómo evolucionó el ahorro del cliente en
+los últimos 12 meses (decisión del usuario vía w1:p4, 30-09-26). El gráfico lo
+hace w1:p6. Spec en spec/30-09-26-evolucion-ahorros/.
+
+- [x] `GET /api/products/savings-history?sessionToken=`: una serie mensual
+      por moneda, reconstruida hacia atrás desde el saldo de hoy con los
+      movimientos Approved (`estimated: true`). Si una moneda pasa por un
+      saldo negativo, no se devuelve.
+- [x] Fixture de Daniela (demo-ar-1) con fechas relativas a `now()`.
+
+Deuda: `sessionToken` en la URL termina en los logs, igual que en
+`/api/products`.
+

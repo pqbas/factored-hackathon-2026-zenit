@@ -17,6 +17,10 @@
 --   CLI-PROFILE-FAILS: as Santiago, but reading his contact data fails (see
 --     the customers view below).
 --   CLI-EMPTY: in customer_360 and nothing else.
+--   CLI-714PN0OOE0WX (Daniela, demo-ar-1): savings only, for the savings
+--     history. Two active ARS accounts, an active USD one whose rebuilt
+--     balance goes negative, a closed one, and movements dated relative to
+--     now() (declined, outside the window, of the closed account).
 DROP SCHEMA IF EXISTS bank_ro CASCADE;
 CREATE SCHEMA bank_ro;
 
@@ -296,6 +300,30 @@ SELECT
   '2026-06-01T00:00:00Z'::timestamptz + (i || ' hours')::interval,
   'Purchase', 'Shop ' || i, i * 10, 'COP', 'Approved'
 FROM generate_series(1, 12) AS i;
+
+-- Daniela's savings. M is the 1st of the current month (UTC).
+INSERT INTO bank_ro.customer_products
+  (product_id, customer_id, product_type, product_status, currency, product_number_last4, current_balance, credit_limit)
+VALUES
+  ('PRD-D-SAV1', 'CLI-714PN0OOE0WX', 'Cuenta Ahorro', 'Active', 'ARS', '4001', 1000.00, NULL),
+  ('PRD-D-SAV2', 'CLI-714PN0OOE0WX', 'Cuenta Ahorro', 'Active', 'ARS', '4002', 500.00, NULL),
+  ('PRD-D-USD', 'CLI-714PN0OOE0WX', 'Cuenta Ahorro', 'Active', 'USD', '4003', 100.00, NULL),
+  ('PRD-D-OLD', 'CLI-714PN0OOE0WX', 'Cuenta Ahorro', 'Closed', 'ARS', '4004', 50.00, NULL);
+INSERT INTO bank_ro.customer_transactions
+  (transaction_id, customer_id, product_id, transaction_date, transaction_type, merchant_name, amount, currency, transaction_status)
+SELECT id, 'CLI-714PN0OOE0WX', product_id,
+  (date_trunc('month', now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC') + offset_from_m,
+  type, 'Savings', amount, currency, status
+FROM (VALUES
+  -- ARS: +300 out in M-2, 200 in in M-1 -> 1600 until M-3, 1300 at M-2, 1500 after.
+  ('TX-D-1', 'PRD-D-SAV1', interval '-2 months 10 days', 'Transfer', 300.00, 'ARS', 'Approved'),
+  ('TX-D-2', 'PRD-D-SAV2', interval '-1 month 5 days', 'Deposit', 200.00, 'ARS', 'Approved'),
+  ('TX-D-3', 'PRD-D-SAV1', interval '-1 month 6 days', 'Withdrawal', 999.00, 'ARS', 'Declined'),
+  ('TX-D-4', 'PRD-D-SAV1', interval '-13 months', 'Deposit', 5000.00, 'ARS', 'Approved'),
+  ('TX-D-5', 'PRD-D-OLD', interval '-1 month 1 day', 'Transfer', 1000.00, 'ARS', 'Approved'),
+  -- USD: 300 deposited into 100 -> -200 before it: no USD series.
+  ('TX-D-6', 'PRD-D-USD', interval '-1 month 3 days', 'Deposit', 300.00, 'USD', 'Approved')
+) AS m(id, product_id, offset_from_m, type, amount, currency, status);
 
 -- Interactions and their transcript (Santiago's first one has it)
 INSERT INTO bank_ro.interaction_history
