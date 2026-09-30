@@ -484,10 +484,12 @@ Shipped en PR #93.
 
 ---
 
-## Phase 24: Avatares con color por cliente
+## Phase 24: Avatares con color por cliente (Complete)
 
 **Goal:** que cada cliente se distinga por su color en la consola, aunque todos los chats vengan del mismo usuario de la app.
 
-- [ ] Color por cliente del banco, igual en la lista y el encabezado; paleta de 8 colores sin grises.
+- [x] Color por cliente del banco, igual en la lista y el encabezado; paleta de 8 colores sin grises.
 
 Spec: `spec/29-09-26-avatares-por-cliente/`.
+
+Shipped en PR #104.
