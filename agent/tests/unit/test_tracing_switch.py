@@ -34,3 +34,24 @@ def test_tracing_on_enables_autolog_with_the_pinned_experiment(monkeypatch):
     calls = _spy(monkeypatch)
     observability.configure_tracing(True)
     assert calls == ["autolog", "pin"]
+
+
+def test_classify_tags_no_trace_when_tracing_is_off(monkeypatch):
+    import dataclasses
+
+    from src.graph.nodes import classify
+    from src.schemas.classification import Classification
+
+    calls = []
+    monkeypatch.setattr(classify.mlflow, "update_current_trace", lambda **kwargs: calls.append(kwargs))
+    classification = Classification(
+        guardrail="OK", guardrail_probability=0.0, language="es", intent="GREETING",
+        intent_confidence=1.0, sentiment="neutral", source="rules",
+    )
+    monkeypatch.setattr(classify, "settings", dataclasses.replace(classify.settings, tracing_enabled=False))
+    classify._tag_trace(classification)
+    assert calls == []
+
+    monkeypatch.setattr(classify, "settings", dataclasses.replace(classify.settings, tracing_enabled=True))
+    classify._tag_trace(classification)
+    assert len(calls) == 1

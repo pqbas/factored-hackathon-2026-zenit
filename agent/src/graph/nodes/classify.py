@@ -5,6 +5,7 @@ import logging
 import mlflow
 from langchain_core.messages import AIMessage, HumanMessage
 
+from src.config import settings
 from src.graph.state import AgentState
 from src.llm.fallback import (
     case_status_follow_up,
@@ -235,6 +236,9 @@ async def classify(
 
 
 def _tag_trace(classification: Classification) -> None:
+    if not settings.tracing_enabled:
+        # No trace to tag (the App runs without tracing); MLflow would warn on every turn.
+        return
     mlflow.update_current_trace(
         tags={
             "classify.guardrail": classification.guardrail,
