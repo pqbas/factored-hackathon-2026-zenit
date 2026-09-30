@@ -96,3 +96,38 @@ parámetros y qué devolvió.
 Pendiente: elegir una herramienta de trazas. Se evaluarán Langfuse o
 LangSmith (free tier), o una tabla de trazas propia en Lakebase. La elección
 depende de si la App se migra a AWS.
+
+## 4. Capacidad del LLM
+
+### Qué pasó (30/09/2026)
+
+Para la demo se simula un día de tráfico: 100 conversaciones cortas de clientes
+reales del dataset contra prod (`npm run simulate:day`, marcadas como
+simulación).
+
+- **Primer intento, 3 conversaciones en paralelo:** el endpoint de Qwen
+  (`databricks-qwen3-next-80b-a3b-instruct`, pago por token) respondió 429:
+  se superó su límite de consultas por segundo. Muchos turnos terminaron en
+  "David no está disponible". La corrida se cortó y se borraron sus 49 chats
+  y sus sesiones simuladas.
+- **Segundo intento, de a una conversación:** en curso. Con 30 de 100
+  conversaciones: p50 2.9 s y p95 6.9 s por turno, 5 errores y ningún
+  "no disponible".
+
+### Qué significa para producción
+
+Cada turno hace 2 o más llamadas al LLM (clasificar y responder). Con el
+endpoint de pago por token compartido, 3 conversaciones a la vez ya superan el
+límite. Un banco con cientos de conversaciones simultáneas necesita:
+
+- **Capacidad reservada** (*provisioned throughput*) en Model Serving, con los
+  tokens por segundo dimensionados para el pico de tráfico, o un endpoint
+  propio.
+- **Menos llamadas por turno:** que la misma llamada que responde también
+  clasifique, o clasificar con un modelo o servicio más liviano (Jev clasifica
+  en 0.28 s).
+- **Cola y reintentos con backoff** ante un 429, en vez de responder "no
+  disponible" al primer error. El back ya encola turnos cuando el agente no
+  responde; faltan los reintentos con espera creciente.
+- **Una prueba de carga** antes de operar: conversaciones concurrentes,
+  tasa de 429 y p95 bajo carga.
