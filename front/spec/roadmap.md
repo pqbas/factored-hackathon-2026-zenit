@@ -480,4 +480,4 @@ Shipped en PR #82.
 
 Spec: `spec/29-09-26-secciones-sin-otros/`.
 
-Shipped en PR #<n>.
+Shipped en PR #93.
