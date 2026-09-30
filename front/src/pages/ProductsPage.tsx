@@ -10,6 +10,7 @@ import { SidebarToggle } from '@/components/sidebar-toggle';
 import { Button } from '@/components/ui/button';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { useLang } from '@/contexts/LangContext';
 import { useDemoCustomers } from '@/hooks/use-demo-customers';
 import {
   getLastCustomerToken,
@@ -54,6 +55,7 @@ function Notice({
 }
 
 export default function ProductsPage() {
+  const { t } = useLang();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   // Same persisted open/closed state as the other sections' sidebars.
   const isCollapsed = localStorage.getItem('sidebar:state') === 'false';
@@ -84,8 +86,8 @@ export default function ProductsPage() {
       <Notice
         testId="products-no-customer"
         icon={<UserRoundX className="size-5" />}
-        title="No hay un cliente demo"
-        text="Elige un cliente demo en el chat para ver sus productos."
+        title={t.products.noCustomerTitle}
+        text={t.products.noCustomerText}
       />
     );
   } else if (errorKind === 'expired' || errorKind === 'invalid') {
@@ -93,8 +95,8 @@ export default function ProductsPage() {
       <Notice
         testId="products-session-error"
         icon={<UserRoundX className="size-5" />}
-        title={errorKind === 'expired' ? 'La sesión de este cliente venció' : 'Cliente no válido'}
-        text="Elige otro cliente demo arriba para ver sus productos."
+        title={errorKind === 'expired' ? t.products.sessionExpired : t.products.invalidCustomer}
+        text={t.products.sessionText}
       />
     );
   } else if (errorKind === 'failed') {
@@ -102,11 +104,11 @@ export default function ProductsPage() {
       <Notice
         testId="products-error"
         icon={<RefreshCw className="size-5" />}
-        title="No pudimos traer tus productos"
-        text="El banco no respondió. Vuelve a intentarlo en unos segundos."
+        title={t.products.failedTitle}
+        text={t.products.failedText}
         action={
           <Button type="button" variant="secondary" onClick={() => mutate()}>
-            Reintentar
+            {t.products.retry}
           </Button>
         }
       />
@@ -117,8 +119,8 @@ export default function ProductsPage() {
       <Notice
         testId="products-loading"
         icon={<Loader2 className="size-5 animate-spin" />}
-        title="Consultando tus productos"
-        text="Traemos los datos del banco; la primera consulta puede tardar unos segundos."
+        title={t.products.loadingTitle}
+        text={t.products.loadingText}
       />
     );
   } else if (selected) {
@@ -146,7 +148,7 @@ export default function ProductsPage() {
         <header className="grid h-13 shrink-0 grid-cols-[1fr_auto_1fr] items-center px-3">
           <SidebarToggle />
           <span className="font-semibold text-[13px]">
-            {selected ? productName(selected) : 'Resumen'}
+            {selected ? productName(selected) : t.products.summary}
           </span>
           <div className="flex justify-end">
             <TooltipProvider>

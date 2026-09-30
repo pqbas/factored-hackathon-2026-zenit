@@ -1,7 +1,8 @@
 import { format, isToday, isYesterday } from 'date-fns';
-import { es } from 'date-fns/locale';
 import { ArrowDownLeft, ArrowUpRight } from 'lucide-react';
 
+import { useLang } from '@/contexts/LangContext';
+import { dateLocale, tr } from '@/lib/i18n';
 import {
   formatMoney,
   productName,
@@ -16,9 +17,9 @@ import { cn } from '@/lib/utils';
 function formatTxDate(value: string): string {
   const date = new Date(value);
   const time = format(date, 'HH:mm');
-  if (isToday(date)) return `Hoy, ${time}`;
-  if (isYesterday(date)) return `Ayer, ${time}`;
-  return format(date, 'd MMM yyyy, HH:mm', { locale: es });
+  if (isToday(date)) return `${tr().today}, ${time}`;
+  if (isYesterday(date)) return `${tr().yesterday}, ${time}`;
+  return format(date, 'd MMM yyyy, HH:mm', { locale: dateLocale() });
 }
 
 export function TransactionList({
@@ -28,10 +29,11 @@ export function TransactionList({
   transactions: Transaction[];
   showProduct?: boolean;
 }) {
+  const { t } = useLang();
   if (transactions.length === 0) {
     return (
       <p className="px-4 py-6 text-center text-muted-foreground text-sm">
-        Todavía no hay movimientos.
+        {t.products.noMovements}
       </p>
     );
   }

@@ -10,6 +10,7 @@ import { ConversationView } from '@/components/conversations/conversation-view';
 import { CustomerContextPanel } from '@/components/conversations/customer-context-panel';
 import { toast } from '@/components/toast';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
+import { useLang } from '@/contexts/LangContext';
 import { useSession } from '@/contexts/SessionContext';
 import {
   type AdvisorChat,
@@ -34,11 +35,11 @@ import {
   replyToConversation,
   takeConversation,
   toBubble,
-  DAVID_VIEW_LABEL,
+  davidViewLabel,
 } from '@/lib/advisor';
-import { ASSISTANT_NAME } from '@/lib/assistant';
 import { matchesQuery, STATUS_LABEL } from '@/lib/conversations';
 import { handoffReasonLabel } from '@/lib/handoff-case';
+import { tr } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
 // Messages of the open conversation: full list on open, then only the new
@@ -90,19 +91,20 @@ function readContextOpen(): boolean {
   }
 }
 
-const VIEW_TITLE = {
-  inbox: 'Bandeja',
-  david: DAVID_VIEW_LABEL,
-  waiting: STATUS_LABEL.waiting,
-  advisor: STATUS_LABEL.advisor,
-  resolved: 'Resueltas',
-};
-
 function viewTitle(view: InboxView): string {
-  return view.kind === 'reason' ? handoffReasonLabel(view.reason) : VIEW_TITLE[view.kind];
+  if (view.kind === 'reason') return handoffReasonLabel(view.reason);
+  const titles = {
+    inbox: tr().console.inbox,
+    david: davidViewLabel(),
+    waiting: STATUS_LABEL.waiting,
+    advisor: STATUS_LABEL.advisor,
+    resolved: tr().console.resolvedView,
+  };
+  return titles[view.kind];
 }
 
 export default function ConversationsPage() {
+  const { t } = useLang();
   const { session, role } = useSession();
   const me = session?.user?.email;
   // Both attend; the admin also supervises every user's chats.
@@ -171,7 +173,7 @@ export default function ConversationsPage() {
   const inboxEmpty =
     view.kind === 'inbox' && !query ? (
       <span data-testid="inbox-empty-david">
-        No hay casos para atender.
+        {t.console.noCases}
         {davidCount > 0 && (
           <>
             {' '}
@@ -181,15 +183,14 @@ export default function ConversationsPage() {
               onClick={() => openView({ kind: 'david' })}
               className="text-primary hover:underline"
             >
-              {ASSISTANT_NAME} está atendiendo {davidCount}{' '}
-              {davidCount === 1 ? 'cliente' : 'clientes'}
+              {t.console.davidAttending(davidCount)}
             </button>
           </>
         )}
       </span>
     ) : view.kind === 'reason' && view.scope === 'david' && !query ? (
       <span data-testid="inbox-empty-reason-david">
-        {ASSISTANT_NAME} no atiende ningún caso de este motivo ahora.
+        {t.console.davidNoCases}
       </span>
     ) : undefined;
 
@@ -262,7 +263,7 @@ export default function ConversationsPage() {
     try {
       await run();
     } catch {
-      toast({ type: 'error', description: 'No se pudo completar la acción.' });
+      toast({ type: 'error', description: t.console.actionFailed });
     } finally {
       setBusy(false);
       mutate();
@@ -280,7 +281,7 @@ export default function ConversationsPage() {
       } else {
         toast({
           type: 'error',
-          description: `Ya la atiende ${result.assignedTo ?? 'otra persona'}.`,
+          description: t.console.alreadyHeld(result.assignedTo ?? t.console.otherPerson),
         });
       }
     });
@@ -294,7 +295,7 @@ export default function ConversationsPage() {
         applyChat(result.chat);
         refresh();
       } else {
-        toast({ type: 'error', description: 'Esta conversación ya no es tuya.' });
+        toast({ type: 'error', description: t.console.notYours });
       }
     });
   }
@@ -307,11 +308,11 @@ export default function ConversationsPage() {
         append(result.message);
         return true;
       }
-      toast({ type: 'error', description: 'Otra persona tomó esta conversación.' });
+      toast({ type: 'error', description: t.console.takenByOther });
       mutate();
       return false;
     } catch {
-      toast({ type: 'error', description: 'No se pudo enviar el mensaje.' });
+      toast({ type: 'error', description: t.console.sendFailed });
       return false;
     }
   }
@@ -367,7 +368,7 @@ export default function ConversationsPage() {
             <div
               data-testid="conversation-peek"
               role="dialog"
-              aria-label="Conversación"
+              aria-label={t.console.conversation}
               className={cn(
                 'absolute inset-y-2 right-2 z-20 flex overflow-hidden rounded-xl border border-border bg-background shadow-2xl',
                 // The list padding, dot, avatar and name columns end at

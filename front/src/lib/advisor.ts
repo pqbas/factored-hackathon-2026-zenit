@@ -4,6 +4,7 @@
 import type { Chat, DBMessage } from '@chat-template/db';
 
 import { ASSISTANT_NAME } from '@/lib/assistant';
+import { tr } from '@/lib/i18n';
 import { type AgentHandoff, HANDOFF_REASONS, handoffReasonLabel } from '@/lib/handoff-case';
 import { type ConversationStatus, STATUS_LABEL } from '@/lib/conversations';
 
@@ -92,18 +93,13 @@ export type AdvisorMessage = OverJson<
 export const POLL_MS = 4000;
 export const INBOX_PAGE_SIZE = 20;
 
-export const QUICK_REPLIES = [
-  'Ya revisé tu caso.',
-  'La transferencia se acredita en 24 h hábiles.',
-  'Abrí un reclamo y te aviso por aquí cuando tenga respuesta.',
-  '¿Hay algo más en lo que te pueda ayudar?',
-];
-
 const BASE = '/api/advisor/conversations';
 
 // The view of the chats David handles on his own. The rows' state keeps its
 // flow name ("Con AI", STATUS_LABEL.assistant).
-export const DAVID_VIEW_LABEL = 'Agente AI';
+export function davidViewLabel(): string {
+  return tr().console.david;
+}
 
 // What the inbox shows: the open cases that need a person, one handoff reason,
 // the chats David handles on his own, or a state.
@@ -239,7 +235,9 @@ export function toBubble(message: AdvisorMessage, me: string | undefined): Bubbl
       return {
         ...base,
         from: 'advisor',
-        label: sameEmail(message.senderId, me) ? 'Tú' : (message.senderId ?? 'Asesor'),
+        label: sameEmail(message.senderId, me)
+          ? tr().console.you
+          : (message.senderId ?? tr().console.advisorLabel),
       };
     default:
       return { ...base, from: 'assistant', label: ASSISTANT_NAME };
@@ -248,7 +246,7 @@ export function toBubble(message: AdvisorMessage, me: string | undefined): Bubbl
 
 // The bank customer's name, else the app user's email as before.
 export function customerLabel(chat: AdvisorChat): string {
-  return chat.customerName?.trim() || chat.userEmail || 'Cliente sin email';
+  return chat.customerName?.trim() || chat.userEmail || tr().console.customerNoEmail;
 }
 
 
@@ -257,21 +255,21 @@ export function customerLabel(chat: AdvisorChat): string {
 // conversation, in the order the inbox lists them. Small talk and out-of-scope
 // turns aren't a use case: those chats go to "Otras".
 export const USE_CASES = [
-  { id: 'COMPLAINT', label: 'Reclamo' },
-  { id: 'GENERAL_INQUIRY', label: 'Consultas generales' },
-  { id: 'CASE_STATUS', label: 'Estado de un reclamo' },
-  { id: 'HUMAN_AGENT', label: 'Pidió un asesor' },
-  { id: 'COMMERCIAL', label: 'Comercial' },
+  { id: 'COMPLAINT', get label() { return tr().console.useCases.COMPLAINT; } },
+  { id: 'GENERAL_INQUIRY', get label() { return tr().console.useCases.GENERAL_INQUIRY; } },
+  { id: 'CASE_STATUS', get label() { return tr().console.useCases.CASE_STATUS; } },
+  { id: 'HUMAN_AGENT', get label() { return tr().console.useCases.HUMAN_AGENT; } },
+  { id: 'COMMERCIAL', get label() { return tr().console.useCases.COMMERCIAL; } },
   // Both are "Cancelación de producto", like the handoff reason.
-  { id: 'RETENTION', label: 'Cancelación de producto' },
-  { id: 'CANCEL', label: 'Cancelación de producto' },
+  { id: 'RETENTION', get label() { return tr().console.useCases.CANCEL; } },
+  { id: 'CANCEL', get label() { return tr().console.useCases.CANCEL; } },
 ] as const;
 
 export const OTHER_GROUP = 'OTHER';
 
 
 export function useCaseLabelOf(id: string): string {
-  if (id === OTHER_GROUP) return 'Otras';
+  if (id === OTHER_GROUP) return tr().console.useCases.other;
   return USE_CASES.find((u) => u.id === id)?.label ?? id;
 }
 
@@ -341,10 +339,11 @@ export function groupByDavidSection<T extends AdvisorChat>(
 }
 
 export function sectionLabel(id: string): string {
-  if (id === GENERAL_SECTION) return 'Consultas generales';
-  if (id === OUT_OF_SCOPE_SECTION) return 'Fuera de alcance';
-  if (id === NO_REASON_SECTION) return 'Sin motivo aún';
-  if (id === TAKEN_SECTION) return 'Tomada por un asesor';
+  const { sections } = tr().console;
+  if (id === GENERAL_SECTION) return sections.general;
+  if (id === OUT_OF_SCOPE_SECTION) return sections.outOfScope;
+  if (id === NO_REASON_SECTION) return sections.noReason;
+  if (id === TAKEN_SECTION) return sections.taken;
   return handoffReasonLabel(id);
 }
 
@@ -389,7 +388,8 @@ export function attentionOf(
     // Rows name the advisor in their own column (holderLabel); the header
     // spells it out here.
     if (!long) return { text: STATUS_LABEL.advisor, tone };
-    const holder = isMine(chat, me) ? 'la atiendes tú' : (chat.assignedTo ?? 'otro asesor');
+    const { console: c } = tr();
+    const holder = isMine(chat, me) ? c.heldByYou : (chat.assignedTo ?? c.otherAdvisor);
     return { text: `${STATUS_LABEL.advisor} · ${holder}`, tone };
   }
   // Rows show David's chats with the robot; the header names the state.
@@ -400,8 +400,8 @@ export function attentionOf(
 // email before the @). null unless an advisor has it.
 export function holderLabel(chat: AdvisorChat, me: string | undefined): string | null {
   if (chat.closedAt || chat.handledBy !== 'human_agent') return null;
-  if (isMine(chat, me)) return 'tú';
-  return chat.assignedTo ? chat.assignedTo.split('@')[0] : 'otro asesor';
+  if (isMine(chat, me)) return tr().console.youLower;
+  return chat.assignedTo ? chat.assignedTo.split('@')[0] : tr().console.otherAdvisor;
 }
 
 export class AdvisorRequestError extends Error {

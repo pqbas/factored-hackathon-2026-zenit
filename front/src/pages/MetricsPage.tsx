@@ -6,6 +6,7 @@ import { DailyTrend } from '@/components/metrics/daily-trend';
 import { KpiCards } from '@/components/metrics/kpi-cards';
 import { UseCaseBreakdown } from '@/components/metrics/use-case-breakdown';
 import { Button } from '@/components/ui/button';
+import { useLang } from '@/contexts/LangContext';
 import {
   browserTimeZone,
   fetchMetrics,
@@ -51,6 +52,7 @@ function Notice({
 
 // Resolution metrics for the admin (docs/flujo-atencion.md §6).
 export default function MetricsPage() {
+  const { t } = useLang();
   const [range, setRange] = useState<MetricsRange>('week');
   // The range is fixed per pick so the key stays stable across renders.
   const days = useMemo(() => rangeDays(range, new Date(), browserTimeZone()), [range]);
@@ -64,11 +66,11 @@ export default function MetricsPage() {
       <Notice
         testId="metrics-error"
         icon={<RefreshCw className="size-5" />}
-        title="No pudimos traer las métricas"
-        text="Vuelve a intentarlo en unos segundos."
+        title={t.metrics.errorTitle}
+        text={t.metrics.errorText}
         action={
           <Button type="button" variant="secondary" onClick={() => mutate()}>
-            Reintentar
+            {t.metrics.retry}
           </Button>
         }
       />
@@ -78,8 +80,8 @@ export default function MetricsPage() {
       <Notice
         testId="metrics-loading"
         icon={<Loader2 className="size-5 animate-spin" />}
-        title="Cargando métricas…"
-        text="Contando las conversaciones resueltas."
+        title={t.metrics.loadingTitle}
+        text={t.metrics.loadingText}
       />
     );
   } else if (data.total === 0) {
@@ -87,8 +89,8 @@ export default function MetricsPage() {
       <Notice
         testId="metrics-empty"
         icon={<ChartColumn className="size-5" />}
-        title="Todavía no hay resoluciones en este rango"
-        text="Se cuentan desde que se activó el registro: cada vez que una conversación pasa a Resuelta."
+        title={t.metrics.emptyTitle}
+        text={t.metrics.emptyText}
       />
     );
   } else {
@@ -106,13 +108,13 @@ export default function MetricsPage() {
   return (
     <main className="m-2 ml-0 flex min-w-0 flex-1 flex-col gap-4.5 overflow-y-auto rounded-xl bg-background px-7 pt-5.5 pb-6 shadow-sm">
       <div className="flex flex-wrap items-center gap-3">
-        <h1 className="font-semibold text-xl tracking-tight">Métricas de resolución</h1>
+        <h1 className="font-semibold text-xl tracking-tight">{t.metrics.title}</h1>
         <span data-testid="metrics-range-caption" className="text-muted-foreground text-sm">
           {rangeCaption(range, days.from, days.to)}
         </span>
         <div
           role="group"
-          aria-label="Rango"
+          aria-label={t.metrics.rangeLabel}
           className="ml-auto flex gap-0.5 rounded-[9px] bg-secondary p-0.5"
         >
           {RANGES.map((r) => (

@@ -71,6 +71,17 @@ test.describe('Métricas', () => {
     expect(today?.searchParams.get('from')).toBe(today?.searchParams.get('to'));
   });
 
+  test('the language button shows the metrics in Portuguese', async ({ page }) => {
+    await mockMetrics(page, () => ({ status: 200, json: METRICS }));
+    await page.goto('/metrics');
+    await expect(page.getByRole('heading', { name: 'Métricas de resolución' })).toBeVisible();
+    await page.getByTestId('lang-toggle').click();
+    await expect(page.getByRole('heading', { name: 'Métricas de resolução' })).toBeVisible();
+    await expect(page.getByTestId('nav-metrics')).toHaveAttribute('aria-label', 'Métricas');
+    // Numbers and data stay as they come.
+    await expect(page.getByTestId('kpi-containment-value')).toHaveText('60%');
+  });
+
   test('without resolutions it says so', async ({ page }) => {
     await mockMetrics(page, () => ({ status: 204 }));
     await page.goto('/metrics');

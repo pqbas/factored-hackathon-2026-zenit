@@ -1,7 +1,7 @@
 import { ChevronDown, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
 
-import { ASSISTANT_NAME } from '@/lib/assistant';
+import { useLang } from '@/contexts/LangContext';
 import { type AgentHandoff, caseFields } from '@/lib/handoff-case';
 import { cn } from '@/lib/utils';
 
@@ -16,6 +16,7 @@ export function HandoffCard({
   defaultOpen?: boolean;
   className?: string;
 }) {
+  const { t } = useLang();
   const [open, setOpen] = useState(defaultOpen);
   const fields = caseFields(handoff);
   const closed = !!handoff.resolvedAt;
@@ -34,10 +35,10 @@ export function HandoffCard({
         <ShieldCheck className="mt-0.5 size-4 shrink-0 text-primary" strokeWidth={1.9} />
         {/* The reason is the header's chip; the card doesn't repeat it. */}
         <span className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
-          <span className="font-semibold text-[13px]">Caso derivado por {ASSISTANT_NAME}</span>
+          <span className="font-semibold text-[13px]">{t.console.handoffTitle}</span>
           {closed && (
             <span className="rounded-md bg-secondary px-2 py-0.5 text-[11px] text-muted-foreground">
-              Cerrado
+              {t.console.handoffClosed}
             </span>
           )}
         </span>
@@ -68,7 +69,7 @@ export function HandoffCard({
             </dl>
           )}
           {!handoff.summary && fields.length === 0 && (
-            <p className="text-muted-foreground text-xs">Sin datos verificados.</p>
+            <p className="text-muted-foreground text-xs">{t.console.noVerifiedData}</p>
           )}
         </div>
       )}

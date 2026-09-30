@@ -4,6 +4,7 @@
 // reads from/to and groups byDay in `tz`.
 
 import { OTHER_GROUP, USE_CASES } from '@/lib/advisor';
+import { tr } from '@/lib/i18n';
 
 export interface Resolutions {
   total: number;
@@ -24,9 +25,9 @@ export interface Metrics extends Resolutions {
 export type MetricsRange = 'today' | 'week' | 'month';
 
 export const RANGES: { id: MetricsRange; label: string; days: number }[] = [
-  { id: 'today', label: 'Hoy', days: 1 },
-  { id: 'week', label: '7 días', days: 7 },
-  { id: 'month', label: '30 días', days: 30 },
+  { id: 'today', get label() { return tr().today; }, days: 1 },
+  { id: 'week', get label() { return tr().metrics.range7; }, days: 7 },
+  { id: 'month', get label() { return tr().metrics.range30; }, days: 30 },
 ];
 
 export const EMPTY_METRICS: Metrics = {
@@ -164,12 +165,6 @@ export function fillDays(byDay: DayResolutions[], from: string, to: string): Day
   return days;
 }
 
-const WEEKDAY = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-const MONTH = [
-  'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
-  'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
-];
-
 function parts(day: string) {
   const date = new Date(`${day}T00:00:00.000Z`);
   return { weekday: date.getUTCDay(), date: date.getUTCDate(), month: date.getUTCMonth() };
@@ -178,14 +173,17 @@ function parts(day: string) {
 // "Lun 22" under a week's bars, just the day number for a month.
 export function dayLabel(day: string, long: boolean): string {
   const p = parts(day);
-  return long ? `${WEEKDAY[p.weekday]} ${p.date}` : String(p.date);
+  return long ? `${tr().metrics.weekdays[p.weekday]} ${p.date}` : String(p.date);
 }
 
 // "Hoy, 28 de septiembre" or "22 – 28 de septiembre".
 export function rangeCaption(range: MetricsRange, from: string, to: string): string {
+  const { today, metrics } = tr();
   const f = parts(from);
   const t = parts(to);
-  if (range === 'today') return `Hoy, ${t.date} de ${MONTH[t.month]}`;
-  const start = f.month === t.month ? `${f.date}` : `${f.date} de ${MONTH[f.month]}`;
-  return `${start} – ${t.date} de ${MONTH[t.month]}`;
+  const end = metrics.dayOfMonth(t.date, metrics.months[t.month]);
+  if (range === 'today') return `${today}, ${end}`;
+  const start =
+    f.month === t.month ? `${f.date}` : metrics.dayOfMonth(f.date, metrics.months[f.month]);
+  return `${start} – ${end}`;
 }

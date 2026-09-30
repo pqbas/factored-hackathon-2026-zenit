@@ -1,8 +1,8 @@
-import { ASSISTANT_NAME } from '@/lib/assistant';
 // Pure display helpers for the advisor console: no side effects, no fetch.
 
 import { format, isSameDay, subDays } from 'date-fns';
-import { es } from 'date-fns/locale';
+
+import { dateLocale, tr } from '@/lib/i18n';
 
 // "Santiago Martínez" -> "SM"; "ana@banco.test" -> "AN"; "Ana" -> "AN".
 export function getInitials(name: string): string {
@@ -69,10 +69,18 @@ export type ConversationStatus = 'assistant' | 'waiting' | 'advisor' | 'resolved
 
 // The four states a conversation is always in (docs/flujo-atencion.md §5).
 export const STATUS_LABEL: Record<ConversationStatus, string> = {
-  assistant: 'Con AI',
-  waiting: 'En espera',
-  advisor: 'Con asesor',
-  resolved: 'Resuelta',
+  get assistant() {
+    return tr().console.status.assistant;
+  },
+  get waiting() {
+    return tr().console.status.waiting;
+  },
+  get advisor() {
+    return tr().console.status.advisor;
+  },
+  get resolved() {
+    return tr().console.status.resolved;
+  },
 };
 
 export type DayGroup<T> = {
@@ -90,10 +98,10 @@ export function groupByDay<T extends { sentAt: string }>(
   for (const item of items) {
     const date = new Date(item.sentAt);
     const label = isSameDay(date, now)
-      ? 'Hoy'
+      ? tr().today
       : isSameDay(date, yesterday)
-        ? 'Ayer'
-        : format(date, "d 'de' MMMM", { locale: es });
+        ? tr().yesterday
+        : format(date, "d 'de' MMMM", { locale: dateLocale() });
 
     const currentGroup = groups[groups.length - 1];
     if (currentGroup && currentGroup.label === label) {
@@ -109,6 +117,6 @@ export function groupByDay<T extends { sentAt: string }>(
 export function formatListTime(iso: string, now: Date): string {
   const date = new Date(iso);
   if (isSameDay(date, now)) return format(date, 'HH:mm');
-  if (isSameDay(date, subDays(now, 1))) return 'Ayer';
+  if (isSameDay(date, subDays(now, 1))) return tr().yesterday;
   return format(date, 'dd/MM/yyyy');
 }

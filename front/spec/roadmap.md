@@ -531,3 +531,16 @@ Shipped en PR #111.
 Spec: `spec/30-09-26-idioma-es-pt/`.
 
 Shipped en PR #113. David responde en el idioma elegido cuando el back (w1:p1) pase `language` al agente; el agente ya lo lee (PR #112).
+
+---
+
+## Phase 29: Idioma global de la app (Complete)
+
+**Goal:** que el idioma sea un ajuste de toda la app, visible en la barra de íconos.
+
+- [x] Botón de idioma "ES"/"PT" en la barra de íconos, arriba del tema; el selector sale del header del chat.
+- [x] Navegación, consola del asesor, Métricas y Mis productos en ES y PT (los datos del banco no se traducen).
+
+Spec: `spec/30-09-26-idioma-global/`.
+
+Shipped en PR #115.

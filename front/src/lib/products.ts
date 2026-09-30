@@ -2,6 +2,8 @@
 // the customer, their active products and their 10 latest movements, from the
 // bank's warehouse (the same UC functions the agent uses).
 
+import { intlLocale, tr } from '@/lib/i18n';
+
 export interface ProductsCustomer {
   customerId: string;
   firstName: string;
@@ -73,16 +75,17 @@ export function productName(product: { productType: string; last4: string }): st
 }
 
 export const PRODUCT_GROUPS: { kind: ProductKind; label: string }[] = [
-  { kind: 'savings', label: 'Cuentas' },
-  { kind: 'credit', label: 'Tarjetas' },
-  { kind: 'other', label: 'Otros' },
+  { kind: 'savings', get label() { return tr().products.groups.savings; } },
+  { kind: 'credit', get label() { return tr().products.groups.credit; } },
+  { kind: 'other', get label() { return tr().products.groups.other; } },
 ];
 
 export function groupProducts(
   products: Product[],
 ): { kind: ProductKind; label: string; products: Product[] }[] {
   return PRODUCT_GROUPS.map((group) => ({
-    ...group,
+    kind: group.kind,
+    label: group.label,
     products: products.filter((p) => productKind(p) === group.kind),
   })).filter((group) => group.products.length > 0);
 }
@@ -95,7 +98,7 @@ const CURRENCY_LOCALE: Record<string, string> = {
 };
 
 export function formatMoney(amount: number, currency: string): string {
-  return new Intl.NumberFormat(CURRENCY_LOCALE[currency] ?? 'es', {
+  return new Intl.NumberFormat(CURRENCY_LOCALE[currency] ?? intlLocale(), {
     style: 'currency',
     currency,
     minimumFractionDigits: 2,
@@ -147,32 +150,15 @@ export function signedAmount(tx: Transaction): number {
   return INCOMING.has(tx.type) ? amount : -amount;
 }
 
-const TX_TYPE_LABEL: Record<string, string> = {
-  Purchase: 'Compra',
-  Transfer: 'Transferencia',
-  Deposit: 'Depósito',
-  Withdrawal: 'Retiro',
-  Payment: 'Pago',
-  Refund: 'Devolución',
-  Adjustment: 'Ajuste',
-  Fee: 'Comisión',
-};
-
 export function transactionTypeLabel(type: string): string {
-  return TX_TYPE_LABEL[type] ?? type;
+  return tr().products.txTypes[type] ?? type;
 }
 
 export function transactionLabel(tx: Transaction): string {
   return tx.merchant || transactionTypeLabel(tx.type);
 }
 
-const TX_STATUS_LABEL: Record<string, string> = {
-  Pending: 'Pendiente',
-  Declined: 'Rechazada',
-  Reversed: 'Revertida',
-};
-
 // null for approved movements, which need no badge.
 export function transactionStatusLabel(status: string): string | null {
-  return TX_STATUS_LABEL[status] ?? null;
+  return tr().products.txStatuses[status] ?? null;
 }

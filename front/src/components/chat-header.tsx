@@ -1,7 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { ASSISTANT_NAME } from '@/lib/assistant';
 import { useLang } from '@/contexts/LangContext';
-import { LangSwitch } from '@/components/lang-switch';
 import { useWindowSize } from 'usehooks-ts';
 
 import { SidebarToggle } from '@/components/sidebar-toggle';
@@ -71,9 +70,6 @@ export function ChatHeader({
             <PlusIcon />
           </Button>
         )}
-        <div className="ml-1">
-          <LangSwitch />
-        </div>
       </div>
 
       <div className="flex flex-col items-center leading-tight">

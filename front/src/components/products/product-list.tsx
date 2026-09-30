@@ -1,5 +1,6 @@
 import { LayoutGrid } from 'lucide-react';
 
+import { useLang } from '@/contexts/LangContext';
 import { ProductIcon } from '@/components/products/product-icon';
 import {
   Sidebar,
@@ -29,6 +30,7 @@ export function ProductList({
   selectedId: string | null;
   onSelect: (productId: string | null) => void;
 }) {
+  const { t } = useLang();
   const { setOpenMobile } = useSidebar();
 
   function select(id: string | null) {
@@ -40,7 +42,7 @@ export function ProductList({
     <Sidebar variant="inset" className="md:left-16">
       <SidebarHeader>
         <span className="flex h-9 items-center pl-2 font-semibold text-[15px] tracking-tight">
-          Mis productos
+          {t.nav.products}
         </span>
       </SidebarHeader>
 
@@ -58,7 +60,7 @@ export function ProductList({
                   <span className="flex size-8 shrink-0 items-center justify-center rounded-[9px] bg-secondary text-muted-foreground">
                     <LayoutGrid className="size-[17px]" strokeWidth={1.8} />
                   </span>
-                  <span className="text-[13px]">Resumen</span>
+                  <span className="text-[13px]">{t.products.summary}</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>

@@ -227,18 +227,19 @@ test.describe('Demo customer selector', () => {
     await expect(chat.demoCustomerSelector).toBeDisabled();
   });
 
-  test('switches the chat screen between ES and PT and sends the language', async () => {
+  test('the nav rail button switches the chat screen between ES and PT and sends the language', async () => {
     await mockCustomers(page);
     await chat.createNewChat();
     await page.evaluate(() => localStorage.removeItem('ui:lang'));
     await page.reload();
 
     // Spanish by default (the browser is en-US, the demo customers Spanish-speaking).
-    await expect(page.getByTestId('lang-es')).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('html')).toHaveAttribute('lang', 'es');
     await expect(page.getByTestId('greeting')).toHaveText(/^Buen(os|as) \S+, \S+$/);
     await expect(chat.multimodalInput).toHaveAttribute('placeholder', 'Mensaje');
 
-    await page.getByTestId('lang-pt').click();
+    // The language button in the nav rail switches ES <-> PT.
+    await page.getByTestId('lang-toggle').click();
     await expect(page.getByTestId('greeting')).toHaveText(/^(Bom dia|Boa tarde|Boa noite), \S+$/);
     await expect(page.getByTestId('suggested-action-0')).toContainText(
       'Consultar saldo e movimentações do cartão',
@@ -249,7 +250,7 @@ test.describe('Demo customer selector', () => {
 
     // The choice survives a reload.
     await page.reload();
-    await expect(page.getByTestId('lang-pt')).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('html')).toHaveAttribute('lang', 'pt');
 
     // The card sends its Portuguese text, and the body carries the language.
     const request = nextChatRequest(page);
@@ -268,7 +269,7 @@ test.describe('Demo customer selector', () => {
     await chat.createNewChat();
     await page.evaluate(() => localStorage.clear());
     await page.reload();
-    await expect(page.getByTestId('lang-pt')).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('html')).toHaveAttribute('lang', 'pt');
     await expect(page.getByTestId('greeting')).toHaveText(/^(Bom dia|Boa tarde|Boa noite), Ana$/);
     await page.evaluate(() => localStorage.clear());
   });

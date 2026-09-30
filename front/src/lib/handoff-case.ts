@@ -3,7 +3,8 @@
 // as it comes: labels are translated, values are never made up.
 
 import { format, isValid, parseISO } from 'date-fns';
-import { es } from 'date-fns/locale';
+
+import { dateLocale, intlLocale, tr } from '@/lib/i18n';
 
 export interface AgentHandoff {
   reason: string | null;
@@ -20,34 +21,15 @@ export interface AgentHandoff {
 // (docs/flujo-atencion.md). One name per reason, used everywhere: filters,
 // sections, header chip, handoff card, dividers.
 export const HANDOFF_REASONS = [
-  { id: 'complaint', label: 'Reclamo' },
-  { id: 'retention', label: 'Cancelación de producto' },
-  { id: 'case_status', label: 'Estado de un reclamo' },
+  { id: 'complaint', get label() { return tr().console.reasons.complaint; } },
+  { id: 'retention', get label() { return tr().console.reasons.retention; } },
+  { id: 'case_status', get label() { return tr().console.reasons.caseStatus; } },
 ] as const;
 
 export function handoffReasonLabel(reason: string | null | undefined): string {
-  if (!reason) return 'Caso derivado';
+  if (!reason) return tr().console.reasons.fallback;
   return HANDOFF_REASONS.find((r) => r.id === reason)?.label ?? reason;
 }
-
-const COMPLAINT_TYPE: Record<string, string> = {
-  not_recognized: 'No reconoce el cargo',
-  duplicate_charge: 'Cobro duplicado',
-  different_amount: 'Monto distinto al esperado',
-};
-
-const LABEL: Record<string, string> = {
-  card_last4: 'Tarjeta',
-  product_type: 'Producto',
-  product_last4: 'Producto',
-  transaction_date: 'Fecha del cargo',
-  merchant: 'Comercio',
-  amount: 'Monto',
-  transaction_status: 'Estado del cargo',
-  complaint_type: 'Tipo',
-  description: 'Descripción',
-  reason: 'Motivo',
-};
 
 // Keys shown together with another one, not on their own row.
 const FOLDED = new Set(['currency', 'product_last4']);
@@ -69,13 +51,13 @@ function money(amount: unknown, currency: unknown): string | null {
   if (amount === null || amount === undefined || Number.isNaN(value)) return text(amount);
   const code = text(currency);
   try {
-    return new Intl.NumberFormat('es', {
+    return new Intl.NumberFormat(intlLocale(), {
       style: 'currency',
       currency: code ?? 'USD',
       currencyDisplay: 'code',
     }).format(value);
   } catch {
-    return `${value.toLocaleString('es')}${code ? ` ${code}` : ''}`;
+    return `${value.toLocaleString(intlLocale())}${code ? ` ${code}` : ''}`;
   }
 }
 
@@ -83,7 +65,7 @@ function day(value: unknown): string | null {
   const s = text(value);
   if (!s) return null;
   const parsed = parseISO(s);
-  return isValid(parsed) ? format(parsed, 'd MMM yyyy', { locale: es }) : s;
+  return isValid(parsed) ? format(parsed, 'd MMM yyyy', { locale: dateLocale() }) : s;
 }
 
 // The verified data as a card's rows, in a fixed order, then any other key
@@ -91,6 +73,7 @@ function day(value: unknown): string | null {
 export function caseFields(handoff: AgentHandoff | null | undefined): CaseField[] {
   const data = handoff?.verifiedData;
   if (!data || typeof data !== 'object') return [];
+  const { caseLabels: LABEL, complaintTypes: COMPLAINT_TYPE } = tr().console;
   const fields: CaseField[] = [];
   const push = (key: string, value: string | null) => {
     if (value) fields.push({ key, label: LABEL[key] ?? key, value });

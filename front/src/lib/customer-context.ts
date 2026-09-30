@@ -4,7 +4,8 @@
 // transcripts arrive already masked.
 
 import { format, isValid, parseISO } from 'date-fns';
-import { es } from 'date-fns/locale';
+
+import { dateLocale, intlLocale, tr } from '@/lib/i18n';
 
 export interface ContextCustomer {
   customerId: string | null;
@@ -192,113 +193,78 @@ export function firstTab(context: CustomerContext): ContextTab {
   return 'cases';
 }
 
-// Warehouse values translated one to one; unknown values stay as they come.
-const INTERACTION_TYPE: Record<string, string> = {
-  'inbound call': 'Llamada entrante: llamó el cliente',
-  'outbound call': 'Llamada saliente: llamó el banco',
-  video: 'Videollamada',
-  'video call': 'Videollamada',
-  chat: 'Chat',
-  email: 'Correo',
-  'branch visit': 'Visita a sucursal',
-};
-const CHANNEL: Record<string, string> = {
-  phone: 'Teléfono',
-  web: 'Web',
-  chat: 'Chat',
-  app: 'App',
-  mobile: 'App móvil',
-  'mobile app': 'App móvil',
-  email: 'Correo',
-  branch: 'Sucursal',
-  video: 'Video',
-};
-const LANGUAGE: Record<string, string> = {
-  es: 'Español',
-  spanish: 'Español',
-  en: 'Inglés',
-  english: 'Inglés',
-  pt: 'Portugués',
-  portuguese: 'Portugués',
-};
-const SENTIMENT: Record<string, string> = {
-  positive: 'Positivo',
-  neutral: 'Neutral',
-  negative: 'Negativo',
-};
-const PRIORITY: Record<string, string> = { high: 'Alta', medium: 'Media', low: 'Baja' };
-const STATUS: Record<string, { label: string; tone: CaseTone }> = {
-  open: { label: 'Abierto', tone: 'open' },
-  'in progress': { label: 'En proceso', tone: 'open' },
-  pending: { label: 'Pendiente', tone: 'open' },
-  escalated: { label: 'Escalado', tone: 'open' },
-  closed: { label: 'Cerrado', tone: 'closed' },
-  resolved: { label: 'Resuelto', tone: 'closed' },
-  rejected: { label: 'Rechazado', tone: 'closed' },
+// Warehouse values translated one to one (the words live in i18n.ts); unknown
+// values stay as they come.
+const STATUS_TONE: Record<string, CaseTone> = {
+  open: 'open',
+  'in progress': 'open',
+  pending: 'open',
+  escalated: 'open',
+  closed: 'closed',
+  resolved: 'closed',
+  rejected: 'closed',
 };
 
 export type CaseTone = 'open' | 'closed' | 'other';
 
 const key = (value: string | null) => value?.trim().toLowerCase().replace(/[_-]+/g, ' ') ?? '';
 
+// The channel as the warehouse names it, for picking its icon.
+export const channelKey = key;
+
 export function interactionTypeLabel(type: string | null): string | null {
-  return type ? (INTERACTION_TYPE[key(type)] ?? type) : null;
+  return type ? (tr().console.ctx.interactionTypes[key(type)] ?? type) : null;
 }
 
 export function channelLabel(channel: string | null): string | null {
-  return channel ? (CHANNEL[key(channel)] ?? channel) : null;
+  return channel ? (tr().console.ctx.channels[key(channel)] ?? channel) : null;
 }
 
 export function languageLabel(language: string | null): string | null {
-  return language ? (LANGUAGE[key(language)] ?? language) : null;
+  return language ? (tr().console.ctx.languages[key(language)] ?? language) : null;
 }
 
 // "Sí" / "No"; nothing when the field isn't recorded.
 export function yesNo(value: boolean | null): string | null {
-  return value === null ? null : value ? 'Sí' : 'No';
+  return value === null ? null : value ? tr().console.ctx.yes : tr().console.ctx.no;
 }
 
 export function sentimentLabel(sentiment: string | null): string | null {
-  return sentiment ? (SENTIMENT[key(sentiment)] ?? sentiment) : null;
+  return sentiment ? (tr().console.ctx.sentiments[key(sentiment)] ?? sentiment) : null;
 }
 
 export function priorityLabel(priority: string | null): string | null {
-  return priority ? (PRIORITY[key(priority)] ?? priority) : null;
+  return priority ? (tr().console.ctx.priorities[key(priority)] ?? priority) : null;
 }
 
 export function caseStatus(status: string | null): { label: string; tone: CaseTone } {
-  if (!status) return { label: 'Sin estado', tone: 'other' };
-  return STATUS[key(status)] ?? { label: status, tone: 'other' };
+  if (!status) return { label: tr().console.ctx.noStatus, tone: 'other' };
+  const id = key(status);
+  const label = tr().console.ctx.caseStatuses[id];
+  return label ? { label, tone: STATUS_TONE[id] ?? 'other' } : { label: status, tone: 'other' };
 }
 
 // "26 sep 2026"; ISO timestamps and plain YYYY-MM-DD both work.
 export function formatContextDate(date: string | null): string | null {
   if (!date) return null;
   const parsed = parseISO(date);
-  return isValid(parsed) ? format(parsed, 'd MMM yyyy', { locale: es }) : date;
+  return isValid(parsed) ? format(parsed, 'd MMM yyyy', { locale: dateLocale() }) : date;
 }
 
 export function formatClaim(amount: number | null, currency: string | null): string | null {
   if (amount === null) return null;
   try {
-    return new Intl.NumberFormat('es', {
+    return new Intl.NumberFormat(intlLocale(), {
       style: 'currency',
       currency: currency ?? 'USD',
     }).format(amount);
   } catch {
-    return `${amount.toLocaleString('es')} ${currency ?? ''}`.trim();
+    return `${amount.toLocaleString(intlLocale())} ${currency ?? ''}`.trim();
   }
 }
 
-const CUSTOMER_STATUS: Record<string, string> = {
-  active: 'Activo',
-  inactive: 'Inactivo',
-  blocked: 'Bloqueado',
-  closed: 'Cerrado',
-};
-
 export function customerStatusLabel(status: string | null): string | null {
-  return status ? (CUSTOMER_STATUS[key(status)] ?? status) : null;
+  return status ? (tr().console.ctx.customerStatuses[key(status)] ?? status) : null;
 }
 
 export interface ProfileField {
@@ -315,15 +281,16 @@ export function profileFields(profile: CustomerProfile | null): ProfileField[] {
   const products = profile.products.map((p) =>
     [p.productType, p.last4 && `••${p.last4}`].filter(Boolean).join(' '),
   );
+  const labels = tr().console.ctx.profile;
   const rows: [string, string, (string | null)[]][] = [
-    ['location', 'Ubicación', [[profile.city, profile.country].filter(Boolean).join(', ') || null]],
-    ['segment', 'Segmento', [profile.segment]],
-    ['status', 'Estado', [customerStatusLabel(profile.status)]],
-    ['customerSince', 'Cliente desde', [formatContextDate(profile.customerSince)]],
-    ['products', 'Productos', products],
-    ['email', 'Email', [profile.contact.email]],
-    ['mobilePhone', 'Celular', [profile.contact.mobilePhone]],
-    ['preferredChannel', 'Canal preferido', [channelLabel(profile.preferredChannel)]],
+    ['location', labels.location, [[profile.city, profile.country].filter(Boolean).join(', ') || null]],
+    ['segment', labels.segment, [profile.segment]],
+    ['status', labels.status, [customerStatusLabel(profile.status)]],
+    ['customerSince', labels.customerSince, [formatContextDate(profile.customerSince)]],
+    ['products', labels.products, products],
+    ['email', labels.email, [profile.contact.email]],
+    ['mobilePhone', labels.mobilePhone, [profile.contact.mobilePhone]],
+    ['preferredChannel', labels.preferredChannel, [channelLabel(profile.preferredChannel)]],
   ];
   return rows
     .map(([key, label, values]) => ({ key, label, values: values.filter((v): v is string => !!v) }))
