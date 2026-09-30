@@ -4,6 +4,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
@@ -15,7 +16,7 @@ import type { DemoCustomer } from '@/hooks/use-demo-customers';
 import { cn } from '@/lib/utils';
 
 // The chip names the bank customer the demo simulates, not the person using it.
-export const DEMO_CUSTOMER_HINT = 'Elige qué cliente del banco simular en esta demo';
+export const DEMO_CUSTOMER_HINT = 'Clientes del dataset sintético del hackathon: elige a cuál simular';
 
 export function DemoCustomerSelector({
   customers,
@@ -76,7 +77,13 @@ export function DemoCustomerSelector({
         </TooltipTrigger>
         <TooltipContent data-testid="demo-customer-hint">{DEMO_CUSTOMER_HINT}</TooltipContent>
       </Tooltip>
-      <DropdownMenuContent align="end" className="w-52">
+      <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuLabel
+          data-testid="demo-customer-dataset"
+          className="font-normal text-muted-foreground text-xs"
+        >
+          Dataset sintético del hackathon
+        </DropdownMenuLabel>
         {customers.map((customer) => (
           <DropdownMenuItem
             key={customer.token}
