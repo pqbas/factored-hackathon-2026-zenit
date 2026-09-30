@@ -146,6 +146,11 @@ async def non_streaming(request: ResponsesAgentRequest) -> ResponsesAgentRespons
     )
 
 
+def _conversation_start(custom_inputs: dict) -> int:
+    value = custom_inputs.get("conversation_start")
+    return value if isinstance(value, int) and not isinstance(value, bool) and value > 0 else 0
+
+
 @stream()
 async def streaming(
     request: ResponsesAgentRequest,
@@ -159,8 +164,11 @@ async def streaming(
     # The back owns the conversation and sends the whole history on every request
     # (docs/limites-agente-back.md); the agent keeps no state between requests.
     history = to_chat_completions_input([i.model_dump() for i in request.input])
+    messages = history[-MAX_HISTORY_MESSAGES:]
     input_state = {
-        "messages": history[-MAX_HISTORY_MESSAGES:],
+        "messages": messages,
+        # The back's index counts the whole history; the messages before the cut are gone.
+        "conversation_start": max(0, _conversation_start(custom_inputs) - (len(history) - len(messages))),
         # handled_by says who owns the conversation now; the paused node reads it.
         "session": {**session.as_dict(), "handled_by": custom_inputs.get("handled_by")},
         "thread_id": thread_id,

@@ -17,6 +17,7 @@ from src.llm.fallback import (
     names_a_product_to_cancel,
     retention_in_progress,
 )
+from src.prompts.advisor import ADVISOR_PREFIX, strip_advisor_prefix
 from src.prompts.messages import CARD_OPTIONS, GUARDRAIL_REPLIES, MORE_OPTIONS, SAVINGS_OPTIONS
 from src.schemas.classification import (
     Classification,
@@ -60,8 +61,10 @@ _SUBMENUS = {
     "MORE_OPTIONS": set(MORE_OPTIONS.values()),
 }
 
-# Enough for the question David closed his reply with, without resending a whole balance.
-_CONTEXT_CHARS = 300
+# Enough for the question David closed his reply with, without resending a whole balance or menu.
+_DAVID_CHARS = 300
+# The transcript's cap, so the classifier's prompt stays bounded on long conversations.
+_TRANSCRIPT_MESSAGES = 12
 
 
 def _previous_reply(messages: list) -> str | None:
@@ -72,10 +75,22 @@ def _previous_reply(messages: list) -> str | None:
     return content if isinstance(content, str) else str(content)
 
 
-def _context(previous_reply: str | None) -> str | None:
-    if not previous_reply:
-        return None
-    return mask_sensitive(previous_reply)[-_CONTEXT_CHARS:]
+def _transcript(messages: list, start: int = 0) -> str | None:
+    """The current conversation as the classifier reads it: the messages from `start`, without
+    the customer's last one (passed apart as the text), the last 12 of them, masked."""
+    earlier = messages[max(start, 0):]
+    if earlier and isinstance(earlier[-1], HumanMessage):
+        earlier = earlier[:-1]
+    lines = []
+    for message in earlier[-_TRANSCRIPT_MESSAGES:]:
+        content = message.content if isinstance(message.content, str) else str(message.content)
+        if isinstance(message, HumanMessage):
+            lines.append(f"Cliente: {mask_sensitive(content)}")
+        elif isinstance(message, AIMessage) and content.lstrip().startswith(ADVISOR_PREFIX):
+            lines.append(f"Asesor: {mask_sensitive(strip_advisor_prefix(content))}")
+        elif isinstance(message, AIMessage):
+            lines.append(f"David: {mask_sensitive(content)[-_DAVID_CHARS:]}")
+    return "\n".join(lines) or None
 
 
 def _human_messages(messages: list) -> list[HumanMessage]:
@@ -148,12 +163,14 @@ async def classify(
     else:
         masked_text = None
         # classifier is Jev or the LLM (CLASSIFIER, see src/main.py); either one failing
-        # falls back to the keyword rules. The previous reply goes along so an answer to
+        # falls back to the keyword rules. The current conversation goes along so an answer to
         # David's question ("la de 1070", "sí") is read in its context.
         try:
             if classifier is None:
                 raise ClassifierUnavailable("classifier is None")
-            classification = await classifier.classify(text, routes, context=_context(previous_reply))
+            classification = await classifier.classify(
+                text, routes, context=_transcript(state["messages"], state.get("conversation_start", 0))
+            )
         except ClassifierUnavailable as exc:
             name = type(classifier).__name__ if classifier is not None else "Classifier"
             logger.warning("%s unavailable, classifying with rules: %s", name, exc)

@@ -5,6 +5,8 @@ from langgraph.graph.message import add_messages
 
 class AgentState(TypedDict):
     messages: Annotated[list, add_messages]
+    # Index in messages of the first message of the current conversation (the back's custom_inputs).
+    conversation_start: int
     session: dict
     thread_id: str
     classification: dict | None
