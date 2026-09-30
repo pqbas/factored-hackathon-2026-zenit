@@ -11,6 +11,9 @@ import {
   type Transaction,
   transactionLabel,
   transactionsFor,
+  cardChatPrompt,
+  cardColor,
+  maskedCardNumber,
 } from '@/lib/products';
 
 const card = (last4: string, balance: number, limit: number, available: number): Product => ({
@@ -74,5 +77,23 @@ describe('products', () => {
 
   it('formats money in the product currency', () => {
     expect(formatMoney(1234.5, 'USD')).toContain('1,234.50');
+  });
+});
+
+describe('card visuals', () => {
+  const card = { productType: 'Tarjeta Crédito', last4: '1070' };
+
+  it('masks everything but the last 4 digits', () => {
+    expect(maskedCardNumber('1070')).toBe('•••• •••• •••• 1070');
+  });
+
+  it('gives each card a stable color, never a gray', () => {
+    expect(cardColor(card)).toBe(cardColor(card));
+    expect(cardColor(card)).not.toMatch(/zinc|slate|stone|gray|neutral/);
+  });
+
+  it("asks David about that card", () => {
+    expect(cardChatPrompt('claim', card)).toContain('1070');
+    expect(cardChatPrompt('movements', card)).toContain('1070');
   });
 });

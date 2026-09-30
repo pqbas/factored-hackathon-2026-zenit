@@ -1,4 +1,5 @@
 import { useLang } from '@/contexts/LangContext';
+import { CardCarousel } from '@/components/products/card-carousel';
 import { DetailRow, StatTile } from '@/components/products/stat-tile';
 import { TransactionList } from '@/components/products/transaction-list';
 import {
@@ -23,7 +24,8 @@ export function ProductOverview({
   const totals = summarizeProducts(products);
   const money = (amount: number) => formatMoney(amount, totals.currency);
   const hasSavings = products.some((p) => productKind(p) === 'savings');
-  const hasCards = products.some((p) => productKind(p) === 'credit');
+  const cards = products.filter((p) => productKind(p) === 'credit');
+  const hasCards = cards.length > 0;
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-6 py-8 md:px-10">
@@ -51,8 +53,10 @@ export function ProductOverview({
         )}
       </div>
 
+      {hasCards && <CardCarousel cards={cards} transactions={transactions} />}
+
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <section className="flex flex-col gap-2">
+        <section data-testid="overview-movements" className="flex flex-col gap-2">
           <h2 className="px-1 font-semibold text-[15px]">{t.products.lastMovements}</h2>
           <div className="rounded-[14px] bg-card p-1.5">
             <TransactionList transactions={transactions} showProduct />

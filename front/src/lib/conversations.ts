@@ -47,11 +47,16 @@ const AVATAR_COLORS = [
   'bg-linear-to-b from-violet-500 to-violet-600',
 ];
 
-export function avatarColor(key: string): string {
-  // FNV-1a: similar ids (CUS000123, CUS000132) land on different colors.
+// A stable slot in a palette of `size` colors for a key (FNV-1a: similar ids
+// like CUS000123 and CUS000132 land on different colors).
+export function paletteIndex(key: string, size: number): number {
   let hash = 2166136261;
   for (const char of key) hash = Math.imul(hash ^ char.charCodeAt(0), 16777619) >>> 0;
-  return AVATAR_COLORS[hash % AVATAR_COLORS.length];
+  return hash % size;
+}
+
+export function avatarColor(key: string): string {
+  return AVATAR_COLORS[paletteIndex(key, AVATAR_COLORS.length)];
 }
 
 // The bank customer behind a chat; the app user only when there's none (in

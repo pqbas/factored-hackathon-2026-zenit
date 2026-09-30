@@ -2,6 +2,7 @@
 // the customer, their active products and their 10 latest movements, from the
 // bank's warehouse (the same UC functions the agent uses).
 
+import { paletteIndex } from '@/lib/conversations';
 import { intlLocale, tr } from '@/lib/i18n';
 
 export interface ProductsCustomer {
@@ -161,4 +162,32 @@ export function transactionLabel(tx: Transaction): string {
 // null for approved movements, which need no badge.
 export function transactionStatusLabel(status: string): string | null {
   return tr().products.txStatuses[status] ?? null;
+}
+
+// Each card's color, stable, like the avatars: the same hues, deeper, on a
+// diagonal gradient so the white text reads well.
+const CARD_COLORS = [
+  'bg-linear-135 from-rose-500 to-rose-800',
+  'bg-linear-135 from-orange-500 to-orange-800',
+  'bg-linear-135 from-amber-600 to-amber-800',
+  'bg-linear-135 from-emerald-600 to-emerald-900',
+  'bg-linear-135 from-teal-600 to-teal-900',
+  'bg-linear-135 from-sky-600 to-sky-900',
+  'bg-linear-135 from-indigo-500 to-indigo-800',
+  'bg-linear-135 from-violet-500 to-violet-800',
+];
+
+export function cardColor(product: { productType: string; last4: string }): string {
+  return CARD_COLORS[paletteIndex(productId(product), CARD_COLORS.length)];
+}
+
+// Only the last 4 digits exist in the data: the rest is always masked.
+export function maskedCardNumber(last4: string): string {
+  return `•••• •••• •••• ${last4}`;
+}
+
+// What the card's actions send to David, in the current language.
+export function cardChatPrompt(action: 'movements' | 'claim', product: { last4: string }): string {
+  const t = tr().products;
+  return action === 'movements' ? t.movementsPrompt(product.last4) : t.claimPrompt(product.last4);
 }
