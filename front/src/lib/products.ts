@@ -137,6 +137,15 @@ export function creditUsage(product: Product): number | null {
   return Math.min(1, Math.max(0, product.currentBalance / product.creditLimit));
 }
 
+// The movements of the savings accounts only (card movements show under
+// their card).
+export function savingsTransactions(transactions: Transaction[], products: Product[]): Transaction[] {
+  const savings = products.filter((p) => productKind(p) === 'savings');
+  return transactions.filter((tx) =>
+    savings.some((p) => p.productType === tx.productType && p.last4 === tx.last4),
+  );
+}
+
 export function transactionsFor(transactions: Transaction[], product?: Product): Transaction[] {
   return transactions.filter(
     (tx) => !product || (tx.productType === product.productType && tx.last4 === product.last4),

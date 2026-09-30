@@ -12,6 +12,7 @@ import {
   transactionLabel,
   transactionsFor,
   cardChatPrompt,
+  savingsTransactions,
   parseSavingsHistory,
   savingsWithoutSeries,
   cardColor,
@@ -125,5 +126,18 @@ describe('savings history', () => {
     ];
     const series = [{ currency: 'USD', current: 100, points: [{ month: '2026-09', balance: 100 }] }];
     expect(savingsWithoutSeries(products, series)).toEqual([{ currency: 'COP', current: 75 }]);
+  });
+});
+
+describe('savingsTransactions', () => {
+  it('keeps only the savings accounts movements', () => {
+    const products = [
+      { productType: 'Cuenta Ahorro', last4: '1', currency: 'USD', currentBalance: 1, creditLimit: null, availableCredit: null },
+      { productType: 'Tarjeta Crédito', last4: '2', currency: 'USD', currentBalance: 1, creditLimit: 5, availableCredit: 4 },
+    ];
+    const tx = (productType: string, last4: string) => ({
+      date: '2026-09-01T00:00:00.000Z', productType, last4, type: 'Deposit', merchant: null, amount: 1, currency: 'USD', status: 'Approved',
+    });
+    expect(savingsTransactions([tx('Cuenta Ahorro', '1'), tx('Tarjeta Crédito', '2')], products)).toEqual([tx('Cuenta Ahorro', '1')]);
   });
 });

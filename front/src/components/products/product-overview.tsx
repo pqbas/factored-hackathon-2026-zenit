@@ -8,6 +8,7 @@ import {
   type Product,
   productKind,
   type ProductsCustomer,
+  savingsTransactions,
   summarizeProducts,
   type Transaction,
 } from '@/lib/products';
@@ -61,13 +62,16 @@ export function ProductOverview({
 
       {hasCards && <CardCarousel cards={cards} transactions={transactions} />}
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <section data-testid="overview-movements" className="flex flex-col gap-2">
-          <h2 className="px-1 font-semibold text-[15px]">{t.products.lastMovements}</h2>
-          <div className="rounded-[14px] bg-card p-1.5">
-            <TransactionList transactions={transactions} showProduct />
-          </div>
-        </section>
+      {/* Card movements show under their card; this is the accounts' only. */}
+      <div className={hasSavings ? 'grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]' : 'grid max-w-md gap-6'}>
+        {hasSavings && (
+          <section data-testid="overview-movements" className="flex flex-col gap-2">
+            <h2 className="px-1 font-semibold text-[15px]">{t.products.accountMovements}</h2>
+            <div className="rounded-[14px] bg-card p-1.5">
+              <TransactionList transactions={savingsTransactions(transactions, products)} showProduct />
+            </div>
+          </section>
+        )}
 
         <section className="flex flex-col gap-2" data-testid="customer-profile">
           <h2 className="px-1 font-semibold text-[15px]">{t.products.myData}</h2>
