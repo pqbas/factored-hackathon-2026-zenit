@@ -265,7 +265,6 @@
 
 ---
 
-<<<<<<< HEAD
 ## Anexo: set held-out
 
 25. `back/scripts/eval/cases-holdout/H01…H20-*.json`, con datos del
@@ -282,7 +281,7 @@
     su mezcla, ningún mensaje repetido de los 40 ni de los escenarios, el
     registro de cambios, `--set`/`--label`/`reportStem` y
     `compareToMarkdown`.
-=======
+
 ## Anexo: guard de grounding
 
 30. `providers-server.ts`: `AgentGuard` y `guard` en `parseAgentOutputs`
@@ -296,4 +295,3 @@
     `[agent-outputs:guardFired]` y `[agent-outputs:guardNull]`, tomados de
     eventos reales del agente) y `eval-score.test.ts` (numeradores y
     denominadores del guard).
->>>>>>> origin/main
