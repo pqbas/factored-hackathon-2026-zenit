@@ -6,11 +6,6 @@ env:
   # CAN_USE on it.
   - name: API_PROXY
     value: "https://agent-banking-assistant-7474647867986650.aws.databricksapps.com/invocations"
-  # Warehouse and catalog for GET /api/products (agent/uc/bank_uc_consultas.sql).
-  - name: DATABRICKS_WAREHOUSE_ID
-    valueFrom: sql-warehouse
-  - name: UC_CATALOG
-    value: "workspace"
   # Roles (comma-separated emails): admin supervises, advisors attend.
   - name: ADMIN_EMAILS
     value: "pcubasm1@gmail.com"

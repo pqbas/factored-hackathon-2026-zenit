@@ -153,7 +153,7 @@ chatRouter.post('/', requireAuth, async (req: Request, res: Response) => {
         await updateChatCustomer({ chatId: id, customerId });
       }
     }
-    // One warehouse lookup per customer, not per turn: only while the name
+    // One bank lookup per customer, not per turn: only while the name
     // is missing (new chat, new customer, or a lookup that failed before).
     // It doesn't hold up the reply.
     if (

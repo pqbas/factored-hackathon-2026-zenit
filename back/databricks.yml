@@ -21,11 +21,6 @@ resources:
             database_name: databricks_postgres
             instance_name: ${resources.database_instances.chat_lakebase.name}
             permission: CAN_CONNECT_AND_CREATE
-        - name: sql-warehouse
-          description: "Warehouse that runs the bank's Unity Catalog functions (/api/products)"
-          sql_warehouse:
-            id: 07ca55766c9c5097
-            permission: CAN_USE
 
 sync:
   # The built UI is gitignored but must be uploaded: build ../front and run
