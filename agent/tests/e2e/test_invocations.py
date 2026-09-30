@@ -314,7 +314,6 @@ def test_a_balance_turn_with_the_lakebase_backend_answers_from_the_fake_pools_ro
         "product_type": "Tarjeta Crédito", "product_number_last4": "4930", "currency": "USD",
         "current_balance": Decimal("120.50"), "credit_limit": Decimal("1000.00"), "available_credit": Decimal("879.50"),
     }])
-    monkeypatch.setattr(tools_for_module, "settings", type("S", (), {"tools_backend": "lakebase"})())
     monkeypatch.setattr(tools_for_module, "_lakebase_tools", tools_for_module.bank_tools(pool))
     monkeypatch.setattr(main, "tools_for", tools_for_module.tools_for)
     llm = ScriptedToolChatModel([

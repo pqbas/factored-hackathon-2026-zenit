@@ -20,7 +20,6 @@ agent/
 │   │   ├── tools_for.py
 │   │   ├── bank_sql.py
 │   │   ├── lakebase.py
-│   │   ├── mcp_client.py
 │   │   └── bind_customer.py
 │   ├── prompts/
 │   │   ├── system.md
