@@ -536,9 +536,9 @@ Shipped en PR #113. David responde en el idioma elegido cuando el back (w1:p1) p
 
 ## Phase 29: Idioma global de la app
 
-**Goal:** que el idioma sea un ajuste de toda la app, elegido en el menú del usuario.
+**Goal:** que el idioma sea un ajuste de toda la app, visible en la barra de íconos.
 
-- [ ] "Idioma: Español / Português" en el menú del avatar; el selector sale del header del chat.
+- [ ] Botón de idioma "ES"/"PT" en la barra de íconos, arriba del tema; el selector sale del header del chat.
 - [ ] Navegación, consola del asesor, Métricas y Mis productos en ES y PT (los datos del banco no se traducen).
 
 Spec: `spec/30-09-26-idioma-global/`.

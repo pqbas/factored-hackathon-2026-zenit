@@ -12,7 +12,8 @@ import { useTheme } from 'next-themes';
 import { Link, useLocation } from 'react-router-dom';
 
 import { BrandMark } from '@/components/brand-mark';
-import { UserMenu } from '@/components/user-menu';
+import { LangToggle } from '@/components/lang-toggle';
+import { UserAvatar } from '@/components/user-avatar';
 import {
   Tooltip,
   TooltipContent,
@@ -121,6 +122,7 @@ export function NavRail() {
           );
         })}
         <div className="flex-1" />
+        <LangToggle />
         <Tooltip>
           <TooltipTrigger asChild>
             <button
@@ -139,7 +141,18 @@ export function NavRail() {
           </TooltipTrigger>
           <TooltipContent side="right">{themeLabel}</TooltipContent>
         </Tooltip>
-        {userName && <UserMenu name={userName} email={session?.user?.email} />}
+        {userName && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div data-testid="user-avatar" aria-label={userName}>
+                <UserAvatar name={userName} />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="right">
+              {session?.user?.email ?? userName}
+            </TooltipContent>
+          </Tooltip>
+        )}
       </TooltipProvider>
     </nav>
   );

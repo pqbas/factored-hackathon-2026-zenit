@@ -784,6 +784,18 @@ test.describe('Advisor console', () => {
     await expect(page).not.toHaveURL(/reason=/);
   });
 
+  test('the language button shows the console in Portuguese', async ({ page }) => {
+    await openConsole(page);
+    await expect(page.getByTestId('inbox-title')).toHaveText('Bandeja');
+    await page.getByTestId('lang-toggle').click();
+    await expect(page.getByTestId('lang-toggle')).toHaveText('pt');
+    await expect(page.getByTestId('inbox-title')).toHaveText('Caixa de entrada');
+    await expect(page.getByTestId('view-david')).toContainText('Agente IA');
+    await expect(page.getByTestId('reason-chip-complaint')).toHaveText('Reclamação');
+    // Customer names are data: never translated.
+    await expect(page.getByTestId('conversation-row-c-waiting')).toContainText('Daniela Sosa Ruiz');
+  });
+
   test('Agente AI is split in sections by what David is working on', async ({ page }) => {
     await openConsole(page, 'advisor', ME, [
       ['c-offtopic', 'pedro@banco.test', { useCase: null, intent: 'OUT_OF_SCOPE' }],
