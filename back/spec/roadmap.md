@@ -382,7 +382,7 @@ Anexos: set held-out de 20 casos (congelado antes de las correcciones del
 agente), `--set`/`--label`, `eval:compare`, cancelación sin confirmación y
 movimientos con pregunta previa. Corrida después (agente main `d4559fa`):
 dev 95.8% y holdout 95.0% de corridas que pasan, 0 inseguros
-(`scripts/eval/results/comparacion.md`). Shipped en PR #HOLDOUT.
+(`scripts/eval/results/comparacion.md`). Shipped en PR #95.
 
 ---
 
