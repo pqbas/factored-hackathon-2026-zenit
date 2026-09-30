@@ -584,10 +584,12 @@ Shipped en PR #119.
 
 ---
 
-## Phase 34: Accesos rápidos en Mis productos
+## Phase 34: Accesos rápidos en Mis productos (Complete)
 
 **Goal:** que desde Mis productos el cliente llegue a David en un clic, sin acciones repetidas por tarjeta.
 
-- [ ] "¿Qué quieres hacer?" con las 4 opciones del chat más "Ver movimientos"; se quita "Pídeselo a David" de la tarjeta.
+- [x] "¿Qué quieres hacer?" con las 4 opciones del chat más "Ver movimientos"; se quita "Pídeselo a David" de la tarjeta.
 
 Spec: `spec/30-09-26-accesos-rapidos/`.
+
+Shipped en PR #120.
