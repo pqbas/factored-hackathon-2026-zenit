@@ -1,0 +1,9 @@
+# Only the agent's code, config and pinned dependencies reach the build;
+# never env files or secrets.
+*
+!src
+!configs
+!requirements-aws.lock
+**/__pycache__
+**/.env
+**/.env.*
