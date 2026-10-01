@@ -49,7 +49,9 @@ test.describe('Mis productos', () => {
     const tokens = await mockProducts(page, () => ({ status: 200, json: PRODUCTS }));
     await page.goto('/products');
     await expect(page.getByText('Hola, Santiago')).toBeVisible();
-    await expect(page.getByTestId('customer-profile')).toContainText('Contreras López');
+    // No "Mis datos": the name is in the greeting and the customer id is internal.
+    await expect(page.getByTestId('customer-profile')).toHaveCount(0);
+    await expect(page.getByText('CUS1')).toHaveCount(0);
     await expect(page.locator('[data-testid^="product-row-"]:not([data-testid="product-row-summary"])')).toHaveCount(2);
     // Cards only: their movements show under the selected card, once.
     await expect(page.getByTestId('overview-movements')).toHaveCount(0);
