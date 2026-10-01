@@ -1,4 +1,5 @@
--- Lakebase access of the AWS deployment's service principal (bank-assistant-aws).
+-- Lakebase access of the AWS deployment's service principals: the back's
+-- (bank-assistant-aws) and the agent's (bank-assistant-aws-agent).
 -- Idempotent. Run as a member of databricks_superuser:
 --   psql "host=$PGHOST dbname=databricks_postgres user=<you> sslmode=require" \
 --     -v ON_ERROR_STOP=1 -f scripts/aws/lakebase-grants.sql
@@ -31,9 +32,28 @@ GRANT SELECT ON bank_ro.customer_products, bank_ro.customer_transactions,
 GRANT USAGE ON SCHEMA bank_sessions TO "cc0d82f4-6c8d-4311-bbd2-8a603d1d1073";
 GRANT SELECT ON bank_sessions.sim_sessions TO "cc0d82f4-6c8d-4311-bbd2-8a603d1d1073";
 
--- What the principal can do, for the log.
-SELECT table_schema, table_name, string_agg(privilege_type, ', ' ORDER BY privilege_type) AS privileges
+-- The agent on AWS (bank-assistant-aws-agent): least privilege, like the
+-- agent App's principal. It only reads the three tables its tools query and
+-- the simulation's sessions: nothing in ai_chatbot, nothing with personal data.
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '68c1a49e-ede0-4e89-be13-bf054b68b713') THEN
+    PERFORM databricks_create_role('68c1a49e-ede0-4e89-be13-bf054b68b713', 'SERVICE_PRINCIPAL');
+  END IF;
+END $$;
+
+GRANT USAGE ON SCHEMA bank_ro TO "68c1a49e-ede0-4e89-be13-bf054b68b713";
+GRANT SELECT ON bank_ro.customer_products, bank_ro.customer_transactions,
+  bank_ro.customer_cases
+  TO "68c1a49e-ede0-4e89-be13-bf054b68b713";
+
+GRANT USAGE ON SCHEMA bank_sessions TO "68c1a49e-ede0-4e89-be13-bf054b68b713";
+GRANT SELECT ON bank_sessions.sim_sessions TO "68c1a49e-ede0-4e89-be13-bf054b68b713";
+
+-- What each principal can do, for the log.
+SELECT grantee, table_schema, table_name, string_agg(privilege_type, ', ' ORDER BY privilege_type) AS privileges
 FROM information_schema.role_table_grants
-WHERE grantee = 'cc0d82f4-6c8d-4311-bbd2-8a603d1d1073'
-GROUP BY table_schema, table_name
-ORDER BY table_schema, table_name;
+WHERE grantee IN ('cc0d82f4-6c8d-4311-bbd2-8a603d1d1073',
+                  '68c1a49e-ede0-4e89-be13-bf054b68b713')
+GROUP BY grantee, table_schema, table_name
+ORDER BY grantee, table_schema, table_name;

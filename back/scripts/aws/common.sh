@@ -15,6 +15,9 @@ SECRET_PREFIX=$PROJECT/back
 # The Databricks service principal's secret, created apart: a JSON with
 # DATABRICKS_HOST, DATABRICKS_CLIENT_ID and DATABRICKS_CLIENT_SECRET.
 SP_SECRET=$PROJECT/databricks-sp
+# The shared secret the agent on AWS expects in x-agent-token, created by the
+# agent's setup (agent/scripts/aws).
+AGENT_TOKEN_SECRET=$PROJECT/agent/invoke-token
 
 ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
 REGISTRY=$ACCOUNT.dkr.ecr.$AWS_REGION.amazonaws.com

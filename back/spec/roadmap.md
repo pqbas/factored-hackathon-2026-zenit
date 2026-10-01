@@ -524,3 +524,18 @@ Runner en paralelo a Databricks Apps (etapa 1 de
 
 Pendiente: login corporativo (Cognito o SSO) en vez de los usuarios de demo.
 
+---
+
+## Phase 23: El back llama al agente de AWS con un token compartido (Complete)
+
+**Goal:** dejar el back listo para el agente en AWS (etapa 2 de
+`spec/01-10-26-despliegue-aws/`, aprobada por w1:pB, 01-10-26). Spec en
+spec/01-10-26-agent-token/.
+
+- [x] Con `API_PROXY` y `AGENT_TOKEN`, el back manda `x-agent-token` y no el
+      token de Databricks. Sin `AGENT_TOKEN` nada cambia.
+- [x] `scripts/aws/setup.sh agent <url>` apunta el servicio de AWS al agente.
+- [x] Permisos de mínimo privilegio en Lakebase para el SP del agente de AWS.
+
+Pendiente: apuntar el servicio de AWS al agente de AWS cuando esté arriba.
+

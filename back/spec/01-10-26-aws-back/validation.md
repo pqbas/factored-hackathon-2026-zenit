@@ -34,8 +34,8 @@
 - [x] (Con AWS y el SP) el servicio queda RUNNING, un chat de saldo
       responde, queda en Lakebase y se ve en la consola (chat 8bee121d, 7.2 s;
       admin, asesor y cliente entran con su rol; un header falso da 401)
-- [ ] (Con AWS) un segundo deploy no corta `/ping` (pendiente: se mide en
-      el primer `deploy.sh` después del merge)
+- [x] (Con AWS) un segundo deploy no corta `/ping`: 398 pedidos durante el
+      deploy de `ab185daf` (11 min 12 s), los 398 con 200
 - [x] Prod en Databricks sigue RUNNING y sin cambios
 
 ## Definition of Done
