@@ -11,7 +11,7 @@ After this phase, the agent keeps doing what it does today:
 
 And it changes in these ways:
 
-3. With `AGENT_TOKEN` set, `POST /diag/latency` (behind the same `x-agent-token`) takes `{"probe": <name>, "samples": <n>}` and answers `{"probe", "n", "p50", "p95", "max", "min", "errors"}` in seconds. `samples` is capped at 30.
+3. With `AGENT_TOKEN` set, `POST /diag/latency` (behind the same `x-agent-token`) takes `{"probe": <name>, "samples": <n>}` and answers `{"probe", "n", "p50", "p95", "max", "min", "errors", "times"}` in seconds. `samples` is capped at 30. An optional `pause` (seconds, at most 5) waits between samples without being timed, because 30 Qwen calls in a row hit the endpoint's rate limit.
 4. Probes, one per request so none nears App Runner's request timeout:
    - `connect_workspace`, `connect_lakebase`: TCP connect to the workspace host (443) and the Lakebase host (5432); the pure network round trip.
    - `oauth_token`: a client-credentials token request for the service principal, not cached.

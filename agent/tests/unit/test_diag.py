@@ -9,13 +9,13 @@ def test_summarize_returns_the_percentiles_and_the_error_names():
     times = [i / 10 for i in range(1, 21)]  # 0.1 .. 2.0
     stats = summarize("x", times, ["TimeoutError", "TimeoutError", "ValueError"])
     assert stats == {
-        "probe": "x", "n": 20, "errors": ["TimeoutError", "ValueError"],
+        "probe": "x", "n": 20, "errors": ["TimeoutError", "ValueError"], "times": times,
         "p50": 1.1, "p95": 1.9, "max": 2.0, "min": 0.1,
     }
 
 
 def test_summarize_without_samples_has_no_numbers():
-    assert summarize("x", [], ["OSError"]) == {"probe": "x", "n": 0, "errors": ["OSError"]}
+    assert summarize("x", [], ["OSError"]) == {"probe": "x", "n": 0, "errors": ["OSError"], "times": []}
 
 
 def test_samples_are_capped():

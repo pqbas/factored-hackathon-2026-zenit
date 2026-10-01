@@ -31,7 +31,7 @@ def test_the_route_answers_only_the_stats_of_the_probe():
         "/diag/latency", headers={TOKEN_HEADER: TOKEN}, json={"probe": "fast", "samples": 3})
     body = response.json()
     assert response.status_code == 200
-    assert set(body) == {"probe", "n", "errors", "p50", "p95", "max", "min"}
+    assert set(body) == {"probe", "n", "errors", "times", "p50", "p95", "max", "min"}
     assert body["n"] == 3 and body["errors"] == []
 
 
@@ -42,7 +42,7 @@ def test_an_unknown_probe_is_400():
 
 def test_a_failing_setup_answers_the_error_type_only():
     response = _client({"bad": _broken_setup}).post("/diag/latency", headers={TOKEN_HEADER: TOKEN}, json={"probe": "bad"})
-    assert response.json() == {"probe": "bad", "n": 0, "errors": ["RuntimeError"]}
+    assert response.json() == {"probe": "bad", "n": 0, "errors": ["RuntimeError"], "times": []}
     assert "hunter2" not in response.text
 
 

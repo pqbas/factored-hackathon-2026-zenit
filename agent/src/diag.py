@@ -17,6 +17,8 @@ from src.tools.bank_sql import GET_PRODUCTS, _sql
 MAX_SAMPLES = 30
 # A new pool with its token per sample: a few are enough and each one is slow.
 MAX_SAMPLES_BY_PROBE = {"lakebase_first": 5}
+# Untimed wait between samples, so 30 calls in a row don't hit the LLM endpoint's rate limit.
+MAX_PAUSE_SECONDS = 5.0
 
 # A demo customer (demo-mx-1) and made-up rows: the probes never return data.
 _CUSTOMER_ID = "CLI-FLEUCGTWGAHL"
@@ -41,7 +43,8 @@ def _percentile(ordered: list[float], q: float) -> float:
 
 def summarize(probe: str, times: list[float], errors: list[str]) -> dict[str, Any]:
     ordered = sorted(times)
-    stats = {"probe": probe, "n": len(ordered), "errors": sorted(set(errors))}
+    # The samples go too, in order, so runs split across requests can be merged.
+    stats = {"probe": probe, "n": len(ordered), "errors": sorted(set(errors)), "times": [round(t, 3) for t in times]}
     if ordered:
         stats.update(
             p50=round(_percentile(ordered, 0.5), 3), p95=round(_percentile(ordered, 0.95), 3),
@@ -50,10 +53,13 @@ def summarize(probe: str, times: list[float], errors: list[str]) -> dict[str, An
     return stats
 
 
-async def run_probe(probe: str, sample: Probe, samples: int) -> dict[str, Any]:
+async def run_probe(probe: str, sample: Probe, samples: int, pause: float = 0.0) -> dict[str, Any]:
     times: list[float] = []
     errors: list[str] = []
-    for _ in range(capped(probe, samples)):
+    pause = max(0.0, min(pause, MAX_PAUSE_SECONDS))
+    for i in range(capped(probe, samples)):
+        if i and pause:
+            await asyncio.sleep(pause)
         start = time.perf_counter()
         try:
             await sample()
@@ -148,6 +154,7 @@ def build_probes(chat_model, jev_client, routes) -> dict[str, Callable[[], Await
 class LatencyRequest(BaseModel):
     probe: str
     samples: int = MAX_SAMPLES
+    pause: float = 0.0
 
 
 def add_latency_route(app: FastAPI, probes: dict[str, Callable[[], Awaitable[Probe]]]) -> None:
@@ -163,4 +170,4 @@ def add_latency_route(app: FastAPI, probes: dict[str, Callable[[], Awaitable[Pro
             sample = await prepare()
         except Exception as exc:
             return summarize(request.probe, [], [type(exc).__name__])
-        return await run_probe(request.probe, sample, request.samples)
+        return await run_probe(request.probe, sample, request.samples, request.pause)
