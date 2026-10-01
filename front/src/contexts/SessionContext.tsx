@@ -5,7 +5,15 @@ import React, {
   useEffect,
   useCallback,
 } from 'react';
+import { mutate } from 'swr';
 import type { ClientSession } from '@chat-template/auth';
+import {
+  type AuthMode,
+  authModeOf,
+  login as requestLogin,
+  logout as requestLogout,
+  watchExpiredSession,
+} from '@/lib/auth';
 import { type Role, roleOf } from '@/lib/roles';
 
 interface SessionContextType {
@@ -15,6 +23,13 @@ interface SessionContextType {
   loading: boolean;
   error: Error | null;
   refetch: () => Promise<void>;
+  // 'password' outside Databricks Apps: the demo login applies.
+  authMode: AuthMode;
+  // Password mode without a signed-in user: only the login screen shows.
+  needsLogin: boolean;
+  // Throws LoginError when the credentials are wrong or the request fails.
+  login: (username: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
 }
 
 const SessionContext = createContext<SessionContextType | undefined>(undefined);
@@ -50,6 +65,33 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     fetchSession();
   }, [fetchSession]);
 
+  const authMode = authModeOf(session);
+
+  // An expired session (401 `unauthorized` from any /api/* call) goes back to
+  // the login: the user is dropped, the mode stays.
+  useEffect(() => {
+    if (authMode !== 'password') return;
+    return watchExpiredSession(() =>
+      setSession((current) => (current?.user ? ({ ...current, user: null } as ClientSession) : current)),
+    );
+  }, [authMode]);
+
+  const login = useCallback(async (username: string, password: string) => {
+    setSession(await requestLogin(username, password));
+    // Requests made while signed out failed with 401: ask again.
+    void mutate(() => true);
+  }, []);
+
+  const logout = useCallback(async () => {
+    try {
+      await requestLogout();
+    } finally {
+      setSession((current) => (current ? ({ ...current, user: null } as ClientSession) : current));
+      // The next user must not see this one's cached data.
+      void mutate(() => true, undefined, { revalidate: false });
+    }
+  }, []);
+
   return (
     <SessionContext.Provider
       value={{
@@ -58,6 +100,10 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         loading,
         error,
         refetch: fetchSession,
+        authMode,
+        needsLogin: authMode === 'password' && !session?.user,
+        login,
+        logout,
       }}
     >
       {children}
