@@ -157,3 +157,63 @@ Consola interna (asesores, supervisores) ─────────►  Back (c
 
 En el prototipo, el cliente se simula con sesiones demo dentro de la misma App
 ("Simulador de cliente"), y el admin puede verlo todo para la demo.
+
+## 6. Dónde corre: demo y producción
+
+### Hoy
+
+Hay dos despliegues en paralelo, con los mismos datos (Lakebase) y el mismo
+LLM (Qwen):
+
+| Despliegue | Dónde | Para qué |
+| --- | --- | --- |
+| Databricks Apps | Workspace de Databricks | El original; queda como respaldo |
+| AWS App Runner (us-west-2) | Un servicio para back + front y otro para el agente | Demo y entorno de desarrollo |
+
+Por qué se sumó AWS:
+
+- Las Apps de Databricks no tienen salida a internet con este plan, así que no
+  pueden usar Jev (clasifica en 0.28 s) ni herramientas de trazas externas.
+- Cada deploy en Databricks Apps corta el servicio 1 a 2 minutos. En App
+  Runner se midió un deploy completo sin corte: 398 de 398 pedidos con 200.
+- Costo de las apps: ~USD 18 por día en Databricks, frente a ~USD 1 por día
+  en App Runner con el tráfico de una demo.
+
+### App Runner para demo, Fargate para producción
+
+App Runner cobra la memoria siempre y la CPU solo mientras atiende pedidos, e
+incluye HTTPS, balanceo y deploy sin corte. Con poco tráfico es lo más
+barato y lo más simple.
+
+| Dos servicios (1 vCPU / 2 GB cada uno) | App Runner | ECS Fargate |
+| --- | --- | --- |
+| Con tráfico de demo | ~USD 1 por día | ~USD 2.90 por día (tareas encendidas 24 h más el balanceador) |
+| Con tráfico constante | Hasta USD 3.74 por día | ~USD 2.90 por día |
+
+En producción se migraría a ECS Fargate, con la misma imagen de contenedor,
+porque App Runner no ofrece:
+
+- procesos de fondo: en reposo recorta la CPU, y la cola de turnos del back
+  necesita correr sola (hoy está encendida solo en Databricks);
+- pedidos de más de 120 s o WebSockets;
+- contenedores acompañantes (seguridad, monitoreo);
+- deploys graduales (canary, blue/green controlado);
+- control fino de la red privada.
+
+### Pendiente antes de producción
+
+- **Infraestructura como código.** Hoy se despliega con scripts de bash y la
+  AWS CLI (`back/scripts/aws/`, `agent/scripts/aws/`). En producción,
+  Terraform o CDK, que incluya los service principals de Databricks y sus
+  secretos, hoy creados a mano.
+- **Login.** El de AWS es de demo (tres usuarios fijos). En producción, SSO
+  corporativo para la consola y la identidad del banco para los clientes
+  (§5).
+- **Front.** Hoy lo sirve el back. En producción, S3 + CloudFront.
+- **Cuenta de AWS.** Los recursos se crearon con la cuenta raíz. En
+  producción, usuarios o roles IAM con permisos acotados.
+- **Agente sin servidor.** Amazon Bedrock AgentCore Runtime cobra solo por
+  uso y arranca en ~2 s (versión del 18/09/2026). Se evaluó y se dejó para
+  después: exige imagen ARM64, firmar las llamadas con SigV4 y leer los
+  secretos por código, y varios puntos de su contrato no están confirmados en
+  la documentación.
