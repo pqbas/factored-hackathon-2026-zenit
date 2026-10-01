@@ -4,6 +4,7 @@
 #   setup.sh secrets   Secrets Manager secrets, from the environment
 #   setup.sh service   the App Runner service (needs base, secrets, an image)
 #   setup.sh agent URL point the service at the agent on AWS (its /invocations)
+#   setup.sh env K=V.. set plain (non-secret) variables of the running service
 # Every resource is tagged project=bank-assistant. See README.md.
 source "$(dirname "$0")/common.sh"
 
@@ -93,7 +94,7 @@ service() {
           Port: "8080",
           RuntimeEnvironmentVariables: {
             AUTH_MODE: "password",
-            AGENT_QUEUE_WORKER: "off",
+            AGENT_QUEUE_WORKER: "on",
             DATABRICKS_HOST: $host,
             DATABRICKS_CLIENT_ID: $client,
             PGHOST: $pghost,
@@ -145,8 +146,27 @@ agent() {
     --source-configuration "$config" --query 'Service.Status' --output text
 }
 
+# Sets plain variables of the running service, e.g. AGENT_QUEUE_WORKER=on.
+# Not for secrets: those go through Secrets Manager.
+env_vars() {
+  [ $# -gt 0 ] || { echo "usage: setup.sh env KEY=VALUE..." >&2; exit 1; }
+  local arn config pair
+  arn=$(service_arn)
+  [ -n "$arn" ] || { echo "No service $SERVICE" >&2; exit 1; }
+  config=$(aws apprunner describe-service --service-arn "$arn" \
+    --query 'Service.SourceConfiguration' --output json)
+  for pair in "$@"; do
+    [[ $pair == *=* ]] || { echo "Not KEY=VALUE: $pair" >&2; exit 1; }
+    config=$(jq --arg key "${pair%%=*}" --arg value "${pair#*=}" \
+      '.ImageRepository.ImageConfiguration.RuntimeEnvironmentVariables[$key] = $value' <<<"$config")
+  done
+  aws apprunner update-service --service-arn "$arn" \
+    --source-configuration "$config" --query 'Service.Status' --output text
+}
+
 case "${1:-}" in
   base | secrets | service) "$1" ;;
   agent) shift; agent "$@" ;;
-  *) echo "usage: setup.sh base|secrets|service|agent <url>" >&2; exit 1 ;;
+  env) shift; env_vars "$@" ;;
+  *) echo "usage: setup.sh base|secrets|service|agent <url>|env KEY=VALUE..." >&2; exit 1 ;;
 esac

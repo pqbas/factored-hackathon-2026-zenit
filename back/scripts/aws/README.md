@@ -80,12 +80,41 @@ With `AGENT_TOKEN` the back sends the shared secret
 token. Without it, it sends the service principal's OAuth token, as the
 Databricks App expects.
 
-## What this deployment does not do
+## Migrations
 
-- It runs no migrations. The Databricks deploy applies them to the shared
-  database, so deploy Databricks first when there is a new one.
-- It does not answer queued agent turns (`AGENT_QUEUE_WORKER=off`): the
-  Databricks App's worker does.
+AWS is the only active deployment, so nothing applies migrations on its own.
+When a commit brings a new one, apply it before deploying:
+
+```bash
+scripts/aws/migrate.sh           # what is pending, and whether you may apply it
+scripts/aws/migrate.sh --apply
+psql ... -f scripts/aws/lakebase-grants.sql   # only if it added a table
+scripts/aws/deploy.sh
+```
+
+It runs as you (your Databricks CLI profile), never as a service principal
+of the apps: the back's has no DDL and the agent's only reads `bank_ro`.
+
+Postgres lets only a table's owner alter it. The tables were created by the
+Databricks UI app's principal, so `lakebase-owner.sql` moves them once to a
+shared role, `bank_assistant_owner`, that you are a member of. Until that is
+done, `migrate.sh` reports the tables you don't own and refuses to apply.
+
+## The queue of agent turns
+
+A turn the agent couldn't answer is queued and retried by a worker inside the
+back (`AGENT_QUEUE_WORKER=on`, the default). Several instances can run it:
+each one claims different turns.
+
+Limit of App Runner: an instance with no request in flight keeps its memory
+but gets almost no CPU, so the worker's timer barely runs while the service
+is idle. A queued turn is answered while there is traffic (the customer's
+open chat polls the back) or with the next request, not on a strict
+schedule. For a worker that must run on time, move it to a service that is
+always on (ECS) or to a scheduled task.
+
+Run the worker in one deployment only when two share the database:
+`scripts/aws/setup.sh env AGENT_QUEUE_WORKER=off` turns it off here.
 
 ## Removing everything
 

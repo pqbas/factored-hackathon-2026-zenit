@@ -539,3 +539,22 @@ spec/01-10-26-agent-token/.
 
 Pendiente: apuntar el servicio de AWS al agente de AWS cuando esté arriba.
 
+---
+
+## Phase 24: AWS como único despliegue activo (Complete)
+
+**Goal:** las Apps de Databricks quedan apagadas y el back de AWS hace lo que
+hacían ellas: contestar la cola de turnos y aplicar las migraciones (decisión
+del usuario vía w1:pB, 01-10-26). Spec en spec/01-10-26-aws-unico/.
+
+- [x] El back de AWS llama al agente de AWS con `x-agent-token`.
+- [x] Cola de turnos encendida en AWS (`AGENT_QUEUE_WORKER=on`), con el
+      límite de App Runner en reposo documentado.
+- [x] `scripts/aws/migrate.sh`: migraciones como paso explícito, con la
+      identidad de quien lo ejecuta.
+
+Pendiente: traspasar la propiedad de las tablas a `bank_assistant_owner`
+(`scripts/aws/lakebase-owner.sql`). Solo lo puede correr el principal de la
+App de Databricks; el usuario lo decide cuando haya una migración nueva.
+Hasta entonces `migrate.sh --apply` se niega a aplicar.
+
