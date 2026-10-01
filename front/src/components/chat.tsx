@@ -394,6 +394,8 @@ export function Chat({
           sendMessage={sendMessage}
           isReadonly={isReadonly}
           selectedModelId={initialChatModel}
+          handledBy={handledBy}
+          agentPending={agentPending}
         />
 
         {notice && (

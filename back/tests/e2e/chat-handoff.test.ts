@@ -213,9 +213,11 @@ test.describe('Customer chat during a handoff', () => {
     await expect(page.getByTestId('chat-peer-status')).toHaveText(/No disponible/);
     await chat.sendUserMessage('¿Cuál es mi saldo?');
     await expect(page.getByTestId('message-user')).toHaveCount(2);
-    // No waiting bubble, no error: just David shown as unavailable.
+    // No error and no empty David message: the header says unavailable, and
+    // the indicator stays, because David will answer this turn on his own.
     await page.waitForTimeout(500);
     await expect(page.getByTestId('message-assistant')).toHaveCount(1);
+    await expect(page.getByTestId('typing-indicator')).toHaveCount(1);
     await expect(page.getByTestId('agent-unavailable')).toHaveCount(0);
     await expect(page.locator('body')).not.toContainText('Bad Gateway');
     await expect(page.getByTestId('chat-peer-status')).toHaveText('Asistente virtual · No disponible');
@@ -223,6 +225,7 @@ test.describe('Customer chat during a handoff', () => {
     // The worker answers: it shows up by polling and David is back online.
     server.agentAnswers('Tu saldo es $1.000.');
     await expect(page.getByText('Tu saldo es $1.000.')).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByTestId('typing-indicator')).toHaveCount(0);
     await expect(page.getByTestId('chat-peer-status')).toHaveText('Asistente virtual · En línea');
     await page.close();
   });
