@@ -20,7 +20,7 @@
 2. `SessionContext`:
    - `authMode`; `needsLogin = authMode === 'password' && !session?.user`.
    - `login` sets the session; `logout` clears it.
-   - A `fetch` wrapper installed once: a 401 from `/api/*` (other than `/api/login` and `/api/session`) in password mode clears the session.
+   - A `fetch` wrapper installed once: a 401 from `/api/*` whose JSON body has `code === 'unauthorized'` (read from a clone of the response) clears the session, in password mode. Any other 401 passes through untouched.
 
 ## Group 2: UI
 
@@ -41,6 +41,6 @@
    - a wrong password shows the error;
    - a right one enters with its role;
    - "Cerrar sesión" returns to the login;
-   - a 401 from an API returns to the login;
+   - a 401 `unauthorized` from an API returns to the login, and a 401 `unauthorized:chat` (demo customer) doesn't;
    - databricks mode shows no login and no logout button;
    - PT texts.
