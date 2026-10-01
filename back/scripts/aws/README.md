@@ -67,6 +67,19 @@ and the script exits with an error.
 To go back, check out the previous commit and run `deploy.sh` again: its
 image is already in ECR.
 
+## Pointing at the agent on AWS
+
+```bash
+scripts/aws/setup.sh base                                   # lets the role read the agent's token
+scripts/aws/setup.sh agent https://<agent>/invocations      # API_PROXY + AGENT_TOKEN
+scripts/aws/setup.sh agent https://<databricks app>/invocations --databricks   # back to Databricks
+```
+
+With `AGENT_TOKEN` the back sends the shared secret
+(`bank-assistant/agent/invoke-token`) in `x-agent-token` and no Databricks
+token. Without it, it sends the service principal's OAuth token, as the
+Databricks App expects.
+
 ## What this deployment does not do
 
 - It runs no migrations. The Databricks deploy applies them to the shared

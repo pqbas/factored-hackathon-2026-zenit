@@ -3,6 +3,7 @@
 #   setup.sh base      ECR repository and the two IAM roles
 #   setup.sh secrets   Secrets Manager secrets, from the environment
 #   setup.sh service   the App Runner service (needs base, secrets, an image)
+#   setup.sh agent URL point the service at the agent on AWS (its /invocations)
 # Every resource is tagged project=bank-assistant. See README.md.
 source "$(dirname "$0")/common.sh"
 
@@ -26,7 +27,7 @@ base() {
     aws iam create-role --role-name "$INSTANCE_ROLE" --tags "$TAGS" \
       --assume-role-policy-document '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Service":"tasks.apprunner.amazonaws.com"},"Action":"sts:AssumeRole"}]}' >/dev/null
   aws iam put-role-policy --role-name "$INSTANCE_ROLE" --policy-name read-own-secrets \
-    --policy-document "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":\"secretsmanager:GetSecretValue\",\"Resource\":[\"arn:aws:secretsmanager:$AWS_REGION:$ACCOUNT:secret:$SECRET_PREFIX/*\",\"arn:aws:secretsmanager:$AWS_REGION:$ACCOUNT:secret:$SP_SECRET-*\"]}]}"
+    --policy-document "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":\"secretsmanager:GetSecretValue\",\"Resource\":[\"arn:aws:secretsmanager:$AWS_REGION:$ACCOUNT:secret:$SECRET_PREFIX/*\",\"arn:aws:secretsmanager:$AWS_REGION:$ACCOUNT:secret:$SP_SECRET-*\",\"arn:aws:secretsmanager:$AWS_REGION:$ACCOUNT:secret:$AGENT_TOKEN_SECRET-*\"]}]}"
   echo "IAM roles: $ACCESS_ROLE, $INSTANCE_ROLE"
 }
 
@@ -122,7 +123,30 @@ service() {
     --query 'Service.[ServiceArn,ServiceUrl,Status]' --output text
 }
 
+# Points the running service at the agent on AWS: API_PROXY becomes its
+# /invocations URL and AGENT_TOKEN comes from the agent's secret, so the back
+# sends x-agent-token instead of the Databricks token. To go back to the
+# Databricks App, run it with that App's URL and --databricks.
+agent() {
+  local url=${1:?usage: setup.sh agent <https://.../invocations> [--databricks]}
+  local arn config
+  arn=$(service_arn)
+  [ -n "$arn" ] || { echo "No service $SERVICE" >&2; exit 1; }
+  config=$(aws apprunner describe-service --service-arn "$arn" \
+    --query 'Service.SourceConfiguration' --output json |
+    jq --arg url "$url" '.ImageRepository.ImageConfiguration.RuntimeEnvironmentVariables.API_PROXY = $url')
+  if [ "${2:-}" = "--databricks" ]; then
+    config=$(jq 'del(.ImageRepository.ImageConfiguration.RuntimeEnvironmentSecrets.AGENT_TOKEN)' <<<"$config")
+  else
+    config=$(jq --arg token "$(secret_arn "$AGENT_TOKEN_SECRET")" \
+      '.ImageRepository.ImageConfiguration.RuntimeEnvironmentSecrets.AGENT_TOKEN = $token' <<<"$config")
+  fi
+  aws apprunner update-service --service-arn "$arn" \
+    --source-configuration "$config" --query 'Service.Status' --output text
+}
+
 case "${1:-}" in
   base | secrets | service) "$1" ;;
-  *) echo "usage: setup.sh base|secrets|service" >&2; exit 1 ;;
+  agent) shift; agent "$@" ;;
+  *) echo "usage: setup.sh base|secrets|service|agent <url>" >&2; exit 1 ;;
 esac

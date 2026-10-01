@@ -11,6 +11,7 @@ import {
 import { createDatabricksProvider } from '@databricks/ai-sdk-provider';
 import { extractReasoningMiddleware, wrapLanguageModel } from 'ai';
 import { shouldInjectContextForEndpoint } from './request-context';
+import { setAgentAuth } from './agent-auth';
 
 // Header keys for passing context through streamText headers
 export const CONTEXT_HEADER_CONVERSATION_ID = 'x-databricks-conversation-id';
@@ -438,10 +439,10 @@ const provider = createDatabricksProvider({
   baseURL: `${hostname}/serving-endpoints`,
   formatUrl: ({ baseUrl, path }) => API_PROXY ?? `${baseUrl}${path}`,
   fetch: async (...[input, init]: Parameters<typeof fetch>) => {
-    // Always get fresh token for each request (will use cache if valid)
-    const currentToken = await getProviderToken();
+    // Always get fresh token for each request (will use cache if valid);
+    // the agent on AWS takes its shared secret instead (see agent-auth.ts).
     const headers = new Headers(init?.headers);
-    headers.set('Authorization', `Bearer ${currentToken}`);
+    await setAgentAuth(headers, getProviderToken);
 
     return databricksFetch(input, {
       ...init,
