@@ -1221,3 +1221,22 @@ def test_a_rejected_session_with_the_pt_selector_is_told_in_portuguese(client):
         "custom_inputs": {"session_token": "not-a-real-token", "language": "pt"},
     })
     assert _output_text(response.json()) == SESSION_REJECTED["invalid"]["pt"]
+
+
+def test_with_the_agent_token_set_invocations_needs_the_header(client, monkeypatch):
+    monkeypatch.setattr(main.app.state, "agent_token", "e2e-token")
+    assert _invoke(client, "Hola", thread_id="e2e-token-missing").status_code == 401
+    response = client.post(
+        "/invocations",
+        headers={"x-agent-token": "e2e-token"},
+        json={"input": [{"role": "user", "content": "Hola, quiero saber mi saldo"}],
+              "custom_inputs": {"session_token": "demo-mx-1", "thread_id": "e2e-token-ok"}},
+    )
+    assert response.status_code == 200
+    assert _output_text(response.json()) == FAKE_LLM_TEXT
+    assert client.get("/health").status_code == 200
+
+
+def test_without_the_agent_token_invocations_needs_no_header(client):
+    assert main.app.state.agent_token is None
+    assert _invoke(client, "Hola, quiero saber mi saldo", thread_id="e2e-no-token").status_code == 200

@@ -29,6 +29,7 @@ from mlflow.types.responses import (  # noqa: E402
 from src.config import settings  # noqa: E402
 from src.db.session_repo import resolve_session  # noqa: E402
 from src.graph.build import GRAPH_NODES, build_graph  # noqa: E402
+from src.inbound_auth import add_token_check  # noqa: E402
 from src.llm.chat import get_chat_model  # noqa: E402
 from src.llm.jev import JevClient  # noqa: E402
 from src.llm.llm_classifier import LLMClassifier  # noqa: E402
@@ -224,6 +225,8 @@ server = AgentServer("ResponsesAgent", enable_chat_proxy=False)  # UI lives in .
 
 # Define the app as a module level variable to enable multiple workers
 app = server.app  # noqa: F841
+add_token_check(app, settings.agent_token)
+logger.info("Inbound token check: %s", "on" if settings.agent_token else "off")
 if settings.tracing_enabled:
     # Links traces to a LoggedModel of the git commit; without tracing it only costs REST calls.
     setup_mlflow_git_based_version_tracking()

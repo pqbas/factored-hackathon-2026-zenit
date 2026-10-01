@@ -22,6 +22,7 @@ class Settings:
     lakebase_database: str
     bank_ro_schema: str
     sim_sessions_table: str
+    agent_token: str | None
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -46,6 +47,8 @@ class Settings:
             bank_ro_schema=os.getenv("BANK_RO_SCHEMA", "bank_ro"),
             # The daily simulation's sessions (sim- tokens), written by the back's script.
             sim_sessions_table=os.getenv("SIM_SESSIONS_TABLE", "bank_sessions.sim_sessions"),
+            # The shared token callers must send in x-agent-token (AWS); unset, there is no check.
+            agent_token=os.getenv("AGENT_TOKEN") or None,
         )
 
 
