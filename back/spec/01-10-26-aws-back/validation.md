@@ -2,38 +2,41 @@
 
 ## Automated Tests
 
-- [ ] `npm run test:with-db` en 0, una sola suite a la vez (necesita el
-      Postgres de pruebas, hoy roto hasta que se reinicie Docker)
-- [ ] `npx tsc --noEmit` y `npm run build:server` en 0
-- [ ] `cd front && npm run build` en 0
+- [x] `npm run test:with-db` en 0, una sola suite a la vez: 320 passed y 1
+      flaky ajeno (supervision). Corrió contra la base de pruebas por un
+      relay, porque el puerto :55432 del host sigue roto
+- [x] `npx tsc --noEmit` y `npm run build:server` en 0
+- [x] `cd front && npm run build` en 0
 
 ### Specific test coverage required
 
 #### Unit
 
-- [ ] Hash, cookie (válida, alterada, vencida), usuarios inválidos, límite
+- [x] Hash, cookie (válida, alterada, vencida), usuarios inválidos, límite
       de intentos
 
 #### Integration
 
-- [ ] Sin capa separada
+- [x] Sin capa separada
 
 #### End-to-end
 
-- [ ] Sesión sin cookie, login por rol, 401, 429, guard de `/api/*`,
+- [x] Sesión sin cookie, login por rol, 401, 429, guard de `/api/*`,
       header falso ignorado, logout
-- [ ] En modo databricks, login y logout dan 404 y la sesión sale de los
+- [x] En modo databricks, login y logout dan 404 y la sesión sale de los
       headers como hoy
 
 ## Manual Checks
 
-- [ ] La imagen construye y corre en local con `AUTH_MODE=password`: abre el
+- [x] La imagen construye y corre en local con `AUTH_MODE=password`: abre el
       login, entra cada usuario y ve lo de su rol
-- [ ] `docker history` y el repo no tienen secretos
-- [ ] (Con AWS y el SP) el servicio queda RUNNING, un chat de saldo
-      responde, queda en Lakebase y se ve en la consola
-- [ ] (Con AWS) un segundo deploy no corta `/ping`
-- [ ] Prod en Databricks sigue RUNNING y sin cambios
+- [x] `docker history` y el repo no tienen secretos
+- [x] (Con AWS y el SP) el servicio queda RUNNING, un chat de saldo
+      responde, queda en Lakebase y se ve en la consola (chat 8bee121d, 7.2 s;
+      admin, asesor y cliente entran con su rol; un header falso da 401)
+- [ ] (Con AWS) un segundo deploy no corta `/ping` (pendiente: se mide en
+      el primer `deploy.sh` después del merge)
+- [x] Prod en Databricks sigue RUNNING y sin cambios
 
 ## Definition of Done
 
