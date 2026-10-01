@@ -1,5 +1,6 @@
 import {
   Router,
+  type NextFunction,
   type Request,
   type Response,
   type Router as RouterType,
@@ -23,17 +24,19 @@ export const authRouter: RouterType = Router();
 
 const attempts = createAttemptLimiter();
 
-authRouter.use((_req, res, next) => {
+// Mounted on /api next to the other routers, so the mode check is per route:
+// a router-level one would answer 404 for every /api path on Databricks.
+function passwordModeOnly(_req: Request, res: Response, next: NextFunction) {
   if (getAuthMode() !== 'password') return res.status(404).end();
   next();
-});
+}
 
 /**
  * POST /api/login { username, password } - Signs a demo user in: the body of
  * GET /api/session plus the session cookie. 401 invalid_credentials, 429
  * too_many_attempts after 10 failures per IP in 5 minutes.
  */
-authRouter.post('/login', (req: Request, res: Response) => {
+authRouter.post('/login', passwordModeOnly, (req: Request, res: Response) => {
   const demo = getDemoAuth();
   if ('error' in demo) {
     return res.status(503).json({ code: 'login_unavailable' });
@@ -77,7 +80,7 @@ authRouter.post('/login', (req: Request, res: Response) => {
 /**
  * POST /api/logout - Ends the session: 204 and an expired cookie.
  */
-authRouter.post('/logout', (_req: Request, res: Response) => {
+authRouter.post('/logout', passwordModeOnly, (_req: Request, res: Response) => {
   const demo = getDemoAuth();
   const secure = 'config' in demo ? demo.config.secureCookie : true;
   res.setHeader('Set-Cookie', sessionCookie('', secure, 0));

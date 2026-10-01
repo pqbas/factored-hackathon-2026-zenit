@@ -26,7 +26,7 @@ base() {
     aws iam create-role --role-name "$INSTANCE_ROLE" --tags "$TAGS" \
       --assume-role-policy-document '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Service":"tasks.apprunner.amazonaws.com"},"Action":"sts:AssumeRole"}]}' >/dev/null
   aws iam put-role-policy --role-name "$INSTANCE_ROLE" --policy-name read-own-secrets \
-    --policy-document "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":\"secretsmanager:GetSecretValue\",\"Resource\":\"arn:aws:secretsmanager:$AWS_REGION:$ACCOUNT:secret:$SECRET_PREFIX/*\"}]}"
+    --policy-document "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":\"secretsmanager:GetSecretValue\",\"Resource\":[\"arn:aws:secretsmanager:$AWS_REGION:$ACCOUNT:secret:$SECRET_PREFIX/*\",\"arn:aws:secretsmanager:$AWS_REGION:$ACCOUNT:secret:$SP_SECRET-*\"]}]}"
   echo "IAM roles: $ACCESS_ROLE, $INSTANCE_ROLE"
 }
 
@@ -39,49 +39,49 @@ put_secret() { # name, value
   echo "Secret: $SECRET_PREFIX/$1"
 }
 
-# Values come from the environment, never from a file of the repo:
-#   DATABRICKS_CLIENT_SECRET  the service principal's OAuth secret
-#   DEMO_USERS_JSON           see hash-password.mjs
-# SESSION_SECRET is generated here the first time.
+# DEMO_USERS_JSON comes from the environment (see hash-password.mjs), never
+# from a file of the repo. SESSION_SECRET is generated here the first time.
+# The service principal's secret ($SP_SECRET) is created apart.
 secrets() {
-  : "${DATABRICKS_CLIENT_SECRET:?set DATABRICKS_CLIENT_SECRET}"
   : "${DEMO_USERS_JSON:?set DEMO_USERS_JSON}"
-  put_secret databricks-client-secret "$DATABRICKS_CLIENT_SECRET"
   put_secret demo-users "$DEMO_USERS_JSON"
   aws secretsmanager describe-secret --secret-id "$SECRET_PREFIX/session-secret" >/dev/null 2>&1 ||
     put_secret session-secret "$(openssl rand -hex 32)"
 }
 
 secret_arn() {
-  aws secretsmanager describe-secret --secret-id "$SECRET_PREFIX/$1" --query ARN --output text
+  aws secretsmanager describe-secret --secret-id "$1" --query ARN --output text
 }
 
 # Non-secret settings, from the environment:
 #   IMAGE_TAG             a tag already pushed (deploy.sh pushes the commit's)
-#   DATABRICKS_HOST       https://<workspace>
-#   DATABRICKS_CLIENT_ID  the service principal's client id (also PGUSER)
 #   PGHOST                the Lakebase instance's host
 #   API_PROXY             the agent's /invocations URL
 #   ADMIN_EMAILS, ADVISOR_EMAILS   the demo users' emails, by role
 #   DEMO_CUSTOMERS_JSON   as in back/app.yaml
 service() {
-  for name in IMAGE_TAG DATABRICKS_HOST DATABRICKS_CLIENT_ID PGHOST API_PROXY \
+  for name in IMAGE_TAG PGHOST API_PROXY \
     ADMIN_EMAILS ADVISOR_EMAILS DEMO_CUSTOMERS_JSON; do
     [ -n "${!name:-}" ] || { echo "set $name" >&2; exit 1; }
   done
   [ -z "$(service_arn)" ] || { echo "Service $SERVICE already exists; use deploy.sh" >&2; exit 1; }
 
-  local config
+  # Host and client id aren't secret; they're read from the principal's
+  # secret so there is one source for them. PGUSER is the client id.
+  local sp host client config
+  sp=$(secret_arn "$SP_SECRET")
+  host=$(aws secretsmanager get-secret-value --secret-id "$SP_SECRET" --query SecretString --output text | jq -r .DATABRICKS_HOST)
+  client=$(aws secretsmanager get-secret-value --secret-id "$SP_SECRET" --query SecretString --output text | jq -r .DATABRICKS_CLIENT_ID)
   config=$(jq -n \
     --arg image "$IMAGE:$IMAGE_TAG" \
     --arg access "arn:aws:iam::$ACCOUNT:role/$ACCESS_ROLE" \
-    --arg host "$DATABRICKS_HOST" --arg client "$DATABRICKS_CLIENT_ID" \
+    --arg host "$host" --arg client "$client" \
     --arg pghost "$PGHOST" --arg proxy "$API_PROXY" \
     --arg admins "$ADMIN_EMAILS" --arg advisors "$ADVISOR_EMAILS" \
     --arg customers "$DEMO_CUSTOMERS_JSON" \
-    --arg sp "$(secret_arn databricks-client-secret)" \
-    --arg session "$(secret_arn session-secret)" \
-    --arg users "$(secret_arn demo-users)" \
+    --arg sp "$sp:DATABRICKS_CLIENT_SECRET::" \
+    --arg session "$(secret_arn "$SECRET_PREFIX/session-secret")" \
+    --arg users "$(secret_arn "$SECRET_PREFIX/demo-users")" \
     '{
       AuthenticationConfiguration: { AccessRoleArn: $access },
       AutoDeploymentsEnabled: false,

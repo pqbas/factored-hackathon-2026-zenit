@@ -11,9 +11,14 @@ principal. Users sign in with the demo login (`AUTH_MODE=password`).
 
 - An AWS session (`aws sts get-caller-identity`), Docker, `jq`, `openssl`.
 - A Databricks service principal with an OAuth secret and:
-  - CAN_USE on the agent's App;
-  - a Postgres role on the Lakebase instance, with the grants the UI app's
-    principal has on `ai_chatbot`, `bank_ro` and `bank_sessions`.
+  - the `workspace-access` entitlement and CAN_USE on the agent's App
+    (without the entitlement the App answers 302);
+  - its secret in Secrets Manager as `bank-assistant/databricks-sp`, a JSON
+    with `DATABRICKS_HOST`, `DATABRICKS_CLIENT_ID` and
+    `DATABRICKS_CLIENT_SECRET`;
+  - a Postgres role on the Lakebase instance: `lakebase-grants.sql` creates
+    it, with read and write on `ai_chatbot` and read on `bank_ro` and
+    `bank_sessions`.
 
 ## Resources
 
@@ -24,7 +29,7 @@ All of them are tagged `project=bank-assistant`.
 | ECR repository | `bank-assistant-back` |
 | IAM role, pulls the image | `bank-assistant-apprunner-ecr-access` |
 | IAM role, reads the secrets | `bank-assistant-back-instance` |
-| Secrets Manager | `bank-assistant/back/databricks-client-secret`, `session-secret`, `demo-users` |
+| Secrets Manager | `bank-assistant/databricks-sp` (the principal, created apart), `bank-assistant/back/session-secret`, `bank-assistant/back/demo-users` |
 | App Runner service | `bank-assistant-back` (1 vCPU, 2 GB, health check `/ping`) |
 
 ## First time
@@ -36,11 +41,10 @@ scripts/aws/deploy.sh --push         # build and push the commit's image
 # One hash per demo user (admin, asesor, cliente):
 printf '%s' "$PASSWORD" | node scripts/aws/hash-password.mjs
 export DEMO_USERS_JSON='[{"username":"admin","email":"...","name":"...","passwordHash":"..."}]'
-export DATABRICKS_CLIENT_SECRET=...
 scripts/aws/setup.sh secrets
 
 export IMAGE_TAG=<tag printed by deploy.sh --push>
-export DATABRICKS_HOST=... DATABRICKS_CLIENT_ID=... PGHOST=... API_PROXY=...
+export PGHOST=... API_PROXY=...
 export ADMIN_EMAILS=... ADVISOR_EMAILS=... DEMO_CUSTOMERS_JSON=...
 scripts/aws/setup.sh service
 ```
@@ -72,5 +76,5 @@ image is already in ECR.
 
 ## Removing everything
 
-Delete the App Runner service, the three secrets, the two IAM roles and the
+Delete the App Runner service, the secrets, the two IAM roles and the
 ECR repository, all tagged `project=bank-assistant`.

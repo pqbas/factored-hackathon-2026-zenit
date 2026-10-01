@@ -12,6 +12,9 @@ SERVICE=$PROJECT-back
 ACCESS_ROLE=$PROJECT-apprunner-ecr-access
 INSTANCE_ROLE=$PROJECT-back-instance
 SECRET_PREFIX=$PROJECT/back
+# The Databricks service principal's secret, created apart: a JSON with
+# DATABRICKS_HOST, DATABRICKS_CLIENT_ID and DATABRICKS_CLIENT_SECRET.
+SP_SECRET=$PROJECT/databricks-sp
 
 ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
 REGISTRY=$ACCOUNT.dkr.ecr.$AWS_REGION.amazonaws.com
