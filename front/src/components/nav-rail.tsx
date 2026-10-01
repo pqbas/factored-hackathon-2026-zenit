@@ -1,5 +1,6 @@
 import {
   ChartColumn,
+  LogOut,
   FlaskConical,
   MessageCircle,
   MessagesSquare,
@@ -79,7 +80,7 @@ const NAV_ITEMS: NavItem[] = [
 export function NavRail() {
   const { pathname } = useLocation();
   const { t } = useLang();
-  const { session, role, loading } = useSession();
+  const { session, role, loading, authMode, logout } = useSession();
   const { resolvedTheme, setTheme } = useTheme();
   const isDark = resolvedTheme !== 'light';
   const themeLabel = isDark ? t.nav.lightMode : t.nav.darkMode;
@@ -141,6 +142,23 @@ export function NavRail() {
           </TooltipTrigger>
           <TooltipContent side="right">{themeLabel}</TooltipContent>
         </Tooltip>
+        {/* Only with the demo login; Databricks Apps has no session to close. */}
+        {authMode === 'password' && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                data-testid="logout-button"
+                aria-label={t.auth.logout}
+                onClick={() => void logout()}
+                className="mb-2 flex size-11 items-center justify-center rounded-[10px] text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+              >
+                <LogOut className="size-5" strokeWidth={1.7} />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="right">{t.auth.logout}</TooltipContent>
+          </Tooltip>
+        )}
         {userName && (
           <Tooltip>
             <TooltipTrigger asChild>

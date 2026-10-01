@@ -14,6 +14,7 @@ import ConversationsPage from '@/pages/ConversationsPage';
 import ProductsPage from '@/pages/ProductsPage';
 import MetricsPage from '@/pages/MetricsPage';
 import { RequireSection } from '@/components/require-section';
+import { AuthGate } from '@/components/auth-gate';
 
 function App() {
   return (
@@ -25,50 +26,52 @@ function App() {
     >
       <SessionProvider>
         <LangProvider>
-          <AppConfigProvider>
-            <DataStreamProvider>
-              <Toaster position="top-center" />
-              <Routes>
-                <Route path="/" element={<RootLayout />}>
-                  <Route element={<AppShell />}>
-                    <Route element={<ChatLayout />}>
-                      <Route index element={<NewChatPage />} />
-                      <Route path="chat/:id" element={<ChatPage />} />
+          <AuthGate>
+            <AppConfigProvider>
+              <DataStreamProvider>
+                <Toaster position="top-center" />
+                <Routes>
+                  <Route path="/" element={<RootLayout />}>
+                    <Route element={<AppShell />}>
+                      <Route element={<ChatLayout />}>
+                        <Route index element={<NewChatPage />} />
+                        <Route path="chat/:id" element={<ChatPage />} />
+                      </Route>
+                      <Route
+                        path="conversations"
+                        element={
+                          <RequireSection section="chats">
+                            <ConversationsPage />
+                          </RequireSection>
+                        }
+                      />
+                      {/* The admin view became Chats (the admin supervises there). */}
+                      <Route
+                        path="admin"
+                        element={<Navigate to="/conversations" replace />}
+                      />
+                      <Route
+                        path="metrics"
+                        element={
+                          <RequireSection section="metrics">
+                            <MetricsPage />
+                          </RequireSection>
+                        }
+                      />
+                      <Route
+                        path="products"
+                        element={
+                          <RequireSection section="products">
+                            <ProductsPage />
+                          </RequireSection>
+                        }
+                      />
                     </Route>
-                    <Route
-                      path="conversations"
-                      element={
-                        <RequireSection section="chats">
-                          <ConversationsPage />
-                        </RequireSection>
-                      }
-                    />
-                    {/* The admin view became Chats (the admin supervises there). */}
-                    <Route
-                      path="admin"
-                      element={<Navigate to="/conversations" replace />}
-                    />
-                    <Route
-                      path="metrics"
-                      element={
-                        <RequireSection section="metrics">
-                          <MetricsPage />
-                        </RequireSection>
-                      }
-                    />
-                    <Route
-                      path="products"
-                      element={
-                        <RequireSection section="products">
-                          <ProductsPage />
-                        </RequireSection>
-                      }
-                    />
                   </Route>
-                </Route>
-              </Routes>
-            </DataStreamProvider>
-          </AppConfigProvider>
+                </Routes>
+              </DataStreamProvider>
+            </AppConfigProvider>
+          </AuthGate>
         </LangProvider>
       </SessionProvider>
     </ThemeProvider>

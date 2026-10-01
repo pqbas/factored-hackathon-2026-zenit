@@ -629,3 +629,16 @@ Shipped en PR #122 (con el cambio de /api/products de w1:p1).
 Spec: `spec/01-10-26-sin-mis-datos/`.
 
 Shipped en PR #124. Los e2e quedaron sin correr: el Postgres de pruebas no aceptaba conexiones tras el reinicio.
+
+---
+
+## Phase 38: Login de demo y cierre de sesión (Complete)
+
+**Goal:** que la app se pueda usar fuera de Databricks Apps (AWS), con un login de demo.
+
+- [x] Pantalla de login (usuario y contraseña) y botón "Cerrar sesión", en ES y PT, solo en modo `password`.
+- [x] Una sesión vencida vuelve al login; en Databricks Apps nada cambia.
+
+Spec: `spec/01-10-26-login-demo/` (front, bloque 5 de la fase general de AWS).
+
+Shipped en PR #125. Los e2e (`login.test.ts`) quedaron escritos y sin correr: el Postgres de pruebas no aceptaba conexiones.
