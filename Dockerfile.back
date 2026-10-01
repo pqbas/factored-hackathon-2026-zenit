@@ -1,0 +1,38 @@
+# The back with the UI compiled in, for AWS App Runner
+# (back/spec/01-10-26-aws-back). Build from the repo root:
+#   docker build -f Dockerfile.back -t bank-assistant-back .
+# No secret goes in the image: App Runner injects them at runtime. It runs no
+# migrations either; the Databricks deploy applies them to the shared database.
+
+FROM node:22-slim AS build
+WORKDIR /repo
+
+# The UI compiles the shared code of back/packages from source.
+COPY back/package.json back/package-lock.json back/
+COPY back/server/package.json back/server/
+COPY back/packages back/packages
+COPY front/package.json front/package-lock.json front/
+RUN cd back && npm ci --no-audit --no-fund \
+ && cd ../front && npm ci --no-audit --no-fund
+
+COPY back back
+COPY front front
+RUN cd front && npm run build \
+ && cd ../back && npm run build:server \
+ && cp -r ../front/dist server/public \
+ && npm prune --omit=dev --no-audit --no-fund
+
+FROM node:22-slim
+ENV NODE_ENV=production PORT=8080
+WORKDIR /app/back
+COPY --from=build --chown=node:node /repo/back/package.json ./
+COPY --from=build --chown=node:node /repo/back/node_modules ./node_modules
+COPY --from=build --chown=node:node /repo/back/packages ./packages
+COPY --from=build --chown=node:node /repo/back/server/package.json ./server/
+COPY --from=build --chown=node:node /repo/back/server/dist ./server/dist
+COPY --from=build --chown=node:node /repo/back/server/public ./server/public
+
+USER node
+WORKDIR /app/back/server
+EXPOSE 8080
+CMD ["node", "dist/index.mjs"]

@@ -11,9 +11,9 @@
 | `back/server/src/index.ts` | existente | Modificado: rutas, guard, validación al arrancar, `AGENT_QUEUE_WORKER` |
 | `back/scripts/aws/hash-password.mjs` | — | Nuevo |
 | `back/scripts/aws/setup.sh`, `deploy.sh`, `README.md` | — | Nuevos |
-| `Dockerfile.back`, `.dockerignore` (raíz del repo) | — | Nuevos |
+| `Dockerfile.back`, `Dockerfile.back.dockerignore` (raíz del repo) | — | Nuevos |
 | `back/tests/ai-sdk-provider/demo-auth.test.ts` | — | Nuevo |
-| `back/tests/routes/login.test.ts` | — | Nuevo |
+| `back/tests/ai-sdk-provider/login.test.ts` | — | Nuevo |
 | `back/.env.example` | existente | Modificado: variables nuevas |
 
 ---
@@ -38,18 +38,19 @@
 5. `index.ts`:
    - monta `/api/login` y `/api/logout`, y el guard antes de los demás
      routers;
-   - en modo password, falla al arrancar si falta `SESSION_SECRET` o si
-     `DEMO_USERS_JSON` no es válido;
+   - en modo password, si falta `SESSION_SECRET` o `DEMO_USERS_JSON` no es
+     válido, `/ping` responde 503 y el login 503;
    - no arranca el worker con `AGENT_QUEUE_WORKER=off`.
 
 ## Group 2: Imagen
 
-6. `Dockerfile.back`, multi-etapa sobre `node:20-slim`, con el repo como
+6. `Dockerfile.back`, multi-etapa sobre `node:22-slim`, con el repo como
    contexto:
    - compila el front y el server, y copia el front a `server/public`;
    - la etapa final lleva solo lo necesario para `npm run start`, corre con
      un usuario sin privilegios y expone 8080.
-7. `.dockerignore`: `node_modules`, `.env*`, `.git`, resultados de tests.
+7. `Dockerfile.back.dockerignore`: solo entran `back/` y `front/`, sin
+   `node_modules`, `.env*`, tests ni scripts.
 
 ## Group 3: AWS (no se ejecuta hasta tener la sesión de AWS y el SP)
 
@@ -72,12 +73,16 @@
     - `DEMO_USERS_JSON` inválido;
     - límite de intentos.
 12. Integration: no hay capa separada.
-13. End-to-end, `login.test.ts`, contra un back levantado con
-    `AUTH_MODE=password` (los demás tests siguen en modo databricks):
+13. End-to-end, `login.test.ts`, contra una app Express levantada en el
+    test con el middleware y los routers reales, en modo password. No usa
+    base, así que corre aunque el Postgres de pruebas esté caído. Los demás
+    tests siguen en modo databricks.
     - `/api/session` sin cookie da `user: null` y `authMode: 'password'`;
     - login correcto deja la cookie, y la sesión trae el rol de cada
       usuario;
-    - contraseña mala da 401, y la 11ª da 429;
+    - contraseña mala da 401, y la 11ª da 429 aunque cambie la primera IP
+      de `X-Forwarded-For`;
     - `/api/history` sin cookie da 401 `unauthorized`;
     - un `X-Forwarded-User` falso no da sesión;
-    - logout borra la sesión.
+    - una cookie alterada no da sesión;
+    - logout vence la cookie.

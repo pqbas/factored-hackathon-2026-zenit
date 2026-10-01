@@ -23,16 +23,21 @@ And it changes in these ways:
 4. **Modo password** (`AUTH_MODE=password`, solo en AWS):
    - el back ignora los headers `X-Forwarded-*`;
    - la sesión sale de la cookie `bank_session`, firmada con
-     `SESSION_SECRET`: HttpOnly, SameSite=Lax, 12 horas, y Secure cuando el
-     pedido llega por HTTPS;
-   - si falta `SESSION_SECRET` o `DEMO_USERS_JSON`, el back no arranca.
+     `SESSION_SECRET`: HttpOnly, SameSite=Lax, 12 horas y Secure. Solo una
+     corrida local por http la manda sin Secure
+     (`SESSION_COOKIE_INSECURE=true`);
+   - si falta `SESSION_SECRET` o `DEMO_USERS_JSON`, el back arranca pero
+     `/ping` responde 503, para que el deploy falle su health check en vez
+     de quedar medio vivo (revisión de w1:pB);
+   - el back no acepta credenciales de otros orígenes (sin CORS).
 5. **Contrato del login**, acordado con w1:pD:
    - `GET /api/session` devuelve `{ user, authMode }`, con `user: null` sin
      sesión;
    - `POST /api/login { username, password }` devuelve 200 con el cuerpo de
      `/api/session` y deja la cookie; 401 `{ code: 'invalid_credentials' }`
      si falla; 429 `{ code: 'too_many_attempts' }` tras 10 intentos fallidos
-     por IP en 5 minutos;
+     por IP en 5 minutos. La IP es la última de `X-Forwarded-For`, la que
+     agrega el proxy de App Runner; las anteriores las controla el cliente;
    - `POST /api/logout` devuelve 204 y borra la cookie;
    - todo `/api/*` sin sesión devuelve 401 `{ code: 'unauthorized' }`, salvo
      session, login y logout.
