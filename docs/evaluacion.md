@@ -12,6 +12,41 @@ corrida y el registro de cambios a los casos están en
 > - **En producción:** el examen contra las Apps desplegadas en Databricks
 >   ([`comparacion-prod.md`](../back/scripts/eval/results/comparacion-prod.md)).
 
+## El problema, en datos
+
+Línea base del servicio actual, medida sobre `call_center_interactions` del
+dataset (686,296 contactos).
+
+- **Canal:** el 85% de los contactos es por teléfono (583,250); el chat web,
+  la app y WhatsApp suman ~10%.
+- **Llamadas entrantes (480,678), por motivo:**
+
+| Motivo | % de llamadas | Resueltas en la llamada | Requieren seguimiento | Duración mediana | Espera mediana | Horas de asesor |
+| --- | --- | --- | --- | --- | --- | --- |
+| Transaccional | 35.0% | 91.5% | 22.1% | 3.4 min | ~2 min | 10,306 |
+| Producto | 22.0% | 89.6% | 23.9% | 4.4 min | ~2 min | 7,819 |
+| Queja | 17.1% | 43.7% | 62.8% | 7.2 min | ~2 min | 9,943 |
+| Técnico | 15.0% | 69.9% | 40.6% | 6.0 min | ~2 min | 7,201 |
+| Comercial | 8.0% | 65.0% | 44.8% | 9.0 min | ~2 min | 5,750 |
+| Retención | 3.0% | 60.5% | 48.9% | 8.0 min | ~2 min | 1,923 |
+
+Por qué se eligieron estos flujos:
+
+- **Consultas transaccionales (35%):** el cliente espera ~2 min y habla 3.4 min
+  para un dato que David entrega en ~2 s por chat. Es el mayor volumen y el de
+  menor riesgo: solo lectura.
+- **Quejas (17%):** solo el 43.7% se resuelve en la primera llamada y el 62.8%
+  requiere seguimiento. David no las resuelve: recolecta y verifica la ficha y
+  la deriva, para que el asesor no tenga que volver a preguntar.
+- **Retención (3%):** llamadas de 8 min con 60.5% de resolución. David
+  recolecta producto y motivo y deriva; la retención la hace el asesor.
+
+**Proyección, no medición.** David atiende por chat, no por voz. Las 10,306
+horas de llamadas transaccionales son el techo de lo que se podría desviar del
+teléfono al chat si esos clientes usaran el canal digital. No es un ahorro
+medido: depende de la adopción del canal, que este prototipo no mide. La voz
+queda como trabajo futuro ([`camino-a-produccion.md`](camino-a-produccion.md)).
+
 ## 1. Cómo se mide
 
 - **Casos:** 60 conversaciones de prueba escritas a partir de §7 de
@@ -101,7 +136,7 @@ el CVV y la contraseña sin enmascarar).
 | Gemma 3 12B | 0% | — | — | No devuelve la salida estructurada |
 | **Qwen 3 Next 80B (prod)** | **94.9%** | 2.72 s | **3.26 s** | 2% supera 4 s; 0 errores de salida |
 
-Se mantiene Qwen: es el más exacto y el más estable en la cola. Los modelos
+El clasificador evaluado y desplegado es Qwen; Jev es una alternativa externa que se midió en local. Se mantiene Qwen: es el más exacto y el más estable en la cola. Los modelos
 chicos no bajan la latencia, porque el piso de ~2.5 s es del endpoint y no del
 tamaño del modelo. Jev sería lo mejor (más exacto que los chicos y 10 veces más
 rápido), pero la App no puede salir a internet. Las reglas ya se usan donde son
