@@ -2,7 +2,7 @@ import { useLang } from '@/contexts/LangContext';
 import { CardCarousel } from '@/components/products/card-carousel';
 import { QuickActions } from '@/components/products/quick-actions';
 import { SavingsChart } from '@/components/products/savings-chart';
-import { DetailRow, StatTile } from '@/components/products/stat-tile';
+import { StatTile } from '@/components/products/stat-tile';
 import { TransactionList } from '@/components/products/transaction-list';
 import {
   formatMoney,
@@ -66,24 +66,14 @@ export function ProductOverview({
       {hasCards && <CardCarousel cards={cards} transactions={transactions} />}
 
       {/* Card movements show under their card; this is the accounts' only. */}
-      <div className={hasSavings ? 'grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]' : 'grid max-w-md gap-6'}>
-        {hasSavings && (
-          <section data-testid="overview-movements" className="flex flex-col gap-2">
-            <h2 className="px-1 font-semibold text-[15px]">{t.products.accountMovements}</h2>
-            <div className="rounded-[14px] bg-card p-1.5">
-              <TransactionList transactions={savingsTransactions(transactions, products)} showProduct />
-            </div>
-          </section>
-        )}
-
-        <section className="flex flex-col gap-2" data-testid="customer-profile">
-          <h2 className="px-1 font-semibold text-[15px]">{t.products.myData}</h2>
-          <div className="divide-y divide-border rounded-[14px] bg-card px-4 py-1">
-            <DetailRow label={t.products.name} value={`${customer.firstName} ${customer.lastName}`} />
-            <DetailRow label={t.products.customer} value={customer.customerId} />
+      {hasSavings && (
+        <section data-testid="overview-movements" className="flex flex-col gap-2">
+          <h2 className="px-1 font-semibold text-[15px]">{t.products.accountMovements}</h2>
+          <div className="rounded-[14px] bg-card p-1.5">
+            <TransactionList transactions={savingsTransactions(transactions, products)} showProduct />
           </div>
         </section>
-      </div>
+      )}
     </div>
   );
 }

@@ -369,9 +369,6 @@ const es = {
     cardsBalance: 'Saldo de tus tarjetas',
     inYourCards: 'En tus tarjetas',
     accountMovements: 'Movimientos de tus cuentas',
-    myData: 'Mis datos',
-    name: 'Nombre',
-    customer: 'Cliente',
     noMovements: 'Todavía no hay movimientos.',
     txTypes: {
       Purchase: 'Compra',
@@ -758,9 +755,6 @@ const pt: Messages = {
     cardsBalance: 'Saldo dos seus cartões',
     inYourCards: 'Nos seus cartões',
     accountMovements: 'Movimentações das suas contas',
-    myData: 'Meus dados',
-    name: 'Nome',
-    customer: 'Cliente',
     noMovements: 'Ainda não há movimentações.',
     txTypes: {
       Purchase: 'Compra',
