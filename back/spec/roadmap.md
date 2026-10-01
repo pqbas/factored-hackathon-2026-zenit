@@ -503,3 +503,24 @@ spec/30-09-26-movimientos-por-producto/.
 - [x] `transactions` trae los últimos 10 de cada producto activo, no 10 en
       total. La forma es la misma, en una lista plana por fecha descendente.
 
+---
+
+## Phase 22: Back y front en AWS, con login de demo (Complete)
+
+**Goal:** el mismo back de main, con el front adentro, corre en AWS App
+Runner en paralelo a Databricks Apps (etapa 1 de
+`spec/01-10-26-despliegue-aws/`, aprobada por el usuario vía w1:pB,
+01-10-26). Spec en spec/01-10-26-aws-back/.
+
+- [x] Modo password (`AUTH_MODE=password`): login con usuarios fijos y cookie
+      firmada. En ese modo el back ignora los headers `X-Forwarded-*`.
+- [x] Imagen Docker (`Dockerfile.back`) y scripts `scripts/aws/setup.sh` y
+      `deploy.sh`; secretos en Secrets Manager.
+- [x] Lakebase y el agente de Databricks con el service principal
+      `bank-assistant-aws` (`scripts/aws/lakebase-grants.sql`).
+- [x] `AGENT_QUEUE_WORKER=off` en AWS: la cola la contesta Databricks.
+- [x] Servicio `bank-assistant-back` en us-west-2, verificado de punta a
+      punta.
+
+Pendiente: login corporativo (Cognito o SSO) en vez de los usuarios de demo.
+
