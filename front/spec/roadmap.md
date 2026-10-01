@@ -642,3 +642,15 @@ Shipped en PR #124. Los e2e quedaron sin correr: el Postgres de pruebas no acept
 Spec: `spec/01-10-26-login-demo/` (front, bloque 5 de la fase general de AWS).
 
 Shipped en PR #125. Los e2e (`login.test.ts`) quedaron escritos y sin correr: el Postgres de pruebas no aceptaba conexiones.
+
+---
+
+## Phase 39: "David está escribiendo" durante toda la espera (Complete)
+
+**Goal:** que el cliente siempre vea que David está respondiendo, sin huecos.
+
+- [x] Indicador desde el envío hasta el primer texto, también con el turno en cola; sin acciones en un mensaje de David vacío.
+
+Spec: `spec/01-10-26-indicador-espera/`.
+
+Shipped en PR #131.

@@ -31,6 +31,9 @@ function PureMessageActions({
     .join('\n')
     .trim();
 
+  // An assistant message without text has nothing to act on.
+  if (message.role === 'assistant' && !textFromParts) return null;
+
   const handleCopy = async () => {
     if (!textFromParts) {
       toast.error("There's no text to copy!");

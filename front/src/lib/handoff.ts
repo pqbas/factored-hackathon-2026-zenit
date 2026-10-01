@@ -106,3 +106,33 @@ export async function fetchNewMessages(
   if (!res.ok || res.status === 204) return null;
   return { messages: convertToUIMessages(await res.json()), full };
 }
+
+// Where "David está escribiendo" shows, from the moment the customer sends
+// until David's first text: inside David's message once it exists (the
+// stream's `start` creates it empty, and the chat stays `submitted` until
+// content arrives), else at the end of the list. Null when David owes nothing
+// or a person handles the chat. A queued turn (agentPending) counts: David
+// answers on his own, and the reply comes by polling.
+export function isAwaitingDavid({
+  status,
+  messages,
+  handledBy,
+  agentPending,
+}: {
+  status: string;
+  messages: ChatMessage[];
+  handledBy: HandledBy;
+  agentPending: boolean;
+}): 'message' | 'list' | null {
+  if (handledBy !== 'ai_agent') return null;
+  const last = messages.at(-1);
+  if (!last) return null;
+  const sender = senderOf(last);
+  const busy = status === 'submitted' || status === 'streaming';
+  if (sender === 'customer') return busy || agentPending ? 'list' : null;
+  if (sender === 'agent' && busy) {
+    const hasText = last.parts.some((part) => part.type === 'text' && part.text.length > 0);
+    return hasText ? null : 'message';
+  }
+  return null;
+}
