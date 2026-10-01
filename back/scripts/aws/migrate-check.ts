@@ -18,7 +18,7 @@ const journal = JSON.parse(
 async function main() {
   const sql = postgres(await getConnectionUrl(), {
     max: 1,
-    connection: { default_transaction_read_only: 'on' },
+    connection: { default_transaction_read_only: true },
   });
   try {
     const [{ applied }] = await sql`
