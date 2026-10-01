@@ -620,10 +620,12 @@ Shipped en PR #122 (con el cambio de /api/products de w1:p1).
 
 ---
 
-## Phase 37: Mis productos sin "Mis datos"
+## Phase 37: Mis productos sin "Mis datos" (Complete)
 
 **Goal:** que el cliente no vea datos repetidos ni códigos internos.
 
-- [ ] Se quita "Mis datos" (nombre y customerId) del resumen.
+- [x] Se quita "Mis datos" (nombre y customerId) del resumen.
 
 Spec: `spec/01-10-26-sin-mis-datos/`.
+
+Shipped en PR #124. Los e2e quedaron sin correr: el Postgres de pruebas no aceptaba conexiones tras el reinicio.
