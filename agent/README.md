@@ -77,6 +77,8 @@ Cada decisión técnica tiene su propio documento en [`docs/`](docs/):
   functions, con el costo medido y cómo correrlo en local.
 - [Observabilidad](docs/15-observabilidad.md): por qué la App de prod no genera trazas
   de MLflow y qué queda pendiente.
+- [El agente en AWS](docs/16-agente-en-aws.md): el mismo agente en App Runner, con
+  Jev, un token de entrada y la latencia medida.
 
 ### Grafo principal
 
