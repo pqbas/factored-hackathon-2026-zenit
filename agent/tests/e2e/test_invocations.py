@@ -1240,3 +1240,7 @@ def test_with_the_agent_token_set_invocations_needs_the_header(client, monkeypat
 def test_without_the_agent_token_invocations_needs_no_header(client):
     assert main.app.state.agent_token is None
     assert _invoke(client, "Hola, quiero saber mi saldo", thread_id="e2e-no-token").status_code == 200
+
+
+def test_without_the_agent_token_the_latency_route_does_not_exist(client):
+    assert client.post("/diag/latency", json={"probe": "jev"}).status_code == 404
