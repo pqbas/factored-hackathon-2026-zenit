@@ -4,14 +4,14 @@
 
 ## Status and execution
 
-Prepared locally; not imported or executed in Databricks. All code outputs and execution counts are intentionally empty. Historical findings are explicitly attributed to the existing reports.
+Imported into the personal workspace and executed successfully on 2026-10-02 with a one-time serverless run. The checked-in source keeps outputs empty; aggregate results are recorded in `../reports/2026-10-02/eda_report.md` and `eda_data.json`.
 
-1. Obtain approval before creating the notebook resource in the workspace. Use an approved existing Databricks Python environment with Spark, pandas, and matplotlib; a SQL warehouse alone is not sufficient evidence of compatibility.
-2. Import the notebook or open it from an approved workspace repository. Do not provision compute or install packages without reviewing the requirement.
-3. Confirm read access to `workspace.bank_silver.transactions`, Delta version 1, and the runtime/session timezone. If time travel is unavailable, stop; do not silently switch snapshots or change retention.
-4. Run from the first cell downward. Computations read source data only. Session DataFrames and plots do not create database tables. Outputs are aggregates capped at 500 rows; excessive cardinality fails explicitly.
-5. Fill the final Markdown decision table using actual outputs. Source timezone remains unconfirmed, so report rather than conceal timezone-dependent differences.
-6. Review outputs before saving an executed copy. Never retain individual transaction/customer records or credentials. Preserve the unexecuted source when sharing code unless an executed evidence artifact is explicitly intended.
+1. The notebook is stored at `/Users/diegoalonsorv02@gmail.com/fraud-eda/01_fraud_eda`.
+2. A one-time run on serverless completed successfully against `workspace.bank_silver.transactions` version 1. It used the workspace UTC session timezone.
+3. To rerun, use notebook serverless compute or a one-time serverless notebook task. No classic cluster was provisioned.
+4. The notebook reads source data; aggregate DataFrames and plots are session-only. Display results are capped at 500 rows, and the final run payload contains only aggregates.
+5. Review the dated evidence report. Source timestamp timezone semantics and exchange-rate availability at transaction time remain unresolved.
+6. Keep the checked-in source output-free. Do not save customer-level records or credentials in a notebook output or artifact.
 
 ## Scope and safeguards
 
@@ -28,4 +28,6 @@ The notebook documents existing feature-helper edge-case differences rather than
 - [Feature implementation](../features.py)
 - [Requirements](../spec/28-09-26-fraud-model/requirements.md)
 
-Local checks validate notebook structure and Python cell syntax, not Spark execution or live query correctness. Runtime validation remains pending.
+The successful Databricks run validates notebook execution on this workspace runtime and the pinned source snapshot. It does not validate feature usefulness or model quality.
+
+The final notebook cell returns a compact JSON payload of aggregate results through the one-time run output API. It includes no row-level identifiers. Use this payload as the source for the dated evidence report.

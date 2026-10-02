@@ -88,8 +88,8 @@ Proposed development storage: `workspace.bank_ml`; specific permissions will be 
 
 ## 7. Dependencies and open decisions
 
-- Silver reads were blocked by USE SCHEMA at the last check; access was not rechecked for this specification.
-- Confirm training compute: warehouse and MLflow permissions do not establish compatibility with these models.
+- Silver read access was confirmed on 2026-10-02; the EDA notebook completed on Databricks serverless against Delta version 1.
+- Confirm training compute for scikit-learn model fitting: successful Spark EDA execution does not establish memory/runtime compatibility for model training.
 - Verify is_fraud origin/maturation, learnable signal, timezone, and USD conversion.
 - Confirm memory/CPU and set a runtime budget before launching challengers.
 - Obtain write permissions on an isolated ML schema and model registration permissions before deploying outputs.

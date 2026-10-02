@@ -1,0 +1,402 @@
+{
+  "execution": {
+    "run_id": 65077500767968,
+    "task_run_id": 1088669289855459,
+    "run_name": "fraud_eda",
+    "result_state": "SUCCESS",
+    "execution_duration_ms": 67000,
+    "run_page_url": "https://dbc-184e79fe-04dc.cloud.databricks.com/?o=7474647867986650#job/851109356293280/run/1088669289855459"
+  },
+  "eda": {
+    "run_context": {
+      "started_at_utc": "2026-10-02T19:43:12.518890+00:00",
+      "source": "workspace.bank_silver.transactions",
+      "delta_version": 1,
+      "spark_version": "4.2.0",
+      "session_timezone": "Etc/UTC",
+      "scope": "full snapshot integrity; train-only feature exploration"
+    },
+    "snapshot_metrics": [
+      {
+        "rows": 4425008,
+        "distinct_ids": 4425008,
+        "null_ids": 0,
+        "null_labels": 0,
+        "fraud": 4316,
+        "null_dates": 0,
+        "first_transaction": "2023-06-17 06:01:30",
+        "last_transaction": "2026-06-18 05:59:41"
+      }
+    ],
+    "split_metrics": [
+      {
+        "split": "test",
+        "rows": 686502,
+        "fraud": 603,
+        "null_labels": 0,
+        "labeled_rows": 686502,
+        "fraud_rate_pct": 0.0878365977083825
+      },
+      {
+        "split": "train",
+        "rows": 2994597,
+        "fraud": 3014,
+        "null_labels": 0,
+        "labeled_rows": 2994597,
+        "fraud_rate_pct": 0.10064793359507139
+      },
+      {
+        "split": "validation",
+        "rows": 743909,
+        "fraud": 699,
+        "null_labels": 0,
+        "labeled_rows": 743909,
+        "fraud_rate_pct": 0.09396310570244479
+      }
+    ],
+    "training_monthly_metrics": [
+      {
+        "month": "2023-06",
+        "rows": 56260,
+        "fraud": 54,
+        "null_labels": 0,
+        "labeled_rows": 56260,
+        "fraud_rate_pct": 0.09598293636686811
+      },
+      {
+        "month": "2023-07",
+        "rows": 121313,
+        "fraud": 138,
+        "null_labels": 0,
+        "labeled_rows": 121313,
+        "fraud_rate_pct": 0.11375532712899689
+      },
+      {
+        "month": "2023-08",
+        "rows": 127592,
+        "fraud": 137,
+        "null_labels": 0,
+        "labeled_rows": 127592,
+        "fraud_rate_pct": 0.10737350304094301
+      },
+      {
+        "month": "2023-09",
+        "rows": 119559,
+        "fraud": 97,
+        "null_labels": 0,
+        "labeled_rows": 119559,
+        "fraud_rate_pct": 0.0811314915648341
+      },
+      {
+        "month": "2023-10",
+        "rows": 127793,
+        "fraud": 140,
+        "null_labels": 0,
+        "labeled_rows": 127793,
+        "fraud_rate_pct": 0.10955216639409045
+      },
+      {
+        "month": "2023-11",
+        "rows": 121984,
+        "fraud": 125,
+        "null_labels": 0,
+        "labeled_rows": 121984,
+        "fraud_rate_pct": 0.1024724554039874
+      },
+      {
+        "month": "2023-12",
+        "rows": 125969,
+        "fraud": 123,
+        "null_labels": 0,
+        "labeled_rows": 125969,
+        "fraud_rate_pct": 0.09764307091427256
+      },
+      {
+        "month": "2024-01",
+        "rows": 122201,
+        "fraud": 121,
+        "null_labels": 0,
+        "labeled_rows": 122201,
+        "fraud_rate_pct": 0.09901719298532745
+      },
+      {
+        "month": "2024-02",
+        "rows": 117135,
+        "fraud": 118,
+        "null_labels": 0,
+        "labeled_rows": 117135,
+        "fraud_rate_pct": 0.10073846416527937
+      },
+      {
+        "month": "2024-03",
+        "rows": 121588,
+        "fraud": 135,
+        "null_labels": 0,
+        "labeled_rows": 121588,
+        "fraud_rate_pct": 0.11103069381846893
+      },
+      {
+        "month": "2024-04",
+        "rows": 121330,
+        "fraud": 125,
+        "null_labels": 0,
+        "labeled_rows": 121330,
+        "fraud_rate_pct": 0.10302480837385643
+      },
+      {
+        "month": "2024-05",
+        "rows": 126371,
+        "fraud": 132,
+        "null_labels": 0,
+        "labeled_rows": 126371,
+        "fraud_rate_pct": 0.10445434474681692
+      },
+      {
+        "month": "2024-06",
+        "rows": 121816,
+        "fraud": 110,
+        "null_labels": 0,
+        "labeled_rows": 121816,
+        "fraud_rate_pct": 0.09030012477835424
+      },
+      {
+        "month": "2024-07",
+        "rows": 128772,
+        "fraud": 115,
+        "null_labels": 0,
+        "labeled_rows": 128772,
+        "fraud_rate_pct": 0.0893051284440717
+      },
+      {
+        "month": "2024-08",
+        "rows": 122764,
+        "fraud": 129,
+        "null_labels": 0,
+        "labeled_rows": 122764,
+        "fraud_rate_pct": 0.10507966504838552
+      },
+      {
+        "month": "2024-09",
+        "rows": 117525,
+        "fraud": 131,
+        "null_labels": 0,
+        "labeled_rows": 117525,
+        "fraud_rate_pct": 0.11146564560731759
+      },
+      {
+        "month": "2024-10",
+        "rows": 127493,
+        "fraud": 137,
+        "null_labels": 0,
+        "labeled_rows": 127493,
+        "fraud_rate_pct": 0.10745687998556784
+      },
+      {
+        "month": "2024-11",
+        "rows": 121481,
+        "fraud": 122,
+        "null_labels": 0,
+        "labeled_rows": 121481,
+        "fraud_rate_pct": 0.10042722730303505
+      },
+      {
+        "month": "2024-12",
+        "rows": 122761,
+        "fraud": 107,
+        "null_labels": 0,
+        "labeled_rows": 122761,
+        "fraud_rate_pct": 0.08716123198735755
+      },
+      {
+        "month": "2025-01",
+        "rows": 122180,
+        "fraud": 122,
+        "null_labels": 0,
+        "labeled_rows": 122180,
+        "fraud_rate_pct": 0.09985267637911278
+      },
+      {
+        "month": "2025-02",
+        "rows": 110465,
+        "fraud": 110,
+        "null_labels": 0,
+        "labeled_rows": 110465,
+        "fraud_rate_pct": 0.09957905218847599
+      },
+      {
+        "month": "2025-03",
+        "rows": 123716,
+        "fraud": 112,
+        "null_labels": 0,
+        "labeled_rows": 123716,
+        "fraud_rate_pct": 0.09052992337288629
+      },
+      {
+        "month": "2025-04",
+        "rows": 120744,
+        "fraud": 103,
+        "null_labels": 0,
+        "labeled_rows": 120744,
+        "fraud_rate_pct": 0.08530444576956205
+      },
+      {
+        "month": "2025-05",
+        "rows": 126997,
+        "fraud": 131,
+        "null_labels": 0,
+        "labeled_rows": 126997,
+        "fraud_rate_pct": 0.10315204296164476
+      },
+      {
+        "month": "2025-06",
+        "rows": 118788,
+        "fraud": 140,
+        "null_labels": 0,
+        "labeled_rows": 118788,
+        "fraud_rate_pct": 0.1178570225948749
+      }
+    ],
+    "training_feature_coverage": [
+      {
+        "feature": "amount",
+        "nulls": 0,
+        "null_pct": 0.0,
+        "blank_strings": null
+      },
+      {
+        "feature": "currency",
+        "nulls": 0,
+        "null_pct": 0.0,
+        "blank_strings": 0.0
+      },
+      {
+        "feature": "amount_usd",
+        "nulls": 1716831,
+        "null_pct": 57.33095304643663,
+        "blank_strings": null
+      },
+      {
+        "feature": "transaction_type",
+        "nulls": 0,
+        "null_pct": 0.0,
+        "blank_strings": 0.0
+      },
+      {
+        "feature": "channel",
+        "nulls": 0,
+        "null_pct": 0.0,
+        "blank_strings": 0.0
+      },
+      {
+        "feature": "transaction_country",
+        "nulls": 0,
+        "null_pct": 0.0,
+        "blank_strings": 0.0
+      },
+      {
+        "feature": "merchant_category",
+        "nulls": 2297853,
+        "null_pct": 76.73329666729781,
+        "blank_strings": 0.0
+      },
+      {
+        "feature": "transaction_date",
+        "nulls": 0,
+        "null_pct": 0.0,
+        "blank_strings": null
+      }
+    ],
+    "training_currency_coverage": [
+      {
+        "currency": "ARS",
+        "rows": 536904,
+        "missing_amount": 0,
+        "missing_raw_usd": 27041,
+        "missing_normalized_usd": 27041,
+        "nonpositive_amount": 0,
+        "usd_disagreement": 0,
+        "min_amount": "1750.05",
+        "max_amount": "3499939.11"
+      },
+      {
+        "currency": "COP",
+        "rows": 808287,
+        "missing_amount": 0,
+        "missing_raw_usd": 40384,
+        "missing_normalized_usd": 40384,
+        "nonpositive_amount": 0,
+        "usd_disagreement": 0,
+        "min_amount": "20006.90",
+        "max_amount": "39999828.48"
+      },
+      {
+        "currency": "USD",
+        "rows": 1649406,
+        "missing_amount": 0,
+        "missing_raw_usd": 1649406,
+        "missing_normalized_usd": 0,
+        "nonpositive_amount": 0,
+        "usd_disagreement": 0,
+        "min_amount": "5.00",
+        "max_amount": "9999.98"
+      }
+    ],
+    "training_conversion_ratios": [
+      {
+        "currency": "ARS",
+        "rows": 509863,
+        "min_ratio": "0.002854386562251731",
+        "mean_ratio": "0.0028571428435976302283",
+        "max_ratio": "0.002859925925086930",
+        "nonpositive_ratio": 0
+      },
+      {
+        "currency": "COP",
+        "rows": 767903,
+        "min_ratio": "0.000249765936440703",
+        "mean_ratio": "0.0002500000034707740243",
+        "max_ratio": "0.000250243877594995",
+        "nonpositive_ratio": 0
+      }
+    ],
+    "training_amount_distribution": [
+      {
+        "usd_quantiles": [
+          "22.31",
+          "241.97",
+          "466.65",
+          "1978.21",
+          "7553.93",
+          "9509.20"
+        ],
+        "observed_usd_amounts": 2927172
+      }
+    ],
+    "training_fraud_score_bands": [
+      {
+        "score_band": "<70",
+        "rows": 2395168,
+        "fraud": 1679,
+        "null_labels": 0,
+        "labeled_rows": 2395168,
+        "fraud_rate_pct": 0.07009946692674585
+      },
+      {
+        "score_band": ">=70",
+        "rows": 705,
+        "fraud": 705,
+        "null_labels": 0,
+        "labeled_rows": 705,
+        "fraud_rate_pct": 100.0
+      },
+      {
+        "score_band": "missing",
+        "rows": 598724,
+        "fraud": 630,
+        "null_labels": 0,
+        "labeled_rows": 598724,
+        "fraud_rate_pct": 0.1052237758967404
+      }
+    ]
+  }
+}
