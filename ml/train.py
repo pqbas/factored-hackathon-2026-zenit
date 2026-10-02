@@ -175,8 +175,8 @@ def run_training(spark, mlflow) -> dict[str, Any]:
     raw = (
         source.where(F.col("transaction_date") < F.to_timestamp(F.lit(VALIDATION_END)))
         .select(*sorted(required))
-        .where(F.col("transaction_date").isNotNull() & F.col("is_fraud").isin(0, 1))
         .withColumn("label", F.col("is_fraud").cast("double"))
+        .where(F.col("transaction_date").isNotNull() & F.col("label").isin(0.0, 1.0))
         .withColumn("split", F.when(F.col("transaction_date") < F.to_timestamp(F.lit(TRAIN_END)), F.lit("train")).otherwise(F.lit("validation")))
     )
 
