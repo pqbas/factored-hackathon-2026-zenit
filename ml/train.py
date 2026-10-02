@@ -154,7 +154,6 @@ def run_training(spark, mlflow) -> dict[str, Any]:
     from pyspark.ml.pipeline import PipelineModel
     from pyspark.sql import functions as F
     from pyspark.sql import Window
-    from pyspark.storagelevel import StorageLevel
 
     started = time.monotonic()
     spark.conf.set("spark.sql.session.timeZone", "UTC")
@@ -235,12 +234,12 @@ def run_training(spark, mlflow) -> dict[str, Any]:
     prep_model = preprocessing.fit(train_raw)
     train = prep_model.transform(train_raw).select(
         "transaction_id", "label", "features", "transaction_country", "channel"
-    ).persist(StorageLevel.MEMORY_AND_DISK)
+    )
     validation = prep_model.transform(validation_raw).select(
         "transaction_id", "label", "features", "transaction_country", "channel"
-    ).persist(StorageLevel.MEMORY_AND_DISK)
-    train_count = train.count()
-    validation_count = validation.count()
+    )
+    train_count = int(split_summary["train"]["rows"])
+    validation_count = int(split_summary["validation"]["rows"])
     train_positive = int(split_summary["train"]["fraud"])
     train_negative = train_count - train_positive
     validation_positive = int(split_summary["validation"]["fraud"])
@@ -376,29 +375,31 @@ def run_training(spark, mlflow) -> dict[str, Any]:
             "validation_prevalence": validation_positive / validation_count,
         })
 
+        # Serverless does not allow DataFrame.persist/cache. Keep the run
+        # budget bounded: one regularization level per logistic variant and
+        # one conservative tree shape, each with and without class weights.
         for class_weight in ("none", "balanced"):
-            for c_value in (0.1, 1.0, 10.0):
-                params = {"class_weight": class_weight, "C": c_value, "max_iter": 100, "seed": SEED}
-                lr = LogisticRegression(
-                    featuresCol="features", labelCol="label", weightCol="class_weight",
-                    regParam=1.0 / c_value, elasticNetParam=0.0, maxIter=100,
-                    tol=1e-6, standardization=True,
-                )
-                attempt("M1_logistic_regression", params, lr)
+            c_value = 1.0
+            params = {"class_weight": class_weight, "C": c_value, "max_iter": 100, "seed": SEED}
+            lr = LogisticRegression(
+                featuresCol="features", labelCol="label", weightCol="class_weight",
+                regParam=1.0 / c_value, elasticNetParam=0.0, maxIter=100,
+                tol=1e-6, standardization=True,
+            )
+            attempt("M1_logistic_regression", params, lr)
 
         for class_weight in ("none", "balanced"):
-            for depth in (3, 5, 8):
-                for min_leaf in (100, 1000):
-                    params = {
-                        "class_weight": class_weight, "max_depth": depth,
-                        "min_instances_per_node": min_leaf, "seed": SEED,
-                    }
-                    tree = DecisionTreeClassifier(
-                        featuresCol="features", labelCol="label", weightCol="class_weight",
-                        maxDepth=depth, minInstancesPerNode=min_leaf, seed=SEED,
-                        impurity="gini",
-                    )
-                    attempt("M2_decision_tree", params, tree)
+            depth, min_leaf = 5, 1000
+            params = {
+                "class_weight": class_weight, "max_depth": depth,
+                "min_instances_per_node": min_leaf, "seed": SEED,
+            }
+            tree = DecisionTreeClassifier(
+                featuresCol="features", labelCol="label", weightCol="class_weight",
+                maxDepth=depth, minInstancesPerNode=min_leaf, seed=SEED,
+                impurity="gini",
+            )
+            attempt("M2_decision_tree", params, tree)
 
         fit_successful = [a for a in summary["attempts"] if a["status"] == "SUCCESS"]
         successful = [
@@ -440,8 +441,7 @@ def run_training(spark, mlflow) -> dict[str, Any]:
         selected_predictions = selected["fitted"].transform(validation).select(
             "transaction_id", "label", "probability", "rawPrediction",
             "transaction_country", "channel",
-        ).withColumn("score", vector_to_array("probability")[1]).persist(StorageLevel.MEMORY_AND_DISK)
-        selected_predictions.count()
+        ).withColumn("score", vector_to_array("probability")[1])
         selected_auc = float(auc_evaluator.evaluate(selected_predictions))
         summary["selected_validation_auc_roc"] = selected_auc
 
@@ -537,9 +537,6 @@ def run_training(spark, mlflow) -> dict[str, Any]:
             "area_under_pr_lift_over_b0": float(maximum_ap - baseline_ap),
             "total_runtime_seconds": float(summary["total_runtime_seconds"]),
         })
-        selected_predictions.unpersist()
-        train.unpersist()
-        validation.unpersist()
     return _sanitize(summary)
 
 

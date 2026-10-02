@@ -4,7 +4,7 @@
 
 ## Status and execution
 
-The EDA notebook ran successfully on 2026-10-02. The train-only Spark ML smoke test also passed on Serverless environment v4. The full Phase 2 comparison is currently running as a one-time serverless run. Checked-in notebooks keep outputs empty; bounded aggregate results are stored in the dated reports.
+The EDA notebook ran successfully on 2026-10-02. The train-only Spark ML smoke test also passed on Serverless environment v4. Full Phase 2 submissions exposed two constraints (Spark ML needs serverless environment v4; serverless rejects explicit DataFrame persistence). The four-candidate version without manual persistence is now running. Checked-in notebooks keep outputs empty; bounded aggregate results are stored in the dated reports.
 
 1. Shared workspace notebooks are under `/Shared/fraud-eda`; one-time run records are linked from their dated reports.
 2. The EDA and training runs read `workspace.bank_silver.transactions` version 1. The workspace session timezone is UTC.

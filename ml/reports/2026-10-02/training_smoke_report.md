@@ -15,5 +15,5 @@ The initial one-time run on the default Serverless environment failed because th
 - Source: `workspace.bank_silver.transactions`, Delta version 1.
 - The smoke query sampled only transactions before 2025-07-01; validation and final-test rows were excluded.
 - No model-quality metrics, threshold, winner, or promotion decision were produced.
-- The full Phase 2 run is submitted separately and compares B0/B1, six logistic-regression configurations, and twelve decision-tree configurations on temporal validation. Final test remains reserved for Phase 3.
+- The full Phase 2 run compares B0/B1, two logistic-regression configurations, and two conservative decision-tree configurations on temporal validation. The smaller sweep is a compute-aware first pass; final test remains reserved for Phase 3.
 - Serverless setup took about 195 seconds. Dollar cost was not available from the run output and is not estimated here.
