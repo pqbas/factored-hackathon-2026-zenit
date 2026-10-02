@@ -1,21 +1,21 @@
 # Fraud EDA notebooks
 
-[01_fraud_eda.ipynb](01_fraud_eda.ipynb) is the reviewable EDA entry point for Phases 0 and 1.
+[01_fraud_eda.ipynb](01_fraud_eda.ipynb) is the reviewable EDA entry point for Phases 0 and 1. [02_training_smoke.ipynb](02_training_smoke.ipynb) validates Spark ML compatibility on a small train-only sample. [03_model_training.ipynb](03_model_training.ipynb) runs the Phase 2 temporal model comparison.
 
 ## Status and execution
 
-Imported into the personal workspace and executed successfully on 2026-10-02 with a one-time serverless run. The checked-in source keeps outputs empty; aggregate results are recorded in `../reports/2026-10-02/eda_report.md` and `eda_data.json`.
+The EDA notebook ran successfully on 2026-10-02. The train-only Spark ML smoke test also passed on Serverless environment v4. The full Phase 2 comparison is currently running as a one-time serverless run. Checked-in notebooks keep outputs empty; bounded aggregate results are stored in the dated reports.
 
-1. The notebook is stored at `/Users/diegoalonsorv02@gmail.com/fraud-eda/01_fraud_eda`.
-2. A one-time run on serverless completed successfully against `workspace.bank_silver.transactions` version 1. It used the workspace UTC session timezone.
-3. To rerun, use notebook serverless compute or a one-time serverless notebook task. No classic cluster was provisioned.
-4. The notebook reads source data; aggregate DataFrames and plots are session-only. Display results are capped at 500 rows, and the final run payload contains only aggregates.
-5. Review the dated evidence report. Source timestamp timezone semantics and exchange-rate availability at transaction time remain unresolved.
-6. Keep the checked-in source output-free. Do not save customer-level records or credentials in a notebook output or artifact.
+1. Shared workspace notebooks are under `/Shared/fraud-eda`; one-time run records are linked from their dated reports.
+2. The EDA and training runs read `workspace.bank_silver.transactions` version 1. The workspace session timezone is UTC.
+3. Training requires Serverless environment version 4 for PySpark ML. The one-time submit request specifies that environment and does not create a persistent job.
+4. The notebooks read source data. Only bounded aggregates, model metrics, and model artifacts are logged; transaction-level rows and identifiers are not written to reports.
+5. Review the dated evidence reports. Source timestamp semantics and exchange-rate availability at transaction time remain unresolved.
+6. Keep checked-in sources output-free. Do not save customer-level records or credentials in notebook outputs or artifacts.
 
 ## Scope and safeguards
 
-Full-snapshot integrity and partition viability checks are separated from train-only feature exploration. The final test is not used to select features. No model fitting, MLflow logging, database writes, workspace publication, or resource creation is performed by notebook code. It does not create temporary SQL views either.
+The EDA notebook separates full-snapshot integrity and partition viability checks from train-only feature exploration. The Phase 2 notebook fits preprocessing on train and selects with validation; it explicitly excludes final-test rows. Training uses MLflow for experiment evidence and model artifacts but does not create output tables, register a model, or create a persistent job.
 
 Spark performs distributed aggregation; pandas receives bounded aggregates for matplotlib charts. There is no full-data collect, automatic cache, or row-level export. Multiple aggregate sections still scan data and consume compute; avoid rerunning unchanged sections unnecessarily.
 

@@ -89,7 +89,7 @@ Proposed development storage: `workspace.bank_ml`; specific permissions will be 
 ## 7. Dependencies and open decisions
 
 - Silver read access was confirmed on 2026-10-02; the EDA notebook completed on Databricks serverless against Delta version 1.
-- Confirm training compute for scikit-learn model fitting: successful Spark EDA execution does not establish memory/runtime compatibility for model training.
+- Databricks Serverless environment v4 supports PySpark ML. A train-only smoke test validated logistic regression and decision-tree fitting; full-data runtime and convergence are being measured in Phase 2.
 - Verify is_fraud origin/maturation, learnable signal, timezone, and USD conversion.
 - Confirm memory/CPU and set a runtime budget before launching challengers.
 - Obtain write permissions on an isolated ML schema and model registration permissions before deploying outputs.

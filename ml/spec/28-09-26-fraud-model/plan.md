@@ -1,6 +1,6 @@
 # Plan: fraud risk model
 
-Status: not implemented. Depends on [requirements.md](requirements.md).
+Status: Phases 0/1 and EDA are complete; Phase 2 implementation is in progress. See the dated training report for execution evidence.
 
 ## Phase 0 — Access and profiling
 
@@ -27,7 +27,7 @@ Shared seed: 42. Bounded tuning on fixed temporal validation, not random cross-v
 
 B0/B1 require no search. Leaf sizes are starting points for the reported volume; revisit them before using test if sampling changes. Verify parameter support in the installed version during implementation and pin dependencies. M4 starts without weights; record this difference in comparisons. Bound parallelism by available resources rather than using all cores by default. Do not automatically execute all 26 combinations: first run a train-only smoke test and estimate the budget.
 
-Log all attempts, including failures and non-convergence. Do not accept an unconverged M1 as a definitive result. Select the winner and threshold using validation only. Freeze configuration before the next phase.
+Log all attempts, including failures and non-convergence. Do not accept an unconverged M1 as a definitive result. Select the winner and threshold using validation only. Freeze configuration before the next phase. The train-only Spark ML smoke test passed on Databricks Serverless environment v4; its runtime estimate is recorded in `../../reports/2026-10-02/training_smoke_report.md`.
 
 ## Phase 3 — Final evaluation
 
@@ -58,4 +58,4 @@ ml/
 └── spec/                   # decisions, plan, and validation
 ```
 
-Do not install dependencies, launch training, create tables, or deploy jobs as part of this documentation task.
+Phase 2 training uses a one-time serverless notebook run; it does not create a saved job, write tables, register a model, or score final-test rows.

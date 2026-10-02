@@ -17,14 +17,14 @@ ml/
 ├── profile.py         # Phase 0 read-only profiling (Implemented ✓)
 ├── features.py        # Phase 1 V1 feature contract + temporal split (Implemented ✓)
 ├── validate_features.py  # Phase 1 read-only USD-amount validation (Implemented ✓)
-├── train.py           # temporal split, baselines vs model, MLflow tracking, UC model registry
+├── train.py           # temporal Spark ML training, validation, and MLflow tracking
 ├── score.py           # proposed batch scoring -> bank_ml.transaction_risk
 ├── tests/             # local tests for ml modules
 ├── reports/           # profiling + feature evidence (Phase 0/1 outputs)
 └── databricks.yml     # serverless jobs for training and scoring
 ```
 
-Status (2026-10-02): **Phases 0 and 1 are complete, and the EDA notebook has run successfully on serverless.** Model training has not started.
+Status (2026-10-02): **Phases 0 and 1 are complete. Phase 2 implementation is running.** A 1% train-only smoke test passed on Serverless environment v4; the full B0/B1/M1/M2 validation run has been submitted. Final test remains unopened.
 
 Phase 0 measurements: [reports/2026-09-28/profile_report.md](reports/2026-09-28/profile_report.md)
 
@@ -34,13 +34,19 @@ Phase 0 measurements: [reports/2026-09-28/profile_report.md](reports/2026-09-28/
 - **Temporal split viable**: train 2,994,597 (3,014 fraud), val 743,909 (699), test 686,502 (603).
 - **fraud_score >= 70 is strongly associated with the label** (999 rows, 100% fraudulent, 0 false positives). Excluded from predictors as a leakage precaution.
 - **76.8% of `merchant_category` is null** (only 6 distinct values among 23% populated). Limited signal.
-- Train/compute compatibility remains unverified.
+- The smoke test validated Spark ML on Serverless environment v4; the full training workload and quality remain under evaluation.
 
 Phase 1 feature contract: [features.py](features.py), validation [reports/2026-09-28/features_report.md](reports/2026-09-28/features_report.md)
 
 - V1 predictors: `amount`, `currency`, `log_abs_amount`, `amount_sign`, `amount_usd_norm`, `transaction_type`, `channel`, `transaction_country`, `merchant_category`, `hour`, `weekday`, `is_weekend`.
 - **Normalized USD amount is viable**: only 2.25% missing (non-USD rows without a conversion), vs 57.3% for raw `amount_usd` (all USD rows lack a conversion because they are already USD). Conversion ratios are internally consistent per currency.
 - No fitted preprocessing (imputers/encoders/scalers) in this phase; those are train-only and belong to Phase 2.
+
+## Model training
+
+The train-only compatibility check passed on Serverless environment v4: 29,857 sampled rows, 34 positive labels, logistic regression fit in 12.49 seconds, and a depth-3 decision tree in 4.76 seconds. This validates runtime compatibility only, not model quality. See [the smoke-test report](reports/2026-10-02/training_smoke_report.md).
+
+The full Phase 2 comparison is submitted as a one-time serverless run. It fits train-only preprocessing, compares B0/B1 and 18 M1/M2 configurations on temporal validation, and logs metrics/models to MLflow. The final-test period remains excluded. Results will be added after the run completes.
 
 ## Exploratory notebook
 
