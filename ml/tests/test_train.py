@@ -45,3 +45,23 @@ def test_candidate_selection_rejects_empty_candidates():
         assert "successful candidate" in str(exc)
     else:
         raise AssertionError("empty candidate list must fail")
+
+
+def test_tie_aware_topk_bounds_report_best_and_worst_possible_positives():
+    bounds = train.tie_aware_topk_bounds(
+        higher_rows=5, higher_positives=2,
+        tie_rows=10, tie_positives=4, capacity=8,
+    )
+    assert bounds["slots_from_boundary_tie"] == 3
+    assert bounds["tp_if_tie_has_fewest_frauds"] == 2
+    assert bounds["tp_if_tie_has_most_frauds"] == 5
+
+
+def test_tie_aware_topk_bounds_when_all_boundary_frauds_fit():
+    bounds = train.tie_aware_topk_bounds(
+        higher_rows=4, higher_positives=1,
+        tie_rows=5, tie_positives=3, capacity=9,
+    )
+    assert bounds["slots_from_boundary_tie"] == 5
+    assert bounds["tp_if_tie_has_fewest_frauds"] == 4
+    assert bounds["tp_if_tie_has_most_frauds"] == 4

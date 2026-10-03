@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import math
 import time
+from functools import reduce
 from typing import Any, Iterable, Optional, Sequence
 
 
@@ -20,6 +21,7 @@ VALIDATION_END = "2026-01-01"
 SEED = 42
 FEATURE_VERSION = "v2_customer_history"
 REVIEW_BUDGET = 0.10
+REVIEW_BUDGETS = (0.001, 0.005, 0.01, 0.02, 0.05, 0.10, 0.20)
 EXPERIMENT_PATH = "/Shared/fraud-eda/phase2-training"
 
 NUMERIC_FEATURES = [
@@ -159,6 +161,24 @@ def select_candidate_by_validation_ap(candidates: Sequence[dict[str, Any]]) -> d
         candidates,
         key=lambda item: float(item["record"]["validation_area_under_pr"]),
     )
+
+
+def tie_aware_topk_bounds(
+    higher_rows: int,
+    higher_positives: int,
+    tie_rows: int,
+    tie_positives: int,
+    capacity: int,
+) -> dict[str, int]:
+    """Return best/worst TP counts when top-k cuts through a tied score group."""
+    slots = max(0, min(tie_rows, capacity - higher_rows))
+    return {
+        "slots_from_boundary_tie": slots,
+        "boundary_tie_rows": tie_rows,
+        "boundary_tie_positives": tie_positives,
+        "tp_if_tie_has_fewest_frauds": higher_positives + max(0, slots - (tie_rows - tie_positives)),
+        "tp_if_tie_has_most_frauds": higher_positives + min(slots, tie_positives),
+    }
 
 
 def run_training(spark, mlflow) -> dict[str, Any]:
@@ -545,6 +565,7 @@ def run_training(spark, mlflow) -> dict[str, Any]:
         ).orderBy(F.col("score").desc())
         tie_window = Window.orderBy(F.col("score").desc()).rowsBetween(Window.unboundedPreceding, Window.currentRow)
         score_groups = score_groups.withColumn("cumulative_rows", F.sum("rows").over(tie_window))
+        score_groups = score_groups.withColumn("cumulative_positives", F.sum("positives").over(tie_window))
         allowed_thresholds = score_groups.where(F.col("cumulative_rows") <= F.floor(F.lit(validation_count * REVIEW_BUDGET)))
         threshold_row = allowed_thresholds.orderBy(F.col("cumulative_rows").desc()).first()
         threshold = float(threshold_row["score"]) if threshold_row else None
@@ -576,17 +597,61 @@ def run_training(spark, mlflow) -> dict[str, Any]:
         # these are intentionally distinguished from fixed-score thresholds.
         rank_window = Window.orderBy(F.col("score").desc(), F.col("transaction_id").asc())
         ranked = selected_predictions.withColumn("rank", F.row_number().over(rank_window))
+        budget_specs = [
+            (f"{fraction * 100:g}pct", fraction, math.ceil(validation_count * fraction))
+            for fraction in REVIEW_BUDGETS
+        ]
+        ranked_aggregates = []
+        for name, _fraction, capacity in budget_specs:
+            ranked_aggregates.extend([
+                F.sum(F.when(F.col("rank") <= capacity, 1).otherwise(0)).alias(f"{name}_reviewed"),
+                F.sum(F.when((F.col("rank") <= capacity) & (F.col("label") == 1), 1).otherwise(0)).alias(f"{name}_tp"),
+            ])
+        rank_counts = ranked.agg(*ranked_aggregates).first().asDict()
+        boundary_conditions = [
+            (F.col("cumulative_rows") >= capacity)
+            & ((F.col("cumulative_rows") - F.col("rows")) < capacity)
+            for _name, _fraction, capacity in budget_specs
+        ]
+        boundary_rows = score_groups.where(reduce(lambda left, right: left | right, boundary_conditions)).collect()
+        boundaries_by_capacity = {
+            capacity: next((
+                row for row in boundary_rows
+                if int(row["cumulative_rows"]) >= capacity
+                and int(row["cumulative_rows"] - row["rows"]) < capacity
+            ), None)
+            for _name, _fraction, capacity in budget_specs
+        }
         topk = {}
-        for fraction in (0.05, 0.10, 0.20):
-            k = math.ceil(validation_count * fraction)
-            row = ranked.where(F.col("rank") <= k).agg(
-                F.count(F.lit(1)).alias("reviewed"), F.sum("label").alias("tp")
-            ).first()
-            tp_k = int(row["tp"] or 0)
-            topk[str(int(fraction * 100)) + "pct"] = {
-                "reviewed": int(row["reviewed"]), "capacity": k, "tp": tp_k,
+        validation_prevalence = validation_positive / validation_count
+        for name, _fraction, capacity in budget_specs:
+            reviewed = int(rank_counts.get(f"{name}_reviewed") or 0)
+            tp_k = int(rank_counts.get(f"{name}_tp") or 0)
+            boundary = boundaries_by_capacity.get(capacity)
+            tie_bounds = None
+            if boundary is not None:
+                higher_rows = int(boundary["cumulative_rows"] - boundary["rows"])
+                higher_positives = int(boundary["cumulative_positives"] - boundary["positives"])
+                tie_bounds = tie_aware_topk_bounds(
+                    higher_rows, higher_positives, int(boundary["rows"]),
+                    int(boundary["positives"]), capacity,
+                )
+                tie_bounds["boundary_score"] = float(boundary["score"])
+                tie_bounds["tie_split_required"] = tie_bounds["slots_from_boundary_tie"] < tie_bounds["boundary_tie_rows"]
+                tie_bounds["minimum_precision"] = _metric_ratio(
+                    tie_bounds["tp_if_tie_has_fewest_frauds"], capacity
+                )
+                tie_bounds["maximum_precision"] = _metric_ratio(
+                    tie_bounds["tp_if_tie_has_most_frauds"], capacity
+                )
+            precision = _metric_ratio(tp_k, reviewed)
+            topk[name] = {
+                "reviewed": reviewed, "capacity": capacity, "tp": tp_k,
                 "recall": _metric_ratio(tp_k, validation_positive),
-                "precision": _metric_ratio(tp_k, int(row["reviewed"])),
+                "precision": precision,
+                "precision_lift_over_prevalence": _metric_ratio(precision, validation_prevalence) if precision is not None else None,
+                "boundary_tie": tie_bounds,
+                "tie_breaking": "transaction_id ascending; deterministic only, not a risk signal",
             }
         summary["validation_recall_at_top_k"] = topk
 
