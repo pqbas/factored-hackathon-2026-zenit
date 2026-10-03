@@ -162,9 +162,9 @@ def select_candidate_by_validation_ap(candidates: Sequence[dict[str, Any]]) -> d
 
 
 def run_training(spark, mlflow) -> dict[str, Any]:
-    """Train B0/B1/M1/M2, select on validation, log evidence to MLflow."""
+    """Train B0/B1/M1/M2 and one bounded M3 challenger; select on validation."""
     from pyspark.ml import Pipeline
-    from pyspark.ml.classification import DecisionTreeClassifier, LogisticRegression
+    from pyspark.ml.classification import DecisionTreeClassifier, LogisticRegression, RandomForestClassifier
     from pyspark.ml.evaluation import BinaryClassificationEvaluator
     from pyspark.ml.feature import (
         Imputer,
@@ -467,6 +467,20 @@ def run_training(spark, mlflow) -> dict[str, Any]:
             )
             attempt("M2_decision_tree", params, tree)
 
+        # One conservative nonlinear challenger after M1/M2 showed little
+        # signal. Keep it bounded for serverless compute and the rare label.
+        forest_params = {
+            "class_weight": "balanced", "num_trees": 20,
+            "max_depth": 6, "min_instances_per_node": 1000,
+            "feature_subset_strategy": "sqrt", "seed": SEED,
+        }
+        forest = RandomForestClassifier(
+            featuresCol="features", labelCol="label", weightCol="class_weight",
+            numTrees=20, maxDepth=6, minInstancesPerNode=1000,
+            featureSubsetStrategy="sqrt", seed=SEED,
+        )
+        attempt("M3_random_forest", forest_params, forest)
+
         fit_successful = [a for a in summary["attempts"] if a["status"] == "SUCCESS"]
         successful = [
             a for a in fit_successful
@@ -508,9 +522,14 @@ def run_training(spark, mlflow) -> dict[str, Any]:
         if selected["model_id"] == "M1_logistic_regression":
             model_spec["intercept"] = float(selected["fitted"].intercept)
             model_spec["coefficients"] = [float(value) for value in selected["fitted"].coefficients.toArray()]
-        else:
+        elif selected["model_id"] == "M2_decision_tree":
             model_spec["tree_rules"] = selected["fitted"].toDebugString
             summary["selected_tree_rules"] = model_spec["tree_rules"]
+        else:
+            model_spec["feature_importances"] = [
+                {"feature": model_spec["feature_columns"][index], "importance": float(value)}
+                for index, value in enumerate(selected["fitted"].featureImportances.toArray())
+            ]
         summary["selected_model_spec"] = model_spec
         summary["model_binary_logged"] = False
 
