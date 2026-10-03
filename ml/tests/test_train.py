@@ -30,3 +30,18 @@ def test_budget_threshold_handles_invalid_inputs():
 def test_metric_ratio_is_undefined_for_zero_denominator():
     assert train._metric_ratio(0, 0) is None
     assert train._metric_ratio(1, 4) == 0.25
+
+
+def test_candidate_selection_uses_exact_validation_area_under_pr_winner():
+    linear = {"record": {"validation_area_under_pr": 0.00092, "model": "linear"}}
+    tree = {"record": {"validation_area_under_pr": 0.00099, "model": "tree"}}
+    assert train.select_candidate_by_validation_ap([linear, tree]) is tree
+
+
+def test_candidate_selection_rejects_empty_candidates():
+    try:
+        train.select_candidate_by_validation_ap([])
+    except ValueError as exc:
+        assert "successful candidate" in str(exc)
+    else:
+        raise AssertionError("empty candidate list must fail")

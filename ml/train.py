@@ -146,6 +146,21 @@ def _json_number(value: Any) -> Optional[float]:
     return number if math.isfinite(number) else None
 
 
+def select_candidate_by_validation_ap(candidates: Sequence[dict[str, Any]]) -> dict[str, Any]:
+    """Select the exact highest validation areaUnderPR candidate.
+
+    Do not use a fixed absolute tie band: at this dataset's prevalence, a
+    0.001-wide band can include every candidate and select a weaker model.
+    Promotion remains a separate decision against the constant baseline.
+    """
+    if not candidates:
+        raise ValueError("At least one successful candidate is required")
+    return max(
+        candidates,
+        key=lambda item: float(item["record"]["validation_area_under_pr"]),
+    )
+
+
 def run_training(spark, mlflow) -> dict[str, Any]:
     """Train B0/B1/M1/M2, select on validation, log evidence to MLflow."""
     from pyspark.ml import Pipeline
@@ -468,18 +483,9 @@ def run_training(spark, mlflow) -> dict[str, Any]:
         summary["best_validation_area_under_pr"] = maximum_ap
         summary["selected_candidate"] = best_record["record"]
         summary["area_under_pr_lift_over_b0"] = maximum_ap - baseline_ap
-        tied = [a for a in successful if maximum_ap - a["validation_area_under_pr"] <= 0.001]
-        # Prefer the simpler linear model for an AP practical tie; for trees,
-        # prefer shallower depth and larger leaves.
-        def simplicity(record):
-            if record["model"] == "M1_logistic_regression":
-                return (0, record["params"]["C"], record["params"]["class_weight"] != "none")
-            p = record["params"]
-            return (1, p["max_depth"], -p["min_instances_per_node"], p["class_weight"] != "none")
-        preferred = min(tied, key=simplicity)
-        selected = next(item for item in candidate_models if item["record"]["run_id"] == preferred["run_id"])
+        selected = select_candidate_by_validation_ap(candidate_models)
         summary["selected_candidate"] = selected["record"]
-        summary["selection_note"] = "Candidates within 0.001 areaUnderPR of the best are practical ties; selected the simplest model among them."
+        summary["selection_note"] = "Selected the candidate with the highest validation areaUnderPR; promotion is evaluated separately against B0."
         summary["selected_model"] = selected["model_id"]
         summary["selected_params"] = selected["params"]
         summary["selected_validation_run_id"] = selected["mlflow_run_id"]
