@@ -52,6 +52,8 @@ The [review-budget curve](reports/2026-10-03/review_budget_curve_report.md) show
 
 The [fraud-score diagnostic](reports/2026-10-03/fraud_score_validation_diagnostic_report.md) found 100% observed precision at thresholds 50 and 70 on validation, with 37.05% and 21.89% recall respectively. This may be the strongest existing signal, but it must not be used as a real-time feature or rule until its producer confirms it is independent of the label and available before authorization.
 
+Next experiment: [V5 improvement specification](spec/28-09-26-fraud-model/improvement_v5.md). A new [training-only signal audit](reports/2026-10-03/train_signal_audit_report.md) confirmed positive-label support for internal fitting/selection/threshold periods, without finding a strong marginal category signal. Digital-event SELECT remains blocked as of 2026-10-03. The proposed CatBoost capacity/encoding challenger and conditional digital-event ablation are not trained; target precision scenarios are objectives, not results. Current negative results do not prove all models must fail or that current labels are random.
+
 ## Exploratory notebook
 
 [Fraud EDA notebook](notebooks/01_fraud_eda.ipynb) organizes Phases 0/1 into questions, Spark aggregate queries, charts, and interpretation cells. See [execution instructions](notebooks/README.md). It was executed successfully on serverless against Delta version 1. See [the dated EDA report](reports/2026-10-02/eda_report.md) and aggregate evidence JSON.
