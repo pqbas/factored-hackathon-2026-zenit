@@ -1,6 +1,6 @@
 # Data map and initial fraud model design
 
-Status: living design document. The first V1 training comparison completed on 2026-10-02 and was rejected for promotion; see [the Phase 2 report](reports/2026-10-02/training_phase2_report.md). Updated: 2026-10-02.
+Status: living design document. V1–V4 temporal experiments completed by 2026-10-03; none is suitable for promotion. See the [V3](reports/2026-10-03/training_v3_feature_challenger_report.md) and [V4](reports/2026-10-03/training_v4_behavioral_challenger_report.md) reports and the separate [fraud-score provenance diagnostic](reports/2026-10-03/fraud_score_validation_diagnostic_report.md). Updated: 2026-10-03.
 
 Implementation specifications: [requirements and models](spec/28-09-26-fraud-model/requirements.md), [plan](spec/28-09-26-fraud-model/plan.md), and [validation](spec/28-09-26-fraud-model/validation.md). The specs make this proposal concrete and take precedence for contracts and acceptance criteria.
 
@@ -143,7 +143,7 @@ Historical computation is causal per row even if materialized before splitting. 
 
 ## 5. Candidate features for iteration
 
-`T` is the current transaction timestamp. Windows are `[T - duration, T)`; they exclude the current row and other rows with the same timestamp. These are hypotheses, not demonstrated fraud signals.
+`T` is the current transaction timestamp. Windows are `[T - duration, T)`; they exclude the current row and other rows with the same timestamp. Untested rows are hypotheses, not demonstrated fraud signals; tested results are linked below.
 
 | Phase | Feature | Source and calculation | Hypothesis / condition |
 |---|---|---|---|
@@ -158,21 +158,22 @@ Historical computation is causal per row even if materialized before splitting. 
 | V2 | `sum_amount_24h/7d`, `mean_amount_30d` | Validated USD history or per-currency history | Intensity changes; never sum different currencies. |
 | V2 | `amount_ratio_30d` | Amount / compatible historical mean | Behavioral deviation; require minimum observations and a safe denominator. |
 | V2 | `seconds_since_prev_tx` | Last strictly earlier transaction | Frequency; null and flag for first transaction. |
-| V2 | `new_merchant`, `new_country` | Absence from earlier history | Novelty; normalize merchants and distinguish missing values/history. |
-| V2 | `distance_prev_km`, `speed_prev_kmh` | Current/previous coordinates and elapsed time | Valid coordinates and positive elapsed time only; GPS quality unverified. |
+| V4 | `customer_merchant_count_30d`, `customer_new_merchant_30d` | Strictly earlier same-customer merchant history | Implemented without encoding merchant names; no useful ranking gain in the V4 experiment. |
+| V3/V4 | `latitude_coarse`, `longitude_coarse`, `customer_new_geo_30d`, `geo_distance_km_from_mean_30d_log` | Coarse transaction location and earlier customer history | Tested; the V3/V4 candidates did not produce useful ranking signal. Raw coordinates are not model predictors. |
+| V3 candidate | `new_country`, `distance_prev_km`, `speed_prev_kmh` | Prior transaction/customer context | Not evaluated as specified; requires clean point-in-time location and robust timestamp handling. |
 | V3 | `customer_tenure_days` | T minus registration_date | Check registrations after transactions and snapshot limitations. |
 | V3 | `product_age_days` | T minus opening_date by product_id | Check chronology; do not use current_balance. |
 | V3 | `digital_count_24h`, `seconds_since_event` | Customer digital_events before T | Test coverage and incremental value; missing events do not prove zero real activity. |
 | V3 | `prior_ip_country_change` | Country of earlier events | Review geolocation; do not send raw IP addresses to the model. |
 
-**Small initial version:** V1 features + a shallow decision tree. Then measure whether V2 helps; V3 requires justified temporal availability and coverage. No phase requires using all 13 tables.
+**Current conclusion:** V1–V4 candidates are not promotable. V4's selected model assigned the same score to every validation row. V3 digital-event features remain untested because read access is blocked. No phase requires using all 13 tables; add a source only when it contains signal available at decision time.
 
 ### Initial exclusions
 
 | Field or source | Reason |
 |---|---|
 | `is_fraud` as a predictor | It is the label and must never enter X. |
-| `fraud_score` | Potential leakage; the team reports an almost deterministic association with the label. |
+| `fraud_score` | Potential leakage. On validation, all 259 transactions with score >=50 were labeled fraud; generation time and independence are unknown. See the [label-alignment diagnostic](reports/2026-10-03/fraud_score_validation_diagnostic_report.md). |
 | `transaction_status`, `response_code` | May result from detecting/blocking fraud. |
 | `process_date`, ingestion metadata | Processing timestamps, not banking signals available at T. |
 | Current balances, states, segment/credit_score | Insufficient history to establish their value at T. |

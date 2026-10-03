@@ -1,6 +1,6 @@
 # Requirements: fraud risk model
 
-Status: specified, pending implementation and data validation. Date: 2026-09-28.
+Status: specification implemented through exploratory V4 temporal validation as of 2026-10-03; no model is promoted. The final-test period remains sealed. See dated reports in `../../reports/2026-10-03/`.
 
 ## 1. Objective and scope
 
@@ -12,7 +12,7 @@ First version: batch training, evaluation, and MLflow artifacts. Model registrat
 
 ## 2. Models and comparison order
 
-These are defined experiment candidates; there is no winner yet.
+These are defined experiment candidates; completed V1–V4 comparisons have not produced a promotable candidate.
 
 | ID | Model | Role | Rationale |
 |---|---|---|---|
@@ -65,7 +65,7 @@ The score will be between 0 and 1, but named `fraud_risk_score`, not calibrated 
 
 Calibration is not required for MVP. If introduced, reserve a calibration period before training, separate from threshold selection and test; compare Brier score and calibration curves with sufficient support. Do not fit and evaluate the calibrator on the same rows.
 
-Do not use is_fraud at inference. fraud_score >= 70 may appear as a separate, potentially contaminated diagnostic; it is neither a clean baseline nor an automatically accepted fallback. Missing/invalid scores produce `unavailable` and review according to agreed policy, never zero risk.
+Do not use is_fraud at inference. A validation-only diagnostic found all 259 transactions with fraud_score >= 50 labeled as fraud, but score provenance and timing are unknown. Treat this as a leakage warning; do not use the score as an inference feature until the producer confirms it is independent and available before authorization. Missing/invalid scores produce `unavailable` and review according to agreed policy, never zero risk. See `../../reports/2026-10-03/fraud_score_validation_diagnostic_report.md`.
 
 ## 6. Tracking and output contracts
 

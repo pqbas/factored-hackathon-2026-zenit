@@ -1,0 +1,24 @@
+{
+  "source_table": "workspace.bank_silver.transactions",
+  "delta_version": 1,
+  "validation_start_inclusive": "2025-07-01T00:00:00",
+  "validation_end_exclusive": "2026-01-01T00:00:00",
+  "final_test_used": false,
+  "read_only_aggregate": true,
+  "validation_rows": 743909,
+  "validation_fraud": 699,
+  "validation_prevalence": 0.0009396310570244479,
+  "score_bands": [
+    {"band": "missing", "transactions": 149136, "fraud": 137, "non_fraud": 148999},
+    {"band": "<30", "transactions": 594296, "fraud": 187, "non_fraud": 594109},
+    {"band": "30-49", "transactions": 218, "fraud": 116, "non_fraud": 102},
+    {"band": "50-69", "transactions": 106, "fraud": 106, "non_fraud": 0},
+    {"band": ">=70", "transactions": 153, "fraud": 153, "non_fraud": 0}
+  ],
+  "threshold_diagnostics": [
+    {"threshold": 30, "alerts": 477, "fraud": 375, "false_positives": 102, "precision": 0.7861635220125787, "recall": 0.5364806866952789},
+    {"threshold": 50, "alerts": 259, "fraud": 259, "false_positives": 0, "precision": 1.0, "recall": 0.3705293276108727},
+    {"threshold": 70, "alerts": 153, "fraud": 153, "false_positives": 0, "precision": 1.0, "recall": 0.21888412017167383}
+  ],
+  "interpretation": "Forensic label-alignment diagnostic only. Timing/provenance of fraud_score is unknown; these figures are not production performance or an approved model result."
+}

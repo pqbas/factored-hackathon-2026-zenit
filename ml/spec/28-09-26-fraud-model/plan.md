@@ -1,6 +1,6 @@
 # Plan: fraud risk model
 
-Status: Phases 0/1 and EDA are complete. V1 and V2 Phase 2 comparisons completed on 2026-10-02; neither is promoted. See both dated reports. The read-only `digital_events` coverage audit is prepared but blocked by missing SELECT; final test remains sealed.
+Status: Phases 0/1, EDA, and V1–V4 exploratory validation are complete. No model is promoted; V4 assigned a constant score to all validation rows. A validation-only `fraud_score` diagnostic showed unusually strong label alignment, but timing/provenance is unknown. `digital_events` remains blocked on SELECT; the final test remains sealed. See dated reports in `../../reports/2026-10-03/`.
 
 ## Phase 0 — Access and profiling
 
@@ -37,7 +37,7 @@ Explicit decision: useful candidate, insufficient evidence, or no improvement. D
 
 ## Phase 4 — Feature iterations and challengers
 
-The V1/V2 comparison and one bounded M3 challenger are complete; neither supports promotion. Any M4 experiment requires a compute budget and compatibility check. A V3 digital-event coverage audit is prepared but blocked because the active principal lacks `SELECT` on `workspace.bank_silver.digital_events`. Record marginal gain and cost before considering further challengers.
+V1–V4 transaction, customer-history, transaction-category, coarse-location, merchant-familiarity, and customer-location challengers are complete; none supports promotion. The V4 selected model assigned a constant score to every validation row. The `fraud_score` alignment diagnostic must remain separate until its timing and independence are established. The digital-event coverage audit is prepared but blocked because the active principal lacks `SELECT` on `workspace.bank_silver.digital_events`. Do not continue tuning the same validation period as if it were a fresh holdout; first verify label provenance and get access to approved pre-decision signals.
 
 ## Phase 5 — Scoring and integration
 

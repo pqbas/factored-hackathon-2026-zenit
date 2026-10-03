@@ -24,7 +24,7 @@ ml/
 └── databricks.yml     # serverless jobs for training and scoring
 ```
 
-Status (2026-10-03): **Phases 0 and 1 and validation-only V1/V2/V3 experiments are complete; no candidate is suitable for promotion.** V3 transaction category and coarse geolocation did not improve the temporal validation results. The `digital_events` coverage audit remains blocked because the current principal lacks `SELECT` on that table. Final test remains unopened.
+Status (2026-10-03): **Phases 0 and 1 and validation-only V1/V2/V3/V4 experiments are complete; no ML candidate is suitable for promotion.** V4's selected tree assigned one constant score to every validation transaction (ROC-AUC 0.50). A separate validation-only diagnostic found unusually strong alignment between `fraud_score` and `is_fraud` (100% observed precision for `fraud_score >= 50` across 259 alerts), but its timing/provenance is unknown, so it may be leakage. The `digital_events` audit remains blocked on `SELECT`. Final test remains unopened.
 
 Phase 0 measurements: [reports/2026-09-28/profile_report.md](reports/2026-09-28/profile_report.md)
 
@@ -48,7 +48,9 @@ The train-only compatibility check passed on Serverless environment v4: 29,857 s
 
 V1/V2 Phase 2 comparisons and one bounded V2 Random Forest challenger completed as one-time Serverless v4 runs. Best V1 areaUnderPR was 0.000994; the V2 Random Forest reached 0.000974 versus B0 0.000940, with ROC-AUC near 0.5 and top-10% recall 10.3%. No model is promoted. See the [V1 report](reports/2026-10-02/training_phase2_report.md), [V2 report](reports/2026-10-02/training_phase2_v2_report.md), [Random Forest challenger report](reports/2026-10-02/training_phase2_rf_report.md), and aggregate JSON evidence. A read-only `digital_events` audit was attempted but requires `SELECT` on `workspace.bank_silver.digital_events`; the exact access failure is recorded in the [access report](reports/2026-10-02/digital_event_access_report.md). Final test remains unopened. The executable Spark model binary is not logged because this principal has no writable ML staging Volume.
 
-The [review-budget curve](reports/2026-10-03/review_budget_curve_report.md) shows how V2 performs at different review capacities. The [V3 feature challenger](reports/2026-10-03/training_v3_feature_challenger_report.md) tested transaction category and coarse location; it was worse than V2 and near the random baseline. These are validation-only results, not production thresholds or promises of future performance. No model should make automatic fraud decisions from these results.
+The [review-budget curve](reports/2026-10-03/review_budget_curve_report.md) shows V2 performance at different review capacities. The [V3 challenger](reports/2026-10-03/training_v3_feature_challenger_report.md) tested transaction category and coarse location and was worse than V2. The [V4 challenger](reports/2026-10-03/training_v4_behavioral_challenger_report.md) added causal merchant/location familiarity, but its best tree assigned an identical score to every validation transaction. These validation-only experiments do not support real-time use. No model should make automatic fraud decisions from them.
+
+The [fraud-score diagnostic](reports/2026-10-03/fraud_score_validation_diagnostic_report.md) found 100% observed precision at thresholds 50 and 70 on validation, with 37.05% and 21.89% recall respectively. This may be the strongest existing signal, but it must not be used as a real-time feature or rule until its producer confirms it is independent of the label and available before authorization.
 
 ## Exploratory notebook
 

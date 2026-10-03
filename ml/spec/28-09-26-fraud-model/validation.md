@@ -1,6 +1,6 @@
 # Validation: fraud risk model
 
-Status: living verification checklist. Executed evidence is recorded in the dated EDA, smoke, and Phase 2 reports; unchecked items remain open.
+Status: living verification checklist. Executed evidence is recorded in the dated EDA, smoke, Phase 2, V3, V4, and fraud-score diagnostic reports; unchecked items remain open. No model is promoted, and the final test remains sealed.
 
 ## Documentation
 
