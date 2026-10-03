@@ -1,6 +1,6 @@
 # Fraud EDA notebooks
 
-[01_fraud_eda.ipynb](01_fraud_eda.ipynb) is the reviewable EDA entry point for Phases 0 and 1. [02_training_smoke.ipynb](02_training_smoke.ipynb) validates Spark ML compatibility on a small train-only sample. [03_model_training.ipynb](03_model_training.ipynb) runs the Phase 2 temporal model comparison.
+[01_fraud_eda.ipynb](01_fraud_eda.ipynb) is the reviewable EDA entry point for Phases 0 and 1. [02_training_smoke.ipynb](02_training_smoke.ipynb) validates Spark ML compatibility on a small train-only sample. [03_model_training.ipynb](03_model_training.ipynb) runs the V1/V2 temporal model comparison. [05_feature_challenger.ipynb](05_feature_challenger.ipynb) evaluates V3 pre-decision transaction category and coarse geolocation features.
 [04_digital_event_coverage.ipynb](04_digital_event_coverage.ipynb) checks whether strictly prior digital activity covers enough train/validation transactions to justify V3.
 
 ## Status and execution
@@ -30,5 +30,7 @@ The notebook documents existing feature-helper edge-case differences rather than
 - [Requirements](../spec/28-09-26-fraud-model/requirements.md)
 
 The successful Databricks run validates notebook execution on this workspace runtime and the pinned source snapshot. It does not validate feature usefulness or model quality.
+
+The V3 challenger completed on 2026-10-03 and did not improve over V2 or the random-ranking baseline. See [the challenger report](../reports/2026-10-03/training_v3_feature_challenger_report.md). It reads the pinned source snapshot and logs aggregate metrics; it does not write tables or register a model.
 
 The final notebook cell returns a compact JSON payload of aggregate results through the one-time run output API. It includes no row-level identifiers. Use this payload as the source for the dated evidence report.
