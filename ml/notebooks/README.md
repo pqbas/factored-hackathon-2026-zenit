@@ -1,10 +1,11 @@
 # Fraud EDA notebooks
 
 [01_fraud_eda.ipynb](01_fraud_eda.ipynb) is the reviewable EDA entry point for Phases 0 and 1. [02_training_smoke.ipynb](02_training_smoke.ipynb) validates Spark ML compatibility on a small train-only sample. [03_model_training.ipynb](03_model_training.ipynb) runs the Phase 2 temporal model comparison.
+[04_digital_event_coverage.ipynb](04_digital_event_coverage.ipynb) checks whether strictly prior digital activity covers enough train/validation transactions to justify V3.
 
 ## Status and execution
 
-The EDA notebook ran successfully on 2026-10-02. The train-only Spark ML smoke test also passed on Serverless environment v4. Full Phase 2 submissions exposed two constraints (Spark ML needs serverless environment v4; serverless rejects explicit DataFrame persistence). Both the four-candidate V1 comparison and the V2 customer-history comparison completed without a promotable result. Checked-in notebooks keep outputs empty; bounded aggregate results are stored in the dated reports.
+The EDA notebook ran successfully on 2026-10-02. The train-only Spark ML smoke test also passed on Serverless environment v4. Full Phase 2 submissions exposed two constraints (Spark ML needs serverless environment v4; serverless rejects explicit DataFrame persistence). Both the four-candidate V1 comparison and the V2 customer-history comparison completed without a promotable result. The read-only V3 digital-event coverage audit is running. Checked-in notebooks keep outputs empty; bounded aggregate results are stored in the dated reports.
 
 1. Shared workspace notebooks are under `/Shared/fraud-eda`; one-time run records are linked from their dated reports.
 2. The EDA and training runs read `workspace.bank_silver.transactions` version 1. The workspace session timezone is UTC.
