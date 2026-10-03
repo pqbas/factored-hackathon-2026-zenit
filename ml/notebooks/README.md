@@ -15,7 +15,7 @@ The EDA notebook ran successfully on 2026-10-02. The train-only Spark ML smoke t
 
 ## Scope and safeguards
 
-The EDA notebook separates full-snapshot integrity and partition viability checks from train-only feature exploration. The Phase 2 notebook fits preprocessing on train and selects with validation; it explicitly excludes final-test rows. Training uses MLflow for experiment evidence and model artifacts but does not create output tables, register a model, or create a persistent job.
+The EDA notebook separates full-snapshot integrity and partition viability checks from train-only feature exploration. The Phase 2 notebook fits preprocessing on train and selects with validation; it explicitly excludes final-test rows. Training logs metrics and a non-executable model specification to MLflow. Binary Spark model logging requires a writable Unity Catalog Volume, which is not currently available. The run does not create output tables, register a model, or create a persistent job.
 
 Spark performs distributed aggregation; pandas receives bounded aggregates for matplotlib charts. There is no full-data collect, automatic cache, or row-level export. Multiple aggregate sections still scan data and consume compute; avoid rerunning unchanged sections unnecessarily.
 

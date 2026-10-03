@@ -151,7 +151,6 @@ def run_training(spark, mlflow) -> dict[str, Any]:
         VectorAssembler,
     )
     from pyspark.ml.functions import vector_to_array
-    from pyspark.ml.pipeline import PipelineModel
     from pyspark.sql import functions as F
     from pyspark.sql import Window
 
@@ -433,10 +432,29 @@ def run_training(spark, mlflow) -> dict[str, Any]:
         summary["selected_params"] = selected["params"]
         summary["selected_validation_run_id"] = selected["mlflow_run_id"]
 
-        fitted_full = PipelineModel(stages=prep_model.stages + [selected["fitted"]])
-        mlflow.spark.log_model(fitted_full, artifact_path="selected_model")
-        if selected["model_id"] == "M2_decision_tree":
-            summary["selected_tree_rules"] = selected["fitted"].toDebugString
+        feature_metadata = train.schema["features"].metadata.get("ml_attr", {}).get("attrs", {})
+        feature_names = sorted(
+            (attribute for attributes in feature_metadata.values() for attribute in attributes),
+            key=lambda attribute: attribute.get("idx", -1),
+        )
+        model_spec: dict[str, Any] = {
+            "model_id": selected["model_id"],
+            "parameters": selected["params"],
+            "feature_version": FEATURE_VERSION,
+            "feature_columns": [item.get("name", f"feature_{item.get('idx')}") for item in feature_names],
+            "input_predictors": PREDICTORS,
+            "preprocessing": "Spark Pipeline fitted on train only; median imputation; train-fitted StringIndexer/OneHotEncoder with handleInvalid=keep.",
+            "model_binary_logged": False,
+            "binary_artifact_note": "Databricks Serverless MLflow Spark model logging requires a writable Unity Catalog Volume. None is currently available to this principal; no existing data volume was reused.",
+        }
+        if selected["model_id"] == "M1_logistic_regression":
+            model_spec["intercept"] = float(selected["fitted"].intercept)
+            model_spec["coefficients"] = [float(value) for value in selected["fitted"].coefficients.toArray()]
+        else:
+            model_spec["tree_rules"] = selected["fitted"].toDebugString
+            summary["selected_tree_rules"] = model_spec["tree_rules"]
+        summary["selected_model_spec"] = model_spec
+        summary["model_binary_logged"] = False
 
         selected_predictions = selected["fitted"].transform(validation).select(
             "transaction_id", "label", "probability", "rawPrediction",
@@ -531,6 +549,10 @@ def run_training(spark, mlflow) -> dict[str, Any]:
             json.dump(safe_summary, artifact, indent=2, allow_nan=False)
             artifact_path = artifact.name
         mlflow.log_artifact(artifact_path, artifact_path="reports")
+        mlflow.log_text(
+            json.dumps(_sanitize(model_spec), indent=2, allow_nan=False),
+            artifact_file="reports/selected_model_spec.json",
+        )
         mlflow.log_metrics({
             "selected_validation_area_under_pr": float(selected["record"]["validation_area_under_pr"]),
             "selected_validation_auc_roc": selected_auc,

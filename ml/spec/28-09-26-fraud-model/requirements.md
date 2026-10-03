@@ -90,6 +90,7 @@ Proposed development storage: `workspace.bank_ml`; specific permissions will be 
 
 - Silver read access was confirmed on 2026-10-02; the EDA notebook completed on Databricks serverless against Delta version 1.
 - Databricks Serverless environment v4 supports PySpark ML. A train-only smoke test validated logistic regression and decision-tree fitting; full-data runtime and convergence are being measured in Phase 2.
+- Current grants do not include `CREATE SCHEMA` on catalog `workspace` or `CREATE VOLUME` on an ML schema. Serverless `mlflow.spark.log_model` requires a writable Unity Catalog Volume for staging; Phase 2 therefore logs a coefficient/tree specification and metrics, not an executable model binary. Do not reuse the Bronze checkpoints Volume for model artifacts.
 - Verify is_fraud origin/maturation, learnable signal, timezone, and USD conversion.
 - Confirm memory/CPU and set a runtime budget before launching challengers.
 - Obtain write permissions on an isolated ML schema and model registration permissions before deploying outputs.

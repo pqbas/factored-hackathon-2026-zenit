@@ -46,7 +46,7 @@ Phase 1 feature contract: [features.py](features.py), validation [reports/2026-0
 
 The train-only compatibility check passed on Serverless environment v4: 29,857 sampled rows, 34 positive labels, logistic regression fit in 12.49 seconds, and a depth-3 decision tree in 4.76 seconds. This validates runtime compatibility only, not model quality. See [the smoke-test report](reports/2026-10-02/training_smoke_report.md).
 
-The revised Phase 2 comparison is running as a one-time Serverless v4 task. It fits train-only preprocessing, compares B0/B1 and four representative M1/M2 configurations on temporal validation, and logs metrics/model artifacts to MLflow. The final-test period remains excluded. Results will be added after the run completes.
+The revised Phase 2 comparison is running as a one-time Serverless v4 task. It fits train-only preprocessing, compares B0/B1 and four representative M1/M2 configurations on temporal validation, and logs metrics plus a model specification to MLflow. The executable Spark model binary is not logged because this principal has no writable ML staging Volume. The final-test period remains excluded. Results will be added after the run completes.
 
 ## Exploratory notebook
 
