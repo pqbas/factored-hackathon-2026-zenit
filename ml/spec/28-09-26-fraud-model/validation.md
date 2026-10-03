@@ -1,6 +1,6 @@
 # Validation: fraud risk model
 
-Status: verification requirements, not results of executed tests.
+Status: living verification checklist. Executed evidence is recorded in the dated EDA, smoke, and Phase 2 reports; unchecked items remain open.
 
 ## Documentation
 
@@ -24,17 +24,19 @@ Status: verification requirements, not results of executed tests.
 
 ## Models and evaluation
 
-- [ ] B0/B1/M1/M2 run on the same partitions.
-- [ ] Convergence, weights, seeds, and sampling are logged.
+- [x] B0/B1/M1/M2 run on the same partitions (Phase 2 report).
+- [x] Convergence, weights, seeds, and sampling are logged (Phase 2 aggregate evidence).
 - [ ] A tied-score fixture verifies budget handling and distinguishes top-k from fixed thresholds.
 - [ ] A fixture without positive predictions produces neither misleading metrics nor hidden errors.
 - [ ] Threshold chosen without test; configuration frozen before final evaluation.
-- [ ] Validation/test preserve original prevalence.
+- [x] Validation prevalence preserved; final test remains unopened.
 - [ ] Report includes AP, recall, precision, confusion matrix, review rate, subgroups, intervals, and denominators.
-- [ ] Constant-model results demonstrate that high accuracy is insufficient.
-- [ ] A model without improvement is rejected for promotion; the negative result is retained.
+- [x] Constant-score AP baseline and uninformative B1 accuracy are documented.
+- [x] V1 candidates without meaningful validation improvement were rejected for promotion; negative result retained.
 - [ ] Repeating the same data/configuration version reproduces results within a documented tolerance.
 - [ ] Memory, time, and measurable cost recorded; serverless compatibility is not claimed without a test.
+
+See [Phase 2 results](../../reports/2026-10-02/training_phase2_report.md) for validation AP, threshold metrics, subgroup denominators, and the explicit no-promotion decision.
 
 ## Registration and consumption (later phase)
 

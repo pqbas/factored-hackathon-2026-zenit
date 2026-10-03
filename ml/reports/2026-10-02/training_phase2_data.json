@@ -1,0 +1,432 @@
+{
+  "source_table": "workspace.bank_silver.transactions",
+  "delta_version": 1,
+  "feature_version": "v1",
+  "train_end_exclusive": "2025-07-01",
+  "validation_end_exclusive": "2026-01-01",
+  "final_test_used": false,
+  "seed": 42,
+  "review_budget_assumption": 0.1,
+  "split_counts": {
+    "train": {
+      "split": "train",
+      "rows": 2994597,
+      "fraud": 3014.0,
+      "min_date": "2023-06-17 06:01:30",
+      "max_date": "2025-06-30 23:59:46"
+    },
+    "validation": {
+      "split": "validation",
+      "rows": 743909,
+      "fraud": 699.0,
+      "min_date": "2025-07-01 00:00:21",
+      "max_date": "2025-12-31 23:59:23"
+    }
+  },
+  "feature_allowlist": [
+    "amount",
+    "log_abs_amount",
+    "amount_sign",
+    "amount_usd_norm",
+    "hour",
+    "weekday",
+    "is_weekend",
+    "currency",
+    "transaction_type",
+    "channel",
+    "transaction_country",
+    "merchant_category"
+  ],
+  "preprocessing": "Median imputation and categorical indexers fitted on train only; one-hot encoding; no sampling.",
+  "metric_primary": "Spark BinaryClassificationEvaluator areaUnderPR (stepwise PR area).",
+  "attempts": [
+    {
+      "model": "M1_logistic_regression",
+      "params": {
+        "class_weight": "none",
+        "C": 1.0,
+        "max_iter": 100,
+        "seed": 42
+      },
+      "status": "SUCCESS",
+      "run_id": "416be16ec7ae4e93ae0e37ae567977f1",
+      "validation_area_under_pr": 0.0009223791055823075,
+      "validation_rows": 743909,
+      "validation_positives": 699,
+      "validation_prevalence": 0.0009396310570244479,
+      "training_rows": 2994597,
+      "training_positives": 3014,
+      "runtime_seconds": 23.59594345500011,
+      "iterations": 2,
+      "converged": true
+    },
+    {
+      "model": "M1_logistic_regression",
+      "params": {
+        "class_weight": "balanced",
+        "C": 1.0,
+        "max_iter": 100,
+        "seed": 42
+      },
+      "status": "SUCCESS",
+      "run_id": "782c884c8fed46e6bd4d9de7d6515b99",
+      "validation_area_under_pr": 0.0009296510919958521,
+      "validation_rows": 743909,
+      "validation_positives": 699,
+      "validation_prevalence": 0.0009396310570244479,
+      "training_rows": 2994597,
+      "training_positives": 3014,
+      "runtime_seconds": 16.56908854099993,
+      "iterations": 6,
+      "converged": true
+    },
+    {
+      "model": "M2_decision_tree",
+      "params": {
+        "class_weight": "none",
+        "max_depth": 5,
+        "min_instances_per_node": 1000,
+        "seed": 42
+      },
+      "status": "SUCCESS",
+      "run_id": "5132a4159b1747b684f0da8f2010acc2",
+      "validation_area_under_pr": 0.0009396310570244479,
+      "validation_rows": 743909,
+      "validation_positives": 699,
+      "validation_prevalence": 0.0009396310570244479,
+      "training_rows": 2994597,
+      "training_positives": 3014,
+      "runtime_seconds": 15.994863523000049,
+      "converged": null
+    },
+    {
+      "model": "M2_decision_tree",
+      "params": {
+        "class_weight": "balanced",
+        "max_depth": 5,
+        "min_instances_per_node": 1000,
+        "seed": 42
+      },
+      "status": "SUCCESS",
+      "run_id": "d57b22699acb4e0faaa8f5a15d6540cb",
+      "validation_area_under_pr": 0.000994210612783412,
+      "validation_rows": 743909,
+      "validation_positives": 699,
+      "validation_prevalence": 0.0009396310570244479,
+      "training_rows": 2994597,
+      "training_positives": 3014,
+      "runtime_seconds": 14.686175911999953,
+      "converged": null
+    }
+  ],
+  "baselines": {
+    "B0_constant_train_prevalence": {
+      "score": 0.0010064793359507139,
+      "validation_area_under_pr": 0.0009396310570244479,
+      "validation_rows": 743909,
+      "validation_positives": 699
+    },
+    "B1_always_non_fraud": {
+      "accuracy": 0.9990603689429756,
+      "recall": 0.0,
+      "validation_rows": 743909,
+      "validation_positives": 699,
+      "warning": "High accuracy is uninformative under severe class imbalance."
+    }
+  },
+  "non_converged_logistic_attempts": [],
+  "best_validation_area_under_pr": 0.000994210612783412,
+  "selected_candidate": {
+    "model": "M1_logistic_regression",
+    "params": {
+      "class_weight": "none",
+      "C": 1.0,
+      "max_iter": 100,
+      "seed": 42
+    },
+    "status": "SUCCESS",
+    "run_id": "416be16ec7ae4e93ae0e37ae567977f1",
+    "validation_area_under_pr": 0.0009223791055823075,
+    "validation_rows": 743909,
+    "validation_positives": 699,
+    "validation_prevalence": 0.0009396310570244479,
+    "training_rows": 2994597,
+    "training_positives": 3014,
+    "runtime_seconds": 23.59594345500011,
+    "iterations": 2,
+    "converged": true
+  },
+  "area_under_pr_lift_over_b0": 5.457955575896415e-05,
+  "selection_note": "Candidates within 0.001 areaUnderPR of the best are practical ties; selected the simplest model among them.",
+  "selected_model": "M1_logistic_regression",
+  "selected_params": {
+    "class_weight": "none",
+    "C": 1.0,
+    "max_iter": 100,
+    "seed": 42
+  },
+  "selected_validation_run_id": "416be16ec7ae4e93ae0e37ae567977f1",
+  "selected_model_spec": {
+    "model_id": "M1_logistic_regression",
+    "parameters": {
+      "class_weight": "none",
+      "C": 1.0,
+      "max_iter": 100,
+      "seed": 42
+    },
+    "feature_version": "v1",
+    "feature_columns": [
+      "amount_imputed",
+      "log_abs_amount_imputed",
+      "amount_sign_imputed",
+      "amount_usd_norm_imputed",
+      "hour_imputed",
+      "weekday_imputed",
+      "is_weekend_imputed",
+      "currency_ohe_USD",
+      "currency_ohe_COP",
+      "currency_ohe_ARS",
+      "currency_ohe___unknown",
+      "currency_ohe_invalidValues",
+      "transaction_type_ohe_Purchase",
+      "transaction_type_ohe_Withdrawal",
+      "transaction_type_ohe_Transfer",
+      "transaction_type_ohe_Payment",
+      "transaction_type_ohe_Deposit",
+      "transaction_type_ohe_Adjustment",
+      "transaction_type_ohe___unknown",
+      "transaction_type_ohe_invalidValues",
+      "channel_ohe_POS",
+      "channel_ohe_ATM",
+      "channel_ohe_Web",
+      "channel_ohe_App",
+      "channel_ohe_Branch",
+      "channel_ohe_Transfer",
+      "channel_ohe___unknown",
+      "channel_ohe_invalidValues",
+      "transaction_country_ohe_México",
+      "transaction_country_ohe_Colombia",
+      "transaction_country_ohe_Argentina",
+      "transaction_country_ohe_Spain",
+      "transaction_country_ohe_Brazil",
+      "transaction_country_ohe_USA",
+      "transaction_country_ohe___unknown",
+      "transaction_country_ohe_invalidValues",
+      "merchant_category_ohe___missing__",
+      "merchant_category_ohe_Food",
+      "merchant_category_ohe_Services",
+      "merchant_category_ohe_Transport",
+      "merchant_category_ohe_Other",
+      "merchant_category_ohe_Entertainment",
+      "merchant_category_ohe_Health",
+      "merchant_category_ohe___unknown",
+      "merchant_category_ohe_invalidValues"
+    ],
+    "input_predictors": [
+      "amount",
+      "log_abs_amount",
+      "amount_sign",
+      "amount_usd_norm",
+      "hour",
+      "weekday",
+      "is_weekend",
+      "currency",
+      "transaction_type",
+      "channel",
+      "transaction_country",
+      "merchant_category"
+    ],
+    "preprocessing": "Spark Pipeline fitted on train only; median imputation; train-fitted StringIndexer/OneHotEncoder with handleInvalid=keep.",
+    "model_binary_logged": false,
+    "binary_artifact_note": "Databricks Serverless MLflow Spark model logging requires a writable Unity Catalog Volume. None is currently available to this principal; no existing data volume was reused.",
+    "intercept": -6.9000803187838375,
+    "coefficients": [
+      -4.769072590501762e-12,
+      -1.02256373903247e-05,
+      0.0,
+      -2.1281890159379764e-08,
+      -3.2926085822801477e-06,
+      -4.749770172716683e-08,
+      7.73199547376926e-06,
+      5.0895771929381174e-05,
+      -6.665983759316272e-05,
+      3.693076644355001e-06,
+      0.0,
+      0.0,
+      7.276576083670259e-05,
+      -4.922529470510588e-06,
+      -0.00010868401293887971,
+      8.280016154763135e-06,
+      4.06080151823466e-06,
+      0.00011393539904231415,
+      0.0,
+      0.0,
+      -6.403532967777952e-05,
+      1.9600133489452885e-05,
+      4.4200539176025384e-05,
+      8.819583569888495e-06,
+      0.00016960492661153393,
+      -6.259609820644098e-05,
+      0.0,
+      0.0,
+      5.109923128011852e-05,
+      -8.100841649405893e-05,
+      1.1760141229207983e-05,
+      0.00012548961357151882,
+      0.00016338864833946286,
+      -5.631887413133065e-05,
+      0.0,
+      0.0,
+      -7.03059618369025e-05,
+      6.596000618611672e-05,
+      1.6365647647605745e-05,
+      2.9724494274321066e-06,
+      5.242661748147994e-05,
+      0.0001300139383546889,
+      8.704345277081346e-05,
+      0.0,
+      0.0
+    ]
+  },
+  "model_binary_logged": false,
+  "selected_validation_auc_roc": 0.49235419533705427,
+  "validation_threshold_for_10pct_review_budget": 0.001006773860423582,
+  "validation_at_threshold": {
+    "threshold": 0.001006773860423582,
+    "tp": 62,
+    "fp": 74328,
+    "tn": 668882,
+    "fn": 637,
+    "precision": 0.0008334453555585428,
+    "recall": 0.08869814020028613,
+    "f1": 0.0016513737032055294,
+    "review_rate": 0.0999987901746047,
+    "rows": 743909,
+    "positives": 699
+  },
+  "validation_recall_at_top_k": {
+    "5pct": {
+      "reviewed": 37196,
+      "capacity": 37196,
+      "tp": 40,
+      "recall": 0.05722460658082976,
+      "precision": 0.0010753844499408539
+    },
+    "10pct": {
+      "reviewed": 74391,
+      "capacity": 74391,
+      "tp": 62,
+      "recall": 0.08869814020028613,
+      "precision": 0.0008334341519807503
+    },
+    "20pct": {
+      "reviewed": 148782,
+      "capacity": 148782,
+      "tp": 134,
+      "recall": 0.1917024320457797,
+      "precision": 0.0009006465835921012
+    }
+  },
+  "validation_subgroups_at_threshold": [
+    {
+      "dimension": "transaction_country",
+      "value": "Argentina",
+      "rows": 145632,
+      "fraud": 148,
+      "precision": 0.0006437768240343348,
+      "recall": 0.02027027027027027
+    },
+    {
+      "dimension": "transaction_country",
+      "value": "Brazil",
+      "rows": 6823,
+      "fraud": 8,
+      "precision": 0.000628140703517588,
+      "recall": 0.125
+    },
+    {
+      "dimension": "transaction_country",
+      "value": "Colombia",
+      "rows": 216521,
+      "fraud": 213,
+      "precision": 0.0015408320493066256,
+      "recall": 0.004694835680751174
+    },
+    {
+      "dimension": "transaction_country",
+      "value": "México",
+      "rows": 361113,
+      "fraud": 322,
+      "precision": 0.0008465352521465716,
+      "recall": 0.17391304347826086
+    },
+    {
+      "dimension": "transaction_country",
+      "value": "Spain",
+      "rows": 6842,
+      "fraud": 6,
+      "precision": 0.0008517887563884157,
+      "recall": 0.16666666666666666
+    },
+    {
+      "dimension": "transaction_country",
+      "value": "USA",
+      "rows": 6978,
+      "fraud": 2,
+      "precision": 0.0,
+      "recall": 0.0
+    },
+    {
+      "dimension": "channel",
+      "value": "ATM",
+      "rows": 224009,
+      "fraud": 241,
+      "precision": 0.0007815698388477428,
+      "recall": 0.08713692946058091
+    },
+    {
+      "dimension": "channel",
+      "value": "App",
+      "rows": 111226,
+      "fraud": 84,
+      "precision": 0.0010469517596843037,
+      "recall": 0.15476190476190477
+    },
+    {
+      "dimension": "channel",
+      "value": "Branch",
+      "rows": 22194,
+      "fraud": 21,
+      "precision": 0.0006992029086841001,
+      "recall": 0.23809523809523808
+    },
+    {
+      "dimension": "channel",
+      "value": "POS",
+      "rows": 259984,
+      "fraud": 236,
+      "precision": 0.00117341379599363,
+      "recall": 0.059322033898305086
+    },
+    {
+      "dimension": "channel",
+      "value": "Transfer",
+      "rows": 14984,
+      "fraud": 13,
+      "precision": 0.0013297872340425532,
+      "recall": 0.07692307692307693
+    },
+    {
+      "dimension": "channel",
+      "value": "Web",
+      "rows": 111512,
+      "fraud": 104,
+      "precision": 0.0005239030779305828,
+      "recall": 0.07692307692307693
+    }
+  ],
+  "promotion_decision": "no_candidate_beats_baseline_or_finds_positives_within_budget",
+  "total_runtime_seconds": 305.35893039999996,
+  "mlflow_experiment_path": "/Shared/fraud-eda/phase2-training",
+  "mlflow_parent_run_id": "b5515db9fe834a57aa55adf88d3d684b"
+}

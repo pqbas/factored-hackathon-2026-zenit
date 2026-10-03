@@ -24,7 +24,7 @@ ml/
 └── databricks.yml     # serverless jobs for training and scoring
 ```
 
-Status (2026-10-02): **Phases 0 and 1 are complete; the V1 Phase 2 comparison found no promotable candidate. V2 customer-history features are implemented locally and being validated before training.** Final test remains unopened.
+Status (2026-10-02): **Phases 0 and 1 are complete; V1 and V2 temporal training/validation runs are complete, and neither produced a promotable candidate.** Final test remains unopened. A read-only coverage audit of `digital_events` is next.
 
 Phase 0 measurements: [reports/2026-09-28/profile_report.md](reports/2026-09-28/profile_report.md)
 
@@ -46,7 +46,7 @@ Phase 1 feature contract: [features.py](features.py), validation [reports/2026-0
 
 The train-only compatibility check passed on Serverless environment v4: 29,857 sampled rows, 34 positive labels, logistic regression fit in 12.49 seconds, and a depth-3 decision tree in 4.76 seconds. This validates runtime compatibility only, not model quality. See [the smoke-test report](reports/2026-10-02/training_smoke_report.md).
 
-The first Phase 2 comparison completed as a one-time Serverless v4 run. It compared B0/B1 and four representative M1/M2 configurations on temporal validation. The V1 comparison found no convincing gain over the constant baseline; the exact best-AP candidate is being re-evaluated for consistent operating metrics. See [the Phase 2 report](reports/2026-10-02/training_phase2_report.md) and [aggregate evidence](reports/2026-10-02/training_phase2_data.json). V2 adds strictly prior customer transaction counts, time since the previous transaction, and same-currency amount history; tests cover future/simultaneous events, customers, and mixed currencies. Final test remains unopened. The executable Spark model binary is not logged because this principal has no writable ML staging Volume.
+V1 and V2 Phase 2 comparisons completed as one-time Serverless v4 runs. V1 did not produce convincing gain over B0; its initial threshold diagnostics describe the simpler logistic model, not the highest-areaUnderPR tree. V2's customer-history features also failed to improve materially: best areaUnderPR 0.000947 versus B0 0.000940, ROC-AUC 0.501, and top-10% recall 9.0%. See the [V1 report](reports/2026-10-02/training_phase2_report.md), [V2 report](reports/2026-10-02/training_phase2_v2_report.md), and their aggregate JSON evidence. Final test remains unopened. The executable Spark model binary is not logged because this principal has no writable ML staging Volume.
 
 ## Exploratory notebook
 

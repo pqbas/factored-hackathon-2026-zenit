@@ -1,6 +1,6 @@
 # Data map and initial fraud model design
 
-Status: proposal for iteration; no training has been executed. Updated: 2026-09-28.
+Status: living design document. The first V1 training comparison completed on 2026-10-02 and was rejected for promotion; see [the Phase 2 report](reports/2026-10-02/training_phase2_report.md). Updated: 2026-10-02.
 
 Implementation specifications: [requirements and models](spec/28-09-26-fraud-model/requirements.md), [plan](spec/28-09-26-fraud-model/plan.md), and [validation](spec/28-09-26-fraud-model/validation.md). The specs make this proposal concrete and take precedence for contracts and acceptance criteria.
 

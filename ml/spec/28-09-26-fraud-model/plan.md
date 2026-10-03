@@ -1,6 +1,6 @@
 # Plan: fraud risk model
 
-Status: Phases 0/1 and EDA are complete. The first V1 Phase 2 comparison completed on 2026-10-02 and was rejected for promotion; see the dated report. The next iteration is V2 behavioral history features; final test remains sealed.
+Status: Phases 0/1 and EDA are complete. V1 and V2 Phase 2 comparisons completed on 2026-10-02; neither is promoted. See both dated reports. The next step is a read-only coverage audit of `digital_events`; final test remains sealed.
 
 ## Phase 0 — Access and profiling
 
@@ -61,6 +61,6 @@ ml/
 Phase 2 training uses a one-time serverless notebook run; it does not create a saved job, write tables, register a model, or score final-test rows.
 
 
-### Phase 2 outcome (2026-10-02)
+### Phase 2 outcomes (2026-10-02)
 
-Four bounded candidates completed on temporal validation. Best areaUnderPR was 0.000994 versus the constant-score baseline of 0.000940; the selected simple representative scored below baseline. No model is promoted and test remains unopened. Add causal V2 customer history features before another validation comparison. Full aggregate evidence: `../../reports/2026-10-02/training_phase2_report.md`.
+Four bounded candidates completed for each feature version on temporal validation. V1's best areaUnderPR was 0.000994 versus the constant-score baseline of 0.000940. V2 added strictly prior customer activity but reached only 0.000947, with ROC-AUC 0.501 and top-10% recall 9.0%. Neither model is promoted and test remains unopened. Full evidence: `../../reports/2026-10-02/training_phase2_report.md` and `../../reports/2026-10-02/training_phase2_v2_report.md`.

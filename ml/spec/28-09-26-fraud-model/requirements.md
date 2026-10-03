@@ -33,7 +33,7 @@ Proposed implementation: scikit-learn for models and MLflow for tracking, provid
 - R2: isolate and count rows with missing/invalid PK, timestamp, or label. Do not impute is_fraud. If an evaluation partition lacks either class, stop selection and review the design before opening the final test.
 - R3: verify all transaction types and positives per type. Initially include all valid transactions; a later debit filter requires a new version and explicit denominators.
 - R4: V1 features: amount, currency, amount_usd (if validated), log1p(abs(amount)), sign, transaction_type, channel, merchant_category, transaction_country, hour, weekday, and weekend flag.
-- R5: V2 adds strictly earlier history: 1h/24h/7d counts, compatible historical amounts, time since the previous transaction, and new merchant/country indicators. Coordinates and speed are optional after quality checks.
+- R5: V2 adds strictly earlier history: 1h/24h/7d customer transaction counts, time since the previous transaction, and 30-day same-currency amount history after at least five prior rows. New merchant/country indicators, coordinates, and speed remain unimplemented hypotheses.
 - R6: V3 (customers/products/digital_events) is deferred until temporal availability is established. Snapshot country and segment are not assumed historical.
 - R7: exclude is_fraud, fraud_score, transaction_status, response_code, process_date, subsequent outcomes, current states/balances, and personal identifiers from predictors. Keep IDs for provenance and history, separate from X.
 - R8: windows are [T - duration, T), excluding all events at T. Joins must preserve uniqueness; aggregate digital events before joining.
