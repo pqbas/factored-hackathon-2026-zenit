@@ -16,7 +16,8 @@ The first evaluation will cover transactions; do not present it as performance o
 - Schemas and 24 dictionary relationships checked against [the code contract](../data/pipeline/tables.py).
 - [Persistent reference for all columns](../docs/fraud_data_reference.md) and [the team's previous validation](../docs/data_pipeline_validation.md).
 - Verified through CLI: 13 Delta tables exist in `workspace.bank_silver`, plus `_dq_report`, 6 gold tables, and a successful latest ingestion run.
-- Reads with our account remain blocked by `USE SCHEMA`; distributions, missing values, and predictive signal have not been revalidated. Counts of 4,425,008 transactions and 4,316 fraud cases (~0.10%) come from team reports.
+- Historical note (2026-09-28): reads were initially blocked by `USE SCHEMA`. Transaction SELECT was later granted and validated; profiling, EDA, and V1/V2 training evidence are recorded in dated reports.
+- Access update (2026-10-02): transaction reads and V1/V2 modeling succeeded. The principal lacks `SELECT` on `workspace.bank_silver.digital_events`; a read-only V3 coverage audit was blocked. See the [access report](reports/2026-10-02/digital_event_access_report.md).
 
 ## 3. Complete map of the 13 tables
 

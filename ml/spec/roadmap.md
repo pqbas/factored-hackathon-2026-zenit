@@ -10,7 +10,7 @@ Specification source: [Fraud model](28-09-26-fraud-model/requirements.md).
 | EDA notebook | Spark-based data exploration on pinned Delta v1 | **Done 2026-10-02** — serverless run successful; see `../reports/2026-10-02/eda_report.md` |
 | 2 | B0/B1 + logistic regression + decision tree with MLflow | **V1/V2 comparisons complete 2026-10-02; no promotion** — V1 best areaUnderPR 0.000994 vs B0 0.000940; V2 0.000947. See the dated training reports; final test excluded. |
 | 3 | Final evaluation and utility decision | Pending |
-| 4 | Behavioral features / model challengers | **V2 complete; no gain** — strictly prior customer history did not improve materially; next run a read-only digital-event coverage audit before deciding on V3 |
+| 4 | Behavioral features / model challengers | **V2 complete; no gain** — strictly prior customer history did not improve materially; the digital-event coverage audit is blocked until `SELECT` is granted on `workspace.bank_silver.digital_events` |
 | 5 | Registration, scoring, and integration | Pending; depends on evidence |
 
 - [Requirements and models](28-09-26-fraud-model/requirements.md)

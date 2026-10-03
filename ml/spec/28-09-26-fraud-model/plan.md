@@ -1,6 +1,6 @@
 # Plan: fraud risk model
 
-Status: Phases 0/1 and EDA are complete. V1 and V2 Phase 2 comparisons completed on 2026-10-02; neither is promoted. See both dated reports. The next step is a read-only coverage audit of `digital_events`; final test remains sealed.
+Status: Phases 0/1 and EDA are complete. V1 and V2 Phase 2 comparisons completed on 2026-10-02; neither is promoted. See both dated reports. The read-only `digital_events` coverage audit is prepared but blocked by missing SELECT; final test remains sealed.
 
 ## Phase 0 — Access and profiling
 
