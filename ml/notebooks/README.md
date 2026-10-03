@@ -5,7 +5,7 @@
 
 ## Status and execution
 
-The EDA notebook ran successfully on 2026-10-02. The train-only Spark ML smoke test also passed on Serverless environment v4. Full Phase 2 submissions exposed two constraints (Spark ML needs serverless environment v4; serverless rejects explicit DataFrame persistence). Both the four-candidate V1 comparison and the V2 customer-history comparison completed without a promotable result. The V3 digital-event coverage audit requires `SELECT` on `workspace.bank_silver.digital_events`; the current principal lacks that grant. Checked-in notebooks keep outputs empty; bounded aggregate results are stored in the dated reports.
+The EDA notebook ran successfully on 2026-10-02. The train-only Spark ML smoke test also passed on Serverless environment v4. Full Phase 2 submissions exposed two constraints (Spark ML needs serverless environment v4; serverless rejects explicit DataFrame persistence). V1, V2, and one bounded V2 Random Forest challenger completed without a promotable result. The V3 digital-event coverage audit requires `SELECT` on `workspace.bank_silver.digital_events`; the current principal lacks that grant. Checked-in notebooks keep outputs empty; bounded aggregate results are stored in the dated reports.
 
 1. Shared workspace notebooks are under `/Shared/fraud-eda`; one-time run records are linked from their dated reports.
 2. The EDA and training runs read `workspace.bank_silver.transactions` version 1. The workspace session timezone is UTC.

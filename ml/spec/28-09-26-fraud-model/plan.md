@@ -22,7 +22,7 @@ Shared seed: 42. Bounded tuning on fixed temporal validation, not random cross-v
 |---|---|---|
 | M1 logistic regression | C: 0.1, 1, 10; class_weight: None, balanced; L2 penalty; maximum 1000 iterations | 6 |
 | M2 decision tree | max_depth: 3, 5, 8; min_samples_leaf: 100, 1000; class_weight: None, balanced | 12 |
-| M3 Random Forest, later | n_estimators: 200; max_depth: 8, 16; min_samples_leaf: 100, 1000; max_features: sqrt; class_weight: balanced_subsample | 4 |
+| M3 Random Forest | Proposed broader grid: n_estimators: 200; max_depth: 8, 16; min_samples_leaf: 100, 1000; max_features: sqrt; class_weight: balanced_subsample. Executed one bounded challenger: 20 trees, depth 6, minimum 1,000 rows per leaf, balanced weights. | 4 proposed |
 | M4 HistGradientBoosting, optional | max_iter: 200; learning_rate: 0.05, 0.1; max_leaf_nodes: 15, 31; min_samples_leaf: 100; l2_regularization: 1 | 4 |
 
 B0/B1 require no search. Leaf sizes are starting points for the reported volume; revisit them before using test if sampling changes. Verify parameter support in the installed version during implementation and pin dependencies. M4 starts without weights; record this difference in comparisons. Bound parallelism by available resources rather than using all cores by default. Do not automatically execute all 26 combinations: first run a train-only smoke test and estimate the budget.
@@ -37,7 +37,7 @@ Explicit decision: useful candidate, insufficient evidence, or no improvement. D
 
 ## Phase 4 — Feature iterations and challengers
 
-Evaluate V1 versus V1+V2 on temporal validation periods before test, holding the rest of the protocol constant. M3 follows M1/M2 results; M4 requires budget and compatibility. Record marginal gain and cost. This phase must precede opening test for the corresponding version, even though it is listed as the next MVP iteration.
+The V1/V2 comparison and one bounded M3 challenger are complete; neither supports promotion. Any M4 experiment requires a compute budget and compatibility check. A V3 digital-event coverage audit is prepared but blocked because the active principal lacks `SELECT` on `workspace.bank_silver.digital_events`. Record marginal gain and cost before considering further challengers.
 
 ## Phase 5 — Scoring and integration
 
@@ -63,4 +63,4 @@ Phase 2 training uses a one-time serverless notebook run; it does not create a s
 
 ### Phase 2 outcomes (2026-10-02)
 
-Four bounded candidates completed for each feature version on temporal validation. V1's best areaUnderPR was 0.000994 versus the constant-score baseline of 0.000940. V2 added strictly prior customer activity but reached only 0.000947, with ROC-AUC 0.501 and top-10% recall 9.0%. Neither model is promoted and test remains unopened. Full evidence: `../../reports/2026-10-02/training_phase2_report.md` and `../../reports/2026-10-02/training_phase2_v2_report.md`.
+Four bounded M1/M2 candidates completed for V1 and V2. A bounded V2 Random Forest challenger also completed. V1's best areaUnderPR was 0.000994; the V2 forest reached 0.000974 versus the constant-score baseline of 0.000940, with ROC-AUC 0.501 and top-10% recall 10.3%. No model is promoted and test remains unopened. Full evidence: `../../reports/2026-10-02/training_phase2_report.md`, `../../reports/2026-10-02/training_phase2_v2_report.md`, and `../../reports/2026-10-02/training_phase2_rf_report.md`.
