@@ -24,7 +24,7 @@ ml/
 └── databricks.yml     # serverless jobs for training and scoring
 ```
 
-Status (2026-10-02): **Phases 0 and 1 are complete; V1 and V2 temporal training/validation runs are complete, and neither produced a promotable candidate.** Final test remains unopened. The V3 `digital_events` coverage audit is ready but blocked because the current principal lacks `SELECT` on that table.
+Status (2026-10-03): **Phases 0 and 1 and validation-only V1/V2/RF experiments are complete; no candidate is suitable for promotion.** The review-capacity analysis shows precision near the random-review baseline. Final test remains unopened. The V3 `digital_events` coverage audit is ready but blocked because the current principal lacks `SELECT` on that table.
 
 Phase 0 measurements: [reports/2026-09-28/profile_report.md](reports/2026-09-28/profile_report.md)
 
@@ -47,6 +47,8 @@ Phase 1 feature contract: [features.py](features.py), validation [reports/2026-0
 The train-only compatibility check passed on Serverless environment v4: 29,857 sampled rows, 34 positive labels, logistic regression fit in 12.49 seconds, and a depth-3 decision tree in 4.76 seconds. This validates runtime compatibility only, not model quality. See [the smoke-test report](reports/2026-10-02/training_smoke_report.md).
 
 V1/V2 Phase 2 comparisons and one bounded V2 Random Forest challenger completed as one-time Serverless v4 runs. Best V1 areaUnderPR was 0.000994; the V2 Random Forest reached 0.000974 versus B0 0.000940, with ROC-AUC near 0.5 and top-10% recall 10.3%. No model is promoted. See the [V1 report](reports/2026-10-02/training_phase2_report.md), [V2 report](reports/2026-10-02/training_phase2_v2_report.md), [Random Forest challenger report](reports/2026-10-02/training_phase2_rf_report.md), and aggregate JSON evidence. A read-only `digital_events` audit was attempted but requires `SELECT` on `workspace.bank_silver.digital_events`; the exact access failure is recorded in the [access report](reports/2026-10-02/digital_event_access_report.md). Final test remains unopened. The executable Spark model binary is not logged because this principal has no writable ML staging Volume.
+
+The [review-budget curve](reports/2026-10-03/review_budget_curve_report.md) makes the operating trade-off explicit: at 1% review capacity the model found 12 of 699 validation frauds (1.72% recall) and 0.161% precision; at 10% capacity, precision was 0.097%, almost the 0.094% random-review baseline. The apparent 0.269% precision at 0.1% capacity represents only two frauds and is too unstable to rely on. These are validation-only results, not a production threshold or a promise of future performance. No model should make automatic fraud decisions from these results.
 
 ## Exploratory notebook
 
