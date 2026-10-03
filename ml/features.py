@@ -100,6 +100,12 @@ SPLIT_VALIDATION_END = _dt.datetime(2026, 1, 1)
 
 SPLIT_LABELS: Tuple[str, ...] = ("train", "validation", "test")
 
+# Strictly prior customer history windows used by the experimental V2 contract.
+HISTORY_WINDOWS_SECONDS: Tuple[int, ...] = (3600, 86400, 604800)
+HISTORY_WINDOW_NAMES = {3600: "1h", 86400: "24h", 604800: "7d"}
+CUSTOMER_AMOUNT_HISTORY_SECONDS = 30 * 86400
+CUSTOMER_AMOUNT_MIN_HISTORY = 5
+
 
 # ──────────────────────────────────────────────────────────────
 # Pure transforms
@@ -228,6 +234,78 @@ def build_v1_features(row: Mapping[str, Any]) -> dict[str, Any]:
         "weekday": weekday,
         "is_weekend": is_weekend,
     }
+
+
+def build_v2_history_features(
+    current: Mapping[str, Any], history: Any
+) -> dict[str, Any]:
+    """Compute causal customer-history features for one transaction.
+
+    Only earlier transactions for the same customer are eligible. Events at
+    exactly the current timestamp are excluded. Amount averages and ratios
+    use only the current transaction's currency and require five prior rows.
+    ``history`` may be any iterable of transaction mappings.
+    """
+    current_time = _as_datetime(current.get(DATE_COLUMN))
+    customer_id = current.get("customer_id")
+    currency = current.get("currency")
+    prior = []
+    for row in history:
+        timestamp = _as_datetime(row.get(DATE_COLUMN))
+        if (
+            current_time is not None
+            and timestamp is not None
+            and timestamp < current_time
+            and customer_id is not None
+            and row.get("customer_id") == customer_id
+        ):
+            prior.append((timestamp, row))
+
+    result: dict[str, Any] = {}
+    for seconds in HISTORY_WINDOWS_SECONDS:
+        lower = current_time - _dt.timedelta(seconds=seconds) if current_time else None
+        result[f"customer_tx_count_{HISTORY_WINDOW_NAMES[seconds]}"] = sum(
+            1 for timestamp, _ in prior if lower is not None and timestamp >= lower
+        )
+    result["seconds_since_prev_tx"] = (
+        (current_time - max(timestamp for timestamp, _ in prior)).total_seconds()
+        if current_time is not None and prior
+        else None
+    )
+
+    lower = (
+        current_time - _dt.timedelta(seconds=CUSTOMER_AMOUNT_HISTORY_SECONDS)
+        if current_time
+        else None
+    )
+    amounts = []
+    for timestamp, row in prior:
+        if lower is None or timestamp < lower or row.get("currency") != currency:
+            continue
+        try:
+            amount = float(row.get("amount"))
+        except (TypeError, ValueError):
+            continue
+        if math.isfinite(amount):
+            amounts.append(abs(amount))
+    result["customer_same_currency_tx_count_30d"] = len(amounts)
+    result["customer_same_currency_mean_abs_amount_30d"] = (
+        sum(amounts) / len(amounts) if amounts else None
+    )
+    try:
+        current_amount = abs(float(current.get("amount")))
+    except (TypeError, ValueError):
+        current_amount = None
+    mean_amount = result["customer_same_currency_mean_abs_amount_30d"]
+    result["customer_amount_ratio_30d"] = (
+        current_amount / mean_amount
+        if current_amount is not None
+        and mean_amount is not None
+        and mean_amount > 0
+        and len(amounts) >= CUSTOMER_AMOUNT_MIN_HISTORY
+        else None
+    )
+    return result
 
 
 # ──────────────────────────────────────────────────────────────

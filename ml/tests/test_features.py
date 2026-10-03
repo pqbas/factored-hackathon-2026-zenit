@@ -44,6 +44,52 @@ def test_split_missing_date():
     assert features.temporal_split("") is None
 
 
+def test_v2_history_excludes_current_time_and_other_customers():
+    current = {
+        "customer_id": "c1",
+        "transaction_date": dt.datetime(2025, 1, 2, 12),
+        "currency": "USD",
+        "amount": 25,
+    }
+    history = [
+        {"customer_id": "c1", "transaction_date": dt.datetime(2025, 1, 2, 11, 30), "currency": "USD", "amount": 10},
+        {"customer_id": "c1", "transaction_date": dt.datetime(2025, 1, 2, 12), "currency": "USD", "amount": 100},
+        {"customer_id": "c2", "transaction_date": dt.datetime(2025, 1, 2, 11), "currency": "USD", "amount": 100},
+    ]
+    result = features.build_v2_history_features(current, history)
+    assert result["customer_tx_count_1h"] == 1
+    assert result["customer_tx_count_24h"] == 1
+    assert result["seconds_since_prev_tx"] == 1800
+    assert result["customer_amount_ratio_30d"] is None
+
+
+def test_v2_same_currency_amount_ratio_requires_five_prior_rows():
+    current_time = dt.datetime(2025, 2, 1)
+    current = {"customer_id": "c1", "transaction_date": current_time, "currency": "USD", "amount": 30}
+    history = [
+        {"customer_id": "c1", "transaction_date": current_time - dt.timedelta(days=i + 1), "currency": "USD", "amount": 10}
+        for i in range(5)
+    ]
+    result = features.build_v2_history_features(current, history)
+    assert result["customer_same_currency_tx_count_30d"] == 5
+    assert result["customer_same_currency_mean_abs_amount_30d"] == 10
+    assert result["customer_amount_ratio_30d"] == 3
+
+
+def test_v2_never_mixes_currencies_or_uses_future_transactions():
+    current_time = dt.datetime(2025, 3, 1)
+    current = {"customer_id": "c1", "transaction_date": current_time, "currency": "USD", "amount": 20}
+    history = [
+        {"customer_id": "c1", "transaction_date": current_time - dt.timedelta(days=i + 1), "currency": "COP", "amount": 100000}
+        for i in range(5)
+    ]
+    history.append({"customer_id": "c1", "transaction_date": current_time + dt.timedelta(days=1), "currency": "USD", "amount": 10})
+    result = features.build_v2_history_features(current, history)
+    assert result["customer_same_currency_tx_count_30d"] == 0
+    assert result["customer_same_currency_mean_abs_amount_30d"] is None
+    assert result["customer_amount_ratio_30d"] is None
+
+
 def test_split_iso_string():
     assert features.temporal_split("2025-07-01T00:00:00") == "validation"
     assert features.temporal_split("2026-01-01T00:00:00Z") == "test"

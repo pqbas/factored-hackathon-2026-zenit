@@ -18,11 +18,18 @@ DELTA_VERSION = 1
 TRAIN_END = "2025-07-01"
 VALIDATION_END = "2026-01-01"
 SEED = 42
-FEATURE_VERSION = "v1"
+FEATURE_VERSION = "v2_customer_history"
 REVIEW_BUDGET = 0.10
 EXPERIMENT_PATH = "/Shared/fraud-eda/phase2-training"
 
 NUMERIC_FEATURES = [
+    "amount", "log_abs_amount", "amount_sign", "amount_usd_norm",
+    "hour", "weekday", "is_weekend",
+    "customer_tx_count_1h", "customer_tx_count_24h", "customer_tx_count_7d",
+    "seconds_since_prev_tx", "customer_same_currency_tx_count_30d",
+    "customer_same_currency_mean_abs_amount_30d", "customer_amount_ratio_30d",
+]
+SMOKE_NUMERIC_FEATURES = [
     "amount", "log_abs_amount", "amount_sign", "amount_usd_norm",
     "hour", "weekday", "is_weekend",
 ]
@@ -68,7 +75,7 @@ def run_smoke(spark, sample_fraction: float = 0.01) -> dict[str, Any]:
     )
     for column in CATEGORICAL_FEATURES:
         raw = raw.withColumn(column, F.coalesce(F.nullif(F.trim(F.col(column).cast("string")), F.lit("")), F.lit("__missing__")))
-    for column in NUMERIC_FEATURES:
+    for column in SMOKE_NUMERIC_FEATURES:
         raw = raw.withColumn(column, F.col(column).cast("double"))
         raw = raw.withColumn(column, F.when(F.isnan(column), F.lit(None).cast("double")).otherwise(F.col(column)))
         raw = raw.withColumn(column, F.coalesce(F.col(column), F.lit(float("nan"))))
@@ -79,9 +86,9 @@ def run_smoke(spark, sample_fraction: float = 0.01) -> dict[str, Any]:
 
     idx = [f"{c}_idx" for c in CATEGORICAL_FEATURES]
     ohe = [f"{c}_ohe" for c in CATEGORICAL_FEATURES]
-    imputed = [f"{c}_imputed" for c in NUMERIC_FEATURES]
+    imputed = [f"{c}_imputed" for c in SMOKE_NUMERIC_FEATURES]
     pipeline = Pipeline(stages=[
-        Imputer(inputCols=NUMERIC_FEATURES, outputCols=imputed, strategy="median"),
+        Imputer(inputCols=SMOKE_NUMERIC_FEATURES, outputCols=imputed, strategy="median"),
         StringIndexer(inputCols=CATEGORICAL_FEATURES, outputCols=idx, handleInvalid="keep"),
         OneHotEncoder(inputCols=idx, outputCols=ohe, handleInvalid="keep", dropLast=False),
         VectorAssembler(inputCols=imputed + ohe, outputCol="features"),
@@ -159,7 +166,7 @@ def run_training(spark, mlflow) -> dict[str, Any]:
     mlflow.set_experiment(EXPERIMENT_PATH)
 
     required = {
-        "transaction_id", "transaction_date", "is_fraud", "amount", "currency",
+        "transaction_id", "customer_id", "transaction_date", "is_fraud", "amount", "currency",
         "amount_usd", "transaction_type", "channel", "transaction_country",
         "merchant_category",
     }
@@ -169,7 +176,7 @@ def run_training(spark, mlflow) -> dict[str, Any]:
         raise ValueError(f"Required source columns are missing: {missing}")
 
     # Exclude all final-test timestamps at source-read time. IDs remain only
-    # for deterministic ranking and are never included in the feature vector.
+    # for causal history and deterministic ranking, never as model predictors.
     raw = (
         source.where(F.col("transaction_date") < F.to_timestamp(F.lit(VALIDATION_END)))
         .select(*sorted(required))
@@ -190,8 +197,53 @@ def run_training(spark, mlflow) -> dict[str, Any]:
         if not item or not item["rows"] or not item["fraud"] or item["fraud"] >= item["rows"]:
             raise ValueError(f"Both label classes are required in {split}: {item}")
 
+    # V2 history features use timestamp microseconds and a closed lower bound,
+    # open upper bound ending one microsecond before T. This excludes both the
+    # current transaction and every transaction at exactly the same timestamp.
+    features = (
+        raw
+        .withColumn("_tx_epoch_us", F.expr("unix_micros(transaction_date)"))
+        .withColumn(
+            "_history_customer_id",
+            F.when(F.col("customer_id").isNotNull(), F.col("customer_id")).otherwise(
+                F.concat(F.lit("__missing_customer__"), F.col("transaction_id").cast("string"))
+            ),
+        )
+    )
+    customer_order = Window.partitionBy("_history_customer_id").orderBy(F.col("_tx_epoch_us"))
+    history_frames = {
+        "1h": (-3_600_000_000, -1),
+        "24h": (-86_400_000_000, -1),
+        "7d": (-604_800_000_000, -1),
+    }
+    for suffix, (start_us, end_us) in history_frames.items():
+        frame = customer_order.rangeBetween(start_us, end_us)
+        features = features.withColumn(
+            f"customer_tx_count_{suffix}", F.count("transaction_id").over(frame).cast("double")
+        )
+    prior_all = customer_order.rangeBetween(Window.unboundedPreceding, -1)
+    features = features.withColumn("_prev_tx_epoch_us", F.max("_tx_epoch_us").over(prior_all))
+    features = features.withColumn(
+        "seconds_since_prev_tx",
+        ((F.col("_tx_epoch_us") - F.col("_prev_tx_epoch_us")) / F.lit(1_000_000.0)).cast("double"),
+    )
+    customer_currency_order = Window.partitionBy("_history_customer_id", "currency").orderBy(F.col("_tx_epoch_us"))
+    prior_currency_30d = customer_currency_order.rangeBetween(-2_592_000_000_000, -1)
+    features = (
+        features
+        .withColumn("customer_same_currency_tx_count_30d", F.count("transaction_id").over(prior_currency_30d).cast("double"))
+        .withColumn("customer_same_currency_mean_abs_amount_30d", F.avg(F.abs(F.col("amount").cast("double"))).over(prior_currency_30d))
+        .withColumn(
+            "customer_amount_ratio_30d",
+            F.when(
+                (F.col("customer_same_currency_tx_count_30d") >= 5)
+                & (F.col("customer_same_currency_mean_abs_amount_30d") > 0),
+                F.abs(F.col("amount").cast("double")) / F.col("customer_same_currency_mean_abs_amount_30d"),
+            ),
+        )
+    )
+
     # Match the V1 helper: Python Monday=0, Spark dayofweek Sunday=1.
-    features = raw
     amount = F.col("amount").cast("double")
     features = (
         features

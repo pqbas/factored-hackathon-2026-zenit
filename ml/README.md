@@ -24,7 +24,7 @@ ml/
 └── databricks.yml     # serverless jobs for training and scoring
 ```
 
-Status (2026-10-02): **Phases 0 and 1 are complete. Phase 2 implementation is running.** A 1% train-only smoke test passed on Serverless environment v4; the full B0/B1/M1/M2 validation run has been submitted. Final test remains unopened.
+Status (2026-10-02): **Phases 0 and 1 are complete; the V1 Phase 2 comparison found no promotable candidate. V2 customer-history features are implemented locally and being validated before training.** Final test remains unopened.
 
 Phase 0 measurements: [reports/2026-09-28/profile_report.md](reports/2026-09-28/profile_report.md)
 
@@ -46,7 +46,7 @@ Phase 1 feature contract: [features.py](features.py), validation [reports/2026-0
 
 The train-only compatibility check passed on Serverless environment v4: 29,857 sampled rows, 34 positive labels, logistic regression fit in 12.49 seconds, and a depth-3 decision tree in 4.76 seconds. This validates runtime compatibility only, not model quality. See [the smoke-test report](reports/2026-10-02/training_smoke_report.md).
 
-The revised Phase 2 comparison is running as a one-time Serverless v4 task. It fits train-only preprocessing, compares B0/B1 and four representative M1/M2 configurations on temporal validation, and logs metrics plus a model specification to MLflow. The executable Spark model binary is not logged because this principal has no writable ML staging Volume. The final-test period remains excluded. Results will be added after the run completes.
+The first Phase 2 comparison completed as a one-time Serverless v4 run. It compared B0/B1 and four representative M1/M2 configurations on temporal validation. The V1 comparison found no convincing gain over the constant baseline; the exact best-AP candidate is being re-evaluated for consistent operating metrics. See [the Phase 2 report](reports/2026-10-02/training_phase2_report.md) and [aggregate evidence](reports/2026-10-02/training_phase2_data.json). V2 adds strictly prior customer transaction counts, time since the previous transaction, and same-currency amount history; tests cover future/simultaneous events, customers, and mixed currencies. Final test remains unopened. The executable Spark model binary is not logged because this principal has no writable ML staging Volume.
 
 ## Exploratory notebook
 
