@@ -1,6 +1,6 @@
 # Plan: fraud risk model
 
-Status: Phases 0/1, EDA, and V1–V4 exploratory validation are complete. No model is promoted; V4 assigned a constant score to all validation rows. A validation-only `fraud_score` diagnostic showed unusually strong label alignment, but timing/provenance is unknown. `digital_events` remains blocked on SELECT; the final test remains sealed. See dated reports in `../../reports/2026-10-03/`.
+Status: Phases 0/1, EDA, and V1–V5 exploratory validation are complete. No model is promoted; V4 assigned a constant score and V5 CatBoost did not materially improve later-period precision (0.161% at a frozen approximately 1% review threshold). A `fraud_score` diagnostic showed unusually strong label alignment, but timing/provenance is unknown. `digital_events` remains blocked on SELECT, rechecked 2026-10-04; the final test remains sealed. See dated reports in `../../reports/2026-10-04/` and the [V5 protocol](improvement_v5.md).
 
 ## Phase 0 — Access and profiling
 

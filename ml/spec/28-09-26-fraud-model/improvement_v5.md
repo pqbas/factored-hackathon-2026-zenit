@@ -1,6 +1,6 @@
 # V5 improvement proposal: diagnose capacity, then add independent signals
 
-Status: proposed on 2026-10-03. No V5 model has been trained or promoted. Source data, schemas, functions, and serving resources are not changed by this proposal.
+Status: **implemented and completed 2026-10-04; not promoted**. Corrected one-time run `457664911930657` succeeded. V5 precision was 0.161% at the frozen approximately 1% review threshold; no supported 20%/50%/80% precision scenario was feasible. See the [execution report](../../reports/2026-10-04/training_v5_catboost_report.md). Source data, schemas, functions, and serving resources were not changed.
 
 ## Decision and evidence
 
@@ -37,7 +37,13 @@ Add explicit numeric missingness flags and history-support flags. Preserve the d
 
 ## Step 3: bounded model challenger without waiting for digital access
 
-Use CatBoost on numerical and categorical transaction/history features as a capacity/encoding challenger. This is a new dependency and model family; it is not already trained. Its native categorical handling is supported by the [official documentation](https://catboost.ai/docs/en/features/categorical-features), and its early-stopping options are documented in [parameter tuning](https://catboost.ai/docs/en/concepts/parameter-tuning). Neither capability implies an improvement on this dataset.
+CatBoost was executed on numerical and categorical transaction/history features as a capacity/encoding challenger. Its native categorical handling is supported by the [official documentation](https://catboost.ai/docs/en/features/categorical-features), and its early-stopping options are documented in [parameter tuning](https://catboost.ai/docs/en/concepts/parameter-tuning). Neither capability implies an improvement on this dataset; the completed experiment did not provide useful later-period precision.
+
+Implementation: [train_v5.py](../../train_v5.py), called by [09_catboost_challenger.ipynb](../../notebooks/09_catboost_challenger.ipynb). The run reuses the extracted V4 feature builder, checks same-time/lower-bound/final-test semantics on a small Spark fixture, and validates CatBoost parameters on a separate toy smoke test. CatBoost 1.2.8 is declared in the Serverless v4 environment. The job timeout is 3,600 seconds, with zero task retries requested; the trainer stops launching candidates after a 3,000-second runtime budget. Serverless nevertheless retried the first failed smoke execution. The corrected run succeeded in one task attempt. These limits are caps, not measured cost or runtime.
+
+For driver-memory control, the executed fit design retains all fit-period positives plus a fixed hash-based 10% sample of negatives. Negative samples receive inverse inclusion weight 10; positives receive 1, followed by the candidate's explicit class weighting. Evaluation is not sampled. Numeric medians are learned from the sampled fit period and shared across candidates; chronology-aware native categorical handling replaces the old one-hot encoding. Thus C0 is a capacity/encoding comparison under a different training population and earlier fit cutoff, not an isolated causal estimate of the algorithm's effect. Candidate C3 isolates missingness/support flags against the selected C0–C2 settings. The categorical input is sorted by timestamp before fitting, with identifiers used only to break same-time ordering and never as predictors.
+
+Before each collection, a bounded pilot estimates pandas row size; estimated peak uses a factor of three and must fit below both 45% of available physical/cgroup headroom and 2 GiB. Memory checks and sampled row counts are recorded. Identifiers are removed in Spark before collecting feature subsets. No model binary is logged or registered; only aggregate experiment results and non-executable preprocessing/importance metadata are saved to MLflow.
 
 Proposed first-pass budget: at most four sequential fits, CPU only, up to 500 boosting iterations per fit, early stopping after 50 rounds without improvement. Record a runtime cap and driver-memory estimate before starting. Begin with depth 6, learning rate 0.05, L2 leaf regularization 10, seed 42. Log actual effective iterations and all settings.
 

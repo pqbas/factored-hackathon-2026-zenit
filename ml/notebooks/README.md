@@ -5,6 +5,10 @@
 
 [08_train_signal_audit.ipynb](08_train_signal_audit.ipynb) checks training-only category/hour/month rates and positive-label support for the proposed V5 internal periods. Equivalent aggregate SQL completed through the SQL API on 2026-10-03; see [the audit report](../reports/2026-10-03/train_signal_audit_report.md). The notebook does not train CatBoost or establish label provenance. Follow the [V5 improvement specification](../spec/28-09-26-fraud-model/improvement_v5.md) before fitting any challenger.
 
+[09_catboost_challenger.ipynb](09_catboost_challenger.ipynb) executes four V5 CatBoost candidates with a shared V4 feature builder, chronological internal periods, train-only negative sampling with inverse inclusion weights, natural evaluation prevalence, and frozen thresholds. It is published at `/Shared/fraud-eda/09_catboost_challenger`; `train_v4` and `train_v5` source notebooks must be present beside it. The run requires Serverless environment v4 with `catboost==1.2.8`. Spark causal-window fixtures and a toy CatBoost compatibility smoke test precede the actual experiment. It does not open the final test or create database/serving resources.
+
+V5 completed successfully on 2026-10-04. The selected C3 CatBoost candidate produced 0.161% precision at the frozen approximately 1% review threshold and ROC-AUC 0.5038 on later exploratory validation. It failed supported 20%/50%/80% precision targets and is not promoted. See [the execution report](../reports/2026-10-04/training_v5_catboost_report.md).
+
 ## Status and execution
 
 The EDA notebook ran successfully on 2026-10-02. The train-only Spark ML smoke test also passed on Serverless environment v4. Full Phase 2 submissions exposed two constraints (Spark ML needs serverless environment v4; serverless rejects explicit DataFrame persistence). V1, V2, and one bounded V2 Random Forest challenger completed without a promotable result. The V3 digital-event coverage audit requires `SELECT` on `workspace.bank_silver.digital_events`; the current principal lacks that grant. Checked-in notebooks keep outputs empty; bounded aggregate results are stored in the dated reports.

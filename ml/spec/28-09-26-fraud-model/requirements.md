@@ -1,6 +1,6 @@
 # Requirements: fraud risk model
 
-Status: specification implemented through exploratory V4 temporal validation as of 2026-10-03; no model is promoted. The final-test period remains sealed. See dated reports in `../../reports/2026-10-03/`.
+Status: specification implemented through exploratory V5 temporal validation as of 2026-10-04; no model is promoted. V5 CatBoost did not yield useful later-period precision. The final-test period remains sealed. See dated reports in `../../reports/2026-10-04/` and the V5 protocol.
 
 ## 1. Objective and scope
 
@@ -22,6 +22,7 @@ These are defined experiment candidates; completed V1–V4 comparisons have not 
 | M2 | Decision tree | Initial primary candidate | Interpretable; exposes rules and nonlinear relationships. |
 | M3 | Random Forest | Challenger after M1/M2 | Tests whether an ensemble of trees improves generalization. |
 | M4 | HistGradientBoostingClassifier | Optional challenger | Tests boosting if early results and budget justify added complexity. |
+| M5 | CatBoostClassifier | V5 capacity/encoding challenger | Native categorical handling, bounded CPU boosting, missingness ablation; see the separate V5 protocol. |
 
 Required MVP: B0, B1, M1, and M2. M3/M4 do not block the first delivery. Neural networks, LLMs, and unsupervised detectors are outside this version: a label exists and we first need a controlled tabular comparison. LightGBM/XGBoost are outside the initial scope to limit dependencies and experiments.
 

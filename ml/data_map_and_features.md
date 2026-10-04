@@ -1,6 +1,6 @@
 # Data map and initial fraud model design
 
-Status: living design document. V1–V4 temporal experiments completed by 2026-10-03; none is suitable for promotion. See the [V3](reports/2026-10-03/training_v3_feature_challenger_report.md) and [V4](reports/2026-10-03/training_v4_behavioral_challenger_report.md) reports and the separate [fraud-score provenance diagnostic](reports/2026-10-03/fraud_score_validation_diagnostic_report.md). Updated: 2026-10-03.
+Status: living design document. V1–V5 temporal experiments completed by 2026-10-04; none is suitable for promotion. See the [V3](reports/2026-10-03/training_v3_feature_challenger_report.md), [V4](reports/2026-10-03/training_v4_behavioral_challenger_report.md), and [V5 CatBoost](reports/2026-10-04/training_v5_catboost_report.md) reports and the separate [fraud-score provenance diagnostic](reports/2026-10-03/fraud_score_validation_diagnostic_report.md). Updated: 2026-10-04.
 
 Implementation specifications: [requirements and models](spec/28-09-26-fraud-model/requirements.md), [plan](spec/28-09-26-fraud-model/plan.md), and [validation](spec/28-09-26-fraud-model/validation.md). The specs make this proposal concrete and take precedence for contracts and acceptance criteria.
 
