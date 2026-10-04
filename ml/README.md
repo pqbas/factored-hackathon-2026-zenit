@@ -24,7 +24,7 @@ ml/
 └── databricks.yml     # serverless jobs for training and scoring
 ```
 
-Status (2026-10-04): **Phases 0 and 1 and exploratory V1–V5 experiments are complete; no ML candidate is suitable for promotion.** V5 CatBoost completed four candidates; later-period ROC-AUC was 0.5038 and precision 0.161% at a frozen approximately 1% review threshold, without useful improvement. V4's selected tree had assigned a constant score. A separate diagnostic found unusually strong alignment between `fraud_score` and `is_fraud`, but its timing/provenance is unknown, so it may be leakage. The `digital_events` audit remains blocked on `SELECT`, rechecked 2026-10-04. Final test remains unopened.
+Status (2026-10-04): **Phases 0 and 1 and exploratory V1–V6 experiments are complete; no ML candidate is suitable for promotion.** V5 CatBoost completed four candidates; later-period ROC-AUC was 0.5038 and precision 0.161% at a frozen approximately 1% review threshold, without useful improvement. V4's selected tree had assigned a constant score. A separate diagnostic found unusually strong alignment between `fraud_score` and `is_fraud`, but its timing/provenance is unknown, so it may be leakage. The `digital_events` audit remains blocked on `SELECT`, rechecked 2026-10-04. Final test remains unopened.
 
 Phase 0 measurements: [reports/2026-09-28/profile_report.md](reports/2026-09-28/profile_report.md)
 
@@ -53,6 +53,8 @@ The [review-budget curve](reports/2026-10-03/review_budget_curve_report.md) show
 The [fraud-score diagnostic](reports/2026-10-03/fraud_score_validation_diagnostic_report.md) found 100% observed precision at thresholds 50 and 70 on validation, with 37.05% and 21.89% recall respectively. This may be the strongest existing signal, but it must not be used as a real-time feature or rule until its producer confirms it is independent of the label and available before authorization.
 
 The [V5 improvement specification](spec/28-09-26-fraud-model/improvement_v5.md) is implemented through its capacity/encoding branch. A [training-only audit](reports/2026-10-03/train_signal_audit_report.md) confirmed internal-period support. The [V5 execution report](reports/2026-10-04/training_v5_catboost_report.md) records four CatBoost fits, natural-prevalence evaluation, frozen thresholds, and failure to attain supported 20%/50%/80% precision targets. Digital-event features remain unexecuted because SELECT is still blocked. Current negative results do not prove current labels are random, but do not justify a broad repeated parameter sweep on the same signals and inspected validation.
+
+The [V6 advanced challenger](reports/2026-10-04/training_v6_advanced_report.md) completed XGBoost base/enhanced, balanced forest, Isolation Forest, a fixed rank blend, and a shuffled-label control. Enhanced XGBoost was selected, but later ROC-AUC was 0.5023 and frozen approximately 1% review precision **0.106% (8/7,536)**, below V5's 0.161%. No supported 20%/50%/80% precision target was feasible. Its seven new causal features did not produce useful later discrimination; no promotion or deployment occurred. See [V6 research and prerequisites](spec/28-09-26-fraud-model/improvement_v6.md).
 
 ## Exploratory notebook
 

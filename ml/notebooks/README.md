@@ -9,6 +9,8 @@
 
 V5 completed successfully on 2026-10-04. The selected C3 CatBoost candidate produced 0.161% precision at the frozen approximately 1% review threshold and ROC-AUC 0.5038 on later exploratory validation. It failed supported 20%/50%/80% precision targets and is not promoted. See [the execution report](../reports/2026-10-04/training_v5_catboost_report.md).
 
+[10_advanced_challenger.ipynb](10_advanced_challenger.ipynb) is published at `/Shared/fraud-eda/10_advanced_challenger`, with `train_v4`, `train_v5`, and `train_v6` helper notebooks beside it. It runs V6 causal feature ablation, weighted XGBoost, balanced forest, Isolation Forest, fixed blending, and a shuffled-label diagnostic. Serverless v4 dependencies are pinned in [train_v6.json](../jobs/train_v6.json). Spark causal fixtures and native toy smoke checks passed before training. It completed successfully on 2026-10-04, but later precision was **0.106% (8/7,536)** at the frozen approximately 1% threshold, so it is not promoted. See [the report](../reports/2026-10-04/training_v6_advanced_report.md). Findings are Markdown cells; outputs remain empty.
+
 ## Status and execution
 
 The EDA notebook ran successfully on 2026-10-02. The train-only Spark ML smoke test also passed on Serverless environment v4. Full Phase 2 submissions exposed two constraints (Spark ML needs serverless environment v4; serverless rejects explicit DataFrame persistence). V1, V2, and one bounded V2 Random Forest challenger completed without a promotable result. The V3 digital-event coverage audit requires `SELECT` on `workspace.bank_silver.digital_events`; the current principal lacks that grant. Checked-in notebooks keep outputs empty; bounded aggregate results are stored in the dated reports.
@@ -24,7 +26,7 @@ The EDA notebook ran successfully on 2026-10-02. The train-only Spark ML smoke t
 
 The EDA notebook separates full-snapshot integrity and partition viability checks from train-only feature exploration. The Phase 2 notebook fits preprocessing on train and selects with validation; it explicitly excludes final-test rows. Training logs metrics and a non-executable model specification to MLflow. Binary Spark model logging requires a writable Unity Catalog Volume, which is not currently available. The run does not create output tables, register a model, or create a persistent job.
 
-Spark performs distributed aggregation; pandas receives bounded aggregates for matplotlib charts. There is no full-data collect, automatic cache, or row-level export. Multiple aggregate sections still scan data and consume compute; avoid rerunning unchanged sections unnecessarily.
+EDA uses distributed Spark aggregation; pandas receives bounded aggregates for matplotlib charts. V5/V6 also collect approved feature cohorts to the Databricks driver behind explicit memory guards for CPU estimators. They remove identifiers before collection and export only aggregate evidence. There is no full-snapshot collect, automatic cache, or external row-level export. Multiple aggregate sections still scan data and consume compute; avoid rerunning unchanged sections unnecessarily.
 
 The notebook documents existing feature-helper edge-case differences rather than silently changing the training contract. Resolve these in implementation before model training.
 
