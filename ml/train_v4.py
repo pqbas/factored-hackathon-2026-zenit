@@ -187,31 +187,25 @@ def tie_aware_topk_bounds(
     }
 
 
-def run_training(spark, mlflow) -> dict[str, Any]:
-    """Compare standard models on V4 causal behavior features; select on validation."""
-    from pyspark.ml import Pipeline
-    from pyspark.ml.classification import DecisionTreeClassifier, LogisticRegression, RandomForestClassifier
-    from pyspark.ml.evaluation import BinaryClassificationEvaluator
-    from pyspark.ml.feature import (
-        Imputer,
-        OneHotEncoder,
-        StringIndexer,
-        VectorAssembler,
-    )
-    from pyspark.ml.functions import vector_to_array
-    from pyspark.sql import functions as F
-    from pyspark.sql import Window
+def build_feature_frame(spark, end_exclusive: str = VALIDATION_END, source_frame=None):
+    """Build unchanged V4 causal features without fitting models or writing data.
 
-    started = time.monotonic()
+    The end cutoff cannot include the sealed final-test period. Retained keys
+    and timestamps are for joins, splitting, and diagnostics, never predictors.
+    """
+    from datetime import date
+    from pyspark.sql import functions as F, Window
+
+    date.fromisoformat(end_exclusive)
+    if end_exclusive > VALIDATION_END:
+        raise ValueError("Final-test rows must remain excluded.")
     spark.conf.set("spark.sql.session.timeZone", "UTC")
-    mlflow.set_experiment(EXPERIMENT_PATH)
-
     required = {
         "transaction_id", "customer_id", "transaction_date", "is_fraud", "amount", "currency",
         "amount_usd", "transaction_type", "channel", "transaction_country",
         "merchant_category", "transaction_category", "merchant_name", "latitude", "longitude",
     }
-    source = spark.read.option("versionAsOf", DELTA_VERSION).table(SOURCE_TABLE)
+    source = source_frame if source_frame is not None else spark.read.option("versionAsOf", DELTA_VERSION).table(SOURCE_TABLE)
     missing = sorted(required - set(source.columns))
     if missing:
         raise ValueError(f"Required source columns are missing: {missing}")
@@ -219,24 +213,12 @@ def run_training(spark, mlflow) -> dict[str, Any]:
     # Exclude all final-test timestamps at source-read time. IDs remain only
     # for causal history and deterministic ranking, never as model predictors.
     raw = (
-        source.where(F.col("transaction_date") < F.to_timestamp(F.lit(VALIDATION_END)))
+        source.where(F.col("transaction_date") < F.to_timestamp(F.lit(end_exclusive)))
         .select(*sorted(required))
         .withColumn("label", F.col("is_fraud").cast("double"))
         .where(F.col("transaction_date").isNotNull() & F.col("label").isin(0.0, 1.0))
         .withColumn("split", F.when(F.col("transaction_date") < F.to_timestamp(F.lit(TRAIN_END)), F.lit("train")).otherwise(F.lit("validation")))
     )
-
-    date_scope = raw.groupBy("split").agg(
-        F.count(F.lit(1)).alias("rows"),
-        F.sum("label").alias("fraud"),
-        F.min("transaction_date").cast("string").alias("min_date"),
-        F.max("transaction_date").cast("string").alias("max_date"),
-    ).collect()
-    split_summary = {r["split"]: {k: r[k] for k in r.asDict()} for r in date_scope}
-    for split in ("train", "validation"):
-        item = split_summary.get(split)
-        if not item or not item["rows"] or not item["fraud"] or item["fraud"] >= item["rows"]:
-            raise ValueError(f"Both label classes are required in {split}: {item}")
 
     # V2 history features use timestamp microseconds and a closed lower bound,
     # open upper bound ending one microsecond before T. This excludes both the
@@ -366,6 +348,43 @@ def run_training(spark, mlflow) -> dict[str, Any]:
     for column in NUMERIC_FEATURES:
         features = features.withColumn(column, F.col(column).cast("double"))
         features = features.withColumn(column, F.when(F.isnan(column), F.lit(None).cast("double")).otherwise(F.col(column)))
+
+    return features.select(
+        "transaction_id", "customer_id", "transaction_date", "split", "label", *PREDICTORS
+    )
+
+
+def run_training(spark, mlflow) -> dict[str, Any]:
+    """Compare standard models on V4 causal behavior features; select on validation."""
+    from pyspark.ml import Pipeline
+    from pyspark.ml.classification import DecisionTreeClassifier, LogisticRegression, RandomForestClassifier
+    from pyspark.ml.evaluation import BinaryClassificationEvaluator
+    from pyspark.ml.feature import (
+        Imputer,
+        OneHotEncoder,
+        StringIndexer,
+        VectorAssembler,
+    )
+    from pyspark.ml.functions import vector_to_array
+    from pyspark.sql import functions as F
+    from pyspark.sql import Window
+
+    started = time.monotonic()
+    spark.conf.set("spark.sql.session.timeZone", "UTC")
+    mlflow.set_experiment(EXPERIMENT_PATH)
+
+    features = build_feature_frame(spark)
+    date_scope = features.groupBy("split").agg(
+        F.count(F.lit(1)).alias("rows"),
+        F.sum("label").alias("fraud"),
+        F.min("transaction_date").cast("string").alias("min_date"),
+        F.max("transaction_date").cast("string").alias("max_date"),
+    ).collect()
+    split_summary = {r["split"]: {k: r[k] for k in r.asDict()} for r in date_scope}
+    for split in ("train", "validation"):
+        item = split_summary.get(split)
+        if not item or not item["rows"] or not item["fraud"] or item["fraud"] >= item["rows"]:
+            raise ValueError(f"Both label classes are required in {split}: {item}")
 
     feature_frame = features.select("transaction_id", "split", "label", *PREDICTORS)
     train_raw = feature_frame.where(F.col("split") == "train").drop("split")
