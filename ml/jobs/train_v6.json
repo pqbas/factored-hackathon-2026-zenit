@@ -1,0 +1,29 @@
+{
+  "run_name": "Fraud V6 advanced challengers",
+  "timeout_seconds": 3600,
+  "tasks": [
+    {
+      "task_key": "train_v6_advanced",
+      "notebook_task": {
+        "notebook_path": "/Shared/fraud-eda/10_advanced_challenger",
+        "source": "WORKSPACE"
+      },
+      "environment_key": "advanced_v6",
+      "timeout_seconds": 3600,
+      "max_retries": 0
+    }
+  ],
+  "environments": [
+    {
+      "environment_key": "advanced_v6",
+      "spec": {
+        "environment_version": "4",
+        "dependencies": [
+          "xgboost-cpu==2.1.4",
+          "imbalanced-learn==0.14.0",
+          "scikit-learn==1.6.1"
+        ]
+      }
+    }
+  ]
+}
