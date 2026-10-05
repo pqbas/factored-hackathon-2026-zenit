@@ -558,3 +558,13 @@ Pendiente: traspasar la propiedad de las tablas a `bank_assistant_owner`
 App de Databricks; el usuario lo decide cuando haya una migración nueva.
 Hasta entonces `migrate.sh --apply` se niega a aplicar.
 
+
+## Phase 25: Datos demo para las métricas de resolución (In progress)
+
+**Goal:** que "Métricas de resolución" muestre varios días con IA, asistidas y
+asesor para la demo del hackathon (pedido del usuario vía w1:pB, 05-10-26).
+Spec en spec/05-10-26-metricas-demo/.
+
+- [ ] `simulate:backfill`: chats sintéticos cerrados con fecha pasada,
+      marcados `[demo]` y registrados para poder quitarlos.
+- [ ] `simulate:day` contra AWS (login de demo) y `--advisor-share`.
