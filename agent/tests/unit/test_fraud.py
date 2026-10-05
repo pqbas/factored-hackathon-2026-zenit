@@ -91,7 +91,7 @@ def test_original_complaint_route_exposes_the_tool_and_attaches_policy_to_handof
     state = {"session": {"customer_id": "session-owner"}, "messages": [HumanMessage(content="cargo")],
              "classification": {"intent": "COMPLAINT", "language": "es"}}
     tools = asyncio.run(_bound_tools(state, route, None))
-    assert [tool.name for tool in tools] == ["get_fraud_assessment"]
+    assert [tool.name for tool in tools] == ["get_fraud_assessment", "get_transaction_risk"]
     # _hand_off is reached only after main's bank-row verification; no model result
     # changes its reason, verified charge or deterministic need for a person.
     result = _hand_off(state, route, {"merchant": "Verified merchant"}, {})

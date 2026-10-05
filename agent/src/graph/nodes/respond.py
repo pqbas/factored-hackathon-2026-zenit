@@ -15,6 +15,7 @@ from src.tools.collector import CollectorUnavailable, card_to_fetch, extract_fie
 from src.tools.grounding import ungrounded
 from src.tools.handoff import HANDOFF_TOOL_NAME, handoff_tool, tool_rows, verify_case
 from src.tools.fraud import fraud_assessment, fraud_tool
+from src.tools.transaction_risk import transaction_risk_tool
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +48,15 @@ async def respond(
     if route and route.handoff_reason == "complaint":
         assessment = json.loads(await fraud_tool().ainvoke({}))
     result = await _respond(state, llm, routes, intent_threshold, tools_for)
+    transaction_id = None
+    handoff = result.get("handoff")
+    if handoff and handoff.get("reason") == "complaint":
+        transaction_id = handoff["facts"]["verified_data"].get("transaction_id")
+    if route and route.handoff_reason == "complaint" and transaction_id:
+        tool = transaction_risk_tool((state.get("session") or {}).get("customer_id"))
+        assessment = json.loads(await tool.ainvoke({"transaction_id":transaction_id}))
+        if handoff:
+            handoff["facts"]["fraud_assessment"] = assessment
     if assessment is not None:
         result["fraud_assessment"] = assessment
     return result
@@ -209,6 +219,7 @@ async def _bound_tools(state: AgentState, route: IntentRoute, tools_for) -> list
     ]
     if route.handoff_reason == "complaint":
         tools.append(fraud_tool())
+        tools.append(transaction_risk_tool(customer_id))
     return tools
 
 

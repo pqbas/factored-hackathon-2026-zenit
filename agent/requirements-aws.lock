@@ -685,3 +685,8 @@ zipp==4.1.0
     # via importlib-metadata
 zstandard==0.25.0
     # via langsmith
+
+# Executable fraud inference; existing production version pins retained.
+catboost==1.2.8
+graphviz==0.21
+plotly==7.1.0
