@@ -61,3 +61,7 @@ The [V6 advanced challenger](reports/2026-10-04/training_v6_advanced_report.md) 
 [Fraud EDA notebook](notebooks/01_fraud_eda.ipynb) organizes Phases 0/1 into questions, Spark aggregate queries, charts, and interpretation cells. See [execution instructions](notebooks/README.md). It was executed successfully on serverless against Delta version 1. See [the dated EDA report](reports/2026-10-02/eda_report.md) and aggregate evidence JSON.
 
 Phase 0/1 EDA notebook execution: [report](reports/2026-10-02/eda_report.md), [aggregate JSON evidence](reports/2026-10-02/eda_data.json). It ran on 2026-10-02 against Delta v1; no model training or source table writes occurred.
+
+## Dispute integration contract
+
+The [dispute integration contract](spec/28-09-26-fraud-model/dispute_integration.md) defines a customer-reported charge review workflow using authorized lookup and the existing human-handoff interfaces. Predictive fraud scoring stays unavailable for decision use. The contract documents current source gaps and acceptance cases; it is not a deployed integration.

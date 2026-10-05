@@ -1,6 +1,6 @@
 # Requirements: fraud risk model
 
-Status: specification implemented through exploratory V5 temporal validation as of 2026-10-04; no model is promoted. V5 CatBoost did not yield useful later-period precision. The final-test period remains sealed. See dated reports in `../../reports/2026-10-04/` and the V5 protocol.
+Status: exploratory experiments completed through V6 as of 2026-10-04; no model is promoted. V5 CatBoost and V6 advanced challengers did not yield useful later-period precision. The final-test period remains sealed. See dated reports in `../../reports/2026-10-04/`. The [dispute integration contract](dispute_integration.md) defines a workflow with predictive scoring unavailable for decision use.
 
 ## 1. Objective and scope
 
