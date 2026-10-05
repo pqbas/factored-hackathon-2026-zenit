@@ -92,6 +92,7 @@ First-time setup (ECR, IAM roles, secrets, services):
 - [Agent](agent/README.md): use cases and technical decisions.
 - [Data pipeline](data/README.md): data contract and bronze/silver/gold.
 - [Fraud model proposal](docs/ml_fraud_model_proposal.md).
+- [Admin fraud intelligence dashboard](docs/admin_fraud_dashboard.md): data insights, complaint prediction coverage, and model evaluation at `/fraud`.
 
 ## License
 
