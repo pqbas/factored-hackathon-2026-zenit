@@ -20,7 +20,7 @@ registration date before the end of the snapshot reference day. The query
 requires one consistent `as_of_date` across the customer snapshot. All event
 windows are anchored to that date, rather than today's calendar date.
 
-Validated on October 5 using the authorized owner CLI: 150,000 supplied
+Validated on October 5 using the authorized owner CLI and the deployed backend: 150,000 supplied
 customers, 114,516 eligible, with reference date **2026-06-18**. There are 446
 high-priority, 10,916 medium-priority, 47,226 watch and 55,928 no-signal customers.
 These counts describe rules, not confirmed exits. One eligible customer has no
@@ -68,3 +68,8 @@ no fabricated zero dashboard during a connection failure.
 
 See [serving and cache policies](admin_analytics_serving.md) for deadlines,
 failure handling, read-only boundaries and deployment limitations.
+
+The module is deployed at
+[Zenit retention](https://wzmpasrvja.us-west-2.awsapprunner.com/retention).
+See the [AWS deployment report](../ml/reports/2026-10-05/aws_admin_analytics_report.md)
+for live source verification, cache timings and admin-only browser checks.

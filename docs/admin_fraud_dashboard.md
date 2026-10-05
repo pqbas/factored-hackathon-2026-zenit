@@ -95,8 +95,8 @@ customer names, raw transaction records or credentials are returned.
 
 ## Validation
 
-- Frontend: 146 unit/integration tests passed, including fraud and retention checks.
-- Backend: 200 unit tests passed, including cache, warehouse and API checks. The
+- Frontend: 147 unit/integration tests passed, including fraud and retention checks.
+- Backend: 201 unit tests passed, including cache, warehouse and API checks. The
   real Express route was exercised with signed sessions: anonymous 401,
   customer/advisor 403, admin 200, invalid dates/ranges/timezones 400.
 - Browser: `npm run test:fraud-dashboard` in `back/` passed. Its operational
@@ -119,13 +119,17 @@ fixtures. It does not run the repository's database migration/test bootstrap.
 
 ## Delivery boundary
 
-Implemented on `feat/diego-admin-fraud-dashboard` with local commits. The remote
-ML branch is preserved. These changes have not been pushed, merged or deployed.
-The model binary, inference code and existing customer/advisor workflows are
-unchanged. No source database, schema, grant or cloud resource was modified.
+Implemented on `feat/diego-admin-fraud-dashboard` with local commits and deployed
+in the existing App Runner backend/frontend image `928d68f8` on October 5, 2026.
+The remote ML branch is preserved; no push or merge was performed in this deployment
+step. The model binary, inference code and existing customer/advisor workflows
+are unchanged. No source data or schema was modified; narrowly scoped Databricks
+read privileges were added to the existing backend identity.
 
-After the normal review/merge and existing backend deployment, administrators
-will find the shield icon in the left navigation or open `/fraud`. The deployed
-service needs its existing SELECT permission on `ai_chatbot."Handoff"`, plus
-warehouse access and SELECT on the listed Databricks sources. Owner CLI reads
-have succeeded; this does not prove the deployed service identity has access.
+Administrators can use the shield icon in the left navigation or open
+[the published fraud dashboard](https://wzmpasrvja.us-west-2.awsapprunner.com/fraud).
+Actual service OAuth reads, complaint aggregates and protected admin APIs passed
+live verification. Published browser checks exercised all views and five viewport
+widths with no JavaScript errors; customer/advisor APIs returned 403. See the
+[deployment evidence](../ml/reports/2026-10-05/aws_admin_analytics_report.md) for
+permissions, query IDs and warm HTTP timings.

@@ -1,0 +1,273 @@
+{
+  "deployment": {
+    "observed_at_utc": "2026-10-05T23:52:27.363958+00:00",
+    "services": {
+      "agent": {
+        "arn": "arn:aws:apprunner:us-west-2:335741630127:service/bank-assistant-agent/eebc9cee095845e9842f77d236a0a139",
+        "status": "RUNNING",
+        "url": "https://qidmxa8upf.us-west-2.awsapprunner.com",
+        "image": "335741630127.dkr.ecr.us-west-2.amazonaws.com/bank-assistant-agent:00539622",
+        "source_configuration_without_image_sha256": "f6ce572087a0042dbb77332ee3e0334238acf971a59bfafff14f10813b9369ab"
+      },
+      "back": {
+        "arn": "arn:aws:apprunner:us-west-2:335741630127:service/bank-assistant-back/59771fd802f84b48a73871414cec486f",
+        "status": "RUNNING",
+        "url": "https://wzmpasrvja.us-west-2.awsapprunner.com",
+        "image": "335741630127.dkr.ecr.us-west-2.amazonaws.com/bank-assistant-back:928d68f8",
+        "source_configuration_without_image_sha256": "1a2a9451a2cdeacc712024a36f4f8865bdc25815a8aa73c04341c49b843f313f"
+      }
+    }
+  },
+  "operation": {
+    "Id": "10e7832e00c747e9bf107481221b97f3",
+    "Type": "UPDATE_SERVICE",
+    "Status": "SUCCEEDED",
+    "TargetArn": "arn:aws:apprunner:us-west-2:335741630127:service/bank-assistant-back/59771fd802f84b48a73871414cec486f",
+    "StartedAt": "2026-10-05T18:45:57-05:00",
+    "EndedAt": "2026-10-05T18:49:14-05:00",
+    "UpdatedAt": "2026-10-05T18:49:14-05:00"
+  },
+  "imageDigest": "sha256:6d00d7b2160c469f1a6ffd9ff55f0b793610b856490fb28f6c18c08892e1e8b6",
+  "artifactCommit": "928d68f8",
+  "frontendBundle": "/assets/index-CJ5zUF-L.js",
+  "previousBackendImageTag": "09628125",
+  "checks": {
+    "frontendTests": 147,
+    "backendTests": 201,
+    "productionImageBuild": "passed",
+    "backendTypeScript": "passed",
+    "sourceConfigurationPreserved": true,
+    "agentImagePreserved": true
+  },
+  "boundaries": {
+    "sourceDataModified": false,
+    "schemaModified": false,
+    "databaseMigrationsRun": false,
+    "modelArtifactChanged": false,
+    "verificationChatsOrComplaintsCreated": false,
+    "privilegesAdded": true,
+    "gitPushed": false
+  },
+  "liveApi": {
+    "observedAt": "2026-10-05T23:50:18.952570+00:00",
+    "url": "https://wzmpasrvja.us-west-2.awsapprunner.com",
+    "scope": "Authenticated admin GET requests; no complaint/chat/customer data mutations; individual references omitted",
+    "reports": {
+      "retention": {
+        "httpStatus": 200,
+        "httpMs": 836.32,
+        "responseBytes": 30759,
+        "source": {
+          "status": "fresh",
+          "updating": false,
+          "updatedAt": "2026-10-05T23:50:05.247Z",
+          "lastAttemptAt": "2026-10-05T23:49:56.121Z",
+          "lastRefreshFailed": false,
+          "cacheSeconds": 600,
+          "provider": "databricks_sql",
+          "tables": [
+            "workspace.bank_gold.customer_360",
+            "workspace.bank_gold.customer_transactions",
+            "workspace.bank_gold.customer_cases",
+            "workspace.bank_gold.interaction_history"
+          ],
+          "statementId": "01f1c117-77c3-1794-8d0c-90f7561b7845",
+          "durationMs": 9126
+        },
+        "asOf": "2026-06-18",
+        "eligibleCustomers": 114516,
+        "bands": [
+          {
+            "band": "watch",
+            "total": 47226
+          },
+          {
+            "band": "high",
+            "total": 446
+          },
+          {
+            "band": "none",
+            "total": 55928
+          },
+          {
+            "band": "medium",
+            "total": 10916
+          }
+        ],
+        "shortlistRows": 135,
+        "warmHttpMs": [
+          841.26,
+          811.1,
+          784.57,
+          725.0,
+          1834.5
+        ],
+        "oneStatementAcrossWarmReads": true
+      },
+      "fraud": {
+        "httpStatus": 200,
+        "httpMs": 559.81,
+        "responseBytes": 11146,
+        "source": {
+          "status": "fresh",
+          "updating": false,
+          "updatedAt": "2026-10-05T23:50:06.766Z",
+          "lastAttemptAt": "2026-10-05T23:49:56.737Z",
+          "lastRefreshFailed": false,
+          "cacheSeconds": 600,
+          "provider": "databricks_sql",
+          "tables": [
+            "workspace.bank_silver.transactions"
+          ],
+          "statementId": "01f1c117-7d26-148d-a701-0825288bf5ed",
+          "durationMs": 10028
+        },
+        "total": 3738506,
+        "fraud": 3713,
+        "cohort": "training_validation",
+        "operationalStatus": "available",
+        "warmHttpMs": [
+          777.05,
+          655.5,
+          1126.62,
+          1229.28,
+          603.86
+        ],
+        "oneStatementAcrossWarmReads": true
+      }
+    }
+  },
+  "liveBrowser": {
+    "observedAt": "2026-10-05T23:50:12.330295+00:00",
+    "url": "https://wzmpasrvja.us-west-2.awsapprunner.com",
+    "mode": "Real deployed AWS UI and APIs; no mocked routes; no chats or complaints created",
+    "responsive": [
+      {
+        "path": "/fraud",
+        "width": 375,
+        "horizontalOverflow": false
+      },
+      {
+        "path": "/fraud",
+        "width": 414,
+        "horizontalOverflow": false
+      },
+      {
+        "path": "/fraud",
+        "width": 768,
+        "horizontalOverflow": false
+      },
+      {
+        "path": "/fraud",
+        "width": 1024,
+        "horizontalOverflow": false
+      },
+      {
+        "path": "/fraud",
+        "width": 1440,
+        "horizontalOverflow": false
+      },
+      {
+        "path": "/retention",
+        "width": 375,
+        "horizontalOverflow": false
+      },
+      {
+        "path": "/retention",
+        "width": 414,
+        "horizontalOverflow": false
+      },
+      {
+        "path": "/retention",
+        "width": 768,
+        "horizontalOverflow": false
+      },
+      {
+        "path": "/retention",
+        "width": 1024,
+        "horizontalOverflow": false
+      },
+      {
+        "path": "/retention",
+        "width": 1440,
+        "horizontalOverflow": false
+      }
+    ],
+    "fraudViews": [
+      "overview",
+      "model",
+      "operations"
+    ],
+    "retentionCountryAndExpandedEvidence": true,
+    "anonymousDenied": 401,
+    "nonAdminDenied": [
+      {
+        "role": "advisor",
+        "retentionHttpStatus": 403,
+        "fraudHttpStatus": 403
+      },
+      {
+        "role": "customer",
+        "retentionHttpStatus": 403,
+        "fraudHttpStatus": 403
+      }
+    ],
+    "demoSignInPreserved": true,
+    "javascriptErrors": []
+  },
+  "readPermissionChanges": {
+    "principalId": "cc0d82f4-6c8d-4311-bbd2-8a603d1d1073",
+    "changes": [
+      {
+        "kind": "catalog",
+        "name": "workspace",
+        "privilege": "USE_CATALOG"
+      },
+      {
+        "kind": "schema",
+        "name": "workspace.bank_gold",
+        "privilege": "USE_SCHEMA"
+      },
+      {
+        "kind": "schema",
+        "name": "workspace.bank_silver",
+        "privilege": "USE_SCHEMA"
+      },
+      {
+        "kind": "table",
+        "name": "workspace.bank_gold.customer_360",
+        "privilege": "SELECT"
+      },
+      {
+        "kind": "table",
+        "name": "workspace.bank_gold.customer_transactions",
+        "privilege": "SELECT"
+      },
+      {
+        "kind": "table",
+        "name": "workspace.bank_gold.customer_cases",
+        "privilege": "SELECT"
+      },
+      {
+        "kind": "table",
+        "name": "workspace.bank_gold.interaction_history",
+        "privilege": "SELECT"
+      },
+      {
+        "kind": "table",
+        "name": "workspace.bank_silver.transactions",
+        "privilege": "SELECT"
+      }
+    ],
+    "scope": "Additive privileges only; no removal, no schema/table/source-data modifications"
+  },
+  "serviceIdentityPreflight": {
+    "identity": "deployed backend service principal",
+    "principalId": "cc0d82f4-6c8d-4311-bbd2-8a603d1d1073",
+    "httpStatus": 200,
+    "statementId": "01f1c116-7083-160a-b6ec-a1aa1b395b5e",
+    "state": "SUCCEEDED",
+    "errorCode": null,
+    "errorMessage": ""
+  }
+}

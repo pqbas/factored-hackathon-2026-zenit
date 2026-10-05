@@ -66,7 +66,10 @@ raw histories do not enter browser responses. The frontend initially displays
 15 shortlist rows, expands locally in groups of 15, and loads dashboard code
 only when its route is opened.
 
-No table, schema, grant or cloud resource is created or changed. Complaint
+Analytics queries do not create or change tables, schemas or source data.
+Deployment added only catalog/schema usage and SELECT on the five source tables
+to the existing backend service principal. The existing App Runner application
+was updated; no separate analytics service or compute was provisioned. Complaint
 operations continue to read the existing application database.
 
 ## Deployment and scaling boundary
@@ -85,10 +88,12 @@ existing warehouse `07ca55766c9c5097`. Credentials remain server-side through
 the existing authentication module. Successful owner CLI validation does not
 prove that the App Runner service principal has these permissions.
 
-The local implementation is tested and committed. Publishing requires the
-normal review/deployment of the existing backend/frontend image, followed by
-verification using the deployed service identity. No production-latency SLA or
-unconditional availability guarantee is inferred from the local checks.
+The existing backend/frontend image `928d68f8` was deployed on October 5, 2026.
+Actual service OAuth reads, authenticated admin APIs and the published browser
+views passed verification. Repeated warm HTTP reads reused the same warehouse
+statement IDs. See the [AWS deployment report](../ml/reports/2026-10-05/aws_admin_analytics_report.md)
+for permissions, aggregate counts and measured HTTP timings. These checks do not
+establish a production latency SLA or unconditional availability guarantee.
 
 See [retention](admin_retention_dashboard.md), [fraud](admin_fraud_dashboard.md),
 and [read-only validation](../ml/reports/2026-10-05/admin_analytics_report.md).

@@ -1,5 +1,9 @@
 # Admin analytics read-only validation
 
+This report records the **predeployment owner CLI validation**. Subsequent AWS
+deployment, service-identity permission additions and live browser/API checks are
+documented in the [AWS deployment report](aws_admin_analytics_report.md).
+
 Validation date: 2026-10-05. The authorized `pqbas` owner CLI was used. No source
 tables, schemas, grants or cloud resources were modified. No new final-test
 fraud labels were queried. Customer-level rows are omitted from committed
