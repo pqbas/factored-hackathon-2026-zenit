@@ -53,5 +53,5 @@ not interception of live payment authorization. Event-time features do not
 reconstruct processing-time knowledge for late arrivals. Label provenance and
 original event timezone remain unverified.
 
-Deployment verification will be recorded separately after the updated images
-are running in the existing AWS services.
+Both existing AWS services now run the experimental inference image. See
+[deployment verification](aws_predictions_report.md) and aggregate evidence.

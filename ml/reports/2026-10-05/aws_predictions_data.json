@@ -1,0 +1,43 @@
+{
+  "observed_at_utc": "2026-10-05T07:29:16.952712+00:00",
+  "services": {
+    "agent": {
+      "url": "https://qidmxa8upf.us-west-2.awsapprunner.com",
+      "image_tag": "00539622",
+      "operation_id": "4441e91f73f74a969c4def7eb9388d5e",
+      "operation_status": "SUCCEEDED",
+      "configuration_without_image_sha256": "f6ce572087a0042dbb77332ee3e0334238acf971a59bfafff14f10813b9369ab"
+    },
+    "back": {
+      "url": "https://wzmpasrvja.us-west-2.awsapprunner.com",
+      "image_tag": "00539622",
+      "operation_id": "0a3867ec68ec419d8e809871ef81946f",
+      "operation_status": "SUCCEEDED",
+      "configuration_without_image_sha256": "4b346ec534afbde4737aa74f60763e9bdf9a15d27c165a0740921503ae106360"
+    }
+  },
+  "checks": {
+    "agent_tests_passed": 462,
+    "front_tests_passed": 133,
+    "back_tests_passed": 180,
+    "ml_tests_passed": 66,
+    "container_native_model_load_passed": true,
+    "container_app_import_passed": true,
+    "nonconstant_native_scores": true,
+    "read_only_lakebase_prediction_passed": true,
+    "cross_customer_lookup_rejected": true,
+    "deployed_owned_transaction_inference_passed": true,
+    "top_level_assessment_matches_handoff_facts": true,
+    "automatic_decisions_enabled": false,
+    "source_configuration_preserved": true,
+    "backend_chat_persistence_used_for_validation": false,
+    "published_experimental_score_component_present": true
+  },
+  "model_run_id": "663c44e0c3de40718830f5362dce5a9b",
+  "model_version": "v7_gold_lakebase_c3",
+  "score_type": "uncalibrated_model_output",
+  "frontend_bundle": "/assets/index-B81PBaoV.js",
+  "git_branch": "feat/diego-ml-fraud-features",
+  "git_pushed": false,
+  "database_schema_or_source_modified": false
+}

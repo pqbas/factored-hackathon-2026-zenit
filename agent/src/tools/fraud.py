@@ -16,8 +16,9 @@ _FILES = ("training_v5_catboost_data.json", "training_v6_advanced_data.json")
 def fraud_assessment() -> dict:
     """Availability check only. Recorded validation metrics are never a charge's score.
 
-    Even a changed report saying PROMOTED cannot enable inference: this integration
-    has no saved model binary, feature-serving pipeline or validated operating point.
+    Even a changed V5/V6 report saying PROMOTED cannot enable inference here.
+    The executable V7 artifact is served separately by get_transaction_risk;
+    this availability tool never substitutes aggregate metrics for its output.
     """
     evidence = []
     default_reports = _REPORTS if _REPORTS.is_dir() else _PACKAGED_REPORTS

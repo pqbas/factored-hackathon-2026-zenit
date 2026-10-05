@@ -81,3 +81,12 @@ Lakebase configuration and password authentication; the local warehouse-read
 override above was not enabled there. See [the AWS integration report](ml/reports/2026-10-05/aws_integration_report.md).
 This local guide still describes a launch without chat persistence. Git commits
 remain local, while the authorized container images were published to ECR.
+
+## Native prediction update on 2026-10-05
+
+The same existing services now run image tag `00539622`, including the native
+V7 model and experimental advisor index. A direct deployed agent request
+verified real inference for an owned charge without backend case persistence.
+See [the prediction deployment report](ml/reports/2026-10-05/aws_predictions_report.md).
+The local optional warehouse adapter above is not the new inference path;
+V7 uses existing authorized Lakebase reads.

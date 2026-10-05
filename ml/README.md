@@ -73,3 +73,6 @@ The ML branch incorporates `main` through commit `20e0e98`. The standalone dispu
 ## Executable experimental inference
 
 [V7 execution report](reports/2026-10-05/executable_predictions_report.md) records the native CatBoost artifact, shared training/serving contract and real per-transaction inference. Validation precision is **0.083056%**, below V5; no quality improvement or automatic decision utility is claimed. The original advisor workflow receives the experimental score and threshold flag while preserving human review. Incomplete complaints retain the V5/V6 availability notice.
+
+The native prediction path is now deployed to the existing AWS agent and
+web/backend with image tag `00539622`. See [verified deployed predictions](reports/2026-10-05/aws_predictions_report.md).
