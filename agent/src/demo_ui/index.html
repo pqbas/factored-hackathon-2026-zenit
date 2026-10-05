@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="data:,">
+  <title>Mesa de revisión · Demo local</title>
+  <style>
+    :root{color-scheme:light;--ink:#183630;--muted:#52685f;--paper:#f5f3ec;--line:#d1d8ce;--accent:#176747;--soft:#e7efe5;--warning:#785717}
+    *{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:1rem/1.5 "Segoe UI",sans-serif}
+    button,input,select,textarea{font:inherit}button,select,input{min-height:2.75rem}button{cursor:pointer;border:1px solid var(--accent);background:var(--accent);color:white;padding:.65rem 1rem;border-radius:.35rem}button:hover{background:#124d35}button:disabled{opacity:.55;cursor:wait}button.secondary{background:transparent;color:var(--ink);border-color:var(--line)}button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid #d49923;outline-offset:3px}
+    .shell{max-width:90rem;margin:auto;padding:1rem}header{border-bottom:1px solid var(--line);padding:.5rem 0 1.5rem;display:flex;align-items:flex-start;justify-content:space-between;gap:1rem}.eyebrow{font-size:.875rem;letter-spacing:.12em;text-transform:uppercase;font-weight:650;color:var(--muted)}h1{font:normal clamp(2rem,4vw,3.5rem)/1.1 Georgia,serif;margin:.5rem 0}h2{font:normal 1.75rem/1.2 Georgia,serif;margin:.2rem 0 1rem}h3{margin:.5rem 0;font-size:1.05rem}p{margin:.5rem 0}.pill{display:inline-flex;padding:.25rem .7rem;border:1px solid var(--line);border-radius:2rem;font-size:.875rem;background:white}.notice{margin:1rem 0;background:#ece8d8;padding:.8rem 1rem;border-left:3px solid var(--warning);font-size:.875rem}
+    main{display:grid;grid-template-columns:minmax(0,1fr);gap:1rem}.panel{background:#fffef9;border:1px solid var(--line);border-radius:.5rem;padding:1.25rem;min-width:0}.toolbar{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;margin-bottom:1rem}select{background:white;border:1px solid var(--line);padding:.5rem;max-width:100%;border-radius:.3rem}label{display:block;font-size:.875rem;font-weight:600;margin-bottom:.4rem}.chat{height:22rem;overflow-y:auto;border-block:1px solid var(--line);padding:.7rem 0;margin:1rem 0;scroll-behavior:smooth}.message{padding:.7rem .9rem;margin:.5rem 0;background:var(--soft);border-radius:.35rem;max-width:94%;overflow-wrap:anywhere;white-space:pre-wrap}.message.customer{margin-left:auto;background:#f0ede2}.message.system{background:transparent;color:var(--muted);font-size:.875rem;border-left:2px solid var(--line)}.message.human_agent{background:#dcece5;border-left:3px solid var(--accent)}.sender{display:block;font-size:.75rem;font-weight:650;letter-spacing:.05em;text-transform:uppercase;margin-bottom:.2rem}.compose{display:flex;gap:.5rem}input{min-width:0;flex:1;padding:.6rem;border:1px solid var(--line);border-radius:.3rem}.choices{display:grid;gap:.5rem;margin:.7rem 0}.choice{text-align:left;background:white;color:var(--ink);border-color:var(--line);width:100%;line-height:1.5}.choice:hover{background:var(--soft)}.choice strong{display:block}.small{font-size:.875rem;color:var(--muted)}.error{color:#912c20;min-height:1.5rem;margin:.5rem 0;font-size:.875rem}.confirm{background:#eef2e6;border:1px solid var(--line);padding:1rem;border-radius:.35rem;margin:.75rem 0}.buttons{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.7rem}.queue{display:grid;gap:.7rem}.case{border:1px solid var(--line);padding:1rem;border-radius:.35rem}.case.selected{border-color:var(--accent);background:var(--soft)}.facts{margin:1rem 0;padding:.8rem;background:#f2f4ed;border-radius:.3rem;overflow-wrap:anywhere}.facts dl{display:grid;grid-template-columns:1fr 2fr;gap:.3rem .5rem;margin:0}.facts dt{color:var(--muted);font-size:.875rem}.facts dd{margin:0}textarea{width:100%;min-height:5rem;padding:.6rem;border:1px solid var(--line);border-radius:.35rem;resize:vertical}.empty{color:var(--muted);padding:2rem 0;border-block:1px dashed var(--line)}footer{padding:1.5rem 0;color:var(--muted);font-size:.875rem}.hidden{display:none}
+    @media(min-width:768px){.shell{padding:1.5rem}main{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.panel{padding:1.5rem}}
+    @media(min-width:1024px){main{grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr)}.chat{height:26rem}}
+    @media(prefers-reduced-motion:reduce){.chat{scroll-behavior:auto}}
+  </style>
+</head>
+<body>
+<div class="shell">
+  <header><div><div class="eyebrow">Atención bancaria · Cargo no reconocido</div><h1>Mesa de revisión</h1><p class="small">Del reporte del cliente a una conversación con el asesor.</p></div><span class="pill">Demo local</span></header>
+  <div class="notice">Modo de prueba con datos ficticios y respuestas predefinidas. La solicitud se conserva mientras este servidor esté encendido. El detector de fraude no está validado y no interviene en las decisiones.</div>
+  <main>
+    <section class="panel" aria-labelledby="customer-title">
+      <div class="eyebrow">01 · Cliente</div><h2 id="customer-title">Reportar un cargo</h2>
+      <div class="toolbar"><div><label for="customer">Sesión de prueba</label><select id="customer"><option value="local-client-es">Cliente A · Español</option><option value="local-client-pt">Cliente B · Português</option></select></div><button id="new" class="secondary">Nueva conversación</button></div>
+      <span class="pill" id="customer-state">Asistente</span>
+      <div id="chat" class="chat" aria-live="polite" aria-label="Historial del cliente"><p class="small">Escribe «No reconozco un cargo» para empezar.</p></div>
+      <div id="choices" class="choices"></div>
+      <div id="confirmation" class="confirm hidden"><h3 id="confirm-title">Confirmar solicitud</h3><p id="confirm-detail"></p><p id="confirm-explanation" class="small">Confirmas que no reconoces el cargo y quieres enviarlo a revisión. Esto no confirma fraude ni solicita un reembolso automático.</p><div class="buttons"><button id="confirm">Confirmar y enviar a revisión</button><button id="cancel" class="secondary">Cancelar</button></div></div>
+      <form id="customer-form" class="compose"><label class="hidden" for="customer-message">Mensaje del cliente</label><input id="customer-message" aria-label="Mensaje del cliente" placeholder="No reconozco un cargo" maxlength="2000" autocomplete="off" required><button id="send" type="submit">Enviar</button></form>
+      <p id="customer-error" class="error" role="alert"></p>
+    </section>
+    <section class="panel" aria-labelledby="advisor-title">
+      <div class="eyebrow">02 · Asesor</div><h2 id="advisor-title">Solicitudes de revisión</h2><p class="small">Recibe los hechos consultados y lo que reportó el cliente. La legitimidad del cargo sigue pendiente de investigación.</p>
+      <p id="advisor-error" class="error" role="alert"></p><div id="queue" class="queue"><p class="empty">La cola está vacía. Confirma una solicitud desde el chat.</p></div>
+      <div id="advisor-work" class="hidden"><div id="facts" class="facts"></div><button id="claim">Tomar conversación</button><div id="advisor-chat" class="chat" aria-label="Historial para el asesor"></div><form id="advisor-form"><label for="advisor-message">Respuesta al cliente</label><textarea id="advisor-message" maxlength="2000" required>Hola, recibí tu reporte. Voy a revisar el cargo contigo; todavía no hemos confirmado fraude.</textarea><button id="advisor-send" type="submit">Responder en el chat</button></form></div>
+    </section>
+  </main>
+  <footer>Esta demo prueba consulta, confirmación y derivación. No bloquea tarjetas, mueve dinero ni resuelve la disputa financiera.</footer>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+const conversations = new Map();
+let conversation = null, selectedCase = null, cases = [], choices = [], busy = false;
+const roleNames = {customer:'Cliente',ai_agent:'Asistente',human_agent:'Asesor',system:'Estado'};
+const stateNames = {ai_agent:'Asistente',human_queue:'En cola de revisión',human_agent:'Atiende un asesor'};
+const token = () => $('customer').value;
+function node(tag,text,className){const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(className)e.className=className;return e;}
+async function api(path,body,role='customer'){
+ const headers = {'Content-Type':'application/json',...(role==='advisor'?{'X-Demo-Advisor':'local-advisor'}:{'X-Demo-Session':token()})};
+ const r=await fetch(path,{method:body===undefined?'GET':'POST',headers,...(body===undefined?{}:{body:JSON.stringify(body)})});
+ const data=await r.json();if(!r.ok)throw new Error(typeof data.detail==='string'?data.detail:'No se completó la solicitud. Revisa los datos e inténtalo de nuevo.');return data;
+}
+function showMessages(id,messages){const target=$(id);target.replaceChildren();for(const m of messages){const bubble=node('div',undefined,'message '+m.sender_type);bubble.append(node('span',roleNames[m.sender_type]||'Mensaje','sender'),node('span',m.text));target.append(bubble);}target.scrollTop=target.scrollHeight;}
+function setBusy(value){busy=value;for(const id of ['send','confirm','cancel','new','customer'])$(id).disabled=value;for(const button of $('choices').querySelectorAll('button'))button.disabled=value;}
+function renderCustomer(){
+ if(!conversation)return;
+ choices=conversation.choices;
+ const pt=conversation.language==='pt';
+ $('customer-state').textContent=stateNames[conversation.handledBy];showMessages('chat',conversation.messages);
+ $('choices').replaceChildren();
+ if(conversation.stage==='choose'||conversation.stage==='confirm')for(const tx of choices){const b=node('button',undefined,'choice');b.append(node('strong',tx.merchant_name),node('span',`${tx.amount} ${tx.currency} · ${tx.transaction_date.slice(0,10)} · •••• ${tx.product_last4}`));b.disabled=busy;b.onclick=()=>submit({action:'select',transaction_id:tx.transaction_id,message:''});$('choices').append(b);}
+ const confirming=conversation.stage==='confirm'&&conversation.handledBy==='ai_agent';$('confirmation').classList.toggle('hidden',!confirming);
+ $('confirm-title').textContent=pt?'Confirmar solicitação':'Confirmar solicitud';$('confirm').textContent=pt?'Confirmar e enviar para revisão':'Confirmar y enviar a revisión';$('cancel').textContent=pt?'Cancelar':'Cancelar';
+ $('confirm-explanation').textContent=pt?'Você confirma que não reconhece a cobrança e deseja enviá-la para revisão. Isso não confirma fraude nem solicita reembolso automático.':'Confirmas que no reconoces el cargo y quieres enviarlo a revisión. Esto no confirma fraude ni solicita un reembolso automático.';
+ if(confirming){const tx=conversation.selected;$('confirm-detail').textContent=`${tx.merchant_name} · ${tx.amount} ${tx.currency} · ${tx.transaction_date.slice(0,10)}`;}
+ $('customer-message').placeholder=conversation.handledBy==='ai_agent'?(pt?'Não reconheço uma cobrança':'No reconozco un cargo'):(pt?'Mensagem para o atendente':'Mensaje para el asesor');
+}
+async function start(){try{$('customer-error').textContent='';conversation=await api('/api/conversations',{});conversations.set(token(),conversation.id);choices=[];renderCustomer();$('chat').append(node('p',conversation.language==='pt'?'Escreva «Não reconheço uma cobrança» para começar.':'Escribe «No reconozco un cargo» para empezar.','small'));}catch(e){$('customer-error').textContent=e.message;}}
+// Keep a failed submission's ID and body so retrying it cannot duplicate a handoff.
+let pendingRequest = null;
+async function submit(body){if(busy||!conversation)return;setBusy(true);$('customer-error').textContent='';const request={...body,request_id:crypto.randomUUID()};if(pendingRequest&&JSON.stringify(pendingRequest.body)===JSON.stringify(body)&&pendingRequest.id===conversation.id)request.request_id=pendingRequest.request_id;pendingRequest={body,id:conversation.id,request_id:request.request_id};try{const p=await api(`/api/conversations/${conversation.id}/turn`,request);conversation=p.conversation;if(p.choices.length)choices=p.choices;if(conversation.stage==='idle'||conversation.handledBy!=='ai_agent')choices=[];pendingRequest=null;renderCustomer();$('customer-message').value='';await refreshQueue();}catch(e){$('customer-error').textContent=e.message;}finally{setBusy(false);}}
+function renderQueue(){
+ $('queue').replaceChildren();if(!cases.length)$('queue').append(node('p','La cola está vacía. Confirma una solicitud desde el chat.','empty'));
+ for(const c of cases){const card=node('div',undefined,'case'+(c.id===selectedCase?' selected':''));const tx=c.handoff.facts.verified_data;card.append(node('h3',tx.merchant_name),node('p',`${tx.amount} ${tx.currency} · ${stateNames[c.handledBy]}`));const open=node('button','Ver solicitud','secondary');open.onclick=()=>{selectedCase=c.id;renderQueue();renderAdvisor();};card.append(open);$('queue').append(card);}
+ renderAdvisor();
+}
+function renderAdvisor(){const c=cases.find(c=>c.id===selectedCase);$('advisor-work').classList.toggle('hidden',!c);if(!c)return;const facts=c.handoff.facts,tx=facts.verified_data;$('facts').replaceChildren(node('h3','Cargo reportado · Revisión pendiente'));const dl=node('dl');for(const [k,v] of [['Movimiento',tx.transaction_id],['Comercio',tx.merchant_name],['Monto',`${tx.amount} ${tx.currency}`],['Fecha',tx.transaction_date],['Declaración',facts.customer_statement],['Evaluación de fraude','No disponible para decisiones']])dl.append(node('dt',k),node('dd',v));$('facts').append(dl,node('p','Movimiento consultado y confirmado por el cliente. Fraude no establecido.','small'));showMessages('advisor-chat',c.messages);$('claim').disabled=c.handledBy==='human_agent';$('claim').textContent=c.handledBy==='human_agent'?'Conversación tomada':'Tomar conversación';$('advisor-send').disabled=c.handledBy!=='human_agent';}
+async function refreshQueue(){try{cases=await api('/api/advisor/queue',undefined,'advisor');$('advisor-error').textContent='';renderQueue();}catch(e){$('advisor-error').textContent=e.message;}}
+$('customer-form').onsubmit=e=>{e.preventDefault();submit({action:'message',message:$('customer-message').value});};
+$('confirm').onclick=()=>submit({action:'confirm',transaction_id:conversation.selected.transaction_id,confirmation_id:conversation.confirmation_id,message:''});
+$('cancel').onclick=()=>submit({action:'cancel',message:''});
+$('new').onclick=()=>{pendingRequest=null;start();};
+$('customer').onchange=async()=>{pendingRequest=null;choices=[];const id=conversations.get(token());if(id){try{conversation=await api(`/api/conversations/${id}`);renderCustomer();}catch(e){$('customer-error').textContent=e.message;}}else await start();};
+$('claim').onclick=async()=>{try{await api(`/api/advisor/${selectedCase}/claim`,{},'advisor');await refreshQueue();}catch(e){$('advisor-error').textContent=e.message;}};
+$('advisor-form').onsubmit=async e=>{e.preventDefault();$('advisor-send').disabled=true;try{await api(`/api/advisor/${selectedCase}/messages`,{message:$('advisor-message').value,request_id:crypto.randomUUID()},'advisor');await refreshQueue();}catch(error){$('advisor-error').textContent=error.message;}finally{renderAdvisor();}};
+setInterval(async()=>{if(!busy&&conversation){try{const c=await api(`/api/conversations/${conversation.id}`);if(c.messages.length!==conversation.messages.length||c.handledBy!==conversation.handledBy){conversation=c;renderCustomer();}}catch(e){$('customer-error').textContent=e.message;}}await refreshQueue();},2500);
+start();refreshQueue();
+</script>
+</body>
+</html>
