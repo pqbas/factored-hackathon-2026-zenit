@@ -24,7 +24,7 @@ ml/
 └── databricks.yml     # serverless jobs for training and scoring
 ```
 
-Status (2026-10-04): **Phases 0 and 1 and exploratory V1–V6 experiments are complete; no ML candidate is suitable for promotion.** V5 CatBoost completed four candidates; later-period ROC-AUC was 0.5038 and precision 0.161% at a frozen approximately 1% review threshold, without useful improvement. V4's selected tree had assigned a constant score. A separate diagnostic found unusually strong alignment between `fraud_score` and `is_fraud`, but its timing/provenance is unknown, so it may be leakage. The `digital_events` audit remains blocked on `SELECT`, rechecked 2026-10-04. Final test remains unopened.
+Status (2026-10-05): **Phases 0 and 1 and exploratory V1–V7 experiments are complete; no ML candidate is suitable for promotion.** V5 CatBoost completed four candidates; later-period ROC-AUC was 0.5038 and precision 0.161% at a frozen approximately 1% review threshold, without useful improvement. V4's selected tree had assigned a constant score. A separate diagnostic found unusually strong alignment between `fraud_score` and `is_fraud`, but its timing/provenance is unknown, so it may be leakage. The `digital_events` audit remains blocked on `SELECT`, rechecked 2026-10-04. Final test remains unopened.
 
 Phase 0 measurements: [reports/2026-09-28/profile_report.md](reports/2026-09-28/profile_report.md)
 
@@ -68,4 +68,8 @@ The [dispute integration contract](spec/28-09-26-fraud-model/dispute_integration
 
 ## Integration with the original application
 
-The ML branch incorporates `main` through commit `20e0e98`. The standalone dispute demo was removed. The original agent exposes experimental model availability through `get_fraud_assessment`, and verified complaint handoffs carry that policy into the existing advisor UI. Predictive inference remains unavailable. The earlier local run used the personal identity and disabled chat persistence; production keeps its existing service principals and Lakebase configuration. See [the local run guide](../LOCAL_MAIN_INTEGRATION.md), [local validation](reports/2026-10-04/main_integration_report.md), and [the verified AWS integration](reports/2026-10-05/aws_integration_report.md).
+The ML branch incorporates `main` through commit `20e0e98`. The standalone dispute demo was removed. The original agent exposes experimental model availability through `get_fraud_assessment`, and verified complaint handoffs carry that policy into the existing advisor UI. V7 now supplies an executable native artifact for experimental transaction inference through existing Lakebase reads; it is not promoted for decision use. The earlier local run used the personal identity and disabled chat persistence; production keeps its existing service principals and Lakebase configuration. See [the local run guide](../LOCAL_MAIN_INTEGRATION.md), [local validation](reports/2026-10-04/main_integration_report.md), and [the verified AWS integration](reports/2026-10-05/aws_integration_report.md).
+
+## Executable experimental inference
+
+[V7 execution report](reports/2026-10-05/executable_predictions_report.md) records the native CatBoost artifact, shared training/serving contract and real per-transaction inference. Validation precision is **0.083056%**, below V5; no quality improvement or automatic decision utility is claimed. The original advisor workflow receives the experimental score and threshold flag while preserving human review. Incomplete complaints retain the V5/V6 availability notice.

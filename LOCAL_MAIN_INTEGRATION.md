@@ -48,7 +48,7 @@ Do not use `back/npm run build` for this launch: that script runs `db:migrate`. 
 - The existing verified complaint handoff includes the assessment for the advisor. Backend fact preservation and frontend notice were tested with fixtures.
 - Real bank lookup is blocked for the personal identity: Lakebase rejects the login, Gold lacks `USE SCHEMA`, and several Silver tables lack `SELECT`. No permission grant was executed.
 - Chat history, persistence, queued work and advisor handoff storage are disabled in this local launch. No live claim/refund/block/handoff write was performed.
-- There is no deployable predictive fraud artifact. Aggregate precision is not a transaction probability, and this integration does not enable automatic financial decisions.
+- V7 now has an executable native artifact. Its inference path uses existing Lakebase, so the personal identity and optional warehouse override described in this historical local launch do not establish prediction access. Aggregate precision is not a transaction probability; automatic financial decisions remain disabled.
 
 `BANK_READ_SOURCE=databricks` is explicit and optional. It selects parameterized read-only queries against existing tables. Without it, the original Lakebase path remains the default. `BANK_SQL_WAREHOUSE_ID` can select an existing authorized warehouse; the default matches the repository's warehouse resource. This setting does not grant data access.
 
