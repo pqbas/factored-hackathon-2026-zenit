@@ -23,13 +23,14 @@ export interface FraudSnapshot {
   publishedAt: string;
   dataset: {
     source: string;
-    deltaVersion: number;
+    deltaVersion: number | null;
+    scope?: 'training_validation';
     profiledAt: string;
     total: number;
     fraud: number;
     nullIds: number;
     nullLabels: number;
-    duplicates: number;
+    duplicates: number | null;
     dateRange: { min_date: string; max_date: string };
     countries: FraudSegment[];
     channels: FraudSegment[];
@@ -73,7 +74,8 @@ export interface FraudSnapshot {
   evidence: { path: string; sha256: string }[];
 }
 export interface FraudOperational {
-  status: 'available' | 'unavailable' | 'error';
+  status: 'available' | 'unavailable' | 'error' | 'loading';
+  cache?: { updating: boolean; updatedAt: string | null; lastRefreshFailed: boolean; status: string; cacheSeconds: number };
   total: number;
   scored: number;
   alerts: number;
@@ -89,4 +91,5 @@ export interface FraudDashboard {
   window: { from: string; to: string; tz: string };
   refreshedAt: string;
   operational: FraudOperational;
+  source?: import('./retention').AnalyticsSource;
 }

@@ -29,6 +29,8 @@ test.beforeAll(async () => {
   delete process.env.POSTGRES_URL;
   delete process.env.PGHOST;
   delete process.env.PGDATABASE;
+  // Route tests must never submit real warehouse statements.
+  for (const key of ['DATABRICKS_HOST','DATABRICKS_CONFIG_PROFILE','DATABRICKS_CLIENT_ID','DATABRICKS_CLIENT_SECRET']) delete process.env[key];
   const app = express();
   app.use(express.json());
   app.use('/api', authRouter);
@@ -64,6 +66,15 @@ test('requires a session and an admin role on the API', async () => {
     expect(
       (await fetch(url(), { headers: { cookie: await cookie(role) } })).status,
     ).toBe(403);
+});
+test('retention is admin-only and returns a cache state without waiting for compute', async () => {
+  const path=`${base}/api/advisor/retention-dashboard`;
+  expect((await fetch(path)).status).toBe(401);
+  for(const role of ['cliente','asesor']) expect((await fetch(path,{headers:{cookie:await cookie(role)}})).status).toBe(403);
+  const res=await fetch(path,{headers:{cookie:await cookie('admin')}});
+  expect(res.status).toBe(200);expect(res.headers.get('cache-control')).toBe('no-store');
+  const body=await res.json();expect(body.data).toBeNull();expect(body.source.provider).toBe('databricks_sql');
+  expect(body.source.tables).toHaveLength(4);expect(body).not.toHaveProperty('credentials');
 });
 test('admin receives historical evidence even without storage', async () => {
   const res = await fetch(url(), {

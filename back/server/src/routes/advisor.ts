@@ -19,7 +19,6 @@ import {
   getCustomerInbox,
   getChatsByCustomerKey,
   getResolutionMetrics,
-  getFraudDashboardAggregates,
   getTurnMetrics,
   HUMAN_HANDLED_BY,
   getLastCustomerMessages,
@@ -39,7 +38,10 @@ import { getCustomerContext } from '../bank-data';
 import { withHandoff, withHandoffs } from '../handoff-view';
 import { PRICING_ASSUMPTIONS, estimateCostUsd } from '../pricing';
 import fraudSnapshot from '../data/fraud-dashboard.json';
-import { aggregateFraudRows, validFraudWindow } from '../fraud-dashboard';
+import { validFraudWindow } from '../fraud-dashboard';
+import { cachedFraudOperations } from '../operational-cache';
+import { liveFraudDashboard, retentionDashboard } from '../analytics-data';
+import type { FraudSnapshot } from '../../../packages/utils/src/fraud-dashboard';
 
 export const advisorRouter: RouterType = Router();
 
@@ -390,7 +392,7 @@ const metricsQuerySchema = z.object({
 });
 
 // Historical evidence remains accessible when operational storage is unavailable.
-// This endpoint performs one SELECT and never initiates scoring or warehouse jobs.
+// Reads cached aggregates immediately; background refreshes only execute SELECTs.
 advisorRouter.get('/fraud-dashboard', requireAdmin, async (req: Request, res: Response) => {
   const query = metricsQuerySchema.safeParse(req.query);
   if (!query.success || !query.data.from || !query.data.to
@@ -399,17 +401,14 @@ advisorRouter.get('/fraud-dashboard', requireAdmin, async (req: Request, res: Re
   }
   res.setHeader('Cache-Control', 'no-store');
   const window = { from: query.data.from, to: query.data.to, tz: query.data.tz ?? 'UTC' };
-  let operational = aggregateFraudRows([], 'unavailable');
-  if (isDatabaseAvailable()) {
-    try {
-      operational = aggregateFraudRows(await getFraudDashboardAggregates(window));
-    } catch {
-      // Do not log facts, credentials or bank identifiers on a dashboard failure.
-      console.error('[/api/advisor/fraud-dashboard] Aggregate query failed');
-      operational = aggregateFraudRows([], 'error');
-    }
-  }
-  return res.json({ snapshot: fraudSnapshot, operational, window, refreshedAt: new Date().toISOString() });
+  const operational = cachedFraudOperations(window, req.query.refresh === '1');
+  const analytics = liveFraudDashboard(fraudSnapshot as FraudSnapshot, req.query.refresh === '1');
+  return res.json({ ...analytics, operational, window, refreshedAt: new Date().toISOString() });
+});
+
+advisorRouter.get('/retention-dashboard', requireAdmin, (req: Request, res: Response) => {
+  res.setHeader('Cache-Control', 'no-store');
+  return res.json(retentionDashboard(req.query.refresh === '1'));
 });
 
 /**

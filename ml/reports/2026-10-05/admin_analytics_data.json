@@ -1,0 +1,862 @@
+{
+  "validationDate": "2026-10-05",
+  "authentication": "authorized owner CLI profile pqbas; deployed service identity not yet verified",
+  "scope": "read-only aggregates; retention shortlist omitted; no new final-test labels",
+  "queries": [
+    {
+      "label": "customer360_readiness",
+      "statement_id": "01f1c10d-32a8-17c8-9f34-3b60947a2025",
+      "status": {
+        "state": "SUCCEEDED"
+      },
+      "rows": [
+        {
+          "customers": "150000",
+          "min_as_of": "2026-06-18",
+          "max_as_of": "2026-06-18",
+          "active_with_products": "114516",
+          "csat_present": "86127",
+          "sentiment_present": "47111",
+          "sentiment_min": "-1.00",
+          "sentiment_max": "1.00"
+        }
+      ],
+      "total_rows": 1
+    },
+    {
+      "label": "csat_scale",
+      "statement_id": "01f1c10d-3d38-1353-ac4a-3823f31941be",
+      "status": {
+        "state": "SUCCEEDED"
+      },
+      "rows": [
+        {
+          "survey_type": "CSAT",
+          "min_score": "1",
+          "max_score": "4",
+          "n": "127856"
+        },
+        {
+          "survey_type": "NPS",
+          "min_score": "2",
+          "max_score": "7",
+          "n": "63668"
+        },
+        {
+          "survey_type": "CES",
+          "min_score": "1",
+          "max_score": "4",
+          "n": "21235"
+        }
+      ],
+      "total_rows": 3
+    },
+    {
+      "label": "customer_states",
+      "statement_id": "01f1c10d-3ee0-153b-9759-c2554218a972",
+      "status": {
+        "state": "SUCCEEDED"
+      },
+      "rows": [
+        {
+          "customer_status": "Active",
+          "n": "127700"
+        },
+        {
+          "customer_status": "Inactive",
+          "n": "14914"
+        },
+        {
+          "customer_status": "Closed",
+          "n": "2979"
+        },
+        {
+          "customer_status": "Suspended",
+          "n": "4407"
+        }
+      ],
+      "total_rows": 4
+    },
+    {
+      "label": "retention_dashboard",
+      "statement_id": "01f1c10d-996b-14ce-b643-339d959e705a",
+      "status": {
+        "state": "SUCCEEDED"
+      },
+      "rows": [
+        {
+          "section": "metadata",
+          "payload": "{\"asOf\":\"2026-06-18\",\"minAsOf\":\"2026-06-18\",\"totalCustomers\":150000,\"eligibleCustomers\":114516,\"activityUnknown\":1}"
+        },
+        {
+          "section": "bands",
+          "payload": "{\"band\":\"watch\",\"total\":47226}"
+        },
+        {
+          "section": "bands",
+          "payload": "{\"band\":\"high\",\"total\":446}"
+        },
+        {
+          "section": "bands",
+          "payload": "{\"band\":\"none\",\"total\":55928}"
+        },
+        {
+          "section": "bands",
+          "payload": "{\"band\":\"medium\",\"total\":10916}"
+        },
+        {
+          "section": "countries",
+          "payload": "{\"country\":\"Colombia\",\"total\":34529,\"high\":142,\"medium\":3300,\"watch\":14194,\"none\":16893}"
+        },
+        {
+          "section": "countries",
+          "payload": "{\"country\":\"Argentina\",\"total\":22758,\"high\":92,\"medium\":2158,\"watch\":9470,\"none\":11038}"
+        },
+        {
+          "section": "countries",
+          "payload": "{\"country\":\"M\u00e9xico\",\"total\":57229,\"high\":212,\"medium\":5458,\"watch\":23562,\"none\":27997}"
+        },
+        {
+          "section": "segments",
+          "payload": "{\"segment\":\"Premium\",\"total\":11565,\"high\":51}"
+        },
+        {
+          "section": "segments",
+          "payload": "{\"segment\":\"Student\",\"total\":5710,\"high\":23}"
+        },
+        {
+          "section": "segments",
+          "payload": "{\"segment\":\"Basic\",\"total\":68608,\"high\":257}"
+        },
+        {
+          "section": "segments",
+          "payload": "{\"segment\":\"Plus\",\"total\":28633,\"high\":115}"
+        },
+        {
+          "section": "signals",
+          "payload": "{\"id\":\"declining\",\"total\":6513}"
+        },
+        {
+          "section": "signals",
+          "payload": "{\"id\":\"negative_sentiment\",\"total\":3379}"
+        },
+        {
+          "section": "signals",
+          "payload": "{\"id\":\"repeated\",\"total\":80}"
+        },
+        {
+          "section": "signals",
+          "payload": "{\"id\":\"inactive\",\"total\":25692}"
+        },
+        {
+          "section": "signals",
+          "payload": "{\"id\":\"unresolved\",\"total\":32857}"
+        },
+        {
+          "section": "signals",
+          "payload": "{\"id\":\"low_csat\",\"total\":2295}"
+        }
+      ],
+      "total_rows": 18
+    },
+    {
+      "label": "live_fraud_dashboard",
+      "statement_id": "01f1c10d-a816-1249-8782-c17b4aacc0de",
+      "status": {
+        "state": "SUCCEEDED"
+      },
+      "rows": [
+        {
+          "section": "types",
+          "label": "Deposit",
+          "total": "514585",
+          "fraud": "516",
+          "null_ids": "0",
+          "null_labels": "0",
+          "merchant_missing": "514585",
+          "usd_missing": "294699",
+          "normalized_missing": "11753",
+          "min_date": "2023-06-17 06:04:07",
+          "max_date": "2025-12-31 23:56:29"
+        },
+        {
+          "section": "monthly",
+          "label": "2024-01",
+          "total": "122201",
+          "fraud": "121",
+          "null_ids": "0",
+          "null_labels": "0",
+          "merchant_missing": "93833",
+          "usd_missing": "70131",
+          "normalized_missing": "2818",
+          "min_date": "2024-01-01 00:00:57",
+          "max_date": "2024-01-31 23:59:37"
+        },
+        {
+          "section": "countries",
+          "label": "Argentina",
+          "total": "733275",
+          "fraud": "745",
+          "null_ids": "0",
+          "null_labels": "0",
+          "merchant_missing": "562256",
+          "usd_missing": "119215",
+          "normalized_missing": "32559",
+          "min_date": "2023-06-17 06:03:35",
+          "max_date": "2025-12-31 23:57:42"
+        },
+        {
+          "section": "countries",
+          "label": "Spain",
+          "total": "34253",
+          "fraud": "37",
+          "null_ids": "0",
+          "null_labels": "0",
+          "merchant_missing": "26320",
+          "usd_missing": "18376",
+          "normalized_missing": "826",
+          "min_date": "2023-06-17 06:13:12",
+          "max_date": "2025-12-31 23:05:42"
+        },
+        {
+          "section": "currencies",
+          "label": "ARS",
+          "total": "669999",
+          "fraud": "680",
+          "null_ids": "0",
+          "null_labels": "0",
+          "merchant_missing": "513895",
+          "usd_missing": "33722",
+          "normalized_missing": "33722",
+          "min_date": "2023-06-17 06:03:35",
+          "max_date": "2025-12-31 23:57:42"
+        },
+        {
+          "section": "monthly",
+          "label": "2024-05",
+          "total": "126371",
+          "fraud": "132",
+          "null_ids": "0",
+          "null_labels": "0",
+          "merchant_missing": "97044",
+          "usd_missing": "72656",
+          "normalized_missing": "2823",
+          "min_date": "2024-05-01 00:00:12",
+          "max_date": "2024-05-31 23:59:50"
+        },
+        {
+          "section": "types",
+          "label": "Payment",
+          "total": "624136",
+          "fraud": "636",
+          "null_ids": "0",
+          "null_labels": "0",
+          "merchant_missing": "624136",
+          "usd_missing": "358379",
+          "normalized_missing": "14126",
+          "min_date": "2023-06-17 06:03:43",
+          "max_date": "2025-12-31 23:57:35"
+        },
+        {
+          "section": "monthly",
+          "label": "2025-05",
+          "total": "126997",
+          "fraud": "131",
+          "null_ids": "0",
+          "null_labels": "0",
+          "merchant_missing": "97574",
+          "usd_missing": "72941",
+          "normalized_missing": "2932",
+          "min_date": "2025-05-01 00:00:20",
+          "max_date": "2025-05-31 23:59:44"
+        },
+        {
+          "section": "monthly",
+          "label": "2025-04",
+          "total": "120744",
+          "fraud": "103",
+          "null_ids": "0",
+          "null_labels": "0",
+          "merchant_missing": "92592",
+          "usd_missing": "69091",
+          "normalized_missing": "2698",
+          "min_date": "2025-04-01 00:00:00",
+          "max_date": "2025-04-30 23:59:49"
+        },
+        {
+          "section": "monthly",
+          "label": "2025-02",
+          "total": "110465",
+          "fraud": "110",
+          "null_ids": "0",
+          "null_labels": "0",
+          "merchant_missing": "84715",
+          "usd_missing": "63487",
+          "normalized_missing": "2518",
+          "min_date": "2025-02-01 00:00:00",
+          "max_date": "2025-02-28 23:59:58"
+        },
+        {
+          "section": "monthly",
+          "label": "2025-06",
+          "total": "118788",
+          "fraud": "140",
+          "null_ids": "0",
+          "null_labels": "0",
+          "merchant_missing": "91010",
+          "usd_missing": "67969",
+          "normalized_missing": "2675",
+          "min_date": "2025-06-01 00:00:16",
+          "max_date": "2025-06-30 23:59:46"
+        },
+        {
+          "section": "monthly",
+          "label": "2024-04",
+          "total": "121330",
+          "fraud": "125",
+          "null_ids": "0",
+          "null_labels": "0",
+          "merchant_missing": "93089",
+          "usd_missing": "69327",
+          "normalized_missing": "2640",
+          "min_date": "2024-04-01 00:00:53",
+          "max_date": "2024-04-30 23:59:47"
+        },
+        {
+          "section": "monthly",
+          "label": "2024-03",
+          "total": "121588",
+          "fraud": "135",
+          "null_ids": "0",
+          "null_labels": "0",
+          "merchant_missing": "93351",
+          "usd_missing": "69709",
+          "normalized_missing": "2682",
+          "min_date": "2024-03-01 00:01:56",
+          "max_date": "2024-03-31 23:59:24"
+        },
+        {
+          "section": "channels",
+          "label": "Transfer",
+          "total": "75296",
+          "fraud": "70",
+          "null_ids": "0",
+          "null_labels": "0",
+          "merchant_missing": "57792",
+          "usd_missing": "43207",
+          "normalized_missing": "1631",
+          "min_date": "2023-06-17 07:25:28",
+          "max_date": "2025-12-31 23:20:01"
+        },
+        {
+          "section": "monthly",
+          "label": "2024-09",
+          "total": "117525",
+          "fraud": "131",
+          "null_ids": "0",
+          "null_labels": "0",
+          "merchant_missing": "90115",
+          "usd_missing": "67539",
+          "normalized_missing": "2660",
+          "min_date": "2024-09-01 00:00:40",
+          "max_date": "2024-09-30 23:59:21"
+        },
+        {
+          "section": "monthly",
+          "label": "2025-09",
+          "total": "118563",
+          "fraud": "107",
+          "null_ids": "0",
+          "null_labels": "0",
+          "merchant_missing": "91008",
+          "usd_missing": "67863",
+          "normalized_missing": "2600",
+          "min_date": "2025-09-01 00:00:22",
+          "max_date": "2025-09-30 23:59:49"
+        },
+        {
+          "section": "monthly",
+          "label": "2023-07",
+          "total": "121313",
+          "fraud": "138",
+          "null_ids": "0",
+          "null_labels": "0",
+          "merchant_missing": "93076",
+          "usd_missing": "69084",
+          "normalized_missing": "2742",
+          "min_date": "2023-07-01 00:00:04",
+          "max_date": "2023-07-31 23:59:54"
+        },
+        {
+          "section": "channels",
+          "label": "Web",
+          "total": "560703",
+          "fraud": "573",
+          "null_ids": "0",
+          "null_labels": "0",
+          "merchant_missing": "430602",
+          "usd_missing": "321670",
+          "normalized_missing": "12456",
+          "min_date": "2023-06-17 06:03:35",
+          "max_date": "2025-12-31 23:58:22"
+        },
+        {
+          "section": "monthly",
+          "label": "2025-12",
+          "total": "122382",
+          "fraud": "115",
+          "null_ids": "0",
+          "null_labels": "0",
+          "merchant_missing": "94050",
+          "usd_missing": "70378",
+          "normalized_missing": "2749",
+          "min_date": "2025-12-01 00:00:05",
+          "max_date": "2025-12-31 23:59:23"
+        },
+        {
+          "section": "monthly",
+          "label": "2025-07",
+          "total": "126882",
+          "fraud": "130",
+          "null_ids": "0",
+          "null_labels": "0",
+          "merchant_missing": "97341",
+          "usd_missing": "72718",
+          "normalized_missing": "2822",
+          "min_date": "2025-07-01 00:00:21",
+          "max_date": "2025-07-31 23:59:14"
+        },
+        {
+          "section": "monthly",
+          "label": "2024-12",
+          "total": "122761",
+          "fraud": "107",
+          "null_ids": "0",
+          "null_labels": "0",
+          "merchant_missing": "94101",
+          "usd_missing": "70509",
+          "normalized_missing": "2698",
+          "min_date": "2024-12-01 00:00:07",
+          "max_date": "2024-12-31 23:59:51"
+        },
+        {
+          "section": "monthly",
+          "label": "2025-11",
+          "total": "120775",
+          "fraud": "103",
+          "null_ids": "0",
+          "null_labels": "0",
+          "merchant_missing": "92491",
+          "usd_missing": "69395",
+          "normalized_missing": "2696",
+          "min_date": "2025-11-01 00:00:02",
+          "max_date": "2025-11-30 23:58:46"
+        },
+        {
+          "section": "monthly",
+          "label": "2025-08",
+          "total": "126039",
+          "fraud": "119",
+          "null_ids": "0",
+          "null_labels": "0",
+          "merchant_missing": "96908",
+          "usd_missing": "72143",
+          "normalized_missing": "2793",
+          "min_date": "2025-08-01 00:00:33",
+          "max_date": "2025-08-31 23:59:31"
+        },
+        {
+          "section": "monthly",
+          "label": "2025-10",
+          "total": "129268",
+          "fraud": "125",
+          "null_ids": "0",
+          "null_labels": "0",
+          "merchant_missing": "99317",
+          "usd_missing": "74078",
+          "normalized_missing": "2917",
+          "min_date": "2025-10-01 00:00:24",
+          "max_date": "2025-10-31 23:59:56"
+        },
+        {
+          "section": "monthly",
+          "label": "2024-08",
+          "total": "122764",
+          "fraud": "129",
+          "null_ids": "0",
+          "null_labels": "0",
+          "merchant_missing": "94423",
+          "usd_missing": "70032",
+          "normalized_missing": "2809",
+          "min_date": "2024-08-01 00:00:04",
+          "max_date": "2024-08-31 23:58:59"
+        },
+        {
+          "section": "monthly",
+          "label": "2025-01",
+          "total": "122180",
+          "fraud": "122",
+          "null_ids": "0",
+          "null_labels": "0",
+          "merchant_missing": "93513",
+          "usd_missing": "70130",
+          "normalized_missing": "2762",
+          "min_date": "2025-01-01 00:00:29",
+          "max_date": "2025-01-31 23:59:56"
+        },
+        {
+          "section": "channels",
+          "label": "App",
+          "total": "559948",
+          "fraud": "539",
+          "null_ids": "0",
+          "null_labels": "0",
+          "merchant_missing": "429273",
+          "usd_missing": "320553",
+          "normalized_missing": "12647",
+          "min_date": "2023-06-17 06:09:00",
+          "max_date": "2025-12-31 23:59:02"
+        },
+        {
+          "section": "types",
+          "label": "Transfer",
+          "total": "757532",
+          "fraud": "682",
+          "null_ids": "0",
+          "null_labels": "0",
+          "merchant_missing": "757532",
+          "usd_missing": "434454",
+          "normalized_missing": "16835",
+          "min_date": "2023-06-17 06:03:35",
+          "max_date": "2025-12-31 23:59:02"
+        },
+        {
+          "section": "monthly",
+          "label": "2023-10",
+          "total": "127793",
+          "fraud": "140",
+          "null_ids": "0",
+          "null_labels": "0",
+          "merchant_missing": "98092",
+          "usd_missing": "73483",
+          "normalized_missing": "2876",
+          "min_date": "2023-10-01 00:00:35",
+          "max_date": "2023-10-31 23:59:01"
+        },
+        {
+          "section": "monthly",
+          "label": "2023-12",
+          "total": "125969",
+          "fraud": "123",
+          "null_ids": "0",
+          "null_labels": "0",
+          "merchant_missing": "96623",
+          "usd_missing": "72157",
+          "normalized_missing": "2847",
+          "min_date": "2023-12-01 00:00:14",
+          "max_date": "2023-12-31 23:59:23"
+        },
+        {
+          "section": "monthly",
+          "label": "2024-11",
+          "total": "121481",
+          "fraud": "122",
+          "null_ids": "0",
+          "null_labels": "0",
+          "merchant_missing": "93579",
+          "usd_missing": "69686",
+          "normalized_missing": "2687",
+          "min_date": "2024-11-01 00:00:31",
+          "max_date": "2024-11-30 23:59:54"
+        },
+        {
+          "section": "channels",
+          "label": "Branch",
+          "total": "111847",
+          "fraud": "126",
+          "null_ids": "0",
+          "null_labels": "0",
+          "merchant_missing": "85814",
+          "usd_missing": "64218",
+          "normalized_missing": "2542",
+          "min_date": "2023-06-17 06:39:36",
+          "max_date": "2025-12-31 23:49:56"
+        },
+        {
+          "section": "types",
+          "label": "Purchase",
+          "total": "915856",
+          "fraud": "930",
+          "null_ids": "0",
+          "null_labels": "0",
+          "merchant_missing": "46318",
+          "usd_missing": "524581",
+          "normalized_missing": "20699",
+          "min_date": "2023-06-17 06:08:26",
+          "max_date": "2025-12-31 23:59:23"
+        },
+        {
+          "section": "currencies",
+          "label": "USD",
+          "total": "2059404",
+          "fraud": "2067",
+          "null_ids": "0",
+          "null_labels": "0",
+          "merchant_missing": "1581028",
+          "usd_missing": "2059404",
+          "normalized_missing": "0",
+          "min_date": "2023-06-17 06:01:30",
+          "max_date": "2025-12-31 23:59:23"
+        },
+        {
+          "section": "countries",
+          "label": "Brazil",
+          "total": "34208",
+          "fraud": "40",
+          "null_ids": "0",
+          "null_labels": "0",
+          "merchant_missing": "26305",
+          "usd_missing": "18333",
+          "normalized_missing": "869",
+          "min_date": "2023-06-17 07:50:18",
+          "max_date": "2025-12-31 23:46:23"
+        },
+        {
+          "section": "monthly",
+          "label": "2024-07",
+          "total": "128772",
+          "fraud": "115",
+          "null_ids": "0",
+          "null_labels": "0",
+          "merchant_missing": "98829",
+          "usd_missing": "73660",
+          "normalized_missing": "2903",
+          "min_date": "2024-07-01 00:00:00",
+          "max_date": "2024-07-31 23:59:42"
+        },
+        {
+          "section": "monthly",
+          "label": "2024-06",
+          "total": "121816",
+          "fraud": "110",
+          "null_ids": "0",
+          "null_labels": "0",
+          "merchant_missing": "93594",
+          "usd_missing": "69867",
+          "normalized_missing": "2780",
+          "min_date": "2024-06-01 00:00:01",
+          "max_date": "2024-06-30 23:59:49"
+        },
+        {
+          "section": "monthly",
+          "label": "2023-06",
+          "total": "56260",
+          "fraud": "54",
+          "null_ids": "0",
+          "null_labels": "0",
+          "merchant_missing": "43118",
+          "usd_missing": "32208",
+          "normalized_missing": "1297",
+          "min_date": "2023-06-17 06:01:30",
+          "max_date": "2023-06-30 23:59:48"
+        },
+        {
+          "section": "currencies",
+          "label": "COP",
+          "total": "1009103",
+          "fraud": "966",
+          "null_ids": "0",
+          "null_labels": "0",
+          "merchant_missing": "774045",
+          "usd_missing": "50280",
+          "normalized_missing": "50280",
+          "min_date": "2023-06-17 06:03:27",
+          "max_date": "2025-12-31 23:59:02"
+        },
+        {
+          "section": "monthly",
+          "label": "2024-02",
+          "total": "117135",
+          "fraud": "118",
+          "null_ids": "0",
+          "null_labels": "0",
+          "merchant_missing": "89721",
+          "usd_missing": "67235",
+          "normalized_missing": "2611",
+          "min_date": "2024-02-01 00:00:04",
+          "max_date": "2024-02-29 23:59:57"
+        },
+        {
+          "section": "monthly",
+          "label": "2025-03",
+          "total": "123716",
+          "fraud": "112",
+          "null_ids": "0",
+          "null_labels": "0",
+          "merchant_missing": "94719",
+          "usd_missing": "70771",
+          "normalized_missing": "2724",
+          "min_date": "2025-03-01 00:00:26",
+          "max_date": "2025-03-31 23:59:49"
+        },
+        {
+          "section": "summary",
+          "label": "Unknown",
+          "total": "3738506",
+          "fraud": "3713",
+          "null_ids": "0",
+          "null_labels": "0",
+          "merchant_missing": "2868968",
+          "usd_missing": "2143406",
+          "normalized_missing": "84002",
+          "min_date": "2023-06-17 06:01:30",
+          "max_date": "2025-12-31 23:59:23"
+        },
+        {
+          "section": "countries",
+          "label": "M\u00e9xico",
+          "total": "1813299",
+          "fraud": "1822",
+          "null_ids": "0",
+          "null_labels": "0",
+          "merchant_missing": "1392236",
+          "usd_missing": "1797291",
+          "normalized_missing": "837",
+          "min_date": "2023-06-17 06:01:30",
+          "max_date": "2025-12-31 23:59:23"
+        },
+        {
+          "section": "countries",
+          "label": "USA",
+          "total": "34329",
+          "fraud": "28",
+          "null_ids": "0",
+          "null_labels": "0",
+          "merchant_missing": "26324",
+          "usd_missing": "18304",
+          "normalized_missing": "868",
+          "min_date": "2023-06-17 06:30:54",
+          "max_date": "2025-12-31 23:47:22"
+        },
+        {
+          "section": "monthly",
+          "label": "2024-10",
+          "total": "127493",
+          "fraud": "137",
+          "null_ids": "0",
+          "null_labels": "0",
+          "merchant_missing": "97892",
+          "usd_missing": "73039",
+          "normalized_missing": "2886",
+          "min_date": "2024-10-01 00:00:05",
+          "max_date": "2024-10-31 23:59:12"
+        },
+        {
+          "section": "countries",
+          "label": "Colombia",
+          "total": "1089142",
+          "fraud": "1041",
+          "null_ids": "0",
+          "null_labels": "0",
+          "merchant_missing": "835527",
+          "usd_missing": "171887",
+          "normalized_missing": "48043",
+          "min_date": "2023-06-17 06:03:27",
+          "max_date": "2025-12-31 23:59:02"
+        },
+        {
+          "section": "channels",
+          "label": "POS",
+          "total": "1307878",
+          "fraud": "1247",
+          "null_ids": "0",
+          "null_labels": "0",
+          "merchant_missing": "1004157",
+          "usd_missing": "750069",
+          "normalized_missing": "29314",
+          "min_date": "2023-06-17 06:04:07",
+          "max_date": "2025-12-31 23:57:42"
+        },
+        {
+          "section": "channels",
+          "label": "ATM",
+          "total": "1122834",
+          "fraud": "1158",
+          "null_ids": "0",
+          "null_labels": "0",
+          "merchant_missing": "861330",
+          "usd_missing": "643689",
+          "normalized_missing": "25412",
+          "min_date": "2023-06-17 06:01:30",
+          "max_date": "2025-12-31 23:59:23"
+        },
+        {
+          "section": "types",
+          "label": "Adjustment",
+          "total": "111786",
+          "fraud": "119",
+          "null_ids": "0",
+          "null_labels": "0",
+          "merchant_missing": "111786",
+          "usd_missing": "64356",
+          "normalized_missing": "2482",
+          "min_date": "2023-06-17 06:09:00",
+          "max_date": "2025-12-31 23:50:15"
+        },
+        {
+          "section": "monthly",
+          "label": "2023-11",
+          "total": "121984",
+          "fraud": "125",
+          "null_ids": "0",
+          "null_labels": "0",
+          "merchant_missing": "93723",
+          "usd_missing": "69993",
+          "normalized_missing": "2714",
+          "min_date": "2023-11-01 00:00:12",
+          "max_date": "2023-11-30 23:59:51"
+        },
+        {
+          "section": "monthly",
+          "label": "2023-08",
+          "total": "127592",
+          "fraud": "137",
+          "null_ids": "0",
+          "null_labels": "0",
+          "merchant_missing": "97849",
+          "usd_missing": "73455",
+          "normalized_missing": "2891",
+          "min_date": "2023-08-01 00:00:10",
+          "max_date": "2023-08-31 23:59:59"
+        },
+        {
+          "section": "monthly",
+          "label": "2023-09",
+          "total": "119559",
+          "fraud": "97",
+          "null_ids": "0",
+          "null_labels": "0",
+          "merchant_missing": "91678",
+          "usd_missing": "68672",
+          "normalized_missing": "2752",
+          "min_date": "2023-09-01 00:00:04",
+          "max_date": "2023-09-30 23:59:56"
+        },
+        {
+          "section": "types",
+          "label": "Withdrawal",
+          "total": "814611",
+          "fraud": "830",
+          "null_ids": "0",
+          "null_labels": "0",
+          "merchant_missing": "814611",
+          "usd_missing": "466937",
+          "normalized_missing": "18107",
+          "min_date": "2023-06-17 06:01:30",
+          "max_date": "2025-12-31 23:58:32"
+        }
+      ],
+      "total_rows": 53
+    }
+  ]
+}
