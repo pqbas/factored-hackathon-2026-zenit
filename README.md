@@ -23,6 +23,14 @@ Built on Databricks (Apps, Unity Catalog, Lakebase, MLflow, Foundation Model API
 
 ## Architecture
 
+### Current deployment: AWS + Databricks
+
+![Bank Assistant architecture on AWS and Databricks](docs/arquitectura-aws-databricks.drawio.png)
+
+The back and the agent run on AWS App Runner (us-west-2). Chats and bank data live in Lakebase, and the LLM (Qwen) runs on Databricks Model Serving. Flow, services and decisions: [docs/arquitectura-aws-databricks.md](docs/arquitectura-aws-databricks.md). Editable source: [docs/arquitectura-aws-databricks.drawio](docs/arquitectura-aws-databricks.drawio).
+
+### Original design: Databricks only
+
 ```mermaid
 flowchart TB
     subgraph WEB["Databricks App (chat)"]
