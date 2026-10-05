@@ -1,0 +1,19 @@
+# The backend image builds only the original backend and frontend.
+*
+!Dockerfile.back
+!back/
+!back/**
+!front/
+!front/**
+
+# Build dependencies inside the image; never send local credentials or caches.
+**/node_modules
+**/.git
+**/.env
+**/.env.*
+**/.venv
+**/__pycache__
+**/.pytest_cache
+**/dist
+**/test-results
+**/playwright-report

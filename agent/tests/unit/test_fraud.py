@@ -28,6 +28,33 @@ def test_missing_or_broken_reports_fail_closed(tmp_path, monkeypatch):
     assert result["automatic_decisions_enabled"] is False
 
 
+def test_container_evidence_matches_full_reports_without_repository_ml_directory(tmp_path, monkeypatch):
+    import src.tools.fraud as module
+
+    expected = fraud_assessment()
+    monkeypatch.setattr(module, "_REPORTS", tmp_path / "absent-ml-directory")
+    assert fraud_assessment() == expected
+
+
+def test_packaged_evidence_contains_only_traced_aggregate_fields():
+    import hashlib
+    from src.tools.fraud import _FILES, _PACKAGED_REPORTS, _REPORTS
+
+    for filename in _FILES:
+        packaged = json.loads((_PACKAGED_REPORTS / filename).read_text())
+        assert set(packaged) == {
+            "evidence_source", "selected_candidate", "promotion_status",
+            "model_binary_logged", "exploratory_validation",
+        }
+        assert packaged["evidence_source"]["sha256"] == hashlib.sha256(
+            (_REPORTS / filename).read_bytes()
+        ).hexdigest()
+        assert set(packaged["selected_candidate"]) == {"candidate", "run_id"}
+        budgets = packaged["exploratory_validation"]["frozen_budget_results"]
+        assert len(budgets) == 1 and budgets[0]["budget"] == 0.01
+        assert set(budgets[0]["metrics"]) == {"precision", "recall", "alerts"}
+
+
 def test_a_report_cannot_enable_inference_by_claiming_promotion(tmp_path, monkeypatch):
     from src.tools.fraud import _REPORTS
     report = json.loads((_REPORTS / "training_v5_catboost_data.json").read_text())

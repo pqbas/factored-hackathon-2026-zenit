@@ -9,6 +9,7 @@ from pathlib import Path
 from langchain_core.tools import StructuredTool
 
 _REPORTS = Path(__file__).resolve().parents[3] / "ml" / "reports" / "2026-10-04"
+_PACKAGED_REPORTS = Path(__file__).resolve().parents[2] / "configs" / "fraud-evidence"
 _FILES = ("training_v5_catboost_data.json", "training_v6_advanced_data.json")
 
 
@@ -19,7 +20,8 @@ def fraud_assessment() -> dict:
     has no saved model binary, feature-serving pipeline or validated operating point.
     """
     evidence = []
-    report_dir = Path(os.getenv("FRAUD_REPORT_DIR", str(_REPORTS)))
+    default_reports = _REPORTS if _REPORTS.is_dir() else _PACKAGED_REPORTS
+    report_dir = Path(os.getenv("FRAUD_REPORT_DIR", str(default_reports)))
     for filename in _FILES:
         try:
             report = json.loads((report_dir / filename).read_text())
