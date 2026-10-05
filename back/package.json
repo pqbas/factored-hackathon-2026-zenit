@@ -26,6 +26,7 @@
     "seed:console": "tsx scripts/seed-console.ts",
     "simulate:day": "tsx scripts/simulate/day.ts",
     "simulate:cleanup": "tsx scripts/simulate/cleanup.ts",
+    "simulate:backfill": "tsx scripts/simulate/backfill.ts",
     "eval": "tsx scripts/eval/run.ts",
     "eval:compare": "tsx scripts/eval/compare.ts",
     "eval:cleanup": "tsx scripts/eval/cleanup.ts",

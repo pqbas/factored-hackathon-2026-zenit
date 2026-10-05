@@ -55,9 +55,15 @@ And it changes in these ways:
   sigue siendo decisión explícita del usuario (no se corre en esta fase).
 - No se insertan `TurnMetric` sintéticos, porque la pantalla de métricas no
   muestra latencia ni costo; así los números de costo siguen siendo reales.
-- Se usan clientes reales de `bank_ro` (nombre de `customer_360`) para que la
-  vista de cerradas muestre clientes del banco, sin repetir los 14 clientes
-  demo.
+- Cada chat sintético es de un cliente real de `bank_ro`, elegido con el mismo
+  selector de `simulate:day` (`pickCustomers`: nunca un cliente demo ni uno con
+  sesión simulada, y tampoco uno que ya tenga un chat `demo-backfill`), para
+  que el panel del cliente en la consola muestre sus productos y movimientos
+  reales (pedido del coordinador, 05-10-26).
+- Los mensajes usan los datos de ese cliente cuando es barato: "Consultas
+  generales" nombra su tarjeta o cuenta real (últimos 4, saldo y límite de
+  `customer_products`), "Reclamo" su último cargo real (comercio, monto,
+  fecha) y "Estado de un reclamo" la categoría de su caso real.
 - En AWS cliente y admin son el mismo usuario (la cookie del admin), igual que
   en Databricks, donde los dos son el usuario de la CLI.
 - `assertLocalBase` acepta `*.awsapprunner.com` con `--allow-prod`, porque AWS

@@ -26,7 +26,10 @@
      caso; `assisted` → COMPLAINT / GENERAL_INQUIRY; `human` → COMPLAINT /
      CANCEL / COMMERCIAL / HUMAN_AGENT.
    - `businessTimeUtc(day, rand)`: 08:00–19:59 America/Lima (UTC−5) → Date.
-   - `messagesFor(item, customer)`: intercambio corto en es o pt según
+   - `motiveFor`, `quotasFor`, `attachCustomers`: cada caso de uso pide un
+     cliente del motivo que tiene lo que necesita (producto, cargo, caso).
+   - `messagesFor(item, facts)`: intercambio corto con los datos reales del
+     cliente (producto, cargo o caso), en es o pt según
      categoría (ai: pregunta, respuesta, gracias, despedida; assisted/human:
      pregunta, derivación, sistema "Te atiende un asesor.", respuesta del
      asesor, cierre), con minutos crecientes desde la hora de inicio.
@@ -41,8 +44,10 @@
      2026-10-01..2026-10-04), `--seed`, `--dry-run`, `--allow-prod`,
      `--cleanup`, `--file`.
    - Sin `--allow-prod` exige `SIM_PG_URL` con host localhost/127.0.0.1.
-   - Elige clientes reales de `bank_ro.customer_360` (excluye
-     `DEMO_CUSTOMER_IDS`), uno por chat.
+   - Elige un cliente real por chat con `pickCustomers` (`pick.ts`), con
+     cuotas por motivo según el caso de uso (`motiveFor`, `quotasFor`) y
+     excluyendo los clientes que ya tienen un chat `demo-backfill`; lee
+     apellido, producto (saldo, límite, moneda) para armar `CustomerFacts`.
    - Una transacción: inserta `Chat` (`userId = demo-backfill`, título
      `[demo] …`, `closedAt`, `handledBy = ai_agent`, `hadHuman`, `useCase`,
      `language`, `customerId`, `customerName`), sus `Message`, un `Handoff`
