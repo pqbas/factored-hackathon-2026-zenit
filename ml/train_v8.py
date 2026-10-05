@@ -34,6 +34,7 @@ DIGITAL_CATEGORICAL = [
     "digital_latest_type", "digital_latest_category", "digital_latest_platform",
     "digital_latest_browser", "digital_latest_channel",
 ]
+LONG_NUMERIC = ["digital_count_30d", "digital_count_90d", "digital_login_count_90d", "digital_error_count_90d"]
 
 
 def availability_time(event):
@@ -47,13 +48,13 @@ def availability_time(event):
     return max(event["event_date"], end_of_day)
 
 
-def digital_reference(current, events):
+def digital_reference(current, events, lookback_days=7):
     """Independent small oracle: no cross-customer, same-time or future events."""
     t = current["transaction_date"]
     eligible = []
     for event in events:
         available = availability_time(event)
-        if current.get("customer_id") is not None and event.get("customer_id") == current["customer_id"] and available is not None and t-timedelta(days=7) <= available < t:
+        if current.get("customer_id") is not None and event.get("customer_id") == current["customer_id"] and available is not None and t-timedelta(days=lookback_days) <= available < t:
             eligible.append((available, event))
     result = {name: None for name in DIGITAL_NUMERIC + DIGITAL_CATEGORICAL}
     for suffix, delta in [("1h", timedelta(hours=1)), ("24h", timedelta(days=1)), ("7d", timedelta(days=7))]:
@@ -61,6 +62,11 @@ def digital_reference(current, events):
     for kind in ["Login", "Error"]:
         result["digital_"+kind.lower()+"_count_24h"] = sum(available >= t-timedelta(days=1) and event.get("event_type") == kind for available, event in eligible)
     result["digital_available"] = float(bool(eligible))
+    if lookback_days == 90:
+        for days in [30,90]:
+            result[f"digital_count_{days}d"] = sum(available >= t-timedelta(days=days) for available,_ in eligible)
+        for kind in ["Login","Error"]:
+            result["digital_"+kind.lower()+"_count_90d"] = sum(event.get("event_type") == kind for _,event in eligible)
     if not eligible:
         return result
     available, event = max(eligible, key=lambda pair: (pair[0], pair[1]["event_date"], pair[1].get("event_id", "")))
@@ -76,9 +82,12 @@ def digital_reference(current, events):
     return result
 
 
-def build_digital_features(spark, tx, events):
+def build_digital_features(spark, tx, events, lookback_days=7):
     """Combine narrow event/transaction streams; window end is T-1 microsecond."""
     from pyspark.sql import functions as F, Window
+
+    if lookback_days not in (7,90):
+        raise ValueError("Only predeclared seven- and ninety-day experiments are supported")
 
     tx = tx.where(F.col("transaction_date") < F.to_timestamp(F.lit(END)))
     events = events.where(F.col("event_date") < F.to_timestamp(F.lit(END))).where(
@@ -109,7 +118,12 @@ def build_digital_features(spark, tx, events):
         stream = stream.withColumn("digital_count_"+suffix, F.sum("_marker").over(ordered.rangeBetween(-micros, -1)).cast("double"))
     for kind in ["login", "error"]:
         stream = stream.withColumn("digital_"+kind+"_count_24h", F.sum("_"+kind).over(ordered.rangeBetween(-86_400_000_000, -1)).cast("double"))
-    stream = stream.withColumn("_latest", F.max("_event").over(ordered.rangeBetween(-604_800_000_000, -1))).where(F.col("_is_tx") == 1)
+    if lookback_days == 90:
+        for days in [30,90]:
+            stream = stream.withColumn(f"digital_count_{days}d", F.sum("_marker").over(ordered.rangeBetween(-days*86_400_000_000,-1)).cast("double"))
+        for kind in ["login","error"]:
+            stream = stream.withColumn("digital_"+kind+"_count_90d", F.sum("_"+kind).over(ordered.rangeBetween(-90*86_400_000_000,-1)).cast("double"))
+    stream = stream.withColumn("_latest", F.max("_event").over(ordered.rangeBetween(-lookback_days*86_400_000_000, -1))).where(F.col("_is_tx") == 1)
     result = stream.withColumn("digital_available", F.col("_latest").isNotNull().cast("double")).withColumn(
         "digital_seconds_since_latest", (F.col("_time")-F.col("_latest.available_us"))/1_000_000
     ).withColumn("digital_latest_event_age_seconds", (F.col("_time")-F.col("_latest.event_us"))/1_000_000).withColumn(
@@ -119,7 +133,8 @@ def build_digital_features(spark, tx, events):
     )
     for name, source in [("type", "event_type"), ("category", "category"), ("platform", "platform"), ("browser", "browser"), ("channel", "channel")]:
         result = result.withColumn("digital_latest_"+name, F.col("_latest."+source))
-    return result.fillna(0, subset=["digital_count_1h", "digital_count_24h", "digital_count_7d", "digital_login_count_24h", "digital_error_count_24h"]).select("transaction_id", *DIGITAL_NUMERIC, *DIGITAL_CATEGORICAL)
+    extras = LONG_NUMERIC if lookback_days == 90 else []
+    return result.fillna(0, subset=["digital_count_1h", "digital_count_24h", "digital_count_7d", "digital_login_count_24h", "digital_error_count_24h",*extras]).select("transaction_id", *DIGITAL_NUMERIC, *extras, *DIGITAL_CATEGORICAL)
 
 
 def candidate_definitions():
@@ -139,7 +154,7 @@ def clears_exploratory_gate(metrics, baseline):
             and metrics["roc_auc"] >= 0.60)
 
 
-def run(spark, mlflow, v4, v5, contract, baseline_binary, baseline_manifest):
+def run(spark, mlflow, v4, v5, contract, baseline_binary, baseline_manifest, *, lookback_days=7, source_table=TX_TABLE, experiment=EXPERIMENT, candidates=None):
     import numpy as np
     import pandas as pd
     import catboost
@@ -148,23 +163,31 @@ def run(spark, mlflow, v4, v5, contract, baseline_binary, baseline_manifest):
 
     started = time.monotonic()
     spark.conf.set("spark.sql.session.timeZone", "UTC")
-    tx = spark.read.option("versionAsOf", TX_VERSION).table(TX_TABLE).where(F.col("transaction_date") < F.to_timestamp(F.lit(END)))
+    tx = spark.read.option("versionAsOf", TX_VERSION).table(source_table).where(F.col("transaction_date") < F.to_timestamp(F.lit(END)))
+    for name in ["latitude","longitude"]:
+        if name not in tx.columns:
+            tx = tx.withColumn(name,F.lit(None).cast("double"))
     ev = spark.read.option("versionAsOf", EVENT_VERSION).table(EVENT_TABLE).where(F.col("event_date") < F.to_timestamp(F.lit(END)))
-    digital = build_digital_features(spark, tx, ev)
+    digital = build_digital_features(spark, tx, ev, lookback_days)
     frame = v4.build_feature_frame(spark, source_frame=tx).join(digital, "transaction_id", "left").withColumn(
         "period", F.when(F.col("transaction_date") < "2025-01-01", "fit").when(F.col("transaction_date") < "2025-04-01", "selection")
         .when(F.col("transaction_date") < "2025-07-01", "operating_point").otherwise("validation")
     )
-    numeric = list(contract.NUMERIC) + DIGITAL_NUMERIC
+    numeric = list(contract.NUMERIC) + DIGITAL_NUMERIC + (LONG_NUMERIC if lookback_days == 90 else [])
     categorical = list(contract.CATEGORICAL) + DIGITAL_CATEGORICAL
     predictors = numeric + categorical
     counts = {r["period"]:{"rows":int(r["rows"]),"fraud":int(r["fraud"])} for r in frame.groupBy("period").agg(F.count("label").alias("rows"),F.sum("label").alias("fraud")).collect()}
     assert counts == {"fit":{"rows":2271707,"fraud":2296},"selection":{"rows":356361,"fraud":344},"operating_point":{"rows":366529,"fraud":374},"validation":{"rows":743909,"fraud":699}}, counts
-    coverage = [r.asDict() for r in frame.groupBy("period", "digital_available").agg(F.count("label").alias("rows"),F.sum("label").alias("fraud"),F.avg("digital_count_7d").alias("mean_events_7d")).collect()]
-    result = {"status":"SUCCESS","source_tables":{TX_TABLE:TX_VERSION,EVENT_TABLE:EVENT_VERSION},"feature_version":"v8_conservative_digital_history",
-        "availability_proxy":"max(event_date, start_of_day(process_date + 1 day)); strict availability < T; seven-day availability window",
+    coverage_aggs = [F.count("label").alias("rows"),F.sum("label").alias("fraud"),F.avg("digital_count_7d").alias("mean_events_7d")]
+    if lookback_days == 90:
+        coverage_aggs += [F.avg("digital_count_30d").alias("mean_events_30d"),F.avg("digital_count_90d").alias("mean_events_90d")]
+    coverage = [r.asDict() for r in frame.groupBy("period", "digital_available").agg(*coverage_aggs).collect()]
+    definitions = candidates if candidates is not None else candidate_definitions()
+    phase = "V9" if lookback_days == 90 else "V8"
+    result = {"status":"SUCCESS","source_tables":{source_table:TX_VERSION,EVENT_TABLE:EVENT_VERSION},"feature_version":f"{phase.lower()}_conservative_digital_history",
+        "availability_proxy":f"max(event_date, start_of_day(process_date + 1 day)); strict availability < T; {lookback_days}-day availability window",
         "online_availability_verified":False,"final_test_used":False,"source_tables_modified":False,"row_level_records_exported":False,
-        "split_counts":counts,"coverage":coverage,"predictor_allowlist":predictors,"candidate_definitions":candidate_definitions(),
+        "split_counts":counts,"coverage":coverage,"predictor_allowlist":predictors,"candidate_definitions":definitions,
         "libraries":{"catboost":catboost.__version__,"numpy":np.__version__,"pandas":pd.__version__},"memory_checks":[],"attempts":[],
         "evaluation_status":"exploratory; development periods previously inspected; final 2026 test remains sealed",
         "baseline_run_id":baseline_manifest["run_id"],"automatic_decisions_enabled":False}
@@ -198,7 +221,7 @@ def run(spark, mlflow, v4, v5, contract, baseline_binary, baseline_manifest):
     selection = load(frame.where(F.col("period") == "selection"),"selection")
     sy = selection["label"].to_numpy(dtype=int)
     models = {}
-    for definition in candidate_definitions():
+    for definition in definitions:
         if time.monotonic()-started > 3000:
             raise TimeoutError("Bounded experiment runtime exceeded")
         data = fit[fit["month"] >= "2024-07"] if definition["recent_only"] else fit
@@ -215,7 +238,7 @@ def run(spark, mlflow, v4, v5, contract, baseline_binary, baseline_manifest):
         scores = model.predict_proba(Pool(xs,cat_features=categorical),thread_count=4)[:,1]
         record = {**definition,"parameters":params,"fit_rows":len(y),"fit_fraud":int(y.sum()),"trees":model.tree_count_,"fit_seconds":time.monotonic()-before,"selection_metrics":v5.prediction_metrics(sy,scores)}
         result["attempts"].append(record)
-        print("V8 candidate:",json.dumps(record),flush=True)
+        print(f"{phase} candidate:",json.dumps(record),flush=True)
         models[definition["name"]] = (model,medians)
         del xf,xs,scores
         gc.collect()
@@ -263,28 +286,33 @@ def run(spark, mlflow, v4, v5, contract, baseline_binary, baseline_manifest):
             scores,old = predict(data)
             labels.append(y); scores_list.append(scores); old_list.append(old)
             monthly.append({"month":f"2025-{month:02d}","candidate":v5.prediction_metrics(y,scores,threshold),"baseline":v5.prediction_metrics(y,old,baseline_manifest["threshold"])})
-            print("V8 monthly:",json.dumps(monthly[-1]),flush=True)
+            print(f"{phase} monthly:",json.dumps(monthly[-1]),flush=True)
             del data,scores,old
             gc.collect()
         y,scores,old = np.concatenate(labels),np.concatenate(scores_list),np.concatenate(old_list)
         result["validation_metrics"] = v5.prediction_metrics(y,scores,threshold)
         result["baseline_validation_metrics"] = v5.prediction_metrics(y,old,baseline_manifest["threshold"])
+        if source_table == "workspace.bank_gold.customer_transactions":
+            result["baseline_gold_replay_matches_manifest"] = all(result["baseline_validation_metrics"][key] == baseline_manifest["validation_metrics"][key] for key in ["rows","fraud","alerts","tp","fp","fn","tn"])
+        else:
+            result["baseline_gold_replay_matches_manifest"] = False
+            result["baseline_note"] = "Native V7 artifact evaluated over Silver amount_usd; Gold additionally backfills exchange rates. This is a source sensitivity comparator, not an exact Gold replay."
         result["monthly"] = monthly
-        result["clears_exploratory_gate"] = clears_exploratory_gate(result["validation_metrics"],result["baseline_validation_metrics"])
+        result["clears_exploratory_gate"] = clears_exploratory_gate(result["validation_metrics"],result["baseline_validation_metrics"]) and result["baseline_gold_replay_matches_manifest"]
         result["promotion_status"] = "REQUIRES_INDEPENDENT_TEST_AND_SERVING_FEATURES" if result["clears_exploratory_gate"] else "REJECTED_NO_USEFUL_VALIDATED_GAIN"
         importance = model.get_feature_importance()
         result["feature_importance"] = sorted([{ "feature":name,"importance":float(value)} for name,value in zip(model.feature_names_,importance)],key=lambda item:item["importance"],reverse=True)[:25]
         result["runtime_seconds"] = time.monotonic()-started
-        mlflow.set_experiment(EXPERIMENT)
-        with mlflow.start_run(run_name="V8_digital_history_challenger") as run:
+        mlflow.set_experiment(experiment)
+        with mlflow.start_run(run_name=f"{phase}_digital_history_challenger") as run:
             result["mlflow_run_id"] = run.info.run_id
-            mlflow.set_tags({"phase":"V8","final_test_used":"false","promotion_status":result["promotion_status"]})
-            target = Path(folder)/"v8.cbm"
+            mlflow.set_tags({"phase":phase,"final_test_used":"false","promotion_status":result["promotion_status"]})
+            target = Path(folder)/f"{phase.lower()}.cbm"
             model.save_model(str(target))
             result["model_sha256"] = hashlib.sha256(target.read_bytes()).hexdigest()
             result["model_bytes"] = target.stat().st_size
             mlflow.log_artifact(str(target),"candidate_model")
             mlflow.log_dict({"medians":medians,"numeric":numeric,"categorical":categorical,"feature_names":model.feature_names_,"threshold":threshold,"final_test_used":False},"candidate_model/feature_contract.json")
             mlflow.log_metrics({"validation_ap":result["validation_metrics"]["average_precision"],"validation_precision":result["validation_metrics"]["precision"] or 0,"validation_recall":result["validation_metrics"]["recall"],"baseline_ap":result["baseline_validation_metrics"]["average_precision"]})
-            mlflow.log_dict(result,"v8_aggregate_evidence.json")
+            mlflow.log_dict(result,f"{phase.lower()}_aggregate_evidence.json")
     return result

@@ -7,7 +7,7 @@ import subprocess
 from pathlib import Path
 
 
-def render():
+def render(phase=8):
     root = Path(__file__).resolve().parents[1]
     sources = {
         "__V4_SOURCE__": root / "ml/train_v4.py",
@@ -15,7 +15,10 @@ def render():
         "__CONTRACT_SOURCE__": root / "agent/src/ml/features.py",
         "__TRAINER_SOURCE__": root / "ml/train_v8.py",
     }
-    source = (root / "ml/notebooks/12_digital_history_challenger.py").read_text()
+    if phase == 9:
+        sources["__V9_SOURCE__"] = root / "ml/train_v9.py"
+    notebook = "13_long_digital_history_challenger.py" if phase == 9 else "12_digital_history_challenger.py"
+    source = (root / "ml/notebooks" / notebook).read_text()
     hashes = {str(path.relative_to(root)): hashlib.sha256(path.read_bytes()).hexdigest() for path in sources.values()}
     replacements = {name: repr(path.read_text()) for name, path in sources.items()}
     model = (root / "agent/configs/fraud-model/model.cbm").read_bytes()
@@ -36,6 +39,7 @@ def render():
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", required=True, type=Path)
+    parser.add_argument("--phase", type=int, choices=[8,9], default=8)
     args = parser.parse_args()
-    args.output.write_text(render())
-    print(f"Rendered self-contained V8 notebook: {args.output}")
+    args.output.write_text(render(args.phase))
+    print(f"Rendered self-contained V{args.phase} notebook: {args.output}")

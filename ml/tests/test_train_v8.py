@@ -78,3 +78,15 @@ def test_relative_gain_without_useful_precision_does_not_clear_gate():
 def test_empty_alerts_do_not_clear_gate():
     candidate = dict(average_precision=0.1,prevalence=0.001,precision=None,recall=0,alerts=0,roc_auc=0.9)
     assert not v8.clears_exploratory_gate(candidate,dict(average_precision=0.001,precision=0.001))
+
+
+def test_long_history_includes_exact_boundaries_but_preserves_short_counts():
+    t = datetime(2025, 4, 10, 12)
+    current = dict(customer_id="c", transaction_date=t, transaction_country="MX")
+    rows = [event(t-timedelta(days=days)) for days in [7,30,90,91]]
+    result = v8.digital_reference(current,rows,lookback_days=90)
+    assert result["digital_count_7d"] == 1
+    assert result["digital_count_30d"] == 2
+    assert result["digital_count_90d"] == 3
+    assert result["digital_login_count_90d"] == 3
+    assert result["digital_available"] == 1
