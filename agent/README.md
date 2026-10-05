@@ -79,6 +79,8 @@ Cada decisión técnica tiene su propio documento en [`docs/`](docs/):
   de MLflow y qué queda pendiente.
 - [El agente en AWS](docs/16-agente-en-aws.md): el mismo agente en App Runner, con
   Jev, un token de entrada y la latencia medida.
+- [AgentCore frente a App Runner](docs/17-agentcore-vs-app-runner.md): el análisis de
+  factibilidad de llevar el agente a Bedrock AgentCore Runtime y por qué se eligió App Runner.
 
 ### Grafo principal
 

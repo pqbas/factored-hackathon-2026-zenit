@@ -14,7 +14,7 @@ El mismo agente de `main` corre en un contenedor en AWS App Runner (us-west-2, 1
 
 ## Decisiones
 
-- App Runner y no AgentCore Runtime: no cambia el contrato del request y repite el patrón que ya usa el back. AgentCore pedía imagen ARM64, `/ping`, firma SigV4 en el back y secretos leídos por código.
+- App Runner y no AgentCore Runtime: no cambia el contrato del request y repite el patrón que ya usa el back. AgentCore pedía imagen ARM64, `/ping`, firma SigV4 en el back y secretos leídos por código; el análisis está en [17](17-agentcore-vs-app-runner.md).
 - La entrada se protege con un token compartido en el header `x-agent-token`. Sin el token, todo menos `/health` responde 401. El token vive en Secrets Manager (`bank-assistant/agent/invoke-token`) y el back lo lee del mismo secreto.
 - El chequeo se apaga si `AGENT_TOKEN` no está definido, así que en local y en la App de Databricks el agente se comporta igual que antes.
 - El agente de AWS tiene su propio service principal, `bank-assistant-aws-agent`. Solo lee `customer_products`, `customer_transactions`, `customer_cases` y `sim_sessions`. No usa el del back, que lee las 7 tablas de `bank_ro` y escribe en `ai_chatbot`.
@@ -34,7 +34,7 @@ Medición del 1 de octubre de 2026 contra el servicio de AWS, con el token y la 
 
 - El p95 del total fue 8.71 s.
 - Jev clasificó los 20 turnos; ninguno cayó a las reglas.
-- El turno de 22.76 s fue uno solo, de movimientos. No se investigó la causa.
+- El turno de 22.76 s fue uno solo, de movimientos, y fue el turno en que se activó el guard de grounding. Según el log del servicio, a los 11.6 s el guard descartó una lista de movimientos escrita sin llamar a `list_transactions`. El reintento forzado, que llama a la herramienta y vuelve a redactar la lista, tardó otros 10.5 s. No fue la red ni AWS.
 - El guard de grounding se activó una vez en movimientos y el reintento respondió bien.
 - El reclamo terminó en handoff (`reason: complaint`) al confirmar con "sí".
 
