@@ -1,0 +1,65 @@
+{
+  "validationDate": "2026-10-05",
+  "scope": "read-only; owner CLI identity only; no customer records exported",
+  "coldMs": 0.4350000000000023,
+  "warm100ReadsMs": 0.40627300000051036,
+  "retention": {
+    "source": {
+      "status": "fresh",
+      "updating": false,
+      "updatedAt": "2026-10-05T22:51:37.086Z",
+      "lastAttemptAt": "2026-10-05T22:51:09.039Z",
+      "lastRefreshFailed": false,
+      "cacheSeconds": 600,
+      "provider": "databricks_sql",
+      "tables": [
+        "workspace.bank_gold.customer_360",
+        "workspace.bank_gold.customer_transactions",
+        "workspace.bank_gold.customer_cases",
+        "workspace.bank_gold.interaction_history"
+      ],
+      "statementId": "01f1c10f-42ca-1898-9ac2-3d88937c5b61",
+      "durationMs": 28046
+    },
+    "asOf": "2026-06-18",
+    "eligibleCustomers": 114516,
+    "bands": [
+      {
+        "band": "watch",
+        "total": 47226
+      },
+      {
+        "band": "high",
+        "total": 446
+      },
+      {
+        "band": "none",
+        "total": 55928
+      },
+      {
+        "band": "medium",
+        "total": 10916
+      }
+    ],
+    "shortlistRows": 135
+  },
+  "fraud": {
+    "source": {
+      "status": "fresh",
+      "updating": false,
+      "updatedAt": "2026-10-05T22:51:40.352Z",
+      "lastAttemptAt": "2026-10-05T22:51:09.040Z",
+      "lastRefreshFailed": false,
+      "cacheSeconds": 600,
+      "provider": "databricks_sql",
+      "tables": [
+        "workspace.bank_silver.transactions"
+      ],
+      "statementId": "01f1c10f-522c-1eb3-8540-928c3694ab76",
+      "durationMs": 31311
+    },
+    "total": 3738506,
+    "fraud": 3713,
+    "cohort": "training_validation"
+  }
+}

@@ -29,3 +29,15 @@ not a replacement theme for the rest of the product.
   overflow stays within the panel, never the whole page.
 - States: pending, failed request, retry, available empty results and absent
   operational storage must remain distinct. Undefined ratios render as a dash.
+
+## Shared analytics and retention
+
+- Reuse the fraud panel/stat primitives and existing admin rail for retention.
+- Put provenance and background-refresh state below the page header. Distinguish
+  successful query time from the dataset reference date; never advance the
+  success timestamp after a failed refresh.
+- Retention bands mean follow-up priority from explainable rules, not calibrated
+  churn probability. Show the reasons and observation counts with each reference.
+- Filter bounded shortlists locally; use expandable rows instead of exporting
+  full histories. Empty selections, cold caches and unavailable reports are
+  different states. No result means no fabricated zero KPIs.

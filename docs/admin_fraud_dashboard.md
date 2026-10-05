@@ -10,7 +10,7 @@ security boundary.
 
 | View | Content | Meaning |
 | --- | --- | --- |
-| Data overview | Transaction and label counts, prevalence, monthly activity, country/channel/type distributions, currencies, field coverage, timing audits | Descriptive evidence from the synthetic dataset, not confirmed customer fraud |
+| Data overview | Transaction and label counts, prevalence, monthly activity, country/channel/type distributions, currencies, field coverage, timing audits | Cached Databricks descriptive aggregates; labeled historical evidence during cold/failure fallback |
 | Operations | Complaint handoff counts, scored/unavailable counts, threshold flags, open/closed events, daily activity, score histogram, complaint categories | Actual persisted handoff events from the selected local-day cohort |
 | ML evaluation | V7 precision, recall, AP, ROC AUC, confusion counts, V8/V9 comparisons, monthly performance, digital-history coverage, fixed threshold | Retrospective July–December 2025 validation, not live outcome accuracy |
 
@@ -23,23 +23,28 @@ product copy is available in Spanish and Portuguese.
 
 ## Sources and freshness
 
-- `workspace.bank_silver.transactions` Delta v1: the already-reviewed September
-  28 profiling and feature-validation reports. Whole-dataset counters include
-  the already-published 2026 aggregates; the monthly graph only publishes
-  training/validation months before January 2026.
+- `workspace.bank_silver.transactions`: a background aggregate query for
+  transactions before 2026-01-01. Counts and dimensions share a grouping-sets
+  query. The final-test period remains separate. A successful live read reports
+  3,738,506 transactions and 3,713 labels rather than the old full-table totals.
+- Reviewed profiling/feature evidence at Delta v1: explicitly labeled fallback
+  during a cold cache or an unavailable warehouse result. Existing full-table
+  counters include previously published 2026 aggregates; no new final-test
+  labels are inspected.
 - `workspace.bank_gold.customer_transactions` Delta v1: the deployed V7 manifest
-  and exact V9 baseline replay. Model validation remains July–December 2025.
-- Digital-history V8/V9 evidence and the October 5 timing audits: aggregate
-  evidence only. Timing-audit denominators are separately labeled and cover
-  events/transactions before July 2025.
-- `ai_chatbot."Handoff"`: one bounded, parameterized SELECT against the existing
-  application database. No bank tables are scanned by the dashboard endpoint.
+  and exact V9 replay. Model validation remains July–December 2025, with V8/V9
+  comparisons and integrity audits retained as historical evidence.
+- `ai_chatbot."Handoff"`: cached aggregate reads from the application database
+  for the selected complaint cohort, not from Databricks.
 
-Historical evidence is an explicit snapshot, not a real-time warehouse feed.
-Opening or refreshing the dashboard does not start Databricks compute, train a
-model, rescore historical transactions or export customer records. Operations
-refreshes every 60 seconds while selected and supports today/7-day/30-day ranges
-in the browser's IANA timezone. The API accepts at most 31 inclusive days.
+Both warehouse and complaint reads now refresh asynchronously. HTTP responses
+serve available caches immediately, with explicit loading/stale/failure states.
+The warehouse cache refreshes on access after ten minutes; operations after one
+minute. Neither starts training or scoring. Dashboard filters work locally on
+aggregates; operational date changes select a bounded cache cohort. Warehouse
+reads may wake the existing SQL warehouse; they do not provision new compute.
+See [shared analytics serving](admin_analytics_serving.md) for query limits,
+max-age behavior, per-process cache boundaries and deployed identity checks.
 
 Events are counted by handoff creation date, not transaction date. Open counts
 refer to that received-event cohort, not the entire historical backlog. One
@@ -70,7 +75,8 @@ KPIs. Historical evidence stays accessible through the same response.
 `ml/build_fraud_dashboard.py` builds
 `back/server/src/data/fraud-dashboard.json` from committed aggregate evidence.
 It checks basic reconciliation and extracts timing measures from reviewed audit
-tables. Source paths and SHA-256 hashes are included for traceability. Regenerate
+tables. Source paths and SHA-256 hashes trace the historical evidence only; dynamic
+warehouse reads have their own statement IDs and successful query timestamps. Regenerate
 the snapshot when reviewed evidence changes:
 
 ```bash
@@ -83,14 +89,14 @@ browser bundle. The existing App Runner backend image already packages both the
 frontend and backend, so no separate dashboard service is needed.
 
 `GET /api/advisor/fraud-dashboard?from=YYYY-MM-DD&to=YYYY-MM-DD&tz=America/Lima`
-returns the historical snapshot, operational aggregates, selected window and
-refresh timestamp with `Cache-Control: no-store`. No identifiers, case facts,
+returns the cached overview with historical model/audit evidence, source status,
+operational aggregates, selected window and response timestamp with `Cache-Control: no-store`. No identifiers, case facts,
 customer names, raw transaction records or credentials are returned.
 
 ## Validation
 
-- Frontend: 141 unit/integration tests passed, including 8 new dashboard checks.
-- Backend: 188 unit tests passed, including 8 new aggregation/API checks. The
+- Frontend: 146 unit/integration tests passed, including fraud and retention checks.
+- Backend: 200 unit tests passed, including cache, warehouse and API checks. The
   real Express route was exercised with signed sessions: anonymous 401,
   customer/advisor 403, admin 200, invalid dates/ranges/timezones 400.
 - Browser: `npm run test:fraud-dashboard` in `back/` passed. Its operational
@@ -120,4 +126,6 @@ unchanged. No source database, schema, grant or cloud resource was modified.
 
 After the normal review/merge and existing backend deployment, administrators
 will find the shield icon in the left navigation or open `/fraud`. The deployed
-service must retain its existing SELECT permission on `ai_chatbot."Handoff"`.
+service needs its existing SELECT permission on `ai_chatbot."Handoff"`, plus
+warehouse access and SELECT on the listed Databricks sources. Owner CLI reads
+have succeeded; this does not prove the deployed service identity has access.
