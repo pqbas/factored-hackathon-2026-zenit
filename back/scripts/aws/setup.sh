@@ -47,6 +47,10 @@ put_secret() { # name, value
 secrets() {
   : "${DEMO_USERS_JSON:?set DEMO_USERS_JSON}"
   put_secret demo-users "$DEMO_USERS_JSON"
+  # Optional: the credentials the login screen lists (demo only).
+  if [ -n "${DEMO_LOGINS_JSON:-}" ]; then
+    put_secret demo-logins "$DEMO_LOGINS_JSON"
+  fi
   aws secretsmanager describe-secret --secret-id "$SECRET_PREFIX/session-secret" >/dev/null 2>&1 ||
     put_secret session-secret "$(openssl rand -hex 32)"
 }
@@ -70,8 +74,10 @@ service() {
 
   # Host and client id aren't secret; they're read from the principal's
   # secret so there is one source for them. PGUSER is the client id.
-  local sp host client config
+  local sp host client config logins_arn
   sp=$(secret_arn "$SP_SECRET")
+  # The optional demo-logins secret: no secret, no table on the login.
+  logins_arn=$(secret_arn "$SECRET_PREFIX/demo-logins" 2>/dev/null || true)
   host=$(aws secretsmanager get-secret-value --secret-id "$SP_SECRET" --query SecretString --output text | jq -r .DATABRICKS_HOST)
   client=$(aws secretsmanager get-secret-value --secret-id "$SP_SECRET" --query SecretString --output text | jq -r .DATABRICKS_CLIENT_ID)
   config=$(jq -n \
@@ -84,6 +90,7 @@ service() {
     --arg sp "$sp:DATABRICKS_CLIENT_SECRET::" \
     --arg session "$(secret_arn "$SECRET_PREFIX/session-secret")" \
     --arg users "$(secret_arn "$SECRET_PREFIX/demo-users")" \
+    --arg logins "$logins_arn" \
     '{
       AuthenticationConfiguration: { AccessRoleArn: $access },
       AutoDeploymentsEnabled: false,
@@ -111,7 +118,7 @@ service() {
             DATABRICKS_CLIENT_SECRET: $sp,
             SESSION_SECRET: $session,
             DEMO_USERS_JSON: $users
-          }
+          } + (if $logins == "" then {} else { DEMO_LOGINS_JSON: $logins } end)
         }
       }
     }')
