@@ -1,6 +1,9 @@
 # V9: longer digital-history coverage and Gold-consistent comparison
 
-Status: predeclared before V9 execution on 2026-10-05.
+Status: predeclared before execution and completed successfully on 2026-10-05;
+rejected. Coverage rose to 55.53%, but selected precision was 0.051190%
+(4 / 7,814 alerts), below exactly replayed V7. See
+[the execution report](../../reports/2026-10-05/training_v9_digital_report.md).
 
 V8 completed successfully but found only four frauds among 7,371 later alerts.
 Seven-day digital coverage was approximately 6%. This motivates one distinct

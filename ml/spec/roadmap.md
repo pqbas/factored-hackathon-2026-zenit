@@ -14,6 +14,13 @@ Specification source: [Fraud model](28-09-26-fraud-model/requirements.md).
 | 5 | Registration, scoring, and integration | Experimental native V7 artifact and original advisor integration implemented; no model promotion or automated decisions. See [execution report](../reports/2026-10-05/executable_predictions_report.md). |
 | V5 | Capacity/encoding diagnostic, then independent digital signals | **CatBoost branch complete 2026-10-04; not promoted** — four candidates; later ROC-AUC 0.5038, frozen approximately 1% review precision 0.161%; no supported high-precision target. Digital SELECT still blocked. See [V5 report](../reports/2026-10-04/training_v5_catboost_report.md). |
 | V6 | Causal feature ablation, imbalance ensembles, novelty, negative control | **Complete 2026-10-04; not promoted** — selected enhanced XGBoost later ROC-AUC 0.5023, frozen approximately 1% precision 0.106% (8/7,536), worse than V5 at that point. No supported high-precision target. Next distinct hypothesis requires digital access/timing and label provenance. See [V6 report](../reports/2026-10-04/training_v6_advanced_report.md). |
+| V8 | Newly readable prior digital activity | **Complete 2026-10-05; rejected** — owner-profile SELECT succeeds; three candidates, approximately 6% coverage, precision 0.054267% (4/7,371). V7/Silver comparator is a source sensitivity. See [V8 report](../reports/2026-10-05/training_v8_digital_report.md). |
+| V9 | Longer digital coverage and Gold-consistent comparison | **Complete 2026-10-05; rejected** — two candidates, coverage 55.53%, precision 0.051190% (4/7,814). Native V7 Gold replay matches its manifest exactly; V7 remains deployed. See [report](../reports/2026-10-05/training_v9_digital_report.md). |
+
+Historical digital SELECT blocks above describe the earlier principal and dates.
+The [2026-10-05 audit](../reports/2026-10-05/digital_access_and_quality_report.md)
+confirms read access through the explicitly authorized `pqbas` profile. It does
+not establish new grants for the personal or deployed application identities.
 
 - [Requirements and models](28-09-26-fraud-model/requirements.md)
 - [Plan and initial hyperparameters](28-09-26-fraud-model/plan.md)

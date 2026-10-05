@@ -1,15 +1,15 @@
 # OpenCode handoff — experimental fraud model integration
 
 Branch: `feat/diego-ml-fraud-features`. This document records the verified current
-state of the repository as of 2026-10-05, the local PR draft, the prioritized
-remaining work, and a bounded next experiment. It contains no secrets, tokens,
+state of the repository as of 2026-10-05, the delivered integration, the
+remaining work, and completed digital-history experiments. It contains no secrets, tokens,
 credentials, or customer records.
 
 ## Verified current state
 
-- Working tree is clean. `HEAD` is `3e7a3e1` (`docs(ml): verify persisted web-to-advisor predictions`).
-- The branch includes `origin/main` through `20e0e98`; no Git push, PR, or merge has been performed.
-- All commits remain local on `feat/diego-ml-fraud-features`.
+- The original integration was pushed and merged through [PR #135](https://github.com/pqbas/factored-hackathon-2026-zenit/pull/135); the remote feature branch was retained.
+- Subsequent V8/V9 research and report commits are local on `feat/diego-ml-fraud-features`; no new push or merge was performed during these experiments.
+- V8 source commit is `8207cfb`; V9 source commit is `1379d91`. Exact code hashes are saved with each run's aggregate evidence. Use `git status` and `git log` for the latest documentation commit instead of treating an earlier fixed HEAD as current.
 
 ### Delivered application
 
@@ -46,12 +46,12 @@ credentials, or customer records.
 
 ### Verification already completed
 
-- Agent: 462 tests passed. Frontend: 133 passed. Backend: 180 passed. ML: 66 passed (841 total).
+- Original integration verification: agent 462, frontend 133, backend 180, ML 66 tests passed (841 total). After V8/V9 changes, the ML suite was rerun with 75 passing tests. Application suites were not rerun because no application code or artifact changed in this iteration.
 - Production container builds passed; native inference and application import passed inside the agent container.
 - Real deployed inference and cross-customer rejection were verified.
 - The complete browser workflow passed (test reference `ML-E2E-20261005-023840`): customer login, complaint submission, customer confirmation, advisor login, opening the case, and prediction persistence after reload, with zero browser page errors. The test complaint remains in `human_queue`; it was not claimed, resolved, or deleted.
 
-## Local PR draft (do not publish yet)
+## Integration PR description (historical reference; already merged)
 
 **Title:** Integrate executable experimental fraud model into the complaint-to-advisor workflow
 
@@ -77,11 +77,10 @@ credentials, or customer records.
 
 ## Prioritized remaining work
 
-### A. Git delivery (requires authorization)
+### A. Git delivery
 
-1. Review this branch diff against `origin/main`.
-2. Authorized push and opening of the PR above.
-3. Merge (only after explicit authorization).
+1. Original integration delivery is complete through PR #135; retain its remote branch.
+2. V8/V9 research commits and evidence are local. Publishing them is a separate delivery step; no rejected candidate should replace the runtime model.
 
 ### B. Operational follow-up
 
@@ -90,19 +89,22 @@ credentials, or customer records.
 3. Failure behavior: confirm graceful degradation when features, tables, or the artifact are unavailable.
 4. Measured latency under representative load: the current synchronous inference is not benchmarked under load.
 
-### C. Predictive improvement (do not start before A/B hygiene)
+### C. Predictive improvement
 
 1. Label provenance: confirm whether organizer fraud labels are independent of post-transaction outcomes.
 2. Feature availability at decision time: verify each signal exists before authorization.
-3. New independently useful signals (e.g., digital events once read access is confirmed for the production identity).
+3. Obtain a new verified source of predictive information or authoritative label-generation details. The newly readable digital-event source has now been tested in V8/V9 without useful improvement.
+4. Investigate recorded source-date inconsistencies before treating current dimensions as historical feature revisions.
 
-## Bounded next experiment (proposal only)
+## Completed bounded digital experiments
 
-- **Hypothesis:** A single new, decision-time-available signal provides ranking signal beyond V7, moving later-period ROC-AUC above V7's `0.496829` at the same frozen ~1% review budget.
-- **Scope:** one candidate signal, one model family (CatBoost, V7 config), no new parameter sweep, no label changes.
-- **Pre-requisite:** confirm `workspace.bank_silver.digital_events` `SELECT` under the production identity (earlier access failures were under a personal profile, not the production principal). Do not grant permissions automatically.
-- **Evaluation:** later-period ROC-AUC and frozen-threshold precision/recal, compared directly to V7. Final-test labels stay sealed.
-- **Gate:** promote only if the signal is available before authorization, independent of the label, and materially improves the measured metrics; otherwise record the negative result and stop.
+- **Access:** explicitly authorized `pqbas` profile, effective principal `pcubasm1@gmail.com`, can read digital events. This does not prove personal/service-principal grants changed; no grants were applied.
+- **V8:** three CatBoost candidates on conservative seven-day digital history; run `1045349607856484`, task `427959278571538`, MLflow `4bad27824082499e8675958c1e0bf56f`. About 6% coverage; precision 0.054267% (4 / 7,371). Rejected. Its V7 replay used Silver conversions and is an input sensitivity comparator.
+- **V9:** two candidates on thirty-/ninety-day activity and Gold inputs; run `1073504604612583`, task `725203113732658`, MLflow `8d10d8910ac349a0ab65545dbe532469`. Coverage 55.53%; precision 0.051190% (4 / 7,814), ROC-AUC 0.499097. Native V7 Gold replay matches the original manifest exactly. Rejected.
+- **Protocol:** fit before January 2025; select on January–March; freeze thresholds on April–June; evaluate July–December. Development periods are exploratory; final 2026 test remains sealed. Python/Spark timing fixtures passed and source cardinalities reconciled.
+- **Timing:** events use a conservative proxy `max(event_date, midnight after process_date)` before T; this does not prove actual arrival availability. Millions of events have missing customer IDs or inconsistent processing dates. About one quarter of pre-July transactions precede recorded registration/product opening.
+- **Runtime:** V7 remains deployed on image `00539622`; no new AWS deployment, source-table change, schema/grant change or model promotion occurred. Both Databricks experiment tasks ended SUCCESS.
+- **Reproduction:** `python ml/render_v8.py --phase 8|9 --output /tmp/notebook.py` renders a self-contained source notebook. Use the corresponding notebook and `ml/jobs/train_v8.json` or `train_v9.json`. Do not rerun broad searches on the same inspected data without a distinct justified hypothesis.
 
 ## References
 
@@ -110,5 +112,9 @@ credentials, or customer records.
 - `ml/reports/2026-10-05/executable_predictions_report.md`
 - `ml/reports/2026-10-05/aws_predictions_report.md`
 - `ml/reports/2026-10-05/web_end_to_end_report.md` and `web_end_to_end_data.json`
+- `ml/reports/2026-10-05/digital_access_and_quality_report.md`
+- `ml/reports/2026-10-05/dimension_timing_audit_report.md`
+- `ml/reports/2026-10-05/training_v8_digital_report.md` and `training_v8_digital_data.json`
+- `ml/reports/2026-10-05/training_v9_digital_report.md` and `training_v9_digital_data.json`
 - `agent/configs/fraud-model/manifest.json`
 - `LOCAL_MAIN_INTEGRATION.md`

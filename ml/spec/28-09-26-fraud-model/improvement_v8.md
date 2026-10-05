@@ -1,6 +1,8 @@
 # V8: newly accessible digital-history experiment
 
-Status: implementation and execution in progress, 2026-10-05.
+Status: completed successfully and rejected, 2026-10-05. Three candidates ran;
+selected later precision was 0.054267% (4 / 7,371 alerts). See
+[the execution report](../../reports/2026-10-05/training_v8_digital_report.md).
 
 ## Hypothesis and authorization
 
@@ -56,7 +58,10 @@ April–June; evaluate the selected candidate on July–December. These developm
 periods were inspected previously and are exploratory. 2026 test data remains
 sealed. Every evaluated row retains natural prevalence. The deployed V7 binary
 and its frozen threshold are evaluated on the same later rows; baseline vectors
-are checked against the existing scalar serving contract.
+are checked against the existing scalar serving contract. The executed V8
+comparator used Silver inputs, whose conversions differ from Gold's backfill;
+this is a source sensitivity, not an exact production-input replay. V9 resolves
+that mismatch with Gold and verifies original confusion counts.
 
 Report average precision, ROC-AUC, precision/recall, confusion counts, workload,
 monthly support, coverage, and feature importance. A supported ranking gain
