@@ -1,0 +1,22 @@
+{
+  "id": "08",
+  "language": "pt",
+  "group": "consultas",
+  "customer": {
+    "token": "demo-co-2",
+    "user": 6,
+    "segment": "Plus",
+    "name": "Gustavo"
+  },
+  "steps": [
+    {
+      "say": "quanto tenho na poupança?"
+    }
+  ],
+  "expected": {
+    "firstIntent": "GENERAL_INQUIRY",
+    "outcome": "R",
+    "mustMatch": ["7162", "5222", "7297"],
+    "mustNotMatch": ["\\b(tu saldo|tienes|cuenta de ahorro)\\b"]
+  }
+}

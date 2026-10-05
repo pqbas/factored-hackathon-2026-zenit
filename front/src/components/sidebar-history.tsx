@@ -28,8 +28,10 @@ import {
 import type { Chat } from '@chat-template/db';
 import { fetcher } from '@/lib/utils';
 import { ChatItem } from './sidebar-history-item';
-import { MOCK_AGENT_CHATS } from '@/mocks/agent-history';
-import useSWRInfinite from 'swr/infinite';
+import useSWRInfinite, { unstable_serialize } from 'swr/infinite';
+import { getActiveCustomerToken } from '@/lib/demo-customer-storage';
+import { useActiveCustomerToken } from '@/hooks/use-active-customer';
+import { useLang } from '@/contexts/LangContext';
 import { LoaderIcon } from 'lucide-react';
 
 type GroupedChats = {
@@ -80,22 +82,29 @@ const groupChatsByDate = (chats: Chat[]): GroupedChats => {
   );
 };
 
-export function getChatHistoryPaginationKey(
-  pageIndex: number,
-  previousPageData: ChatHistory,
-) {
-  if (previousPageData && previousPageData.hasMore === false) {
-    return null;
-  }
+// Pages of the history, only the chats of the given demo customer (all the
+// user's chats without one).
+export function chatHistoryKey(sessionToken: string | null) {
+  const token = sessionToken ? `&sessionToken=${encodeURIComponent(sessionToken)}` : '';
+  return (pageIndex: number, previousPageData: ChatHistory) => {
+    if (previousPageData && previousPageData.hasMore === false) {
+      return null;
+    }
 
-  if (pageIndex === 0)
-    return `/api/history?limit=${PAGE_SIZE}`;
+    if (pageIndex === 0) return `/api/history?limit=${PAGE_SIZE}${token}`;
 
-  const firstChatFromPage = previousPageData.chats.at(-1);
+    const firstChatFromPage = previousPageData.chats.at(-1);
 
-  if (!firstChatFromPage) return null;
+    if (!firstChatFromPage) return null;
 
-  return `/api/history?ending_before=${firstChatFromPage.id}&limit=${PAGE_SIZE}`;
+    return `/api/history?ending_before=${firstChatFromPage.id}&limit=${PAGE_SIZE}${token}`;
+  };
+}
+
+// SWR key of the list on screen, to refetch it after a chat changes. Other
+// customers' lists refetch when shown again.
+export function chatHistoryCacheKey(): string {
+  return unstable_serialize(chatHistoryKey(getActiveCustomerToken()));
 }
 
 function ChatDateGroup({
@@ -132,6 +141,7 @@ function ChatDateGroup({
 
 export function SidebarHistory({ user }: { user?: ClientUser | null }) {
   const { setOpenMobile } = useSidebar();
+  const { t } = useLang();
   const { id } = useParams();
 
   const {
@@ -140,7 +150,7 @@ export function SidebarHistory({ user }: { user?: ClientUser | null }) {
     isValidating,
     isLoading,
     mutate,
-  } = useSWRInfinite<ChatHistory>(getChatHistoryPaginationKey, fetcher, {
+  } = useSWRInfinite<ChatHistory>(chatHistoryKey(useActiveCustomerToken()), fetcher, {
     fallbackData: [],
   });
 
@@ -159,7 +169,7 @@ export function SidebarHistory({ user }: { user?: ClientUser | null }) {
     });
 
     toast.promise(deletePromise, {
-      loading: 'Eliminando conversación…',
+      loading: t.deleting,
       success: () => {
         mutate((chatHistories) => {
           if (chatHistories) {
@@ -170,9 +180,9 @@ export function SidebarHistory({ user }: { user?: ClientUser | null }) {
           }
         });
 
-        return 'Conversación eliminada';
+        return t.deleted;
       },
-      error: 'No se pudo eliminar la conversación',
+      error: t.deleteFailed,
     });
 
     setShowDeleteDialog(false);
@@ -240,49 +250,54 @@ export function SidebarHistory({ user }: { user?: ClientUser | null }) {
               <SidebarMenu>
                 {paginatedChatHistories &&
                   (() => {
-                    // Demo chats always show under the real ones, so the
-                    // sidebar has example conversations to open.
-                    const chatsFromHistory = [
-                      ...paginatedChatHistories.flatMap(
-                        (paginatedChatHistory) => paginatedChatHistory.chats,
-                      ),
-                      ...MOCK_AGENT_CHATS.map((mock) => mock.chat),
-                    ];
+                    const chatsFromHistory = paginatedChatHistories.flatMap(
+                      (paginatedChatHistory) => paginatedChatHistory.chats,
+                    );
+                    if (chatsFromHistory.length === 0 && !isLoading) {
+                      return (
+                        <p
+                          data-testid="chat-history-empty"
+                          className="px-2 py-4 text-muted-foreground text-xs"
+                        >
+                          {t.noConversations}
+                        </p>
+                      );
+                    }
 
                     const groupedChats = groupChatsByDate(chatsFromHistory);
 
                     return (
                       <div className="flex flex-col gap-4">
                         <ChatDateGroup
-                          label="Hoy"
+                          label={t.today}
                           chats={groupedChats.today}
                           activeId={id}
                           onDelete={onDeleteChat}
                           setOpenMobile={setOpenMobile}
                         />
                         <ChatDateGroup
-                          label="Ayer"
+                          label={t.yesterday}
                           chats={groupedChats.yesterday}
                           activeId={id}
                           onDelete={onDeleteChat}
                           setOpenMobile={setOpenMobile}
                         />
                         <ChatDateGroup
-                          label="Últimos 7 días"
+                          label={t.last7Days}
                           chats={groupedChats.lastWeek}
                           activeId={id}
                           onDelete={onDeleteChat}
                           setOpenMobile={setOpenMobile}
                         />
                         <ChatDateGroup
-                          label="Últimos 30 días"
+                          label={t.last30Days}
                           chats={groupedChats.lastMonth}
                           activeId={id}
                           onDelete={onDeleteChat}
                           setOpenMobile={setOpenMobile}
                         />
                         <ChatDateGroup
-                          label="Anteriores"
+                          label={t.older}
                           chats={groupedChats.older}
                           activeId={id}
                           onDelete={onDeleteChat}
@@ -306,7 +321,7 @@ export function SidebarHistory({ user }: { user?: ClientUser | null }) {
                   <div className="animate-spin">
                     <LoaderIcon />
                   </div>
-                  <div>Cargando…</div>
+                  <div>{t.loading}</div>
                 </div>
               )}
             </>
@@ -316,16 +331,15 @@ export function SidebarHistory({ user }: { user?: ClientUser | null }) {
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar esta conversación?</AlertDialogTitle>
+            <AlertDialogTitle>{t.deleteTitle}</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta acción no se puede deshacer. La conversación se borrará de
-              forma permanente.
+              {t.deleteDescription}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel>{t.cancel}</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete}>
-              Eliminar
+              {t.delete}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

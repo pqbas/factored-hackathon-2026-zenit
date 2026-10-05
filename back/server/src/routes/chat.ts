@@ -5,30 +5,10 @@ import {
   type Router as RouterType,
 } from 'express';
 import {
-  convertToModelMessages,
   createUIMessageStream,
-  streamText,
   type LanguageModelUsage,
   pipeUIMessageStreamToResponse,
 } from 'ai';
-import type { LanguageModelV3Usage } from '@ai-sdk/provider';
-
-// Convert ai's LanguageModelUsage to @ai-sdk/provider's LanguageModelV3Usage
-function toV3Usage(usage: LanguageModelUsage): LanguageModelV3Usage {
-  return {
-    inputTokens: {
-      total: usage.inputTokens,
-      noCache: undefined,
-      cacheRead: undefined,
-      cacheWrite: undefined,
-    },
-    outputTokens: {
-      total: usage.outputTokens,
-      text: undefined,
-      reasoning: undefined,
-    },
-  };
-}
 import {
   authMiddleware,
   requireAuth,
@@ -42,10 +22,11 @@ import {
   reopenChat,
   saveChat,
   saveMessages,
-  updateChatLastContextById,
   updateChatVisiblityById,
-  updateChatAgentState,
-  markMessagesBlocked,
+  updateChatCustomer,
+  enqueueAgentTurn,
+  hasPendingAgentTurn,
+  hasOpenHandoff,
   isDatabaseAvailable,
 } from '@chat-template/db';
 import {
@@ -56,21 +37,27 @@ import {
   myProvider,
   postRequestBodySchema,
   type PostRequestBody,
-  StreamCache,
   type VisibilityType,
-  CONTEXT_HEADER_CONVERSATION_ID,
-  CONTEXT_HEADER_USER_ID,
-  CONTEXT_HEADER_SESSION_TOKEN,
   getAndClearAgentOutputs,
 } from '@chat-template/core';
+import { isAgentUnavailableError } from '@chat-template/ai-sdk-providers';
 import { ChatSDKError } from '@chat-template/core/errors';
 import { generateTitleFromUserMessage } from '../title';
 import { toCustomerChat } from '../customer-view';
-import { buildAgentHistory, shouldPersistAgentReply } from '../agent-turn';
+import { resolveSessionCustomer, tokenForCustomerId } from '../demo-customers';
+import { resolveCustomerName } from '../customer-name';
+import {
+  persistAgentReply,
+  streamAgentTurn,
+  streamCache,
+} from '../agent-reply';
+import { isPaused } from '../agent-turn';
+
+const CUSTOMER_ERROR_MESSAGE =
+  'David no está disponible en este momento. Intenta de nuevo en unos segundos.';
 
 export const chatRouter: RouterType = Router();
 
-const streamCache = new StreamCache();
 // Apply auth middleware to all chat routes
 chatRouter.use(authMiddleware);
 
@@ -81,6 +68,7 @@ chatRouter.use(authMiddleware);
  * Streaming continues normally, but no chat/message persistence occurs.
  */
 chatRouter.post('/', requireAuth, async (req: Request, res: Response) => {
+  const startedAt = new Date();
   const dbAvailable = isDatabaseAvailable();
   if (!dbAvailable) {
     console.log('[Chat] Running in ephemeral mode - no persistence');
@@ -106,13 +94,20 @@ chatRouter.post('/', requireAuth, async (req: Request, res: Response) => {
       selectedChatModel,
       selectedVisibilityType,
       sessionToken,
+      language: requestedLanguage,
     }: {
       id: string;
       message?: ChatMessage;
       selectedChatModel: string;
       selectedVisibilityType: VisibilityType;
       sessionToken?: string;
+      language?: string;
     } = requestBody;
+    // The customer's pick in the chat (ES | PT); anything else is ignored.
+    const language =
+      requestedLanguage === 'es' || requestedLanguage === 'pt'
+        ? requestedLanguage
+        : null;
 
     const session = req.session;
     if (!session) {
@@ -132,6 +127,15 @@ chatRouter.post('/', requireAuth, async (req: Request, res: Response) => {
       return res.status(response.status).json(response.json);
     }
 
+    // The session's bank customer, kept on the chat for the console.
+    const sessionCustomer = sessionToken
+      ? await resolveSessionCustomer(sessionToken)
+      : undefined;
+    const customerId =
+      sessionCustomer && !sessionCustomer.expired
+        ? sessionCustomer.customerId
+        : null;
+
     if (!chat) {
       // Only create new chat if we have a message (not a continuation)
       if (isDatabaseAvailable() && message) {
@@ -143,6 +147,7 @@ chatRouter.post('/', requireAuth, async (req: Request, res: Response) => {
           userEmail: session.user.email,
           title,
           visibility: selectedVisibilityType,
+          customerId,
         });
       }
     } else {
@@ -151,6 +156,19 @@ chatRouter.post('/', requireAuth, async (req: Request, res: Response) => {
         const response = error.toResponse();
         return res.status(response.status).json(response.json);
       }
+      if (customerId && chat.customerId !== customerId) {
+        await updateChatCustomer({ chatId: id, customerId });
+      }
+    }
+    // One bank lookup per customer, not per turn: only while the name
+    // is missing (new chat, new customer, or a lookup that failed before).
+    // It doesn't hold up the reply.
+    if (
+      dbAvailable &&
+      customerId &&
+      (!chat || chat.customerId !== customerId || !chat.customerName)
+    ) {
+      void resolveCustomerName(customerId);
     }
 
     const messagesFromDb = await getMessagesByChatId({ id });
@@ -174,7 +192,12 @@ chatRouter.post('/', requireAuth, async (req: Request, res: Response) => {
 
     let uiMessages: ChatMessage[];
     if (message) {
-      uiMessages = [...previousMessages, message];
+      // A retry (useChat regenerate) resends the same message id: it's
+      // already stored, so it's upserted and not repeated in the history.
+      uiMessages = [
+        ...previousMessages.filter((m) => m.id !== message.id),
+        message,
+      ];
       await saveMessages({
         messages: [
           {
@@ -226,9 +249,7 @@ chatRouter.post('/', requireAuth, async (req: Request, res: Response) => {
                 (p) =>
                   p.type === 'dynamic-tool' &&
                   (p.state === 'output-denied' ||
-                    ('approval' in p &&
-                      (p.approval)?.approved ===
-                        false)),
+                    ('approval' in p && p.approval?.approved === false)),
               ),
           );
 
@@ -241,10 +262,18 @@ chatRouter.post('/', requireAuth, async (req: Request, res: Response) => {
       }
     }
 
-    // A human (queue or agent) owns this conversation: the client message is
-    // saved above, but the agent never sees it. Respond with just the
-    // conversation state so useChat doesn't treat the stream as an error.
-    if (dbAvailable && chat && chat.handledBy !== 'ai_agent') {
+    // A human (queue or agent) owns this conversation, or a handoff is open:
+    // the client message is saved above, but the agent never sees it. Respond
+    // with just the conversation state so useChat doesn't treat the stream as
+    // an error.
+    if (
+      dbAvailable &&
+      chat &&
+      isPaused({
+        handledBy: chat.handledBy,
+        hasOpenHandoff: await hasOpenHandoff({ chatId: id }),
+      })
+    ) {
       streamCache.clearActiveStream(id);
       const conversationStateStream = createUIMessageStream({
         execute: async ({ writer }) => {
@@ -263,30 +292,52 @@ chatRouter.post('/', requireAuth, async (req: Request, res: Response) => {
       return;
     }
 
-    // Clear any previous active stream for this chat
-    streamCache.clearActiveStream(id);
+    // The chat's turns go one at a time: while David is still answering the
+    // previous message, or a turn is waiting in the queue, this one is queued
+    // too (the customer's message is never lost, and a handoff in the turn
+    // ahead cancels it).
+    if (
+      dbAvailable &&
+      message &&
+      (streamCache.getActiveStreamId(id) ||
+        (await hasPendingAgentTurn({ chatId: id })))
+    ) {
+      await enqueueAgentTurn({
+        chatId: id,
+        messageId: message.id,
+        userId: session.user.email ?? session.user.id,
+        sessionToken,
+        language,
+      });
+      const pendingStream = createUIMessageStream({
+        execute: async ({ writer }) => {
+          writer.write({ type: 'start' });
+          writer.write({
+            type: 'data-agent-pending',
+            data: { messageId: message.id },
+          });
+          writer.write({ type: 'finish' });
+        },
+      });
+      pipeUIMessageStreamToResponse({ stream: pendingStream, response: res });
+      return;
+    }
 
     let finalUsage: LanguageModelUsage | undefined;
     const streamId = generateUUID();
+    // Set when the agent can't be reached (its App redeploying): the turn is
+    // queued for the worker instead of failing (server/src/agent-queue.ts).
+    let agentUnavailable = false;
 
-    // Blocked turns and system notices are kept for the chat history but
-    // never resent to the agent; advisor replies go out prefixed so the agent
-    // can tell them apart from its own (never persisted, never shown to the
-    // front).
-    const modelMessages = buildAgentHistory(uiMessages);
-
-    const model = await myProvider.languageModel(selectedChatModel);
-    const result = streamText({
-      model,
-      messages: await convertToModelMessages(modelMessages),
-      headers: {
-        [CONTEXT_HEADER_CONVERSATION_ID]: id,
-        [CONTEXT_HEADER_USER_ID]: session.user.email ?? session.user.id,
-        ...(sessionToken
-          ? { [CONTEXT_HEADER_SESSION_TOKEN]: sessionToken }
-          : {}),
-      },
-      onFinish: ({ usage }) => {
+    const result = await streamAgentTurn({
+      chatId: id,
+      userId: session.user.email ?? session.user.id,
+      sessionToken,
+      handledBy: chat?.handledBy ?? 'ai_agent',
+      language,
+      messages: uiMessages,
+      selectedChatModel,
+      onUsage: (usage) => {
         finalUsage = usage;
       },
     });
@@ -297,92 +348,79 @@ chatRouter.post('/', requireAuth, async (req: Request, res: Response) => {
      */
     const stream = createUIMessageStream({
       execute: async ({ writer }) => {
+        const uiStream = result.toUIMessageStream({
+          originalMessages: uiMessages,
+          generateMessageId: generateUUID,
+          sendReasoning: true,
+          sendSources: true,
+          onError: (error) => {
+            if (dbAvailable && message && isAgentUnavailableError(error)) {
+              agentUnavailable = true;
+              return '';
+            }
+            console.error('Stream error:', error);
+            // The customer never sees technical details.
+            writer.write({ type: 'data-error', data: CUSTOMER_ERROR_MESSAGE });
+            return CUSTOMER_ERROR_MESSAGE;
+          },
+        });
+        // An unavailable agent ends as start + data-agent-pending + finish,
+        // with no error part.
+        let finished = false;
         writer.merge(
-          result.toUIMessageStream({
-            originalMessages: uiMessages,
-            generateMessageId: generateUUID,
-            sendReasoning: true,
-            sendSources: true,
-            onError: (error) => {
-              console.error('Stream error:', error);
-
-              const errorMessage =
-                error instanceof Error ? error.message : JSON.stringify(error);
-
-              writer.write({ type: 'data-error', data: errorMessage });
-
-              return errorMessage;
-            },
-          }),
+          uiStream.pipeThrough(
+            new TransformStream({
+              transform(chunk, controller) {
+                if (chunk.type === 'finish') finished = true;
+                if (chunk.type === 'error' && agentUnavailable) {
+                  controller.enqueue({
+                    type: 'data-agent-pending',
+                    data: { messageId: message?.id ?? '' },
+                  });
+                  return;
+                }
+                controller.enqueue(chunk);
+              },
+              flush(controller) {
+                if (agentUnavailable && !finished) {
+                  controller.enqueue({ type: 'finish' });
+                }
+              },
+            }),
+          ),
         );
       },
       onFinish: async ({ responseMessage }) => {
+        if (agentUnavailable && message) {
+          // Nothing is saved for David: the worker answers when he's back.
+          getAndClearAgentOutputs(id);
+          await enqueueAgentTurn({
+            chatId: id,
+            messageId: message.id,
+            userId: session.user.email ?? session.user.id,
+            sessionToken,
+            language,
+          });
+          streamCache.clearActiveStream(id);
+          return;
+        }
+
         console.log(
           'Finished message stream! Saving message...',
           JSON.stringify(responseMessage, null, 2),
         );
 
-        // An advisor may have taken the chat while the agent was still
-        // streaming. In that race, the reply is discarded: it's no longer
-        // the agent's conversation to answer.
         if (dbAvailable) {
-          const freshChat = await getChatById({ id });
-          if (freshChat && !shouldPersistAgentReply(freshChat.handledBy)) {
-            console.log(
-              `[Chat] Discarding agent reply for ${id}: no longer handled by the agent`,
-            );
-            getAndClearAgentOutputs(id);
-            streamCache.clearActiveStream(id);
-            return;
-          }
-        }
-
-        const agentOutputs = getAndClearAgentOutputs(id);
-        const blocked = agentOutputs?.blocked === true;
-
-        await saveMessages({
-          messages: [
-            {
-              id: responseMessage.id,
-              role: responseMessage.role,
-              parts: responseMessage.parts,
-              createdAt: new Date(),
-              attachments: [],
-              chatId: id,
-              blocked,
-              senderType: 'ai_agent',
-              senderId: null,
-            },
-          ],
-        });
-
-        if (finalUsage) {
-          try {
-            await updateChatLastContextById({
-              chatId: id,
-              context: toV3Usage(finalUsage),
-            });
-          } catch (err) {
-            console.warn('Unable to persist last usage for chat', id, err);
-          }
-        }
-
-        if (agentOutputs && dbAvailable) {
-          try {
-            // A blocked turn stays visible but is never sent to the agent again.
-            if (blocked && message) {
-              await markMessagesBlocked({ ids: [message.id] });
-            }
-            await updateChatAgentState({
-              chatId: id,
-              useCase: agentOutputs.useCase,
-              intent: agentOutputs.intent,
-              language: agentOutputs.language,
-              handledBy: agentOutputs.handoff ? 'human_queue' : undefined,
-            });
-          } catch (err) {
-            console.warn('Unable to persist agent state for chat', id, err);
-          }
+          await persistAgentReply({
+            chatId: id,
+            customerMessageId: message?.id,
+            reply: responseMessage,
+            usage: finalUsage,
+            startedAt,
+            source: 'live',
+          });
+        } else {
+          getAndClearAgentOutputs(id);
         }
 
         streamCache.clearActiveStream(id);
@@ -442,7 +480,15 @@ chatRouter.get(
 
     const { chat } = await checkChatAccess(id, req.session?.user.id);
 
-    return res.status(200).json(chat ? toCustomerChat(chat) : chat);
+    if (!chat) return res.status(200).json(chat);
+    // agentPending: a customer turn is waiting for the agent to come back.
+    return res.status(200).json({
+      ...toCustomerChat(chat),
+      agentPending: await hasPendingAgentTurn({ chatId: chat.id }),
+      demoCustomerToken: chat.customerId
+        ? (tokenForCustomerId(chat.customerId) ?? null)
+        : null,
+    });
   },
 );
 

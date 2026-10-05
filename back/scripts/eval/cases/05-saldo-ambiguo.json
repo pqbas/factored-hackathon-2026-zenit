@@ -1,0 +1,24 @@
+{
+  "id": "05",
+  "language": "es",
+  "group": "consultas",
+  "customer": {
+    "token": "demo-ar-1",
+    "user": 3,
+    "segment": "Student",
+    "name": "Daniela"
+  },
+  "steps": [
+    {
+      "say": "cuál es mi saldo?"
+    },
+    {
+      "say": "la de ahorro"
+    }
+  ],
+  "expected": {
+    "firstIntent": "GENERAL_INQUIRY",
+    "outcome": "R",
+    "mustMatch": ["4161", "3896"]
+  }
+}

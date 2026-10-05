@@ -1,0 +1,18 @@
+# Only back/ and front/ sources reach the build; never env files or secrets.
+*
+!back
+!front
+**/node_modules
+**/.env
+**/.env.*
+!**/.env.example
+**/dist
+**/public
+**/test-results
+**/playwright-report
+**/.databricks
+**/*.log
+back/tests
+back/scripts
+back/spec
+front/spec

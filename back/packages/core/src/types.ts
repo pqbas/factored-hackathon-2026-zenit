@@ -15,6 +15,7 @@ type MessageMetadata = z.infer<typeof messageMetadataSchema>;
 
 export type CustomUIDataTypes = {
   error: string;
+  'agent-pending': { messageId: string };
   usage: LanguageModelUsage;
   'conversation-state': { handledBy: string };
 };

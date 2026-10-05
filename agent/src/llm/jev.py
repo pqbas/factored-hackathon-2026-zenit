@@ -5,13 +5,18 @@ from typing import Any
 
 import httpx
 
-from src.schemas.classification import GUARDRAIL_CATEGORIES, SENTIMENT_LEVELS, Classification
+from src.schemas.classification import (
+    GUARDRAIL_CATEGORIES,
+    SENTIMENT_LEVELS,
+    Classification,
+    ClassifierUnavailable,
+)
 from src.schemas.routing import IntentRoute
 
 logger = logging.getLogger(__name__)
 
 
-class JevUnavailable(Exception):
+class JevUnavailable(ClassifierUnavailable):
     pass
 
 
@@ -30,19 +35,32 @@ class JevClient:
         # transport is only set by tests, to inject httpx.MockTransport.
         self._client = httpx.AsyncClient(transport=transport, timeout=timeout)
 
-    async def classify(self, text: str, routes: list[IntentRoute]) -> Classification:
+    async def classify(
+        self, text: str, routes: list[IntentRoute], context: str | None = None
+    ) -> Classification:
+        # `context` is the current conversation's transcript: Jev reads the last message in it,
+        # and the guardrail, language and sentiment questions still ask about that message only.
+        state = f"{context}\nCliente: {text}" if context else text
+        intent_instructions = "What is the customer asking for?"
+        if context:
+            intent_instructions = (
+                "What does the customer want now, in this conversation? The customer's last message may"
+                " continue the ongoing operation (answers David's question, picks an option, gives the"
+                " data asked for, or confirms) or change it. A reason or description given for a"
+                " cancellation stays RETENTION even if it mentions fees or charges."
+            )
         body = {
             "model": "jev-latest",
-            "state": text,
+            "state": state,
             "questions": {
                 "guardrail": {
                     "type": "choice",
-                    "instructions": "Does the customer message violate any of these policies?",
+                    "instructions": "Does the customer's last message violate any of these policies?",
                     "criteria": GUARDRAIL_CATEGORIES,
                 },
                 "language": {
                     "type": "choice",
-                    "instructions": "What language is the customer message written in?",
+                    "instructions": "What language is the customer's last message written in?",
                     "criteria": {
                         "es": "Spanish.",
                         "pt": "Portuguese.",
@@ -51,7 +69,7 @@ class JevClient:
                 },
                 "intent": {
                     "type": "choice",
-                    "instructions": "What is the customer asking for?",
+                    "instructions": intent_instructions,
                     "criteria": {
                         route.intent: f"{route.description} Examples: {'; '.join(route.examples)}"
                         for route in routes
@@ -59,7 +77,7 @@ class JevClient:
                 },
                 "sentiment": {
                     "type": "score",
-                    "instructions": "How does the customer sound in this message?",
+                    "instructions": "How does the customer sound in their last message?",
                     "criteria": SENTIMENT_LEVELS,
                 },
             },
@@ -69,17 +87,20 @@ class JevClient:
             "Content-Type": "application/json",
         }
 
+        # The reasons below name the status or exception only: never the customer's text,
+        # the response body or the API key.
         try:
             response = await self._client.post(self._url, json=body, headers=headers)
-            response.raise_for_status()
         except httpx.HTTPError as exc:
-            raise JevUnavailable("Jev request failed") from exc
+            raise JevUnavailable(f"request failed: {type(exc).__name__}: {exc}") from exc
+        if response.is_error:
+            raise JevUnavailable(f"HTTP {response.status_code}")
 
         try:
             answers = response.json()["answers"]
             return self._parse(answers)
         except (KeyError, TypeError, ValueError) as exc:
-            raise JevUnavailable("Jev returned an incomplete answer") from exc
+            raise JevUnavailable(f"incomplete answer: {type(exc).__name__}: {exc}") from exc
 
     @staticmethod
     def _parse(answers: dict[str, Any]) -> Classification:

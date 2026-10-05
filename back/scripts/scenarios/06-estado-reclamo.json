@@ -1,0 +1,13 @@
+{
+  "name": "06-estado-reclamo",
+  "description": "Estado de un reclamo de Eduardo: David lo consulta y, como necesita algo más, deriva con case_status (3.D2)",
+  "sessionToken": "demo-mx-2",
+  "customer": 6,
+  "messages": [
+    "hola",
+    "quiero saber el estado de mi reclamo",
+    "sí, ese es",
+    "necesito saber en cuánto tiempo me van a responder",
+    "sí, confirmo"
+  ]
+}

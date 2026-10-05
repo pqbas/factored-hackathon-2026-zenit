@@ -1,0 +1,48 @@
+{
+  "id": "13",
+  "language": "es",
+  "group": "reclamo-cargo",
+  "customer": {
+    "token": "demo-mx-4",
+    "user": 8,
+    "segment": "Plus",
+    "name": "Victoria"
+  },
+  "steps": [
+    {
+      "say": "quiero reclamar un cargo"
+    },
+    {
+      "say": "no sé cuál"
+    },
+    {
+      "say": "en la 1670"
+    },
+    {
+      "say": "el de Laboratorio Central de 380.60 del 17 de mayo"
+    },
+    {
+      "say": "no reconozco ese cargo"
+    },
+    {
+      "say": "yo no fui a ningún laboratorio"
+    },
+    {
+      "say": "sí, confirmo"
+    }
+  ],
+  "expected": {
+    "firstIntent": "COMPLAINT",
+    "outcome": "D",
+    "reason": "complaint",
+    "mustMatchAnywhere": ["Laboratorio Central|Conciertos Live"],
+    "handoffFacts": [
+      "card_last4",
+      "transaction_date",
+      "merchant",
+      "amount",
+      "complaint_type",
+      "description"
+    ]
+  }
+}

@@ -1,9 +1,9 @@
-import { motion } from 'framer-motion';
 import { ASSISTANT_TITLE } from '@/lib/assistant';
 import React, { memo, useState } from 'react';
 import { UserRound } from 'lucide-react';
 import { BrandMark } from './brand-mark';
 import { senderOf } from '@/lib/handoff';
+import { useLang } from '@/contexts/LangContext';
 import { Response } from './elements/response';
 import { MessageContent } from './elements/message';
 import {
@@ -22,6 +22,7 @@ import {
   McpApprovalActions,
 } from './elements/mcp-tool';
 import { MessageActions } from './message-actions';
+import { TypingIndicator } from './typing-indicator';
 import { PreviewAttachment } from './preview-attachment';
 import equal from 'fast-deep-equal';
 import { cn, sanitizeText } from '@/lib/utils';
@@ -36,7 +37,7 @@ import {
   isNamePart,
   joinMessagePartSegments,
 } from './databricks-message-part-transformers';
-import { MessageError } from './message-error';
+import { AgentUnavailable } from './agent-unavailable';
 import { MessageOAuthError } from './message-oauth-error';
 import { isCredentialErrorMessage } from '@/lib/oauth-error-utils';
 import { Streamdown } from 'streamdown';
@@ -68,6 +69,13 @@ const PurePreviewMessage = ({
   const [showErrors, setShowErrors] = useState(false);
   // Advisor replies are role 'assistant' too; senderType tells them apart.
   const isAdvisor = senderOf(message) === 'advisor';
+  const { t } = useLang();
+  // David is streaming but no text arrived yet (e.g. a slow data query).
+  const awaitingText =
+    isLoading &&
+    message.role === 'assistant' &&
+    !isAdvisor &&
+    !message.parts.some((part) => part.type === 'text' && part.text.length > 0);
 
   // Hook for handling MCP approval requests
   const { submitApproval, isSubmitting, pendingApprovalId } = useApproval({
@@ -154,9 +162,10 @@ const PurePreviewMessage = ({
               data-testid="advisor-label"
               className="-mb-2 font-semibold text-muted-foreground text-xs"
             >
-              Asesor
+              {t.advisor}
             </span>
           )}
+          {awaitingText && <TypingIndicator className="text-muted-foreground" />}
           {attachmentsFromMessage.length > 0 && (
             <div
               data-testid={`message-attachments`}
@@ -393,22 +402,14 @@ const PurePreviewMessage = ({
               message={message}
               isLoading={isLoading}
               setMode={setMode}
-              errorCount={errorParts.length}
+              errorCount={0}
               showErrors={showErrors}
               onToggleErrors={() => setShowErrors(!showErrors)}
             />
           )}
 
-          {errorParts.length > 0 && (hasOnlyErrors || showErrors) && (
-            <div className="flex flex-col gap-2">
-              {errorParts.map((part, index) => (
-                <MessageError
-                  key={`error-${message.id}-${index}`}
-                  error={part.data}
-                />
-              ))}
-            </div>
-          )}
+          {/* David couldn't answer: a friendly note, never the technical error. */}
+          {errorParts.length > 0 && !isLoading && <AgentUnavailable />}
         </div>
       </div>
     </div>
@@ -441,34 +442,9 @@ export const AwaitingResponseMessage = () => {
         <BrandMark size={26} pulse className="mt-0.5" />
 
         <div className="flex w-full flex-col gap-2 md:gap-4">
-          <div className="p-0 text-muted-foreground text-sm">
-            <LoadingText>Thinking...</LoadingText>
-          </div>
+          <TypingIndicator className="text-muted-foreground" />
         </div>
       </div>
     </div>
-  );
-};
-
-const LoadingText = ({ children }: { children: React.ReactNode }) => {
-  return (
-    <motion.div
-      animate={{ backgroundPosition: ['100% 50%', '-100% 50%'] }}
-      transition={{
-        duration: 1.5,
-        repeat: Number.POSITIVE_INFINITY,
-        ease: 'linear',
-      }}
-      style={{
-        background:
-          'linear-gradient(90deg, hsl(var(--muted-foreground)) 0%, hsl(var(--muted-foreground)) 35%, hsl(var(--foreground)) 50%, hsl(var(--muted-foreground)) 65%, hsl(var(--muted-foreground)) 100%)',
-        backgroundSize: '200% 100%',
-        WebkitBackgroundClip: 'text',
-        backgroundClip: 'text',
-      }}
-      className="flex items-center text-transparent"
-    >
-      {children}
-    </motion.div>
   );
 };

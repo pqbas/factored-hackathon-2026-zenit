@@ -1,0 +1,21 @@
+{
+  "id": "H14",
+  "language": "es",
+  "group": "ambiguos-fuera-de-alcance",
+  "customer": {
+    "token": "demo-ar-4",
+    "user": 11,
+    "segment": "Basic",
+    "name": "Marco"
+  },
+  "steps": [
+    {
+      "say": "me comunicas con alguien del banco por favor"
+    }
+  ],
+  "expected": {
+    "firstIntent": "HUMAN_AGENT",
+    "outcome": "A",
+    "mustMatch": ["Tengo estas opciones|Cuéntame qué necesitas"]
+  }
+}

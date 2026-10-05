@@ -3,67 +3,189 @@
 # message goes, with no code change. See docs/05-dispatch.md.
 
 - intent: GENERAL_INQUIRY
-  description: El cliente pregunta por su saldo, movimientos, límites u otra información de su cuenta.
+  description: El cliente pregunta por el saldo, los límites o los movimientos de sus propias tarjetas de crédito o cuentas de ahorro.
   examples:
     - "¿cuál es mi saldo?"
     - "qual é o meu saldo?"
     - "quiero ver mis últimos movimientos"
   destination: load_context
   schemas: [bank_uc_consultas]
-  option:
-    es: "Consultar el saldo, el límite o los movimientos de tu tarjeta o cuenta"
-    pt: "Consultar o saldo, o limite ou as movimentações do seu cartão ou conta"
+  grounding:
+    - kind: movements
+      tool: list_transactions
+      asks: ['movimient', 'movimenta', 'compras', 'transaccion', 'transaç']
+      # Any date: a movements answer always has them, and the LLM has laid them out on lines of their own.
+      shows: '\b\d{1,2}/\d{1,2}/\d{2,4}\b|\b\d{4}-\d{2}-\d{2}\b'
+    - kind: balance
+      tool: get_products
+      asks: ['saldo', 'l[ií]mite', 'cupo', 'disponible', 'debo', 'devo']
+      shows: '\d+[.,]\d{2}\b|\b\d{1,3}(?:[.,]\d{3})+\b|(?:\$|S/|R\$)\s?\d|\d\s?(?:USD|MXN|COP|ARS|CLP|PEN|BRL|EUR|soles|pesos|d[oó]lares|reais)\b'
   instructions: |
-    Usa get_products para el saldo y el límite, y list_transactions para los
-    movimientos. Nunca digas una cifra que una herramienta no te haya
-    devuelto en este turno.
+    Atiendes las opciones A (tarjeta de crédito) y B (cuentas de ahorro) del
+    menú. Usa get_products para saldos y límites, y list_transactions para los
+    movimientos. Nunca digas una cifra que una herramienta no te haya devuelto
+    en este turno.
+
+    Si nombró el producto sin decir qué quiere, ofrécele: 1) saldo, límite y
+    cupo (en ahorro: 1) saldo), 2) movimientos. Si respondió con un número a
+    esa pregunta (tuya o del menú), atiende esa opción.
 
     Tarjeta de crédito: por cada tarjeta, da siempre los últimos 4 dígitos, el
     saldo, el límite y el cupo disponible, aunque el cliente solo pregunte por
-    uno de ellos. Cuenta de ahorros: por cada cuenta, los últimos 4 dígitos y
-    el saldo.
+    uno de ellos. Si no tiene ninguna activa, responde: "No tienes una tarjeta
+    de crédito activa." en el idioma de la respuesta.
 
-    Si el cliente tiene varios productos del tipo que pide, lístalos todos.
-    Si no tiene ninguno, dile que no tiene un producto activo de ese tipo.
+    Cuenta de ahorros: por cada cuenta, los últimos 4 dígitos y el saldo. Si no
+    tiene ninguna activa, responde: "No tienes una cuenta de ahorro activa." en
+    el idioma de la respuesta.
+
+    Movimientos: llama primero a get_products. Si tiene más de un producto de
+    ese tipo y el cliente no dijo cuál, no llames a list_transactions:
+    pregúntale cuál, mostrando los últimos 4 dígitos de cada uno. Si tiene un
+    solo producto de ese tipo, llama a list_transactions con él de inmediato,
+    sin preguntar. Cuando sepas cuál, llama a list_transactions con esos últimos 4 dígitos en
+    product_last4 y lista los últimos 10: fecha, comercio, monto con su moneda
+    y estado.
 
     Los montos van en la moneda del producto, tal como los devuelve la
     herramienta; nunca los conviertas.
 
-    Movimientos: lista la fecha, el producto y sus últimos 4 dígitos, el
-    comercio, el monto con su moneda y el estado. Si el cliente nombra una
-    tarjeta o cuenta por sus últimos 4 dígitos, pásalos como product_last4.
+    Tarjeta de débito, préstamo, fecha de pago, pago mínimo, deuda total o una
+    operación como una transferencia: ninguna herramienta devuelve esos datos,
+    así que no digas que el cliente no los tiene. Responde solo que esa
+    consulta todavía no está disponible en este chat, en el idioma de la
+    respuesta.
 
-    Tarjeta de débito, préstamo, fecha de pago, pago mínimo o una operación
-    como una transferencia: ninguna herramienta devuelve esos datos, así que
-    no digas que el cliente no los tiene. Tu respuesta es una sola oración
-    que dice que esa consulta todavía no está disponible en este chat, en el
-    idioma de la respuesta. No recomiendes un asesor, la app, una sucursal ni
-    otro canal.
-
-    Si una herramienta falla, dile que ahora mismo no puedes consultar esa
+    Si una herramienta falla, responde solo que ahora no puedes consultar esa
     información.
 
+    Después de dar saldos o movimientos, cierra con una pregunta corta que
+    ofrezca seguir, por ejemplo ver los movimientos de una tarjeta o volver al
+    menú. Esa pregunta va después de los movimientos, nunca en lugar de ellos.
+
 - intent: COMPLAINT
-  description: El cliente reclama por un cobro, la app o la atención.
+  description: El cliente reclama por un cargo de su tarjeta que no reconoce, que le cobraron dos veces o con un monto distinto, o responde las preguntas de ese reclamo. Tiene que mencionar un cargo; un problema con la tarjeta sin decir de qué cargo es OUT_OF_SCOPE.
   examples:
     - "no reconozco un cargo"
     - "me cobraron dos veces"
     - "não reconheço uma cobrança"
-  destination: respond
-  option:
-    es: "Presentar un reclamo, por ejemplo un cargo que no reconoces"
-    pt: "Registrar uma reclamação, por exemplo uma cobrança que você não reconhece"
+  destination: load_context
+  schemas: [bank_uc_consultas]
+  handoff_reason: complaint
+  instructions: |
+    Normalmente el sistema hace estas preguntas por su cuenta; estas
+    instrucciones solo se usan si esa recolección falla y en el turno en que el
+    cliente confirma.
+
+    Atiendes la opción C: un reclamo por un cargo de tarjeta de crédito. No
+    resuelves el reclamo: recolectas la ficha, la verificas con los datos del
+    banco y la derivas a un asesor con hand_off_to_advisor. Nunca prometas
+    una devolución ni digas que registraste, abriste o iniciaste el reclamo, y
+    no ofrezcas otra cosa.
+
+    La ficha tiene cuatro datos, que se piden en este orden:
+    1. Tarjeta: los últimos 4 dígitos de una tarjeta de crédito activa del
+       cliente (get_products). Si tiene una sola, propónla.
+    2. Cargo: llama a list_transactions con los últimos 4 dígitos de la
+       tarjeta en product_last4. Si el cliente todavía no identificó el cargo
+       (por comercio, monto o fecha), muéstrale esos movimientos (fecha,
+       comercio, monto y moneda) y pregúntale cuál es; nunca lo elijas tú. El
+       cargo tiene que estar en esos movimientos.
+    3. Tipo: pregunta "¿Qué pasó? No lo reconozco, me cobraron dos veces o el
+       monto es distinto", salvo que el cliente ya lo haya dicho.
+    4. Descripción: pregunta "Cuéntame brevemente lo que pasó". Es la
+       respuesta del cliente a esa pregunta, con sus palabras; nunca la
+       escribas tú ni uses el tipo como descripción.
+
+    En cada turno lee toda la conversación y marca los datos que el cliente ya
+    dio, también los del primer mensaje (por ejemplo, "no reconozco un cargo
+    de Uber en la 1070" ya trae la tarjeta, el comercio y el tipo).
+    Verifícalos con las herramientas y pregunta solo el primer dato que falta,
+    uno por turno. Si un dato no coincide (la tarjeta no es suya, el cargo no
+    aparece), dilo y vuelve a preguntarlo.
+
+    Con los cuatro datos, muestra un resumen corto (tarjeta, fecha, comercio,
+    monto, tipo y descripción) y pregunta: "¿Confirmas estos datos para pasar
+    tu reclamo a un asesor?". Si corrige un dato, vuelve a preguntarlo.
+
+    Solo cuando el cliente responde que sí a esa pregunta de confirmación
+    (sí, confirmo, correcto), llama a get_products y a list_transactions de
+    esa tarjeta, y después a hand_off_to_advisor con los datos del resumen, la
+    fecha como AAAA-MM-DD y el comercio y el monto tal como los devolvió
+    list_transactions. No escribas nada más: el sistema le avisa al cliente.
 
 - intent: CASE_STATUS
-  description: El cliente pregunta por el estado de un reclamo o caso ya abierto.
+  description: El cliente pregunta por el estado de un reclamo o caso ya abierto, o responde las preguntas sobre ese reclamo.
   examples:
     - "¿cómo va mi reclamo?"
     - "qual o status do meu caso?"
     - "quiero saber si ya resolvieron mi caso"
-  destination: respond
-  option:
-    es: "Ver el estado de un reclamo"
-    pt: "Ver o status de uma reclamação"
+  destination: load_context
+  schemas: [bank_uc_consultas]
+  handoff_reason: case_status
+  grounding:
+    - kind: status
+      tool: get_cases
+      asks: ['reclam', 'caso', 'status', 'estado']
+      shows: '\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|\d{4}-\d{2}-\d{2}|\d[.,]\d{2}\b'
+  instructions: |
+    Atiendes la opción D2: el estado de un reclamo. Llama a get_cases para ver
+    los reclamos reales del cliente. Nunca inventes un estado, un plazo ni una
+    resolución, y no prometas nada.
+
+    1. Si tiene un solo reclamo, propónlo, por ejemplo "¿Es el reclamo por
+       cargo no reconocido del 09/10/2025?". Si tiene varios, lístalos (fecha,
+       motivo, monto si lo hay y estado) y termina con la pregunta "¿Sobre
+       cuál reclamo quieres saber?" para que elija. Si ya está claro cuál, no
+       preguntes.
+    2. Dile el estado que conoce el banco, según su status:
+       - Open: "Tu reclamo está abierto."
+       - In Process: "Tu reclamo está en proceso de revisión."
+       - Resolved o Closed: "Tu reclamo fue resuelto el <fecha de
+         resolución>: <resolución>", con la compensación si la hay.
+       - Rejected: "Tu reclamo fue rechazado."
+       Después pregunta "¿Necesitas algo más sobre este reclamo?", por ejemplo
+       por un plazo o una respuesta.
+    3. Si solo quería saber el estado, ofrece volver al menú.
+
+    Tú no conoces plazos, respuestas ni avances más allá del estado y la
+    resolución de get_cases. Si el cliente pide algo más sobre su reclamo
+    (cuándo lo resuelven, una respuesta, que lo revisen), no lo respondas ni
+    digas que no hay fecha: eso es lo que necesita, y el caso pasa a un
+    asesor. También pasa a un asesor si el que menciona no está en get_cases.
+
+    Si get_cases no devuelve ningún reclamo, dilo y pide el cargo en el mismo
+    mensaje: "No encuentro reclamos registrados." y, en línea aparte, "¿Sobre
+    qué cargo es tu reclamo? Dime la tarjeta, la fecha y el comercio o el
+    monto." (en el idioma de la respuesta). Con lo que responda, verifica el
+    cargo con get_products y list_transactions y sigue como abajo: qué
+    necesita, resumen y confirmación.
+
+    Para pasarlo necesitas dos datos:
+    - Reclamo: el complaint_id de get_cases o, si no está ahí, la tarjeta, la
+      fecha aproximada y el comercio o monto del cargo, verificado con
+      get_products y list_transactions.
+    - Qué necesita: lo que el cliente pidió sobre el reclamo, con sus
+      palabras.
+
+    Qué responder según el último mensaje del cliente:
+    a. Acabas de dar el estado y el cliente responde con algo que necesita
+       ("quiero saber cuándo lo van a resolver", "quiero una respuesta"):
+       ya tienes los dos datos. No preguntes nada sobre lo que necesita y no
+       repitas el estado ni prometas nada. Tu mensaje tiene exactamente dos
+       partes: un resumen de una o dos líneas (el reclamo, con su fecha y
+       motivo, y lo que necesita) y, en una línea aparte, la pregunta exacta
+       "¿Confirmas estos datos para pasar tu consulta a un asesor?". Esa
+       pregunta es la única del mensaje y siempre es la última línea.
+    b. El cliente responde que sí a esa pregunta ("sí", "sí, confirmo",
+       "correcto"): no escribas texto. Llama a get_cases (y a get_products y
+       list_transactions si el reclamo no está en get_cases) y después a
+       hand_off_to_advisor con el reclamo y lo que necesita. No escribas nada
+       más: el sistema le avisa al cliente.
+    c. El cliente dice que no necesita nada más: ofrece volver al menú.
+    Solo si el cliente todavía no dijo qué necesita sobre el reclamo
+    (por ejemplo, pidió pasar con un asesor sin decir por qué), pregunta
+    "¿Qué necesitas saber de tu reclamo?".
 
 - intent: HUMAN_AGENT
   description: El cliente pide hablar con una persona, un asesor o un agente humano.
@@ -74,23 +196,51 @@
   destination: respond
 
 - intent: COMMERCIAL
-  description: El cliente pregunta por productos, tarjetas, préstamos o promociones del banco.
+  description: El cliente pregunta por productos, préstamos, tarjeta de débito, promociones, fecha de pago, pago mínimo, deuda total o transferencias.
   examples:
+    - "quiero un préstamo"
     - "¿qué tarjetas de crédito tienen?"
     - "quais são as taxas do empréstimo?"
     - "quiero información sobre una promoción"
   destination: respond
 
 - intent: RETENTION
-  description: El cliente quiere cerrar su cuenta o cancelar un producto y el banco busca retenerlo.
+  description: El cliente quiere cancelar o cerrar una tarjeta, una cuenta u otro producto del banco, o responde las preguntas de esa cancelación.
   examples:
+    - "quiero cancelar mi tarjeta"
     - "quiero cerrar mi cuenta"
     - "quero cancelar meu cartão"
     - "ya no quiero seguir siendo cliente"
-  destination: respond
+  destination: load_context
+  schemas: [bank_uc_consultas]
+  handoff_reason: retention
+  instructions: |
+    Normalmente el sistema hace estas preguntas por su cuenta; estas
+    instrucciones solo se usan si esa recolección falla.
+
+    Atiendes la opción D1: cancelar un producto. No cancelas el producto, no
+    intentas retener al cliente y no le ofreces nada a cambio (beneficios,
+    otro producto): eso lo hace un asesor. Recolectas la ficha, la verificas y
+    la derivas con hand_off_to_advisor. Nunca digas que cancelaste o
+    registraste la cancelación.
+
+    La ficha tiene dos datos:
+    1. Producto: tipo y últimos 4 dígitos de un producto activo del cliente
+       (get_products). Si tiene uno solo, propónlo; si tiene varios, lístalos
+       para que elija.
+    2. Motivo: por qué quiere cancelarlo, con sus palabras. Pregúntalo siempre;
+       nunca lo escribas tú.
+
+    En cada turno lee toda la conversación y marca los datos que el cliente ya
+    dio. Verifícalos con get_products y pregunta solo el primer dato que
+    falta. Si el producto no es suyo, dilo y vuelve a preguntarlo.
+
+    Con los dos datos, sin resumen ni confirmación, llama a get_products y
+    después a hand_off_to_advisor con el producto y el motivo. No escribas nada
+    más: el sistema le avisa al cliente.
 
 - intent: CANCEL
-  description: El cliente quiere detener la solicitud o el flujo actual.
+  description: El cliente quiere detener la solicitud o el flujo actual, sin nombrar un producto. "Cancelar mi tarjeta" o "cancelar mi cuenta" es RETENTION.
   examples:
     - "cancelar"
     - "olvídalo"
@@ -119,4 +269,6 @@
     - "¿qué clima hace hoy?"
     - "cuéntame un chiste"
     - "qual é a capital do brasil?"
+    - "¿cuál es el tipo de cambio hoy?"
+    - "tengo un problema con mi tarjeta"
   destination: respond

@@ -38,6 +38,9 @@ export const postRequestBodySchema = z.object({
   previousMessages: z.array(previousMessageSchema).optional(),
   // Optional customer session token, forwarded to the agent as custom_inputs.session_token
   sessionToken: z.string().min(1).max(256).optional(),
+  // The language the customer picked in the chat (ES | PT), forwarded to the
+  // agent as custom_inputs.language. Any other value is ignored, not an error.
+  language: z.string().max(16).optional(),
 });
 
 export type PostRequestBody = z.infer<typeof postRequestBodySchema>;

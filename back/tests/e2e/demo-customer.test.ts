@@ -25,6 +25,48 @@ function nextChatRequest(page: Page): Promise<Request> {
   );
 }
 
+const OLD_CHAT_ID = '00000000-0000-4000-8000-0000000000aa';
+
+// A saved chat as GET /api/chat/:id returns it; demoCustomerToken is the
+// customer the back stored for it.
+async function mockSavedChat(page: Page, demoCustomerToken: string | null) {
+  await page.route('**/api/config', (route) =>
+    route.fulfill({ json: { features: { chatHistory: true } } }),
+  );
+  await page.route(`**/api/chat/${OLD_CHAT_ID}`, (route) =>
+    route.fulfill({
+      json: {
+        id: OLD_CHAT_ID,
+        title: 'Chat de Santiago',
+        createdAt: '2026-09-28T10:00:00.000Z',
+        userId: 'ada-id',
+        visibility: 'private',
+        lastContext: null,
+        handledBy: 'ai_agent',
+        assignedTo: null,
+        demoCustomerToken,
+      },
+    }),
+  );
+  await page.route(`**/api/chat/${OLD_CHAT_ID}/stream`, (route) => route.fulfill({ status: 204 }));
+  await page.route(`**/api/messages/${OLD_CHAT_ID}**`, (route) =>
+    route.fulfill({
+      json: [
+        {
+          id: 'm1',
+          chatId: OLD_CHAT_ID,
+          role: 'user',
+          parts: [{ type: 'text', text: 'Hola' }],
+          attachments: [],
+          createdAt: '2026-09-28T10:00:00.000Z',
+          senderType: 'customer',
+          senderId: null,
+        },
+      ],
+    }),
+  );
+}
+
 // Tests share the worker's authenticated context (and its localStorage), so
 // they run in order and each opens its own page.
 test.describe.configure({ mode: 'serial' });
@@ -48,8 +90,15 @@ test.describe('Demo customer selector', () => {
     await page.evaluate(() => localStorage.clear());
     await page.reload();
 
-    await expect(chat.demoCustomerSelector).toContainText('Santiago · México');
-    await chat.selectDemoCustomer('demo-co-1');
+    await expect(chat.demoCustomerSelector).toContainText('Cliente demo: Santiago · México');
+    await chat.demoCustomerSelector.hover();
+    await expect(page.getByTestId('demo-customer-hint').first()).toContainText(
+      'Clientes del dataset sintético del hackathon: elige a cuál simular',
+    );
+    // The open menu says where the customers come from.
+    await chat.demoCustomerSelector.click();
+    await expect(page.getByTestId('demo-customer-dataset')).toHaveText('Dataset sintético del hackathon');
+    await page.getByTestId('demo-customer-option-demo-co-1').click();
     await expect(chat.demoCustomerSelector).toContainText('Javier · Colombia');
 
     const request = nextChatRequest(page);
@@ -94,5 +143,134 @@ test.describe('Demo customer selector', () => {
     const request = nextChatRequest(page);
     await chat.sendUserMessage('Hola');
     expect((await request).postDataJSON()).not.toHaveProperty('sessionToken');
+  });
+
+  test('greets the picked customer, offers the menu and shows only their chats', async () => {
+    await mockCustomers(page);
+    // The sidebar lists history only with chat history on (ephemeral runs have it off).
+    await page.route('**/api/config', (route) =>
+      route.fulfill({ json: { features: { chatHistory: true } } }),
+    );
+    const historyTokens: (string | null)[] = [];
+    await page.route('**/api/history**', (route) => {
+      const token = new URL(route.request().url()).searchParams.get('sessionToken');
+      historyTokens.push(token);
+      const name = token === 'demo-co-1' ? 'Javier' : 'Santiago';
+      return route.fulfill({
+        json: {
+          chats: [
+            {
+              id: `00000000-0000-4000-8000-00000000000${token === 'demo-co-1' ? 2 : 1}`,
+              title: `Chat de ${name}`,
+              createdAt: new Date().toISOString(),
+              userId: 'ada-id',
+              visibility: 'private',
+              lastContext: null,
+            },
+          ],
+          hasMore: false,
+        },
+      });
+    });
+    await chat.createNewChat();
+    await page.evaluate(() => localStorage.clear());
+    await page.reload();
+
+    await expect(page.getByTestId('greeting')).toContainText(', Santiago');
+    await expect(page.getByTestId('greeting')).not.toContainText('Ada');
+    await expect(page.getByTestId('suggested-actions')).toContainText('Consultar saldo y movimientos de tarjeta');
+    for (const title of ['Cuentas de ahorro', 'Presentar un reclamo', 'Más opciones']) {
+      await expect(page.getByTestId('suggested-actions')).toContainText(title);
+    }
+    await expect(page.getByTestId('suggested-actions')).not.toContainText('Agregar beneficiario');
+    await expect(page.getByText('Chat de Santiago')).toBeVisible();
+    expect(historyTokens).toContain('demo-mx-1');
+
+    await chat.selectDemoCustomer('demo-co-1');
+    await expect(page.getByTestId('greeting')).toContainText(', Javier');
+    await expect(page.getByText('Chat de Javier')).toBeVisible();
+    await expect(page.getByText('Chat de Santiago')).toHaveCount(0);
+    expect(historyTokens).toContain('demo-co-1');
+  });
+
+  test('the picked customer stays when moving to an existing chat and back', async () => {
+    await mockCustomers(page);
+    await mockSavedChat(page, 'demo-mx-1');
+    await chat.createNewChat();
+    await page.evaluate(() => localStorage.clear());
+    await page.reload();
+    await chat.selectDemoCustomer('demo-co-1');
+    await expect(chat.demoCustomerSelector).toContainText('Javier · Colombia');
+
+    // The existing chat shows the customer the back stored for it, locked.
+    await page.goto(`/chat/${OLD_CHAT_ID}`);
+    await expect(chat.demoCustomerSelector).toContainText('Santiago · México');
+    await expect(chat.demoCustomerSelector).toBeDisabled();
+
+    // Opening it did not change the session: the new chat is still Javier's.
+    await chat.createNewChat();
+    await expect(chat.demoCustomerSelector).toContainText('Javier · Colombia');
+    await expect(chat.demoCustomerSelector).toBeEnabled();
+    await expect(page.getByTestId('greeting')).toContainText(', Javier');
+  });
+
+  test('an existing chat without a customer from the back falls back to the browser', async () => {
+    await mockCustomers(page);
+    await mockSavedChat(page, null);
+    await page.goto('/');
+    await page.evaluate((chatId) => {
+      localStorage.setItem('demo-customer:last', 'demo-co-1');
+      localStorage.setItem(`demo-customer:chat:${chatId}`, 'demo-mx-1');
+    }, OLD_CHAT_ID);
+    await page.goto(`/chat/${OLD_CHAT_ID}`);
+    await expect(chat.demoCustomerSelector).toContainText('Santiago · México');
+    await expect(chat.demoCustomerSelector).toBeDisabled();
+  });
+
+  test('the nav rail button switches the chat screen between ES and PT and sends the language', async () => {
+    await mockCustomers(page);
+    await chat.createNewChat();
+    await page.evaluate(() => localStorage.removeItem('ui:lang'));
+    await page.reload();
+
+    // Spanish by default (the browser is en-US, the demo customers Spanish-speaking).
+    await expect(page.locator('html')).toHaveAttribute('lang', 'es');
+    await expect(page.getByTestId('greeting')).toHaveText(/^Buen(os|as) \S+, \S+$/);
+    await expect(chat.multimodalInput).toHaveAttribute('placeholder', 'Mensaje');
+
+    // The language button in the nav rail switches ES <-> PT.
+    await page.getByTestId('lang-toggle').click();
+    await expect(page.getByTestId('greeting')).toHaveText(/^(Bom dia|Boa tarde|Boa noite), \S+$/);
+    await expect(page.getByTestId('suggested-action-0')).toContainText(
+      'Consultar saldo e movimentações do cartão',
+    );
+    await expect(chat.multimodalInput).toHaveAttribute('placeholder', 'Mensagem');
+    await expect(page.getByText('Nunca vamos pedir sua senha, seu PIN nem o CVV.')).toBeVisible();
+    await expect(page.getByTestId('chat-peer-status')).toContainText('Assistente virtual · Online');
+
+    // The choice survives a reload.
+    await page.reload();
+    await expect(page.locator('html')).toHaveAttribute('lang', 'pt');
+
+    // The card sends its Portuguese text, and the body carries the language.
+    const request = nextChatRequest(page);
+    await page.getByTestId('suggested-action-0').click();
+    const body = (await request).postDataJSON();
+    expect(body.language).toBe('pt');
+    expect(body.message.parts[0].text).toBe('Quero ver o saldo e as movimentações do meu cartão de crédito');
+
+    await page.evaluate(() => localStorage.removeItem('ui:lang'));
+  });
+
+  test('a customer from Brazil starts in Portuguese', async () => {
+    await page.route('**/api/demo-customers', (route) =>
+      route.fulfill({ json: { customers: [{ token: 'demo-br-1', label: 'Ana · Brasil' }] } }),
+    );
+    await chat.createNewChat();
+    await page.evaluate(() => localStorage.clear());
+    await page.reload();
+    await expect(page.locator('html')).toHaveAttribute('lang', 'pt');
+    await expect(page.getByTestId('greeting')).toHaveText(/^(Bom dia|Boa tarde|Boa noite), Ana$/);
+    await page.evaluate(() => localStorage.clear());
   });
 });

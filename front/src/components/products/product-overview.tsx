@@ -1,123 +1,79 @@
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
-
-import { DetailRow, StatTile } from '@/components/products/stat-tile';
+import { useLang } from '@/contexts/LangContext';
+import { CardCarousel } from '@/components/products/card-carousel';
+import { QuickActions } from '@/components/products/quick-actions';
+import { SavingsChart } from '@/components/products/savings-chart';
+import { StatTile } from '@/components/products/stat-tile';
 import { TransactionList } from '@/components/products/transaction-list';
 import {
   formatMoney,
-  maskNumber,
-  parseDate,
-  productLabel,
+  type Product,
+  productKind,
+  type ProductsCustomer,
+  savingsTransactions,
   summarizeProducts,
-  transactionsFor,
+  type Transaction,
 } from '@/lib/products';
-import type {
-  MockCustomer,
-  MockProduct,
-  MockTransaction,
-} from '@/mocks/products';
 
 export function ProductOverview({
   customer,
   products,
   transactions,
+  sessionToken,
 }: {
-  customer: MockCustomer;
-  products: MockProduct[];
-  transactions: MockTransaction[];
+  customer: ProductsCustomer;
+  products: Product[];
+  transactions: Transaction[];
+  // The demo customer's token, for the savings history.
+  sessionToken: string;
 }) {
-  const currency = products[0]?.currency ?? 'USD';
+  const { t } = useLang();
   const totals = summarizeProducts(products);
-  const productNames = Object.fromEntries(
-    products.map((p) => [
-      p.productId,
-      `${productLabel(p.productType)} ${maskNumber(p.productNumber)}`,
-    ]),
-  );
-  const since = format(parseDate(customer.registrationDate), 'yyyy');
+  const money = (amount: number) => formatMoney(amount, totals.currency);
+  const hasSavings = products.some((p) => productKind(p) === 'savings');
+  const cards = products.filter((p) => productKind(p) === 'credit');
+  const hasCards = cards.length > 0;
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-6 py-8 md:px-10">
       <div className="flex flex-col gap-1">
-        <h1 className="font-semibold text-3xl tracking-tight">
-          Hola, {customer.firstName}
-        </h1>
+        <h1 className="font-semibold text-3xl tracking-tight">{t.products.hello(customer.firstName)}</h1>
         <p className="text-muted-foreground">
-          Cliente {customer.segment} desde {since} · {products.length}{' '}
-          productos
+          {products.length} {products.length === 1 ? t.products.activeProduct : t.products.activeProducts}
         </p>
       </div>
 
+      <QuickActions />
+
+      {/* Only the tiles that apply to what the customer has. */}
       <div className="grid gap-3 sm:grid-cols-3">
-        <StatTile
-          label="Disponible en cuentas"
-          value={formatMoney(totals.available, currency)}
-        />
-        <StatTile
-          label="Por pagar"
-          value={formatMoney(totals.debt, currency)}
-          hint="Tarjetas y créditos"
-        />
-        <StatTile
-          label="Invertido"
-          value={formatMoney(totals.invested, currency)}
-        />
+        {hasSavings && (
+          <StatTile label={t.products.availableInAccounts} value={money(totals.available)} />
+        )}
+        {hasCards && (
+          <>
+            <StatTile label={t.products.toPay} value={money(totals.debt)} hint={t.products.cardsBalance} />
+            <StatTile
+              label={t.products.availableCredit}
+              value={money(totals.creditAvailable)}
+              hint={t.products.inYourCards}
+            />
+          </>
+        )}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <section className="flex flex-col gap-2">
-          <h2 className="px-1 font-semibold text-[15px]">Últimos movimientos</h2>
+      {hasSavings && <SavingsChart sessionToken={sessionToken} products={products} />}
+
+      {hasCards && <CardCarousel cards={cards} transactions={transactions} />}
+
+      {/* Card movements show under their card; this is the accounts' only. */}
+      {hasSavings && (
+        <section data-testid="overview-movements" className="flex flex-col gap-2">
+          <h2 className="px-1 font-semibold text-[15px]">{t.products.accountMovements}</h2>
           <div className="rounded-[14px] bg-card p-1.5">
-            <TransactionList
-              transactions={transactionsFor(transactions).slice(0, 8)}
-              productNames={productNames}
-            />
+            <TransactionList transactions={savingsTransactions(transactions, products)} showProduct />
           </div>
         </section>
-
-        <section className="flex flex-col gap-2" data-testid="customer-profile">
-          <h2 className="px-1 font-semibold text-[15px]">Mis datos</h2>
-          <div className="divide-y divide-border rounded-[14px] bg-card px-4 py-1">
-            <DetailRow
-              label="Nombre"
-              value={`${customer.firstName} ${customer.lastName}`}
-            />
-            <DetailRow
-              label="Documento"
-              value={`${customer.documentType} ${maskNumber(customer.documentNumber)}`}
-            />
-            <DetailRow label="Correo" value={customer.email} />
-            {customer.mobilePhone && (
-              <DetailRow label="Celular" value={customer.mobilePhone} />
-            )}
-            {customer.city && (
-              <DetailRow
-                label="Ciudad"
-                value={`${customer.city}, ${customer.country}`}
-              />
-            )}
-            <DetailRow label="Segmento" value={customer.segment} />
-            {customer.creditScore !== null && (
-              <DetailRow
-                label="Puntaje crediticio"
-                value={String(Math.round(customer.creditScore))}
-              />
-            )}
-            {customer.estimatedMonthlyIncome !== null && (
-              <DetailRow
-                label="Ingreso mensual estimado"
-                value={formatMoney(customer.estimatedMonthlyIncome, currency)}
-              />
-            )}
-            <DetailRow
-              label="Cliente desde"
-              value={format(parseDate(customer.registrationDate), "d 'de' MMMM yyyy", {
-                locale: es,
-              })}
-            />
-          </div>
-        </section>
-      </div>
+      )}
     </div>
   );
 }

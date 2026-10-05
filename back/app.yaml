@@ -2,8 +2,16 @@ command: ["npm", "run", "start"]
 runtime: nodejs20
 
 env:
-  # URL of the agent app's invocations endpoint (../agent). Set it after deploying the agent:
-  #   databricks apps get dev-agent-langgraph -o json | jq -r .url
-  # The UI app's service principal needs CAN_USE on the agent app.
+  # The agent's Databricks App (../agent). The UI app's service principal needs
+  # CAN_USE on it.
   - name: API_PROXY
-    value: "https://REPLACE-WITH-AGENT-APP-URL/invocations"
+    value: "https://agent-banking-assistant-7474647867986650.aws.databricksapps.com/invocations"
+  # Roles (comma-separated emails): admin supervises, advisors attend.
+  - name: ADMIN_EMAILS
+    value: "pcubasm1@gmail.com"
+  - name: ADVISOR_EMAILS
+    value: "asesor1@example.com,asesor2@example.com"
+  # Demo customers (token -> bank customer) for the customer chat and the
+  # evaluation; they must match DEMO_SESSIONS_JSON of the agent's app.yaml.
+  - name: DEMO_CUSTOMERS_JSON
+    value: '[{"token":"demo-mx-1","label":"Santiago · México","customerId":"CLI-FLEUCGTWGAHL"},{"token":"demo-co-1","label":"Javier · Colombia","customerId":"CLI-7MPS3ZOPSN4Q"},{"token":"demo-ar-1","label":"Daniela · Argentina","customerId":"CLI-714PN0OOE0WX"},{"token":"demo-mx-2","label":"Eduardo · México","customerId":"CLI-0IY07CEBUL79"},{"token":"demo-mx-3","label":"Fernando · México","customerId":"CLI-OAZTV7GG5M0D"},{"token":"demo-co-2","label":"Gustavo · Colombia","customerId":"CLI-TVX8Q10GJDTW"},{"token":"demo-ar-2","label":"Adriana · Argentina","customerId":"CLI-2MM9EXMOO8KD"},{"token":"demo-mx-4","label":"Victoria · México","customerId":"CLI-01OSDSMM4FX2"},{"token":"demo-co-3","label":"Pilar · Colombia","customerId":"CLI-JLLEM8RQT11E"},{"token":"demo-ar-3","label":"Antonio · Argentina","customerId":"CLI-MO9NTQLU8K63"},{"token":"demo-ar-4","label":"Marco · Argentina","customerId":"CLI-BTHO9TGJDB68"},{"token":"demo-mx-5","label":"Natalia · México","customerId":"CLI-MA350GCK64W1"},{"token":"demo-co-4","label":"Leonardo · Colombia","customerId":"CLI-2UJ5P5LESPCJ"},{"token":"demo-closed","label":"Cliente cerrado","customerId":"CLI-02Y493OHFA18"},{"token":"demo-expired","label":"Sesión vencida","customerId":"CLI-FLEUCGTWGAHL","expired":true},{"token":"demo-tool-down","label":"Herramienta caída (prueba)","customerId":"CLI-FLEUCGTWGAHL"}]'

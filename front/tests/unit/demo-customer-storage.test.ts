@@ -1,11 +1,17 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  chatCustomerToken,
+  chooseCustomerToken,
   getChatCustomerToken,
   getLastCustomerToken,
   pickDefaultToken,
   setChatCustomerToken,
   setLastCustomerToken,
+  customerFirstName,
+  getActiveCustomerToken,
+  setActiveCustomerToken,
+  subscribeActiveCustomer,
 } from '@/lib/demo-customer-storage';
 
 const customers = [{ token: 'demo-mx-1' }, { token: 'demo-co-1' }];
@@ -55,5 +61,51 @@ describe('customer token storage', () => {
     expect(() => setLastCustomerToken('demo-mx-1')).not.toThrow();
     expect(getChatCustomerToken('chat-a')).toBeNull();
     expect(getLastCustomerToken()).toBeNull();
+  });
+});
+
+describe('active demo customer', () => {
+  it('starts from the last pick and notifies on change', () => {
+    localStorage.setItem('demo-customer:last', 'demo-mx-1');
+    expect(getActiveCustomerToken()).toBe('demo-mx-1');
+    const seen: (string | null)[] = [];
+    const stop = subscribeActiveCustomer(() => seen.push(getActiveCustomerToken()));
+    setActiveCustomerToken('demo-co-1');
+    setActiveCustomerToken('demo-co-1');
+    stop();
+    setActiveCustomerToken('demo-mx-1');
+    expect(seen).toEqual(['demo-co-1']);
+  });
+});
+
+describe('chooseCustomerToken', () => {
+  it('saves the session pick and notifies the active token', () => {
+    setActiveCustomerToken('demo-mx-1');
+    const seen: (string | null)[] = [];
+    const stop = subscribeActiveCustomer(() => seen.push(getActiveCustomerToken()));
+    chooseCustomerToken('demo-co-1');
+    stop();
+    expect(getLastCustomerToken()).toBe('demo-co-1');
+    expect(getActiveCustomerToken()).toBe('demo-co-1');
+    expect(seen).toEqual(['demo-co-1']);
+  });
+});
+
+describe('chatCustomerToken', () => {
+  it("prefers the back's token, then the browser's, then null", () => {
+    setChatCustomerToken('chat-a', 'demo-co-1');
+    expect(chatCustomerToken('chat-a', 'demo-mx-1')).toBe('demo-mx-1');
+    expect(chatCustomerToken('chat-a', null)).toBe('demo-co-1');
+    expect(chatCustomerToken('chat-a', undefined)).toBe('demo-co-1');
+    expect(chatCustomerToken('chat-b', null)).toBeNull();
+  });
+});
+
+describe('customerFirstName', () => {
+  it('takes the first name from the label', () => {
+    expect(customerFirstName('Santiago · México')).toBe('Santiago');
+    expect(customerFirstName('Daniela Sosa · Chile')).toBe('Daniela');
+    expect(customerFirstName('Sesión vencida')).toBeNull();
+    expect(customerFirstName(undefined)).toBeNull();
   });
 });

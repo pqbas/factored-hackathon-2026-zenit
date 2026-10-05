@@ -1,0 +1,23 @@
+{
+  "id": "03",
+  "language": "es",
+  "group": "consultas",
+  "customer": {
+    "token": "demo-co-3",
+    "user": 9,
+    "segment": "Basic",
+    "name": "Pilar"
+  },
+  "steps": [
+    {
+      "say": "muéstrame mis últimos movimientos de la tarjeta"
+    }
+  ],
+  "expected": {
+    "firstIntent": "GENERAL_INQUIRY",
+    "outcome": "R",
+    "mustMatch": [
+      "Uber|Internet Plus|Cable TV|¿?\\s*(te gustaría|deseas|quieres) ver (los )?(últimos |ultimos )?(10 )?movimientos"
+    ]
+  }
+}

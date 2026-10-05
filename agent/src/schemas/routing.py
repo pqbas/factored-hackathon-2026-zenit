@@ -3,9 +3,17 @@ from __future__ import annotations
 from pathlib import Path
 
 import yaml
-from pydantic import BaseModel, field_validator, model_validator
+from pydantic import BaseModel, model_validator
 
-from src.schemas.classification import reply_language
+
+class GroundingKind(BaseModel):
+    """A kind of account data the customer can ask for, the UC tool that returns it, the words
+    of the customer's message that ask for it, and what a reply that shows it contains."""
+
+    kind: str
+    tool: str
+    asks: list[str] = []
+    shows: str
 
 
 class IntentRoute(BaseModel):
@@ -13,16 +21,12 @@ class IntentRoute(BaseModel):
     description: str
     examples: list[str]
     destination: str
-    option: dict[str, str] | None = None
     schemas: list[str] = []
     instructions: str | None = None
-
-    @field_validator("option")
-    @classmethod
-    def _option_has_es_and_pt(cls, value: dict[str, str] | None) -> dict[str, str] | None:
-        if value is not None and not {"es", "pt"} <= value.keys():
-            raise ValueError("option must include both 'es' and 'pt'")
-        return value
+    # Set on a route whose operation ends with a human (docs/flujo-atencion.md, etapa 5).
+    handoff_reason: str | None = None
+    # Checked after the tool loop: account data in the reply needs the kind's tool to have run.
+    grounding: list[GroundingKind] = []
 
     @model_validator(mode="after")
     def _load_context_needs_schemas_and_instructions(self) -> "IntentRoute":
@@ -49,9 +53,3 @@ def load_routing(path: str | Path, allowed_destinations: set[str]) -> list[Inten
             )
         routes.append(route)
     return routes
-
-
-def render_options(routes: list[IntentRoute], language: str) -> str:
-    lang = reply_language(language)
-    options = [route.option[lang] for route in routes if route.option]
-    return "\n".join(f"{i}. {option}" for i, option in enumerate(options, start=1))

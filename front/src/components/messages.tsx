@@ -1,7 +1,9 @@
-import { senderOf } from '@/lib/handoff';
+import { type HandledBy, isAwaitingDavid, senderOf } from '@/lib/handoff';
 import { getTextFromMessage } from '@/lib/utils';
 import { PreviewMessage, AwaitingResponseMessage } from './message';
 import { Greeting } from './greeting';
+import { AgentUnavailable } from './agent-unavailable';
+import { BrandMark } from './brand-mark';
 import { memo, useEffect } from 'react';
 import equal from 'fast-deep-equal';
 import type { UseChatHelpers } from '@ai-sdk/react';
@@ -21,6 +23,10 @@ interface MessagesProps {
   regenerate: UseChatHelpers<ChatMessage>['regenerate'];
   isReadonly: boolean;
   selectedModelId: string;
+  // Who handles the chat, and whether a turn waits in the queue: they decide
+  // the "David está escribiendo" indicator.
+  handledBy?: HandledBy;
+  agentPending?: boolean;
 }
 
 function PureMessages({
@@ -33,7 +39,10 @@ function PureMessages({
   regenerate,
   isReadonly,
   selectedModelId,
+  handledBy = 'ai_agent',
+  agentPending = false,
 }: MessagesProps) {
+  const awaiting = isAwaitingDavid({ status, messages, handledBy, agentPending });
   const {
     containerRef: messagesContainerRef,
     endRef: messagesEndRef,
@@ -88,8 +97,12 @@ function PureMessages({
               chatId={chatId}
               message={message}
               allMessages={messages}
+              // The stream's `start` creates David's message while the chat is
+              // still `submitted`: it counts as loading from then on (only
+              // when David is the one answering).
               isLoading={
-                status === 'streaming' && messages.length - 1 === index
+                messages.length - 1 === index &&
+                (status === 'streaming' || awaiting === 'message')
               }
               setMessages={setMessages}
               addToolApprovalResponse={addToolApprovalResponse}
@@ -103,12 +116,17 @@ function PureMessages({
             ),
           )}
 
-          {status === 'submitted' &&
-            messages.length > 0 &&
-            messages[messages.length - 1].role === 'user' &&
-            selectedModelId !== 'chat-model-reasoning' && (
-              <AwaitingResponseMessage />
-            )}
+          {/* The request failed before David started answering. */}
+          {status === 'error' && messages.at(-1)?.role === 'user' && !isReadonly && (
+            <div className="flex items-start gap-3">
+              <BrandMark size={26} className="mt-0.5" />
+              <AgentUnavailable />
+            </div>
+          )}
+
+          {awaiting === 'list' && selectedModelId !== 'chat-model-reasoning' && (
+            <AwaitingResponseMessage />
+          )}
 
           <div
             ref={messagesEndRef}
@@ -134,6 +152,8 @@ function PureMessages({
 export const Messages = memo(PureMessages, (prevProps, nextProps) => {
   if (prevProps.status !== nextProps.status) return false;
   if (prevProps.selectedModelId !== nextProps.selectedModelId) return false;
+  if (prevProps.handledBy !== nextProps.handledBy) return false;
+  if (prevProps.agentPending !== nextProps.agentPending) return false;
   if (prevProps.messages.length !== nextProps.messages.length) return false;
   if (!equal(prevProps.messages, nextProps.messages)) return false;
 

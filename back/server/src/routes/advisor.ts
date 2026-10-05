@@ -9,16 +9,23 @@ import {
   authMiddleware,
   requireAuth,
   requireAdvisor,
-  requireAdvisorOnly,
   requireAdmin,
   getIdFromRequest,
 } from '../middleware/auth';
 import {
   getChats,
   getChatOwners,
+  getConversationCounts,
+  getCustomerInbox,
+  getChatsByCustomerKey,
+  getResolutionMetrics,
+  getTurnMetrics,
+  HUMAN_HANDLED_BY,
+  getLastCustomerMessages,
   getChatById,
   getMessagesAfter,
   takeChat,
+  cancelAgentTurns,
   releaseChat,
   saveMessages,
   isDatabaseAvailable,
@@ -26,6 +33,10 @@ import {
 import { generateUUID } from '@chat-template/core';
 import { ChatSDKError } from '@chat-template/core/errors';
 import { normalizeEmail } from '../roles';
+import { toLastMessagePreview } from '../inbox';
+import { getCustomerContext } from '../bank-data';
+import { withHandoff, withHandoffs } from '../handoff-view';
+import { PRICING_ASSUMPTIONS, estimateCostUsd } from '../pricing';
 
 export const advisorRouter: RouterType = Router();
 
@@ -83,10 +94,18 @@ advisorRouter.get('/conversations', async (req: Request, res: Response) => {
   const limit = Number.parseInt((req.query.limit as string) || '10');
   const startingAfter = req.query.starting_after as string | undefined;
   const endingBefore = req.query.ending_before as string | undefined;
-  const handledBy = req.query.handledBy as string | undefined;
+  // Without handledBy, the inbox is the human cases only (open). David's chats
+  // come with handledBy=ai_agent; the closed view keeps every resolved chat,
+  // since resolving hands the chat back to ai_agent.
+  const handledByParam = req.query.handledBy as string | undefined;
+  const statusParam = req.query.status as 'open' | 'closed' | undefined;
+  const humanInbox = !handledByParam && statusParam !== 'closed';
+  const handledBy = humanInbox ? HUMAN_HANDLED_BY : handledByParam;
+  const status = humanInbox ? 'open' : statusParam;
   const useCase = req.query.useCase as string | undefined;
   const userId = req.query.userId as string | undefined;
-  const status = req.query.status as 'open' | 'closed' | undefined;
+  const handoffReason =
+    (req.query.handoffReason as string | undefined) || undefined;
   const assignedToParam = req.query.assignedTo as string | undefined;
   const assignedTo =
     normalizeEmail(
@@ -103,6 +122,40 @@ advisorRouter.get('/conversations', async (req: Request, res: Response) => {
   }
 
   try {
+    // One row per bank customer: their in-progress chat (closed view: the
+    // latest resolved one).
+    if (req.query.groupBy === 'customer') {
+      const { rows, hasMore } = await getCustomerInbox({
+        userId,
+        handledBy,
+        useCase,
+        assignedTo,
+        handoffReason,
+        status,
+        limit,
+        startingAfter,
+      });
+      const lastMessages = await getLastCustomerMessages({
+        chatIds: rows.map((r) => r.chat.id),
+      });
+      const lastByChat = new Map(lastMessages.map((m) => [m.chatId, m]));
+      return res.json({
+        hasMore,
+        chats: await withHandoffs(
+          rows.map(({ chat, customerKey, conversationCount, updatedAt }) => {
+            const last = lastByChat.get(chat.id);
+            return {
+              ...chat,
+              lastMessage: last ? toLastMessagePreview(last) : null,
+              customerKey,
+              conversationCount,
+              updatedAt,
+            };
+          }),
+        ),
+      });
+    }
+
     const chats = await getChats({
       scope: userId ? { userId } : 'all',
       limit,
@@ -112,9 +165,26 @@ advisorRouter.get('/conversations', async (req: Request, res: Response) => {
       useCase,
       assignedTo,
       status,
+      handoffReason,
     });
 
-    res.json(chats);
+    const lastMessages = await getLastCustomerMessages({
+      chatIds: chats.chats.map((c) => c.id),
+    });
+    const lastByChat = new Map(lastMessages.map((m) => [m.chatId, m]));
+
+    res.json({
+      ...chats,
+      chats: await withHandoffs(
+        chats.chats.map((c) => {
+          const last = lastByChat.get(c.id);
+          return {
+            ...c,
+            lastMessage: last ? toLastMessagePreview(last) : null,
+          };
+        }),
+      ),
+    });
   } catch (error) {
     console.error('[/api/advisor/conversations] Error in handler:', error);
     res.status(500).json({ error: 'Failed to fetch conversations' });
@@ -165,6 +235,126 @@ advisorRouter.get(
 );
 
 /**
+ * GET /api/advisor/conversations/:id/customer-context - The chat's bank
+ * customer as seen from Lakebase (bank_ro) (past contacts, call transcripts,
+ * cases). 204 when the chat has no customer.
+ */
+advisorRouter.get(
+  '/conversations/:id/customer-context',
+  async (req: Request, res: Response) => {
+    if (!isDatabaseAvailable()) {
+      return res.status(204).end();
+    }
+
+    const id = getIdFromRequest(req);
+    if (!id) return;
+
+    try {
+      const chat = await getChatById({ id });
+      if (!chat) {
+        const response = new ChatSDKError('not_found:chat').toResponse();
+        return res.status(response.status).json(response.json);
+      }
+      if (!chat.customerId) {
+        return res.status(204).end();
+      }
+
+      res.json(await getCustomerContext(chat.customerId));
+    } catch (error) {
+      console.error(
+        '[/api/advisor/conversations/:id/customer-context] Error:',
+        error,
+      );
+      res.status(502).json({ error: 'Failed to read bank data' });
+    }
+  },
+);
+
+/**
+ * GET /api/advisor/conversations/counts - Counts for the console's view bar.
+ */
+advisorRouter.get(
+  '/conversations/counts',
+  async (req: Request, res: Response) => {
+    if (!isDatabaseAvailable()) {
+      return res.status(204).end();
+    }
+
+    const email = normalizeEmail(req.session?.user.email);
+    try {
+      res.json(
+        await getConversationCounts({
+          userId: (req.query.userId as string | undefined) || undefined,
+          advisorEmail: email,
+          byCustomer: req.query.groupBy === 'customer',
+        }),
+      );
+    } catch (error) {
+      console.error('[/api/advisor/conversations/counts] Error:', error);
+      res.status(500).json({ error: 'Failed to count conversations' });
+    }
+  },
+);
+
+/**
+ * GET /api/advisor/conversations/:id - One chat, as the inbox lists it.
+ * Registered after /conversations/counts so that path isn't taken as an id.
+ */
+advisorRouter.get(
+  '/conversations/:id',
+  async (req: Request, res: Response) => {
+    if (!isDatabaseAvailable()) {
+      return res.status(204).end();
+    }
+
+    const id = getIdFromRequest(req);
+    if (!id) return;
+
+    try {
+      const chat = await getChatById({ id });
+      if (!chat) {
+        const response = new ChatSDKError('not_found:chat').toResponse();
+        return res.status(response.status).json(response.json);
+      }
+      res.json(await withHandoff(chat));
+    } catch (error) {
+      console.error('[/api/advisor/conversations/:id] Error in handler:', error);
+      res.status(500).json({ error: 'Failed to fetch conversation' });
+    }
+  },
+);
+
+/**
+ * GET /api/advisor/customers/:customerKey/conversations - Every conversation
+ * of a customer (customerKey from ?groupBy=customer), oldest first.
+ */
+advisorRouter.get(
+  '/customers/:customerKey/conversations',
+  async (req: Request, res: Response) => {
+    if (!isDatabaseAvailable()) {
+      return res.status(204).end();
+    }
+
+    try {
+      const chats = await getChatsByCustomerKey({
+        customerKey: String(req.params.customerKey),
+      });
+      if (chats.length === 0) {
+        const response = new ChatSDKError('not_found:chat').toResponse();
+        return res.status(response.status).json(response.json);
+      }
+      res.json({ chats: await withHandoffs(chats) });
+    } catch (error) {
+      console.error(
+        '[/api/advisor/customers/:customerKey/conversations] Error:',
+        error,
+      );
+      res.status(500).json({ error: 'Failed to fetch conversations' });
+    }
+  },
+);
+
+/**
  * GET /api/advisor/users - Users with at least one chat, for the admin's
  * customer filter. Admin only: it is for supervising.
  */
@@ -181,12 +371,107 @@ advisorRouter.get('/users', requireAdmin, async (_req: Request, res: Response) =
   }
 });
 
+const isTimeZone = (tz: string) => {
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: tz });
+    return /^[A-Za-z0-9_+\-/]+$/.test(tz);
+  } catch {
+    return false;
+  }
+};
+
+const metricsQuerySchema = z.object({
+  from: z.iso.date().optional(),
+  to: z.iso.date().optional(),
+  tz: z.string().refine(isTimeZone).optional(),
+});
+
+/**
+ * GET /api/advisor/metrics?from=YYYY-MM-DD&to=YYYY-MM-DD&tz=America/Lima -
+ * Resolution metrics (docs/flujo-atencion.md §6). Admin only. from/to are
+ * inclusive days and byDay groups by day, both local to tz (UTC if absent).
+ */
+advisorRouter.get(
+  '/metrics',
+  requireAdmin,
+  async (req: Request, res: Response) => {
+    if (!isDatabaseAvailable()) {
+      return res.status(204).end();
+    }
+
+    const query = metricsQuerySchema.safeParse(req.query);
+    if (!query.success) {
+      const error = new ChatSDKError(
+        'bad_request:api',
+        'from and to must be YYYY-MM-DD dates, and tz an IANA time zone.',
+      );
+      const response = error.toResponse();
+      return res.status(response.status).json(response.json);
+    }
+
+    try {
+      const { cost, ...metrics } = await getResolutionMetrics(query.data);
+      const estimatedUsd = estimateCostUsd({
+        inputTokens: cost.turnsWithUsage ? cost.inputTokens : null,
+        outputTokens: cost.turnsWithUsage ? cost.outputTokens : null,
+        durationMs: cost.durationMs,
+      });
+      res.json({
+        ...metrics,
+        cost: {
+          turnsWithUsage: cost.turnsWithUsage,
+          inputTokens: cost.inputTokens,
+          outputTokens: cost.outputTokens,
+          estimatedUsd,
+          perConversationUsd:
+            estimatedUsd !== null && cost.conversations > 0
+              ? estimatedUsd / cost.conversations
+              : null,
+          assumptions: PRICING_ASSUMPTIONS,
+        },
+      });
+    } catch (error) {
+      console.error('[/api/advisor/metrics] Error in handler:', error);
+      res.status(500).json({ error: 'Failed to get metrics' });
+    }
+  },
+);
+
+/**
+ * GET /api/advisor/conversations/:id/turns - The chat's TurnMetric rows,
+ * oldest first (duration, intent, tokens per agent turn). Admin only: the
+ * evaluation runner reads them.
+ */
+advisorRouter.get(
+  '/conversations/:id/turns',
+  requireAdmin,
+  async (req: Request, res: Response) => {
+    if (!isDatabaseAvailable()) {
+      return res.status(204).end();
+    }
+
+    const id = getIdFromRequest(req);
+    if (!id) return;
+
+    try {
+      const chat = await getChatById({ id });
+      if (!chat) {
+        const response = new ChatSDKError('not_found:chat').toResponse();
+        return res.status(response.status).json(response.json);
+      }
+      res.json({ turns: await getTurnMetrics({ chatId: id }) });
+    } catch (error) {
+      console.error('[/api/advisor/conversations/:id/turns] Error:', error);
+      res.status(500).json({ error: 'Failed to fetch turns' });
+    }
+  },
+);
+
 /**
  * POST /api/advisor/conversations/:id/take
  */
 advisorRouter.post(
   '/conversations/:id/take',
-  requireAdvisorOnly,
   async (req: Request, res: Response) => {
     if (!isDatabaseAvailable()) {
       return res.status(204).end();
@@ -218,11 +503,12 @@ advisorRouter.post(
           .json({ ...response.json, assignedTo: result.assignedTo });
       }
 
+      await cancelAgentTurns({ chatId: id });
       if (!result.alreadyMine) {
         await saveSystemMessage({ chatId: id, text: SYSTEM_MESSAGES.taken });
       }
 
-      res.json({ chat: result.chat });
+      res.json({ chat: await withHandoff(result.chat) });
     } catch (error) {
       console.error(
         '[/api/advisor/conversations/:id/take] Error in handler:',
@@ -238,7 +524,6 @@ advisorRouter.post(
  */
 advisorRouter.post(
   '/conversations/:id/messages',
-  requireAdvisorOnly,
   async (req: Request, res: Response) => {
     if (!isDatabaseAvailable()) {
       return res.status(204).end();
@@ -306,7 +591,6 @@ advisorRouter.post(
  */
 advisorRouter.post(
   '/conversations/:id/release',
-  requireAdvisorOnly,
   async (req: Request, res: Response) => {
     if (!isDatabaseAvailable()) {
       return res.status(204).end();
@@ -353,7 +637,7 @@ advisorRouter.post(
         text: SYSTEM_MESSAGES[body.outcome],
       });
 
-      res.json({ chat: updatedChat });
+      res.json({ chat: updatedChat && (await withHandoff(updatedChat)) });
     } catch (error) {
       console.error(
         '[/api/advisor/conversations/:id/release] Error in handler:',

@@ -2,7 +2,8 @@ import type { ChatMessage } from '@chat-template/core';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import {
-  fetchHandledBy,
+  endsAgentPending,
+  fetchChatState,
   fetchNewMessages,
   HANDOFF_POLL_MS,
   STATE_POLL_MS,
@@ -18,24 +19,30 @@ import {
 export function useHandoff({
   chatId,
   initialHandledBy,
+  initialAgentPending = false,
   messages,
   setMessages,
   enabled,
 }: {
   chatId: string;
   initialHandledBy: HandledBy;
+  initialAgentPending?: boolean;
   messages: ChatMessage[];
   setMessages: (update: (current: ChatMessage[]) => ChatMessage[]) => void;
   enabled: boolean;
 }) {
   const [handledBy, setHandledBy] = useState<HandledBy>(initialHandledBy);
+  // A turn waits in the back's queue: poll until David (or a notice) answers.
+  const [agentPending, setAgentPending] = useState(initialAgentPending);
   const lastIdRef = useRef<string | undefined>(undefined);
   lastIdRef.current = messages.at(-1)?.id;
 
   const refreshState = useCallback(async () => {
     try {
-      const next = await fetchHandledBy(chatId);
-      if (next) setHandledBy(next);
+      const next = await fetchChatState(chatId);
+      if (!next) return;
+      setHandledBy(next.handledBy);
+      if (next.agentPending !== null) setAgentPending(next.agentPending);
     } catch {
       // The next poll retries.
     }
@@ -45,6 +52,7 @@ export function useHandoff({
     try {
       const result = await fetchNewMessages(chatId, lastIdRef.current);
       if (!result) return;
+      if (endsAgentPending(result.messages)) setAgentPending(false);
       setMessages((current) =>
         mergeNewMessages(result.full ? [] : current, result.messages),
       );
@@ -58,7 +66,7 @@ export function useHandoff({
 
   useEffect(() => {
     if (!enabled || !hasMessages) return;
-    if (handledBy === 'ai_agent') {
+    if (handledBy === 'ai_agent' && !agentPending) {
       const timer = setInterval(refreshState, STATE_POLL_MS);
       return () => clearInterval(timer);
     }
@@ -71,7 +79,7 @@ export function useHandoff({
     pollMessages();
     const timer = setInterval(tick, HANDOFF_POLL_MS);
     return () => clearInterval(timer);
-  }, [enabled, hasMessages, handledBy, pollMessages, refreshState]);
+  }, [enabled, hasMessages, handledBy, agentPending, pollMessages, refreshState]);
 
-  return { handledBy, setHandledBy, refreshState };
+  return { handledBy, setHandledBy, agentPending, setAgentPending, refreshState };
 }

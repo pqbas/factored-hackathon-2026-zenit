@@ -1,0 +1,38 @@
+{
+  "id": "H07",
+  "language": "es",
+  "group": "reclamo-cargo",
+  "customer": {
+    "token": "demo-co-3",
+    "user": 9,
+    "segment": "Basic",
+    "name": "Pilar"
+  },
+  "steps": [
+    {
+      "say": "me descontaron el mismo pago dos veces"
+    },
+    {
+      "say": "en la tarjeta 2392, el de Empresa Telefónica de 819171.55 del 18 de julio de 2025"
+    },
+    {
+      "say": "aparece repetido, lo pagué una sola vez"
+    },
+    {
+      "say": "sí, confirmo"
+    }
+  ],
+  "expected": {
+    "firstIntent": "COMPLAINT",
+    "outcome": "D",
+    "reason": "complaint",
+    "handoffFacts": [
+      "card_last4",
+      "transaction_date",
+      "merchant",
+      "amount",
+      "complaint_type",
+      "description"
+    ]
+  }
+}

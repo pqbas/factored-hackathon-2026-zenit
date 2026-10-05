@@ -9,6 +9,7 @@ import { getChats, isDatabaseAvailable } from '@chat-template/db';
 import { ChatSDKError } from '@chat-template/core/errors';
 
 import { toCustomerChat } from '../customer-view';
+import { resolveSessionCustomer } from '../demo-customers';
 
 export const historyRouter: RouterType = Router();
 
@@ -16,7 +17,8 @@ export const historyRouter: RouterType = Router();
 historyRouter.use(authMiddleware);
 
 /**
- * GET /api/history - Get chat history for authenticated user
+ * GET /api/history - Get chat history for authenticated user. With
+ * ?sessionToken=, only the chats of that demo customer.
  */
 historyRouter.get('/', requireAuth, async (req: Request, res: Response) => {
   console.log('[/api/history] Handler called');
@@ -43,6 +45,7 @@ historyRouter.get('/', requireAuth, async (req: Request, res: Response) => {
   const handledBy = req.query.handledBy as string | undefined;
   const intent = req.query.intent as string | undefined;
   const useCase = req.query.useCase as string | undefined;
+  const sessionToken = req.query.sessionToken as string | undefined;
 
   if (startingAfter && endingBefore) {
     const error = new ChatSDKError(
@@ -53,9 +56,19 @@ historyRouter.get('/', requireAuth, async (req: Request, res: Response) => {
     return res.status(response.status).json(response.json);
   }
 
+  // An unknown or expired token lists nothing rather than failing: the
+  // history doesn't depend on the session still being valid.
+  const customer = sessionToken
+    ? await resolveSessionCustomer(sessionToken)
+    : undefined;
+  if (sessionToken && (!customer || customer.expired)) {
+    return res.json({ chats: [], hasMore: false });
+  }
+
   try {
     const chats = await getChats({
       scope: { userId: session.user.id },
+      customerId: customer?.customerId,
       limit,
       startingAfter: startingAfter ?? null,
       endingBefore: endingBefore ?? null,

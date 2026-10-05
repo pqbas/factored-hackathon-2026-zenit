@@ -7,8 +7,12 @@ from src.schemas.routing import IntentRoute
 
 def after_gate(state: AgentState) -> str:
     if state["session"].get("authenticated"):
-        return "classify"
+        return "paused"
     return END
+
+
+def after_paused(state: AgentState) -> str:
+    return END if state.get("paused") else "classify"
 
 
 def dispatch(

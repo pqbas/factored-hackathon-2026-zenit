@@ -72,6 +72,13 @@ Cada decisión técnica tiene su propio documento en [`docs/`](docs/):
   LLM lo vea.
 - [Estructura del agente](docs/13-estructura-del-agente.md): carpetas y
   módulos del código.
+- [Herramientas sobre Lakebase](docs/14-herramientas-sobre-lakebase.md): por qué
+  las herramientas de datos del banco leen `bank_ro` en Lakebase y no las UC
+  functions, con el costo medido y cómo correrlo en local.
+- [Observabilidad](docs/15-observabilidad.md): por qué la App de prod no genera trazas
+  de MLflow y qué queda pendiente.
+- [El agente en AWS](docs/16-agente-en-aws.md): el mismo agente en App Runner, con
+  Jev, un token de entrada y la latencia medida.
 
 ### Grafo principal
 
@@ -119,6 +126,22 @@ seguridad.
 | Resultados inseguros  | Datos de otro cliente, acciones no verificadas o promesas de dinero. Meta: cero. |
 | Latencia              | Tiempo por turno y por creación de caso.                                         |
 | Costo                 | Llamadas al LLM por conversación.                                                |
+
+## Agente local para el runner de evaluación
+
+Los tokens de los casos de evaluación están en `configs/eval_sessions.json` (solo para local; la App no lo usa). Cada turno devuelve además `usage`, `model`, `prompt_version` y `classifier` en `custom_outputs`.
+
+```bash
+DEMO_SESSIONS_JSON="$(cat configs/eval_sessions.json)" CLASSIFIER=llm uv run start-server --port 8001
+```
+
+### Contra Lakebase
+
+Las herramientas leen `bank_ro` en Lakebase; no hay camino por MCP. En local usan tu identidad de Databricks, así que hace falta `databricks auth login` y acceso a la instancia `bank-assistant-chat-db`; el detalle está en [docs/14](docs/14-herramientas-sobre-lakebase.md).
+
+```bash
+LAKEBASE_INSTANCE=bank-assistant-chat-db DEMO_SESSIONS_JSON="$(cat configs/eval_sessions.json)" CLASSIFIER=llm uv run start-server --port 8001
+```
 
 ## Pendientes
 

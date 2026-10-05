@@ -3,7 +3,9 @@ import type { Page } from '@playwright/test';
 import { expect, test } from '../fixtures';
 import { mockSessionRole, type Role } from '../session-role';
 
-const SECTIONS = ['nav-agent', 'nav-products', 'nav-chats'] as const;
+const SECTIONS = ['nav-agent', 'nav-products', 'nav-chats', 'nav-metrics'] as const;
+const CUSTOMER_CHAT = 'David (asistente virtual)';
+const SIMULATOR = 'Simulador de cliente (demo)';
 
 async function expectRail(page: Page, visible: (typeof SECTIONS)[number][]) {
   await expect(page.getByTestId('nav-agent')).toBeVisible();
@@ -17,23 +19,27 @@ test.describe('Navigation by role', () => {
     role: Role | null;
     rail: (typeof SECTIONS)[number][];
     blocked: string | null;
+    // The chat with David: the customer's own, a simulator for staff.
+    agent: string;
   }[] = [
-    { role: 'customer', rail: ['nav-agent', 'nav-products'], blocked: '/conversations' },
-    { role: 'advisor', rail: ['nav-agent', 'nav-chats'], blocked: '/products' },
+    { role: 'customer', rail: ['nav-agent', 'nav-products'], blocked: '/conversations', agent: CUSTOMER_CHAT },
+    { role: 'advisor', rail: ['nav-agent', 'nav-chats'], blocked: '/metrics', agent: SIMULATOR },
     {
       role: 'admin',
-      rail: ['nav-agent', 'nav-products', 'nav-chats'],
+      rail: ['nav-agent', 'nav-products', 'nav-chats', 'nav-metrics'],
       blocked: null,
+      agent: SIMULATOR,
     },
     // No role in the session: treated as customer, never as admin.
-    { role: null, rail: ['nav-agent', 'nav-products'], blocked: '/conversations' },
+    { role: null, rail: ['nav-agent', 'nav-products'], blocked: '/conversations', agent: CUSTOMER_CHAT },
   ];
 
-  for (const { role, rail, blocked } of cases) {
+  for (const { role, rail, blocked, agent } of cases) {
     test(`${role ?? 'no role'} sees only its sections`, async ({ page }) => {
       await mockSessionRole(page, role);
       await page.goto('/products');
       await expectRail(page, rail);
+      await expect(page.getByTestId('nav-agent')).toHaveAttribute('aria-label', agent);
 
       if (blocked) {
         await page.goto(blocked);

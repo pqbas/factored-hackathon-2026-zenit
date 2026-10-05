@@ -1,5 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
+import { execFileSync } from 'node:child_process';
 import { config } from 'dotenv';
+import { reapOrphanBrowsers } from './tests/reap-orphan-browsers';
 
 /**
  * Dual-Mode Testing Configuration
@@ -19,6 +21,14 @@ import { config } from 'dotenv';
  *
  * Run both modes sequentially: npm test
  * Run specific mode: npm run test:with-db or npm run test:ephemeral
+ *
+ * The bank's data (bank_ro, read by server/src/bank-data.ts) never touches
+ * Lakebase in tests, in either mode: the test server gets BANK_POSTGRES_URL,
+ * a Postgres database that this config fills with tests/fixtures/bank_ro.sql
+ * (dropped and recreated on each run). Default: the database bank_fixture of
+ * the Docker Postgres on 127.0.0.1:55432 (created if missing); set
+ * BANK_POSTGRES_URL to use another one. It is independent of POSTGRES_URL, so
+ * ephemeral mode (no chats database) still reads the bank.
  */
 
 // Determine which mode to run (default: with-db)
@@ -56,6 +66,23 @@ if (TEST_MODE === 'with-db') {
   console.log('✓ Database configuration found, tests will use database');
 }
 
+// Fill the bank's fixture database once, in the main process (the workers load
+// this config too, and TEST_WORKER_INDEX is only set in them).
+const BANK_POSTGRES_URL =
+  process.env.BANK_POSTGRES_URL ||
+  'postgresql://postgres:postgres@127.0.0.1:55432/bank_fixture';
+if (!process.env.TEST_WORKER_INDEX) {
+  // A run cut short (Ctrl+C, a crash, a reboot mid-run) can leave headless
+  // browsers behind; reap them before starting new ones.
+  const reaped = reapOrphanBrowsers();
+  if (reaped) console.log(`Reaped ${reaped} orphaned Playwright browser(s)`);
+  execFileSync(
+    process.execPath,
+    ['node_modules/tsx/dist/cli.mjs', 'tests/fixtures/apply-bank-fixture.ts'],
+    { env: { ...process.env, BANK_POSTGRES_URL }, stdio: 'inherit' },
+  );
+}
+
 // Not 3000/3001: those are the Vite and Express dev servers, and
 // reuseExistingServer would run the tests against whichever one is up.
 const PORT = process.env.PORT || 3100;
@@ -71,10 +98,13 @@ export default defineConfig({
   /* Fail the build on CI if you accidentally left test.only in the source code. */
   forbidOnly: !!process.env.CI,
   retries: 3,
-  /* Opt out of parallel tests on CI. */
-  workers: process.env.CI ? 2 : 8,
-  /* Reporter to use. See https://playwright.dev/docs/test-reporters */
-  reporter: 'html',
+  /* Two workers: each one runs its own headless browser, and several
+   * worktrees often run the suite at once (8 per run ran a laptop out of
+   * memory, 30-09-26). PW_WORKERS overrides it. */
+  workers: Number(process.env.PW_WORKERS) || 2,
+  /* Reporter to use. See https://playwright.dev/docs/test-reporters. Never
+   * open the report: on a failure it would leave a server running. */
+  reporter: [['html', { open: 'never' }]],
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
@@ -133,6 +163,10 @@ export default defineConfig({
       DATABRICKS_CLIENT_ID: 'mock-value',
       DATABRICKS_CLIENT_SECRET: 'mock-value',
       DATABRICKS_HOST: 'mock-value',
+      BANK_POSTGRES_URL,
+      // The agent queue worker, fast enough for tests.
+      AGENT_QUEUE_INTERVAL_MS: '200',
+      AGENT_QUEUE_BACKOFF_MS: '100',
       // ada-<workerIndex> is admin, babbage-<workerIndex> is advisor, and
       // curie-<workerIndex> is a plain customer. workerIndex isn't capped at
       // `workers` - a fresh worker (new project, a retry) gets the next

@@ -247,3 +247,410 @@ supervisa en solo lectura.
 - [x] El asesor atiende como hoy, sin forzar conversaciones ajenas.
 
 La vista Admin de la Fase 6 quedó reemplazada por Chats. Shipped en PR #28.
+
+---
+
+## Phase 9: Consola estilo Notion Mail (Complete)
+
+**Goal:** que el asesor vea de un vistazo qué pide atención, agrupado por caso
+de uso.
+
+<!-- Diseño aprobado: artboards H, I y J del lienzo
+     https://claude.ai/artifact/SfN8i51oncvvSj5dskfiH9. Sin cambios de API
+     salvo lastMessage (PR #29 del back). -->
+
+- [x] Vistas a la izquierda: Bandeja, una por caso de uso (icono y color) y
+      los estados Sin atender, Mías y Resueltas; el admin suma el filtro de
+      usuario.
+- [x] La Bandeja agrupa por caso de uso, con "Otras" al final.
+- [x] Filas de una línea: punto si está sin atender, avatar, nombre, robot si
+      la atiende David, último mensaje del cliente (el asunto queda de
+      tooltip), estado y hora.
+- [x] La conversación se abre al lado de la lista y se cierra con la X.
+
+Fuera de alcance / futuro: mensajes no leídos (la API no los trae; el punto
+marca "Sin atender").
+
+Incluye la consola "con menos ruido" (estado solo cuando pide atención).
+Shipped en PR #33.
+
+---
+
+## Phase 10: Contadores en las vistas de la consola (Complete)
+
+**Goal:** que el asesor vea cuánto hay en cada vista sin abrirla.
+
+<!-- GET /api/advisor/conversations/counts (back, fix/pqbas-back-inbox-counts):
+     { total, byUseCase, withoutUseCase, unattended, mine, resolved }. -->
+
+- [x] Cada vista (Bandeja, casos de uso, Sin atender, Mías, Resueltas) muestra
+      su número a la derecha; se oculta si es 0 y "Sin atender" se resalta.
+- [x] Los números se refrescan con el polling de la bandeja y tras cada acción.
+
+Shipped en PR #35.
+
+---
+
+## Phase 11: Datos reales (Complete)
+
+**Goal:** que la app muestre la data real del banco para el despliegue.
+
+- [x] Mis productos lee GET /api/products del cliente demo elegido, con
+      estados de carga, cliente vencido y reintento.
+- [x] La barra del chat muestra solo conversaciones reales.
+
+Fuera de alcance / futuro: el nombre real del cliente en la consola (el back
+lo deja para después del deploy) y los totales con monedas mezcladas.
+Shipped en PR #37.
+
+---
+
+## Phase 12: Ajustes de producción (Complete)
+
+**Goal:** que el admin pueda atender y que la demo no confunda mientras David piensa.
+
+- [x] En Chats el admin tiene los mismos controles que el asesor (David ON/OFF,
+      Tomar, responder, Resolver) y la vista Mías, sin perder la supervisión
+      (Bandeja completa y filtro por usuario). Si la tiene otro, solo lo ve.
+- [x] Indicador de "escribiendo" en la burbuja de David hasta el primer texto,
+      con "David está consultando tus datos…" pasados 3 s; también en la consola.
+- [x] El chip del cliente demo dice "Cliente demo: …" con un tooltip que
+      explica que elige qué cliente del banco simular (chat y Mis productos).
+
+Shipped en PR #42.
+
+---
+
+## Phase 13: Bandeja solo con casos humanos (Complete)
+
+**Goal:** que la Bandeja del asesor muestre solo lo que necesita a una persona.
+
+- [x] La Bandeja (y los casos de uso) muestran solo las conversaciones derivadas
+      o en manos de un humano, agrupadas por caso de uso.
+- [x] Nueva vista "Atendidas por David" con su contador, para ver las
+      conversaciones autónomas e intervenir si hace falta.
+- [x] Con la Bandeja vacía: "No hay casos para atender. David está atendiendo N
+      conversaciones", con link a esa vista.
+- [x] Los estados se llaman Con AI, En espera, Con asesor y Resuelta en vistas,
+      filas y encabezado (docs/flujo-atencion.md §5); la vista de David es "Con AI".
+
+Shipped en PR #44.
+
+---
+
+## Phase 14: Panel de métricas (Complete)
+
+**Goal:** que el admin vea cuánto resuelve la IA sola y cuánto necesita a un asesor.
+
+- [x] Sección "Métricas" en el riel, solo para el admin, con rango hoy / 7 días / 30 días.
+- [x] Tarjetas: % resuelto por la IA de punta a punta, resueltas por la IA, por un
+      asesor y asistidas.
+- [x] Desglose por caso de uso con los colores de la consola y tendencia diaria
+      en barras apiladas (IA / asistidas / asesor).
+- [x] Estados de carga, sin resoluciones y error con reintento.
+- [x] Los días son los del navegador (zona IANA, `tz`): un cierre a las 22:30 en
+      Lima cuenta en ese día, no en el siguiente UTC.
+
+Shipped en PR #49.
+
+---
+
+## Phase 15: Contexto del cliente en la consola (Complete)
+
+**Goal:** que el asesor vea la historia del cliente con el banco sin salir de la conversación.
+
+- [x] Panel "Contexto del cliente" al lado de la conversación abierta, con el botón
+      "Contexto" para abrirlo y cerrarlo (se recuerda).
+- [x] Pestañas Casos, Contactos y Llamadas (transcripción desplegable), leídas
+      del banco y traducidas al español.
+- [x] Estados de carga, sin cliente del banco y error con reintento, sin
+      bloquear la conversación.
+- [x] En pantallas de menos de 1600 px el panel ocupa el lugar de la lista.
+- [x] Refleja tal cual lo registrado en el banco: pestañas Casos, Interacciones
+      (tipo, canal, motivo, resuelta, escalada, sentimiento) y Transcripciones
+      (idioma, intenciones, temas y texto de cliente y agente), traducidos 1 a 1.
+- [x] Cada interacción con transcripción tiene "Ver transcripción", que la abre
+      dentro de la interacción; la pestaña Transcripciones sigue como lista completa.
+
+Shipped en PR #50.
+
+---
+
+## Phase 16: Nombre del cliente del banco en la consola (Complete)
+
+**Goal:** que el asesor vea a quién atiende por su nombre, no por el email de la app.
+
+- [x] Fila y encabezado muestran customerName, con avatar e iniciales de ese nombre;
+      el email queda chico en el encabezado y como tooltip en la fila.
+- [x] Sin customerName (sin sesión de cliente o mientras el banco responde) se
+      muestra el email; la búsqueda también encuentra por nombre.
+
+Shipped en PR #54.
+
+---
+
+## Phase 17: Chat del cliente según el cliente demo (Complete)
+
+**Goal:** que el chat del cliente se sienta el del cliente demo elegido, no el del usuario de la app.
+
+- [x] La barra de conversaciones muestra solo los chats del cliente demo elegido y
+      se refresca al cambiarlo (`/api/history?sessionToken=`).
+- [x] El saludo usa el nombre del cliente demo ("Buenas noches, Daniela").
+- [x] Las tarjetas sugeridas son las opciones reales del menú de David: saldo y
+      movimientos de tarjeta, cuentas de ahorro, reclamo y más opciones.
+
+Shipped en PR #64.
+
+---
+
+## Phase 18: Consola agrupada por cliente (Complete)
+
+**Goal:** que cada cliente aparezca una sola vez en la consola, como en WhatsApp.
+
+- [x] Una fila por cliente con su último mensaje, hora y estado de su conversación
+      más reciente; vistas, robot y contadores se aplican a esa conversación y los
+      contadores cuentan clientes.
+- [x] Al abrir un cliente, una línea de tiempo con todas sus conversaciones en orden
+      cronológico, separadas por un divisor con fecha, caso de uso y estado.
+- [x] Las acciones aplican a la conversación más reciente; las anteriores son de solo lectura.
+
+Shipped en PR #66.
+
+---
+
+## Phase 19: David no disponible, con cola (Complete)
+
+**Goal:** que el mensaje del cliente nunca se pierda cuando el agente no está disponible.
+
+- [x] Con data-agent-pending, el indicador de David pasa a ámbar "No disponible", sin
+      burbuja ni texto de espera; la respuesta llega sola por polling y vuelve "En línea".
+- [x] Se mantiene al recargar (agentPending en GET /api/chat/:id).
+- [x] Nunca se muestra un error técnico: cualquier otro error sale con un texto amable.
+
+Shipped en PR #69.
+
+---
+
+## Phase 20: Caso derivado por David en la consola (Complete)
+
+**Goal:** que el asesor reciba el caso que David derivó con sus datos verificados, sin volver a preguntarlos.
+
+- [x] Tarjeta "Caso derivado por David" arriba de la conversación: motivo, resumen y ficha
+      de datos verificados tal cual vienen (tarjeta, cargo, tipo y descripción; o producto y motivo).
+- [x] En la fila de la bandeja, el motivo como etiqueta corta mientras el caso está abierto.
+
+Shipped en PR #72.
+
+---
+
+## Phase 21: Filtros por motivo y cliente demo fijo (Complete)
+
+**Goal:** que los filtros de la consola sean los motivos reales de derivación y que el cliente demo elegido no cambie solo.
+
+- [x] Tres filtros por motivo de derivación (Reclamo, Cancelación de producto, Estado de un
+      reclamo) con contador, evaluados sobre la conversación en curso de cada cliente.
+- [x] "Mías" pasa a "Con asesor" (human_agent); la Bandeja se agrupa por motivo.
+- [x] El cliente demo elegido queda fijo para la sesión; un chat existente usa el cliente que guardó el back.
+
+Spec: `spec/29-09-26-filtros-handoff-y-cliente-fijo/`.
+
+Shipped en PR #82.
+
+---
+
+## Phase 22: Datos del cliente en el panel Contexto (Complete)
+
+**Goal:** que el asesor vea primero quién es el cliente, tal como está en el banco.
+
+- [x] Sección "Datos del cliente" como primera del panel Contexto (ubicación, segmento, estado,
+      cliente desde, productos activos, email, celular y canal preferido), sin repetir el nombre ni el id.
+
+Spec: `spec/29-09-26-datos-del-cliente/`.
+
+Shipped en PR #82.
+
+---
+
+## Phase 23: Secciones con nombre real (Complete)
+
+**Goal:** que ningún chat de la consola caiga en "Otros": cada uno en una sección que diga por qué está ahí.
+
+- [x] Agente AI: "Fuera de alcance" (OUT_OF_SCOPE, COMMERCIAL) y "Sin motivo aún" en lugar de "Otros".
+- [x] Bandeja: "Tomada por un asesor" en lugar de "Otros".
+
+Spec: `spec/29-09-26-secciones-sin-otros/`.
+
+Shipped en PR #93.
+
+---
+
+## Phase 24: Avatares con color por cliente (Complete)
+
+**Goal:** que cada cliente se distinga por su color en la consola, aunque todos los chats vengan del mismo usuario de la app.
+
+- [x] Color por cliente del banco, igual en la lista y el encabezado; paleta de 8 colores sin grises.
+
+Spec: `spec/29-09-26-avatares-por-cliente/`.
+
+Shipped en PR #104.
+
+---
+
+## Phase 25: Bandeja o Agente AI dentro de cada motivo (Complete)
+
+**Goal:** que en cada motivo el asesor vea también los casos que David todavía está atendiendo.
+
+- [x] Selector "Bandeja | Agente AI" con contador en Reclamo, Cancelación de producto y Estado de un reclamo, recordado en la URL.
+
+Spec: `spec/30-09-26-motivo-bandeja-agente/`.
+
+Shipped en PR #108. El contador de Agente AI aparece cuando el back mande `aiAgentByUseCase`.
+
+---
+
+## Phase 27: Simulador de cliente (Complete)
+
+**Goal:** que en la demo se entienda que chatear con David desde la consola es una herramienta de prueba.
+
+- [x] "Simulador de cliente (demo)" para asesor y admin; el cliente mantiene "David (asistente virtual)".
+- [x] El selector de cliente demo explica que son clientes del dataset sintético del hackathon.
+
+Spec: `spec/30-09-26-simulador-cliente/`.
+
+Shipped en PR #111.
+
+---
+
+## Phase 28: Idioma ES | PT en el chat del cliente (Complete)
+
+**Goal:** que un cliente de Brasil use el chat en portugués y David le responda en ese idioma.
+
+- [x] Selector "ES | PT" en el header del chat; todos los textos de la pantalla del chat en ES y PT; la elección se recuerda.
+- [x] Cada mensaje lleva el idioma elegido al back (`language`), para que David lo use.
+
+Spec: `spec/30-09-26-idioma-es-pt/`.
+
+Shipped en PR #113. David responde en el idioma elegido cuando el back (w1:p1) pase `language` al agente; el agente ya lo lee (PR #112).
+
+---
+
+## Phase 29: Idioma global de la app (Complete)
+
+**Goal:** que el idioma sea un ajuste de toda la app, visible en la barra de íconos.
+
+- [x] Botón de idioma "ES"/"PT" en la barra de íconos, arriba del tema; el selector sale del header del chat.
+- [x] Navegación, consola del asesor, Métricas y Mis productos en ES y PT (los datos del banco no se traducen).
+
+Spec: `spec/30-09-26-idioma-global/`.
+
+Shipped en PR #115.
+
+---
+
+## Phase 30: Tarjetas visuales en Mis productos (Complete)
+
+**Goal:** que el cliente vea sus tarjetas de crédito como tarjetas, al estilo de las apps bancarias.
+
+- [x] Carrusel "Mis tarjetas" con tarjetas visuales (color por tarjeta, número enmascarado, moneda) y puntos.
+- [x] Detalle de la tarjeta seleccionada: saldo, límite, cupo con barra, movimientos y acciones que abren el chat con David.
+
+Spec: `spec/30-09-26-tarjetas-visuales/`.
+
+Shipped en PR #116.
+
+---
+
+## Phase 32: Evolución de tus ahorros (Complete)
+
+**Goal:** que el cliente vea cómo evolucionó su ahorro en el último año.
+
+- [x] Gráfico de línea por moneda en Mis productos, 12 meses, con el saldo de hoy destacado y rotulado como estimado.
+
+Spec: `spec/30-09-26-evolucion-ahorros/`.
+
+Shipped en PR #117. Con datos reales cuando esté el endpoint de w1:p1.
+
+---
+
+## Phase 33: Movimientos sin duplicar en Mis productos (Complete)
+
+**Goal:** que cada movimiento aparezca una sola vez en el resumen.
+
+- [x] Movimientos de tarjeta solo bajo la tarjeta seleccionada; "Movimientos de tus cuentas" solo con los de ahorro, oculto sin cuentas de ahorro.
+
+Spec: `spec/30-09-26-movimientos-sin-duplicar/`.
+
+Shipped en PR #119.
+
+---
+
+## Phase 34: Accesos rápidos en Mis productos (Complete)
+
+**Goal:** que desde Mis productos el cliente llegue a David en un clic, sin acciones repetidas por tarjeta.
+
+- [x] "¿Qué quieres hacer?" con las 4 opciones del chat más "Ver movimientos"; se quita "Pídeselo a David" de la tarjeta.
+
+Spec: `spec/30-09-26-accesos-rapidos/`.
+
+Shipped en PR #120.
+
+---
+
+## Phase 35: Alineación en Mis productos (Complete)
+
+**Goal:** que el resumen se lea como una sola grilla, sin cortes ni desalineaciones.
+
+- [x] Accesos rápidos de igual altura, totales en 3 columnas, carrusel dentro del contenido, número y moneda en la misma línea base, barra de uso alineada.
+
+Spec: `spec/30-09-26-alineacion-productos/`.
+
+Shipped en PR #121.
+
+---
+
+## Phase 36: Movimientos por producto en Mis productos (Complete)
+
+**Goal:** que cada tarjeta y cada cuenta muestren sus propios movimientos.
+
+- [x] Cada tarjeta muestra sus últimos 10 (el back devuelve 10 por producto); "Movimientos de tus cuentas" muestra los 10 más recientes.
+
+Spec: `spec/30-09-26-movimientos-por-producto/`.
+
+Shipped en PR #122 (con el cambio de /api/products de w1:p1).
+
+---
+
+## Phase 37: Mis productos sin "Mis datos" (Complete)
+
+**Goal:** que el cliente no vea datos repetidos ni códigos internos.
+
+- [x] Se quita "Mis datos" (nombre y customerId) del resumen.
+
+Spec: `spec/01-10-26-sin-mis-datos/`.
+
+Shipped en PR #124. Los e2e quedaron sin correr: el Postgres de pruebas no aceptaba conexiones tras el reinicio.
+
+---
+
+## Phase 38: Login de demo y cierre de sesión (Complete)
+
+**Goal:** que la app se pueda usar fuera de Databricks Apps (AWS), con un login de demo.
+
+- [x] Pantalla de login (usuario y contraseña) y botón "Cerrar sesión", en ES y PT, solo en modo `password`.
+- [x] Una sesión vencida vuelve al login; en Databricks Apps nada cambia.
+
+Spec: `spec/01-10-26-login-demo/` (front, bloque 5 de la fase general de AWS).
+
+Shipped en PR #125. Los e2e (`login.test.ts`) quedaron escritos y sin correr: el Postgres de pruebas no aceptaba conexiones.
+
+---
+
+## Phase 39: "David está escribiendo" durante toda la espera (Complete)
+
+**Goal:** que el cliente siempre vea que David está respondiendo, sin huecos.
+
+- [x] Indicador desde el envío hasta el primer texto, también con el turno en cola; sin acciones en un mensaje de David vacío.
+
+Spec: `spec/01-10-26-indicador-espera/`.
+
+Shipped en PR #131.

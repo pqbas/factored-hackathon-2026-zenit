@@ -1,8 +1,8 @@
 import { Lock } from 'lucide-react';
-import { ASSISTANT_NAME } from '@/lib/assistant';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 
+import { useLang } from '@/contexts/LangContext';
 import { useSession } from '@/contexts/SessionContext';
 import { canAccess, type Section } from '@/lib/roles';
 
@@ -21,6 +21,7 @@ export function RequireSection({
 }
 
 export function NoAccess() {
+  const { t } = useLang();
   return (
     <div
       data-testid="no-access"
@@ -30,16 +31,16 @@ export function NoAccess() {
         <Lock className="size-5" strokeWidth={1.8} />
       </span>
       <div className="flex flex-col gap-1">
-        <h1 className="font-semibold text-lg tracking-tight">Sin acceso</h1>
+        <h1 className="font-semibold text-lg tracking-tight">{t.nav.noAccess}</h1>
         <p className="text-muted-foreground text-sm">
-          Tu rol no puede ver esta sección.
+          {t.nav.noAccessBody}
         </p>
       </div>
       <Link
         to="/"
         className="rounded-full bg-primary px-4 py-2 font-medium text-primary-foreground text-sm hover:bg-primary/90"
       >
-        Hablar con {ASSISTANT_NAME}
+        {t.nav.talkTo}
       </Link>
     </div>
   );

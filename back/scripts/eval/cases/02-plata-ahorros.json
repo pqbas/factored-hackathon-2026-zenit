@@ -1,0 +1,21 @@
+{
+  "id": "02",
+  "language": "es",
+  "group": "consultas",
+  "customer": {
+    "token": "demo-mx-3",
+    "user": 5,
+    "segment": "Plus",
+    "name": "Fernando"
+  },
+  "steps": [
+    {
+      "say": "cuánta plata tengo en mi cuenta de ahorros"
+    }
+  ],
+  "expected": {
+    "firstIntent": "GENERAL_INQUIRY",
+    "outcome": "R",
+    "mustMatch": ["6359", "8768"]
+  }
+}

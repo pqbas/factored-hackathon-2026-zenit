@@ -1,52 +1,16 @@
-import {
-  CreditCard,
-  HandCoins,
-  House,
-  Landmark,
-  PiggyBank,
-  TrendingUp,
-  type LucideIcon,
-} from 'lucide-react';
+import { CreditCard, PiggyBank, Wallet, type LucideIcon } from 'lucide-react';
 
+import { type ProductKind } from '@/lib/products';
 import { cn } from '@/lib/utils';
-import type { ProductType } from '@/mocks/products';
 
-const ICONS: Record<ProductType, { icon: LucideIcon; tint: string }> = {
-  'Checking Account': {
-    icon: Landmark,
-    tint: 'bg-tint-blue text-tint-blue-foreground',
-  },
-  'Savings Account': {
-    icon: PiggyBank,
-    tint: 'bg-tint-green text-tint-green-foreground',
-  },
-  'Debit Card': {
-    icon: CreditCard,
-    tint: 'bg-tint-blue text-tint-blue-foreground',
-  },
-  'Credit Card': {
-    icon: CreditCard,
-    tint: 'bg-tint-amber text-tint-amber-foreground',
-  },
-  'Personal Loan': {
-    icon: HandCoins,
-    tint: 'bg-tint-red text-tint-red-foreground',
-  },
-  Mortgage: { icon: House, tint: 'bg-tint-red text-tint-red-foreground' },
-  Investment: {
-    icon: TrendingUp,
-    tint: 'bg-tint-green text-tint-green-foreground',
-  },
+const ICONS: Record<ProductKind, { icon: LucideIcon; tint: string }> = {
+  credit: { icon: CreditCard, tint: 'bg-tint-amber text-tint-amber-foreground' },
+  savings: { icon: PiggyBank, tint: 'bg-tint-green text-tint-green-foreground' },
+  other: { icon: Wallet, tint: 'bg-tint-blue text-tint-blue-foreground' },
 };
 
-export function ProductIcon({
-  type,
-  className,
-}: {
-  type: ProductType;
-  className?: string;
-}) {
-  const { icon: Icon, tint } = ICONS[type];
+export function ProductIcon({ kind, className }: { kind: ProductKind; className?: string }) {
+  const { icon: Icon, tint } = ICONS[kind];
   return (
     <span
       className={cn(

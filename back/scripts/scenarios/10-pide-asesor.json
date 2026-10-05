@@ -1,0 +1,14 @@
+{
+  "name": "10-pide-asesor",
+  "description": "Pide un asesor sin decir para qué: David muestra el menú y, con el reclamo, deriva",
+  "sessionToken": "demo-mx-1",
+  "customer": 5,
+  "messages": [
+    "quiero hablar con un asesor",
+    "tengo un cargo que no reconozco en la 4930",
+    "el de Internet Plus de 329.44",
+    "no lo reconozco",
+    "no hice esa compra",
+    "sí, confirmo"
+  ]
+}

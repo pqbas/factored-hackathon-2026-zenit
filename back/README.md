@@ -43,61 +43,66 @@ but has some [known limitations](#known-limitations) for other use cases. Work i
 
 ## Deployment
 
-This project includes a [Databricks Asset Bundle (DAB)](https://docs.databricks.com/aws/en/dev-tools/bundles/apps-tutorial) configuration that simplifies deployment by automatically creating and managing all required resources.
+The chat (API + built UI from `../front`) runs as the Databricks App
+`dev-bank-assistant-ui`, with its own Lakebase instance
+(`bank-assistant-chat-db`) as its app resource (`databricks.yml`). It reads the
+bank's data from read-only synced tables in that same instance (Postgres
+schema `bank_ro`, see [docs/datos-banco-lakebase.md](../docs/datos-banco-lakebase.md)),
+not from the SQL warehouse. It calls the agent app through `API_PROXY`
+(`app.yaml`).
 
-1. **Clone the repo**:
-   ```bash
-   git clone https://github.com/databricks/app-templates
-   cd e2e-chatbot-app-next
-   ```
-2. **Databricks authentication**: Ensure auth is configured as described in [Prerequisites](#prerequisites).
-3. **Specify serving endpoint and address TODOs in databricks.yml**: Address the TODOs in `databricks.yml`, setting the default value of `serving_endpoint_name` to the name of the custom code agent or Agent Bricks endpoint to chat with. The optional TODOs wil allow you to deploy a Lakebase database bound to your application, which will allow for chat history to be persisted.
-
-   **Tip:** To automatically configure and deploy with database support, run `./scripts/quickstart.sh` and select "Yes" when prompted about enabling persistent chat history. See [Database Configuration](#database-modes) for details.
-
-   - NOTE: if using [Agent Bricks Multi-Agent Supervisor](https://docs.databricks.com/aws/en/generative-ai/agent-bricks/multi-agent-supervisor), you need to additionally grant the app service principal the `CAN_QUERY` permission on the underlying agent(s) that the MAS orchestrates. You can do this by adding those
-     agent serving endpoints as resources in `databricks.yml` (see the NOTE in `databricks.yml` on this)
-4. **Validate the bundle configuration**:
-
-   ```bash
-   databricks bundle validate
-   ```
-
-5. **Deploy the bundle**. The first deployment may take several minutes for provisioning resources (especially if database is enabled), but subsequent deployments are fast:
-
-   ```bash
-   databricks bundle deploy
-   ```
-
-   This creates:
-
-   - **App resource** ready to start
-   - **Lakebase database instance** (only if database resource is uncommented)
-
-6. **Start the app**:
-
-   ```bash
-   databricks bundle run databricks_chatbot
-   ```
-
-7. **View deployment summary** (useful for debugging deployment issues):
-   ```bash
-   databricks bundle summary
-   ```
-
-### Deployment Targets
-
-The bundle supports multiple environments:
-
-- **dev** (default): Development environment
-- **staging**: Staging environment for testing
-- **prod**: Production environment
-
-To deploy to a specific target:
+### Deploy
 
 ```bash
-databricks bundle deploy -t staging --var serving_endpoint_name="your-endpoint"
+# 1. Build the UI and copy it into server/public (uploaded by the bundle).
+(cd ../front && npm install && npm run build)
+npm run copy:front
+
+# 2. Deploy and start. The first deploy creates the Lakebase instance (5-10 min).
+#    The app's build runs `npm run build`, which applies the SQL migrations.
+databricks bundle deploy
+databricks bundle run bank_assistant_ui
+databricks apps get dev-bank-assistant-ui -o json | jq -r .url
 ```
+
+One-time grants for the app's service principal (its `service_principal_client_id`
+from `databricks apps get dev-bank-assistant-ui`):
+
+- `CAN_USE` on the agent app (`agent-banking-assistant`), granted from the agent side.
+- On the bank data: `bank_ro` and its grants are set up once with
+  `scripts/bank-ro/` (as the Lakebase instance's owner):
+
+  ```bash
+  # Once: check the primary keys on the warehouse (check-keys.sql), then
+  scripts/bank-ro/create.sh     # the 7 synced tables, first sync and grants
+  # After each update of the gold tables (no scheduled refresh):
+  scripts/bank-ro/refresh.sh    # snapshot refresh + grants again
+  scripts/bank-ro/test-freshness.sh  # proof that a refresh brings changes
+  ```
+
+  `grants.sql` gives the back's and the agent's service principals `USAGE` on
+  `bank_ro` and `SELECT` on their tables, nothing else. The synced tables are
+  also declared in `databricks.yml`; bind them before the next deploy (see the
+  comment there).
+
+### Turn it on and off (cost)
+
+Lakebase (CU_1, about 0.7 USD/h) and the app bill while they run. Stop both
+when there is no demo, and start them before the next one:
+
+```bash
+# Stop
+databricks apps stop dev-bank-assistant-ui
+databricks database update-database-instance bank-assistant-chat-db stopped --stopped
+
+# Start (Lakebase first, then the app)
+databricks database update-database-instance bank-assistant-chat-db stopped --stopped=false
+databricks apps start dev-bank-assistant-ui
+```
+
+The back no longer uses the SQL warehouse. Locally, chats stay in the Docker
+Postgres and the bank's data is read from Lakebase with your Databricks
+identity: set `BANK_PGHOST` to the instance's host (`.env.example`).
 
 ## Running Locally
 

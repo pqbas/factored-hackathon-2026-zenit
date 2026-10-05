@@ -1,0 +1,30 @@
+{
+  "id": "30",
+  "language": "es",
+  "group": "ambiguos-fuera-de-alcance",
+  "customer": {
+    "token": "demo-mx-1",
+    "user": 1,
+    "segment": "Plus",
+    "name": "Santiago"
+  },
+  "steps": [
+    {
+      "say": "tengo un cobro que no entiendo en mi tarjeta"
+    },
+    {
+      "say": "la 6262"
+    },
+    {
+      "say": "el de Cine Premium de 496.44"
+    },
+    {
+      "say": "olvídalo"
+    }
+  ],
+  "expected": {
+    "firstIntent": "COMPLAINT",
+    "outcome": "F",
+    "mustMatch": ["Listo, lo dejamos ahí"]
+  }
+}

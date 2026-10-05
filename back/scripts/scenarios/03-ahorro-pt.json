@@ -1,0 +1,11 @@
+{
+  "name": "03-ahorro-pt",
+  "description": "Cuenta de ahorro en portugués",
+  "sessionToken": "demo-ar-1",
+  "customer": 3,
+  "messages": [
+    "olá",
+    "qual é o saldo da minha conta poupança?",
+    "isso é tudo, obrigado"
+  ]
+}

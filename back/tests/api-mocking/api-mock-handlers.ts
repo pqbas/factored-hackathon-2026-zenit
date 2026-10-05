@@ -1,10 +1,12 @@
 import { http, HttpResponse } from 'msw';
 import {
   createMockStreamResponse,
+  mockSSE,
   mockMcpApprovalRequestStream,
   mockMcpApprovalApprovedStream,
   mockMcpApprovalDeniedStream,
   mockResponsesApiTextStream,
+  mockResponsesApiMultiTextStream,
 } from '../helpers';
 import { TEST_PROMPTS } from '../prompts/routes';
 
@@ -16,11 +18,7 @@ import { TEST_PROMPTS } from '../prompts/routes';
  * State machine for MCP approval flow.
  * This tracks the state of approval requests across multiple API calls.
  */
-type McpApprovalState =
-  | 'idle'
-  | 'awaiting-approval'
-  | 'approved'
-  | 'denied';
+type McpApprovalState = 'idle' | 'awaiting-approval' | 'approved' | 'denied';
 
 let mcpApprovalState: McpApprovalState = 'idle';
 const MCP_REQUEST_ID = '__fake_mcp_request_id__';
@@ -51,6 +49,7 @@ export interface CapturedRequest {
   hasContext: boolean;
   customInputs?: {
     session_token?: string;
+    handled_by?: string;
     [key: string]: unknown;
   };
   // Responses API request body, kept so tests can check which turns were
@@ -186,10 +185,26 @@ function containsMcpApprovalResponse(body: unknown): {
 // ============================================================================
 
 export const AGENT_OUTPUTS = {
+  greeting: {
+    thread_id: 'mock',
+    use_case: null,
+    intent: 'GREETING',
+    language: 'es',
+    blocked: false,
+    handoff: null,
+  },
   state: {
     thread_id: 'mock',
     use_case: 'GENERAL_INQUIRY',
     intent: 'GENERAL_INQUIRY',
+    language: 'es',
+    blocked: false,
+    handoff: null,
+  },
+  goodbye: {
+    thread_id: 'mock',
+    use_case: null,
+    intent: 'GOODBYE',
     language: 'es',
     blocked: false,
     handoff: null,
@@ -223,7 +238,127 @@ export const AGENT_OUTPUTS = {
       },
     },
   },
+  complaint: {
+    thread_id: 'mock',
+    use_case: 'COMPLAINT',
+    intent: 'COMPLAINT',
+    language: 'es',
+    blocked: false,
+    handoff: {
+      reason: 'complaint',
+      summary: 'Reclamo por un cargo no reconocido.',
+      facts: {
+        verified_data: {
+          card_last4: '4930',
+          merchant: 'Internet Plus',
+          amount: 329.44,
+          currency: 'USD',
+        },
+        tools_called: ['list_transactions'],
+        intent: 'COMPLAINT',
+        language: 'es',
+        sentiment: 'negative',
+      },
+    },
+  },
+  // The handoff turn, with more text after the handoff message.
+  complaintThenText: {
+    thread_id: 'mock',
+    use_case: 'COMPLAINT',
+    intent: 'COMPLAINT',
+    language: 'es',
+    blocked: false,
+    handoff: {
+      reason: 'complaint',
+      summary: 'Reclamo por un cargo no reconocido.',
+      facts: null,
+    },
+  },
+  // A plain answer with the turn's token usage, model and classifier.
+  usage: {
+    thread_id: 'mock',
+    use_case: 'GENERAL_INQUIRY',
+    intent: 'GENERAL_INQUIRY',
+    language: 'es',
+    blocked: false,
+    handoff: null,
+    usage: { input_tokens: 1200, output_tokens: 300 },
+    model: 'mock-model',
+    prompt_version: 'mock-prompt-v1',
+    classifier: 'llm',
+  },
+  // The grounding guard fired: David showed movements without calling
+  // list_transactions and the retry forcing it came out backed (the shape of
+  // a real agent event, 29-09-26).
+  guardFired: {
+    thread_id: 'mock',
+    use_case: 'GENERAL_INQUIRY',
+    intent: 'GENERAL_INQUIRY',
+    language: 'es',
+    blocked: false,
+    handoff: null,
+    paused: false,
+    usage: { input_tokens: 36592, output_tokens: 2280 },
+    model: 'mock-model',
+    prompt_version: 'mock-prompt-v1',
+    classifier: 'llm',
+    guard: {
+      fired: true,
+      missing_tool: 'list_transactions',
+      action: 'retried_ok',
+    },
+  },
+  // The guard ran and didn't fire.
+  guardNull: {
+    thread_id: 'mock',
+    use_case: 'GENERAL_INQUIRY',
+    intent: 'GENERAL_INQUIRY',
+    language: 'es',
+    blocked: false,
+    handoff: null,
+    paused: false,
+    usage: { input_tokens: 19528, output_tokens: 624 },
+    model: 'mock-model',
+    prompt_version: 'mock-prompt-v1',
+    classifier: 'llm',
+    guard: null,
+  },
+  // The agent was called on a conversation it doesn't own and says nothing.
+  paused: {
+    thread_id: 'mock',
+    use_case: 'GENERAL_INQUIRY',
+    intent: 'GENERAL_INQUIRY',
+    language: 'es',
+    blocked: false,
+    handoff: null,
+    paused: true,
+  },
 } as const;
+
+export const HANDOFF_TEXT =
+  'Te comunico con un asesor, que ya tiene los datos de tu caso.';
+
+// '[agent-slow:<ms>]' in the prompt: the responses endpoint waits that long
+// before answering.
+function agentDelayMs(body: unknown): number {
+  const text = JSON.stringify((body as { input?: unknown[] })?.input?.at(-1));
+  return Number(text?.match(/\[agent-slow:(\d+)\]/)?.[1] ?? 0);
+}
+
+// '[agent-down-N:<key>]' in the prompt: the agent answers 502 the first N
+// times it sees that key (its App redeploying), then normally.
+const agentDownRemaining = new Map<string, number>();
+
+function agentIsDown(body: unknown): boolean {
+  const text = JSON.stringify((body as { input?: unknown[] })?.input?.at(-1));
+  const match = text?.match(/\[agent-down-(\d+):([^\]]+)\]/);
+  if (!match) return false;
+  const [, count, key] = match;
+  const remaining = agentDownRemaining.get(key) ?? Number(count);
+  if (remaining <= 0) return false;
+  agentDownRemaining.set(key, remaining - 1);
+  return true;
+}
 
 function agentOutputsFor(body: unknown) {
   const text = JSON.stringify((body as { input?: unknown[] })?.input?.at(-1));
@@ -237,17 +372,20 @@ export const handlers = [
   // Mock chat completions (FMAPI - llm/v1/chat)
   // Use RegExp for better URL matching - matches any URL ending with /chat/completions,
   // with or without an endpoint-name segment before it (the title-model call has none).
-  http.post(/\/serving-endpoints\/(?:[^/]+\/)?chat\/completions$/, async (req) => {
-    const body = await req.request.clone().json();
-    captureRequestContext(req.request.url, body);
-    if ((body as { stream?: boolean })?.stream) {
-      return createMockStreamResponse(
-        TEST_PROMPTS.SKY.OUTPUT_STREAM.responseSSE,
-      );
-    } else {
-      return HttpResponse.json(TEST_PROMPTS.SKY.OUTPUT_TITLE.response);
-    }
-  }),
+  http.post(
+    /\/serving-endpoints\/(?:[^/]+\/)?chat\/completions$/,
+    async (req) => {
+      const body = await req.request.clone().json();
+      captureRequestContext(req.request.url, body);
+      if ((body as { stream?: boolean })?.stream) {
+        return createMockStreamResponse(
+          TEST_PROMPTS.SKY.OUTPUT_STREAM.responseSSE,
+        );
+      } else {
+        return HttpResponse.json(TEST_PROMPTS.SKY.OUTPUT_TITLE.response);
+      }
+    },
+  ),
 
   // Mock responses endpoint (agent/v1/responses)
   // URL pattern: {host}/serving-endpoints/responses
@@ -283,10 +421,36 @@ export const handlers = [
       }
     }
 
+    if (agentIsDown(body)) {
+      return new HttpResponse('Bad Gateway', { status: 502 });
+    }
+
+    const delayMs = agentDelayMs(body);
+    if (delayMs > 0) await new Promise((r) => setTimeout(r, delayMs));
+
     // Prompts containing an AGENT_OUTPUTS key make the mock attach the
     // matching custom_outputs, as the real agent does on each turn.
     const agentOutputs = agentOutputsFor(body);
     if (isStreaming && agentOutputs) {
+      // Exactly what the agent streams for a paused turn: one
+      // response.in_progress event with custom_outputs, then [DONE].
+      if (agentOutputs === AGENT_OUTPUTS.paused) {
+        return createMockStreamResponse([
+          mockSSE({
+            type: 'response.in_progress',
+            custom_outputs: agentOutputs,
+          }),
+          'data: [DONE]',
+        ]);
+      }
+      if (agentOutputs === AGENT_OUTPUTS.complaintThenText) {
+        return createMockStreamResponse(
+          mockResponsesApiMultiTextStream(
+            [HANDOFF_TEXT, 'Mientras tanto, cuéntame si necesitas algo más.'],
+            agentOutputs,
+          ),
+        );
+      }
       return createMockStreamResponse(
         mockResponsesApiTextStream('Mock agent reply', agentOutputs),
       );

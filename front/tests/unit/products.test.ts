@@ -4,121 +4,155 @@ import {
   creditUsage,
   formatMoney,
   groupProducts,
-  maskNumber,
-  parseDate,
+  type Product,
+  productKind,
   signedAmount,
   summarizeProducts,
+  type Transaction,
+  transactionLabel,
   transactionsFor,
+  savingsTransactions,
+  parseSavingsHistory,
+  savingsWithoutSeries,
+  cardColor,
+  maskedCardNumber,
 } from '@/lib/products';
-import {
-  MOCK_CUSTOMER,
-  MOCK_PRODUCTS,
-  MOCK_TRANSACTIONS,
-  type MockProduct,
-  type MockTransaction,
-} from '@/mocks/products';
 
-function product(overrides: Partial<MockProduct>): MockProduct {
-  return {
-    productId: 'P1',
-    productType: 'Checking Account',
-    productNumber: '0000111122223333',
-    currency: 'ARS',
-    currentBalance: 100,
-    creditLimit: null,
-    interestRate: null,
-    openingDate: '2024-01-01',
-    expirationDate: null,
-    productStatus: 'Active',
-    openingChannel: 'Branch',
-    daysPastDue: null,
-    lastTransactionDate: null,
-    ...overrides,
-  };
-}
+const card = (last4: string, balance: number, limit: number, available: number): Product => ({
+  productType: 'Tarjeta Crédito',
+  last4,
+  currency: 'USD',
+  currentBalance: balance,
+  creditLimit: limit,
+  availableCredit: available,
+});
+const savings = (last4: string, balance: number): Product => ({
+  productType: 'Cuenta Ahorro',
+  last4,
+  currency: 'USD',
+  currentBalance: balance,
+  creditLimit: null,
+  availableCredit: null,
+});
+const tx = (last4: string, type: string, amount: number, merchant: string | null = null): Transaction => ({
+  date: '2026-09-28T10:00:00.000Z',
+  productType: 'Tarjeta Crédito',
+  last4,
+  type,
+  merchant,
+  amount,
+  currency: 'USD',
+  status: 'Approved',
+});
 
-function tx(overrides: Partial<MockTransaction>): MockTransaction {
-  return {
-    transactionId: 'T1',
-    transactionDate: '2026-06-01 10:00:00',
-    productId: 'P1',
-    transactionType: 'Purchase',
-    transactionCategory: null,
-    merchantName: null,
-    amount: 50,
-    currency: 'ARS',
-    channel: null,
-    transactionCity: null,
-    transactionStatus: 'Approved',
-    ...overrides,
-  };
-}
-
-describe('products helpers', () => {
-  it('masks all but the last four digits', () => {
-    expect(maskNumber('4647798048915246')).toBe('•• 5246');
+describe('products', () => {
+  it('tells cards from savings and groups them', () => {
+    expect(productKind(card('1070', 1, 10, 9))).toBe('credit');
+    expect(productKind(savings('5555', 1))).toBe('savings');
+    const groups = groupProducts([card('1070', 1, 10, 9), savings('5555', 1)]);
+    expect(groups.map((g) => g.label)).toEqual(['Cuentas', 'Tarjetas']);
   });
 
-  it('groups products and drops empty groups', () => {
-    const groups = groupProducts([
-      product({ productId: 'a', productType: 'Savings Account' }),
-      product({ productId: 'b', productType: 'Credit Card' }),
-    ]);
-    expect(groups.map((g) => g.id)).toEqual(['accounts', 'cards']);
-  });
-
-  it('sums available money, debt and investments, skipping closed products', () => {
-    const totals = summarizeProducts([
-      product({ productType: 'Checking Account', currentBalance: 100 }),
-      product({ productType: 'Debit Card', currentBalance: 100 }),
-      product({ productType: 'Credit Card', currentBalance: 30 }),
-      product({ productType: 'Personal Loan', currentBalance: 70 }),
-      product({ productType: 'Investment', currentBalance: 500 }),
-      product({ productType: 'Savings Account', currentBalance: 999, productStatus: 'Closed' }),
-    ]);
-    expect(totals).toEqual({ available: 100, debt: 100, invested: 500 });
-  });
-
-  it('computes credit usage only for credit cards', () => {
+  it('sums savings, card debt and available credit', () => {
     expect(
-      creditUsage(product({ productType: 'Credit Card', currentBalance: 25, creditLimit: 100 })),
-    ).toBe(0.25);
-    expect(creditUsage(product({ productType: 'Checking Account' }))).toBeNull();
+      summarizeProducts([card('1070', 300, 1000, 700), card('6262', 100, 500, 400), savings('5555', 50)]),
+    ).toEqual({ currency: 'USD', available: 50, debt: 400, creditAvailable: 1100 });
   });
 
-  it('signs deposits and adjustments as incoming, the rest as outgoing', () => {
-    expect(signedAmount(tx({ transactionType: 'Deposit' }))).toBe(50);
-    expect(signedAmount(tx({ transactionType: 'Adjustment' }))).toBe(50);
-    expect(signedAmount(tx({ transactionType: 'Purchase' }))).toBe(-50);
+  it('computes the share of the limit in use', () => {
+    expect(creditUsage(card('1070', 250, 1000, 750))).toBe(0.25);
+    expect(creditUsage(savings('5555', 10))).toBeNull();
   });
 
-  it('filters by product and sorts newest first', () => {
-    const list = transactionsFor(
-      [
-        tx({ transactionId: 'old', transactionDate: '2026-01-01 10:00:00' }),
-        tx({ transactionId: 'new', transactionDate: '2026-06-01 10:00:00' }),
-        tx({ transactionId: 'other', productId: 'P2' }),
-      ],
-      'P1',
-    );
-    expect(list.map((t) => t.transactionId)).toEqual(['new', 'old']);
+  it('filters movements by product', () => {
+    const all = [tx('1070', 'Purchase', 10), tx('6262', 'Purchase', 20)];
+    expect(transactionsFor(all, card('1070', 0, 1, 1))).toHaveLength(1);
+    expect(transactionsFor(all)).toHaveLength(2);
   });
 
-  it('parses a bare date as local midnight, not UTC', () => {
-    const date = parseDate('2025-06-06');
-    expect([date.getFullYear(), date.getMonth(), date.getDate()]).toEqual([2025, 5, 6]);
+  it('signs and labels movements', () => {
+    expect(signedAmount(tx('1070', 'Purchase', 10))).toBe(-10);
+    expect(signedAmount(tx('1070', 'Payment', 10))).toBe(10);
+    expect(transactionLabel(tx('1070', 'Purchase', 10, 'Supermercado'))).toBe('Supermercado');
+    expect(transactionLabel(tx('1070', 'Payment', 10))).toBe('Pago');
   });
 
-  it('formats money in the currency of the product', () => {
-    expect(formatMoney(1393876.48, 'ARS')).toContain('1.393.876,48');
+  it('formats money in the product currency', () => {
+    expect(formatMoney(1234.5, 'USD')).toContain('1,234.50');
   });
 });
 
-describe('demo customer fixture', () => {
-  it('holds one customer with products and movements from the dataset', () => {
-    expect(MOCK_CUSTOMER.customerId).toBe('CUS00000322');
-    expect(MOCK_PRODUCTS.length).toBeGreaterThan(0);
-    const ids = new Set(MOCK_PRODUCTS.map((p) => p.productId));
-    expect(MOCK_TRANSACTIONS.every((t) => ids.has(t.productId))).toBe(true);
+describe('card visuals', () => {
+  const card = { productType: 'Tarjeta Crédito', last4: '1070' };
+
+  it('masks everything but the last 4 digits', () => {
+    expect(maskedCardNumber('1070')).toBe('•••• •••• •••• 1070');
+  });
+
+  it('gives each card a stable color, never a gray', () => {
+    expect(cardColor(card)).toBe(cardColor(card));
+    expect(cardColor(card)).not.toMatch(/zinc|slate|stone|gray|neutral/);
+  });
+});
+
+describe('savings history', () => {
+  it('keeps valid series, points sorted by month, and drops junk', () => {
+    const series = parseSavingsHistory({
+      estimated: true,
+      series: [
+        { currency: 'USD', current: 2500, points: [{ month: '2026-09', balance: 2500 }, { month: '2026-04', balance: 16000 }, { month: 'bad', balance: 1 }] },
+        { currency: 'COP', points: [] },
+        { nope: true },
+      ],
+    });
+    expect(series).toEqual([
+      { currency: 'USD', current: 2500, points: [{ month: '2026-04', balance: 16000 }, { month: '2026-09', balance: 2500 }] },
+    ]);
+    expect(parseSavingsHistory(null)).toEqual([]);
+  });
+
+  it('lists the savings currencies without a series, with their balance', () => {
+    const products = [
+      { productType: 'Cuenta Ahorro', last4: '1', currency: 'USD', currentBalance: 100, creditLimit: null, availableCredit: null },
+      { productType: 'Cuenta Ahorro', last4: '2', currency: 'COP', currentBalance: 50, creditLimit: null, availableCredit: null },
+      { productType: 'Cuenta Ahorro', last4: '3', currency: 'COP', currentBalance: 25, creditLimit: null, availableCredit: null },
+      { productType: 'Tarjeta Crédito', last4: '4', currency: 'ARS', currentBalance: 9, creditLimit: 10, availableCredit: 1 },
+    ];
+    const series = [{ currency: 'USD', current: 100, points: [{ month: '2026-09', balance: 100 }] }];
+    expect(savingsWithoutSeries(products, series)).toEqual([{ currency: 'COP', current: 75 }]);
+  });
+});
+
+describe('savingsTransactions', () => {
+  it('keeps only the savings accounts movements', () => {
+    const products = [
+      { productType: 'Cuenta Ahorro', last4: '1', currency: 'USD', currentBalance: 1, creditLimit: null, availableCredit: null },
+      { productType: 'Tarjeta Crédito', last4: '2', currency: 'USD', currentBalance: 1, creditLimit: 5, availableCredit: 4 },
+    ];
+    const tx = (productType: string, last4: string) => ({
+      date: '2026-09-01T00:00:00.000Z', productType, last4, type: 'Deposit', merchant: null, amount: 1, currency: 'USD', status: 'Approved',
+    });
+    expect(savingsTransactions([tx('Cuenta Ahorro', '1'), tx('Tarjeta Crédito', '2')], products)).toEqual([tx('Cuenta Ahorro', '1')]);
+  });
+
+  it('keeps the 10 most recent across accounts', () => {
+    const products = [
+      { productType: 'Cuenta Ahorro', last4: '1', currency: 'USD', currentBalance: 1, creditLimit: null, availableCredit: null },
+      { productType: 'Cuenta Ahorro', last4: '3', currency: 'USD', currentBalance: 1, creditLimit: null, availableCredit: null },
+    ];
+    const txs = Array.from({ length: 16 }, (_, i) => ({
+      date: `2026-09-${String(i + 1).padStart(2, '0')}T00:00:00.000Z`,
+      productType: 'Cuenta Ahorro',
+      last4: i % 2 ? '1' : '3',
+      type: 'Deposit',
+      merchant: null,
+      amount: 1,
+      currency: 'USD',
+      status: 'Approved',
+    }));
+    const kept = savingsTransactions(txs, products);
+    expect(kept).toHaveLength(10);
+    expect(kept[0].date).toBe('2026-09-16T00:00:00.000Z');
+    expect(kept[9].date).toBe('2026-09-07T00:00:00.000Z');
   });
 });

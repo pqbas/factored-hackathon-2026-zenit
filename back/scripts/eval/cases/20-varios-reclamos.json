@@ -1,0 +1,24 @@
+{
+  "id": "20",
+  "language": "es",
+  "group": "estado-reclamo",
+  "customer": {
+    "token": "demo-mx-2",
+    "user": 4,
+    "segment": "Basic",
+    "name": "Eduardo"
+  },
+  "steps": [
+    {
+      "say": "quiero saber de mi reclamo"
+    },
+    {
+      "say": "el del 9 de octubre de 2025"
+    }
+  ],
+  "expected": {
+    "firstIntent": "CASE_STATUS",
+    "outcome": "R",
+    "mustMatch": ["en proceso|in process|proceso"]
+  }
+}

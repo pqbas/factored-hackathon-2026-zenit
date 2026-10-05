@@ -11,11 +11,14 @@ import {
 import { createDatabricksProvider } from '@databricks/ai-sdk-provider';
 import { extractReasoningMiddleware, wrapLanguageModel } from 'ai';
 import { shouldInjectContextForEndpoint } from './request-context';
+import { setAgentAuth } from './agent-auth';
 
 // Header keys for passing context through streamText headers
 export const CONTEXT_HEADER_CONVERSATION_ID = 'x-databricks-conversation-id';
 export const CONTEXT_HEADER_USER_ID = 'x-databricks-user-id';
 export const CONTEXT_HEADER_SESSION_TOKEN = 'x-databricks-session-token';
+export const CONTEXT_HEADER_HANDLED_BY = 'x-databricks-handled-by';
+export const CONTEXT_HEADER_LANGUAGE = 'x-databricks-language';
 
 // Use centralized authentication - only on server side
 async function getProviderToken(): Promise<string> {
@@ -33,7 +36,7 @@ async function getProviderToken(): Promise<string> {
 let cachedWorkspaceHostname: string | null = null;
 
 // Get workspace hostname with one-time resolution and caching
-async function getWorkspaceHostname(): Promise<string> {
+export async function getWorkspaceHostname(): Promise<string> {
   if (cachedWorkspaceHostname) {
     return cachedWorkspaceHostname;
   }
@@ -89,10 +92,32 @@ export interface AgentOutputs {
   language?: string | null;
   blocked?: boolean;
   handoff?: AgentHandoff | null;
+  // The agent was called on a conversation it no longer owns and stayed quiet.
+  paused?: boolean;
+  // Tokens the turn used across every LLM call (classifier, reply, summary).
+  usage?: { inputTokens: number; outputTokens: number };
+  model?: string | null;
+  promptVersion?: string | null;
+  // The agent's configured CLASSIFIER ('llm' or 'jev').
+  classifier?: string | null;
+  // The grounding guard: null when it didn't fire; undefined when the agent
+  // doesn't report it.
+  guard?: AgentGuard | null;
+}
+
+export interface AgentGuard {
+  fired: boolean;
+  // The tool that returns the data David showed without calling it.
+  missingTool: string | null;
+  // retried_ok: retried forcing the tool; safe_reply: "Ahora no puedo…".
+  action: string | null;
 }
 
 const stringOrNull = (value: unknown) =>
   typeof value === 'string' || value === null ? value : undefined;
+
+const isCount = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isInteger(value) && value >= 0;
 
 const isObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -112,12 +137,40 @@ export function parseAgentOutputs(raw: unknown): AgentOutputs {
     };
   }
 
+  // A malformed usage is dropped whole: half a count would skew the cost.
+  const usage =
+    isObject(raw.usage) &&
+    isCount(raw.usage.input_tokens) &&
+    isCount(raw.usage.output_tokens)
+      ? {
+          inputTokens: raw.usage.input_tokens,
+          outputTokens: raw.usage.output_tokens,
+        }
+      : undefined;
+
+  let guard: AgentGuard | null | undefined;
+  if (raw.guard === null) {
+    guard = null;
+  } else if (isObject(raw.guard) && typeof raw.guard.fired === 'boolean') {
+    guard = {
+      fired: raw.guard.fired,
+      missingTool: stringOrNull(raw.guard.missing_tool) ?? null,
+      action: stringOrNull(raw.guard.action) ?? null,
+    };
+  }
+
   return {
     useCase: stringOrNull(raw.use_case),
     intent: stringOrNull(raw.intent),
     language: stringOrNull(raw.language),
     blocked: typeof raw.blocked === 'boolean' ? raw.blocked : undefined,
     handoff,
+    paused: typeof raw.paused === 'boolean' ? raw.paused : undefined,
+    usage,
+    model: stringOrNull(raw.model),
+    promptVersion: stringOrNull(raw.prompt_version),
+    classifier: stringOrNull(raw.classifier),
+    guard,
   };
 }
 
@@ -167,6 +220,43 @@ function shouldInjectContext(): boolean {
   return shouldInjectContextForEndpoint(endpointTask);
 }
 
+// The agent is unreachable while its App redeploys: its proxy answers
+// 502/503/504, or the connection fails. That is reported as
+// AgentUnavailableError so the chat can queue the turn (server/src/agent-queue.ts)
+// instead of showing a technical error.
+const UNAVAILABLE_STATUS = new Set([502, 503, 504]);
+
+export class AgentUnavailableError extends Error {
+  constructor(cause?: unknown) {
+    super('The agent is unavailable', { cause });
+    this.name = 'AgentUnavailableError';
+  }
+}
+
+export function isAgentUnavailableError(error: unknown): boolean {
+  for (let e = error, depth = 0; e && depth < 5; depth++) {
+    if (e instanceof Error && e.name === 'AgentUnavailableError') return true;
+    e = (e as { cause?: unknown }).cause;
+  }
+  return false;
+}
+
+async function fetchAgent(url: string, init?: RequestInit): Promise<Response> {
+  let response: Response;
+  try {
+    response = await fetch(url, init);
+  } catch (error) {
+    if (init?.signal?.aborted) throw error;
+    throw new AgentUnavailableError(error);
+  }
+  if (UNAVAILABLE_STATUS.has(response.status)) {
+    // Not awaited: some bodies (MSW's) never settle a cancel.
+    response.body?.cancel().catch(() => {});
+    throw new AgentUnavailableError(`HTTP ${response.status}`);
+  }
+  return response;
+}
+
 // Custom fetch function to transform Databricks responses to OpenAI format
 export const databricksFetch: typeof fetch = async (input, init) => {
   const url = input.toString();
@@ -177,16 +267,20 @@ export const databricksFetch: typeof fetch = async (input, init) => {
   const conversationId = headers.get(CONTEXT_HEADER_CONVERSATION_ID);
   const userId = headers.get(CONTEXT_HEADER_USER_ID);
   const sessionToken = headers.get(CONTEXT_HEADER_SESSION_TOKEN);
+  const handledBy = headers.get(CONTEXT_HEADER_HANDLED_BY);
+  const language = headers.get(CONTEXT_HEADER_LANGUAGE);
   // Remove context headers so they don't get sent to the API
   headers.delete(CONTEXT_HEADER_CONVERSATION_ID);
   headers.delete(CONTEXT_HEADER_USER_ID);
   headers.delete(CONTEXT_HEADER_SESSION_TOKEN);
+  headers.delete(CONTEXT_HEADER_HANDLED_BY);
+  headers.delete(CONTEXT_HEADER_LANGUAGE);
   requestInit = { ...requestInit, headers };
 
   // Inject context into request body if appropriate
   const hasContext = Boolean(conversationId && userId);
   if (
-    (hasContext || sessionToken) &&
+    (hasContext || sessionToken || handledBy || language) &&
     requestInit?.body &&
     typeof requestInit.body === 'string' &&
     shouldInjectContext()
@@ -205,6 +299,15 @@ export const databricksFetch: typeof fetch = async (input, init) => {
           ...body.custom_inputs,
           session_token: sessionToken,
         };
+      }
+      if (handledBy) {
+        body.custom_inputs = {
+          ...body.custom_inputs,
+          handled_by: handledBy,
+        };
+      }
+      if (language) {
+        body.custom_inputs = { ...body.custom_inputs, language };
       }
       requestInit = { ...requestInit, body: JSON.stringify(body) };
     } catch {
@@ -234,7 +337,7 @@ export const databricksFetch: typeof fetch = async (input, init) => {
     }
   }
 
-  const response = await fetch(url, requestInit);
+  const response = await fetchAgent(url, requestInit);
 
   const shouldWrapStream = conversationId || LOG_SSE_EVENTS;
   if (shouldWrapStream && response.body) {
@@ -336,10 +439,10 @@ const provider = createDatabricksProvider({
   baseURL: `${hostname}/serving-endpoints`,
   formatUrl: ({ baseUrl, path }) => API_PROXY ?? `${baseUrl}${path}`,
   fetch: async (...[input, init]: Parameters<typeof fetch>) => {
-    // Always get fresh token for each request (will use cache if valid)
-    const currentToken = await getProviderToken();
+    // Always get fresh token for each request (will use cache if valid);
+    // the agent on AWS takes its shared secret instead (see agent-auth.ts).
     const headers = new Headers(init?.headers);
-    headers.set('Authorization', `Bearer ${currentToken}`);
+    await setAgentAuth(headers, getProviderToken);
 
     return databricksFetch(input, {
       ...init,

@@ -7,6 +7,7 @@ import {
 import { authMiddleware } from '../middleware/auth';
 import type { ClientSession } from '@chat-template/auth';
 import { getRole } from '../roles';
+import { getAuthMode } from '../demo-auth';
 
 export const sessionRouter: RouterType = Router();
 
@@ -17,15 +18,15 @@ sessionRouter.use(authMiddleware);
  * GET /api/session - Get current user session
  */
 sessionRouter.get('/', async (req: Request, res: Response) => {
-  console.log('GET /api/session', req.session);
   const session = req.session;
 
   if (!session?.user) {
-    return res.json({ user: null } as ClientSession);
+    return res.json({ user: null, authMode: getAuthMode() });
   }
 
   // Return minimal user data for client
-  const clientSession: ClientSession = {
+  const clientSession: ClientSession & { authMode: string } = {
+    authMode: getAuthMode(),
     user: {
       email: session.user.email,
       name: session.user.name,

@@ -1,0 +1,8 @@
+# synced table (workspace.bank_ro.*)	source table	primary key (customer_id first: its index serves per-customer reads)
+customer_360	workspace.bank_gold.customer_360	customer_id
+customers	workspace.bank_silver.customers	customer_id
+customer_cases	workspace.bank_gold.customer_cases	customer_id,complaint_id
+call_transcripts	workspace.bank_silver.call_transcripts	customer_id,transcript_id
+customer_products	workspace.bank_gold.customer_products	customer_id,product_id
+interaction_history	workspace.bank_gold.interaction_history	customer_id,interaction_id
+customer_transactions	workspace.bank_gold.customer_transactions	customer_id,transaction_id

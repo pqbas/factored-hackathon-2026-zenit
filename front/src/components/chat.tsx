@@ -13,8 +13,7 @@ import type {
   CustomUIDataTypes,
   VisibilityType,
 } from '@chat-template/core';
-import { unstable_serialize } from 'swr/infinite';
-import { getChatHistoryPaginationKey } from './sidebar-history';
+import { chatHistoryCacheKey } from './sidebar-history';
 import { toast } from './toast';
 import { useSearchParams } from 'react-router-dom';
 import { useChatVisibility } from '@/hooks/use-chat-visibility';
@@ -25,20 +24,25 @@ import { ChatTransport } from '../lib/ChatTransport';
 import type { ClientSession } from '@chat-template/auth';
 import { softNavigateToChatId } from '@/lib/navigation';
 import { useAppConfig } from '@/contexts/AppConfigContext';
+import { useLang } from '@/contexts/LangContext';
 import { useDemoCustomers } from '@/hooks/use-demo-customers';
 import { useHandoff } from '@/hooks/use-handoff';
 import {
   type HandledBy,
   handledByOf,
+  AGENT_PENDING_EVENT,
   handoffNotice,
   isStateOnlyMessage,
 } from '@/lib/handoff';
 import {
+  chatCustomerToken,
+  chooseCustomerToken,
   getChatCustomerToken,
   getLastCustomerToken,
   pickDefaultToken,
   setChatCustomerToken,
-  setLastCustomerToken,
+  getActiveCustomerToken,
+  setActiveCustomerToken,
 } from '@/lib/demo-customer-storage';
 
 export function Chat({
@@ -49,6 +53,8 @@ export function Chat({
   isReadonly,
   initialLastContext,
   initialHandledBy = 'ai_agent',
+  initialAgentPending = false,
+  initialCustomerToken = null,
 }: {
   id: string;
   initialMessages: ChatMessage[];
@@ -58,6 +64,9 @@ export function Chat({
   session: ClientSession;
   initialLastContext?: LanguageModelUsage;
   initialHandledBy?: HandledBy;
+  initialAgentPending?: boolean;
+  // The customer the back stored for this chat, when it has one.
+  initialCustomerToken?: string | null;
 }) {
   const { visibilityType } = useChatVisibility({
     chatId: id,
@@ -77,16 +86,24 @@ export function Chat({
   // goes out, because the agent keys its memory on the chat id.
   const { customers } = useDemoCustomers();
   const [customerToken, setCustomerToken] = useState<string | null>(() =>
-    getChatCustomerToken(id),
+    chatCustomerToken(id, initialCustomerToken),
   );
   const [isCustomerLocked, setIsCustomerLocked] = useState(
-    () => getChatCustomerToken(id) !== null,
+    () => initialMessages.length > 0 && chatCustomerToken(id, initialCustomerToken) !== null,
   );
   const customerTokenRef = useRef(customerToken);
   customerTokenRef.current = customerToken;
+  // The chosen language goes with every message, for David to answer in it
+  // when the message doesn't make it clear (custom_inputs.language).
+  const { lang } = useLang();
+  const langRef = useRef(lang);
+  langRef.current = lang;
   useEffect(() => {
     if (customerToken === null && customers.length > 0) {
-      setCustomerToken(pickDefaultToken(customers, getLastCustomerToken()));
+      const picked = pickDefaultToken(customers, getLastCustomerToken());
+      setCustomerToken(picked);
+      // Nothing picked yet this session: the default is the session's customer.
+      if (picked && getActiveCustomerToken() === null) setActiveCustomerToken(picked);
     }
   }, [customers, customerToken]);
 
@@ -123,7 +140,7 @@ export function Chat({
   const isNewChat = initialMessages.length === 0;
   const didFetchHistoryOnNewChat = useRef(false);
   const fetchChatHistory = useCallback(() => {
-    mutate(unstable_serialize(getChatHistoryPaginationKey));
+    mutate(chatHistoryCacheKey());
   }, [mutate]);
 
   const {
@@ -169,7 +186,6 @@ export function Chat({
         const sessionToken = customerTokenRef.current;
         if (sessionToken && isUserMessage && getChatCustomerToken(id) === null) {
           setChatCustomerToken(id, sessionToken);
-          setLastCustomerToken(sessionToken);
           setIsCustomerLocked(true);
         }
 
@@ -184,6 +200,7 @@ export function Chat({
             nextMessageId: generateUUID(),
             // Never an empty string: the back rejects it.
             ...(sessionToken ? { sessionToken } : {}),
+            language: langRef.current,
             // Send previous messages when:
             // 1. Database is disabled (ephemeral mode) - always need client-side messages
             // 2. Continuation request (tool results) - tool result only exists client-side
@@ -222,6 +239,8 @@ export function Chat({
           handledByOf((dataPart.data as { handledBy?: string }).handledBy),
         );
       }
+      // The agent is unavailable: the back queued this turn.
+      if (dataPart.type === AGENT_PENDING_EVENT) setAgentPending(true);
     },
     onFinish: ({
       isAbort,
@@ -298,14 +317,20 @@ export function Chat({
 
       // Only show toast for explicit ChatSDKError (backend validation errors)
       // Other errors (network, schema validation) are handled silently or in message parts
-      if (error instanceof ChatSDKError) {
+      // Failures on David's side (unavailable, offline, gateway) show inline
+      // as a friendly note; only the customer's own problems (validation,
+      // permissions, limits) get a toast.
+      const inline =
+        !(error instanceof ChatSDKError) ||
+        !['bad_request', 'unauthorized', 'forbidden', 'not_found', 'rate_limit', 'conflict'].includes(
+          error.type,
+        );
+      if (!inline) {
         toast({
           type: 'error',
           description: error.message,
         });
       } else {
-        // Non-ChatSDKError: Could be network error or in-stream error
-        // Log but don't toast - errors during streaming may be informational
         console.warn('[Chat onError] Error during streaming:', error.message);
       }
       // Note: We don't call resumeStream here because onError can be called
@@ -314,14 +339,15 @@ export function Chat({
     },
   });
 
-  const { handledBy, setHandledBy, refreshState } = useHandoff({
+  const { handledBy, setHandledBy, agentPending, setAgentPending, refreshState } = useHandoff({
     chatId: id,
     initialHandledBy,
+    initialAgentPending,
     messages,
     setMessages,
     enabled: chatHistoryEnabled,
   });
-  const notice = handoffNotice(handledBy);
+  const notice = handoffNotice(handledBy, lang);
 
   const [searchParams] = useSearchParams();
   const query = searchParams.get('query');
@@ -349,9 +375,13 @@ export function Chat({
           chatId={id}
           customers={customers}
           customerToken={customerToken}
-          onCustomerChange={setCustomerToken}
+          onCustomerChange={(t) => {
+            setCustomerToken(t);
+            chooseCustomerToken(t);
+          }}
           isCustomerLocked={isCustomerLocked}
           handledBy={handledBy}
+          agentPending={agentPending}
         />
 
         <Messages
@@ -364,6 +394,8 @@ export function Chat({
           sendMessage={sendMessage}
           isReadonly={isReadonly}
           selectedModelId={initialChatModel}
+          handledBy={handledBy}
+          agentPending={agentPending}
         />
 
         {notice && (

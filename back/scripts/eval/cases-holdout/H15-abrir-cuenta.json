@@ -1,0 +1,22 @@
+{
+  "id": "H15",
+  "language": "es",
+  "group": "ambiguos-fuera-de-alcance",
+  "customer": {
+    "token": "demo-co-3",
+    "user": 9,
+    "segment": "Basic",
+    "name": "Pilar"
+  },
+  "steps": [
+    {
+      "say": "quiero abrir una cuenta nueva"
+    }
+  ],
+  "expected": {
+    "firstIntent": "COMMERCIAL",
+    "outcome": "R",
+    "mustMatch": ["todav[ií]a no est[aá] disponible"],
+    "mustNotMatch": ["\\d\\s?%", "\\b(tasa|cuotas|plazo|requisitos)\\b"]
+  }
+}

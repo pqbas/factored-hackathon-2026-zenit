@@ -1,19 +1,17 @@
-import { ASSISTANT_KIND, ASSISTANT_NAME } from '@/lib/assistant';
-import { Bot } from 'lucide-react';
+import { Bot, PanelRight, X } from 'lucide-react';
 
-import { avatarColor } from '@/components/conversations/conversation-list';
-import { StatusInline } from '@/components/conversations/status-chip';
-import { SidebarToggle } from '@/components/sidebar-toggle';
+import { handoffReasonStyle } from '@/components/conversations/use-case-style';
 import { Button } from '@/components/ui/button';
+import { useLang } from '@/contexts/LangContext';
 import {
   type AdvisorChat,
   customerLabel,
-  isHeldByOther,
   isMine,
   statusOf,
-  useCaseLabel,
+  reasonTagOf,
+  sectionLabel,
 } from '@/lib/advisor';
-import { getInitials } from '@/lib/conversations';
+import { avatarColor, avatarKeyOf, getInitials } from '@/lib/conversations';
 import { cn } from '@/lib/utils';
 
 function AssistantSwitch({
@@ -25,11 +23,14 @@ function AssistantSwitch({
   disabled: boolean;
   onToggle: () => void;
 }) {
+  const { t } = useLang();
   return (
     <button
       type="button"
       role="switch"
       aria-checked={on}
+      aria-label={t.console.assistantSwitch}
+      title={t.console.assistantSwitch}
       data-testid="assistant-switch"
       disabled={disabled}
       onClick={onToggle}
@@ -39,9 +40,8 @@ function AssistantSwitch({
         className={cn('size-4', on ? 'text-primary' : 'text-muted-foreground')}
         strokeWidth={1.8}
       />
-      <span className="hidden sm:inline" title={ASSISTANT_KIND}>
-        {ASSISTANT_NAME} (asistente)
-      </span>
+      {/* No text label: the robot says it's David (name in the tooltip), so
+          the customer's name and email keep their room. */}
       <span className="w-6 text-left">{on ? 'ON' : 'OFF'}</span>
       <span
         className={cn(
@@ -58,95 +58,119 @@ function AssistantSwitch({
 export function ConversationHeader({
   chat,
   me,
-  readOnly,
   busy,
+  contextOpen,
+  onToggleContext,
   onTake,
   onRelease,
+  onClose,
 }: {
   chat: AdvisorChat;
   me: string | undefined;
-  // The admin supervises: sees the chat, can't act on it.
-  readOnly: boolean;
   busy: boolean;
+  contextOpen: boolean;
+  onToggleContext: () => void;
   onTake: () => void;
   onRelease: (outcome: 'returned_to_agent' | 'resolved') => void;
+  onClose: () => void;
 }) {
+  const { t } = useLang();
   const status = statusOf(chat);
   const mine = isMine(chat, me);
-  const heldByOther = isHeldByOther(chat, me);
+  const tag = reasonTagOf(chat);
   const name = customerLabel(chat);
 
   return (
-    <header className="flex items-center gap-3 border-border border-b px-3 py-2.5 sm:px-4">
-      <SidebarToggle />
+    <header className="flex items-center gap-3 border-border border-b px-4 py-3">
+      <button
+        type="button"
+        aria-label={t.console.closeConversation}
+        data-testid="close-conversation"
+        onClick={onClose}
+        className="flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground"
+      >
+        <X className="size-4" />
+      </button>
       <div
+        data-testid="header-avatar"
         className={cn(
           'flex size-10 shrink-0 items-center justify-center rounded-full font-medium text-sm text-white',
-          avatarColor(chat.userId),
+          avatarColor(avatarKeyOf(chat)),
         )}
       >
         {getInitials(name)}
       </div>
-      <div className="flex min-w-0 flex-col">
-        <span className="flex min-w-0 items-center gap-2.5">
-          <span className="truncate font-semibold text-[15px]">{name}</span>
-          <StatusInline status={status} />
+      <div className="flex min-w-0 flex-col gap-0.5">
+        <span data-testid="customer-name" className="truncate font-semibold text-[15px]">
+          {name}
         </span>
-        <span
-          data-testid="customer-meta"
-          className="truncate text-muted-foreground text-xs"
-        >
-          {useCaseLabel(chat)}
-          {mine && ' · La atiendes tú'}
-          {heldByOther && ` · La atiende ${chat.assignedTo}`}
-        </span>
+        {/* Second line: only why the customer is here. The state and who has
+            the chat live in the input's placeholder; who the customer is, in
+            the context panel. */}
+        {tag && (
+          <span data-testid="customer-meta" className="flex min-w-0 items-center text-xs">
+            <span
+              data-testid="use-case-tag"
+              className={cn(
+                'shrink-0 rounded-md px-2 py-0.5 font-medium text-[11px]',
+                handoffReasonStyle(tag).chip,
+              )}
+            >
+              {sectionLabel(tag)}
+            </span>
+          </span>
+        )}
       </div>
-      {readOnly ? (
-        <span
-          data-testid="read-only-badge"
-          className="ml-auto shrink-0 rounded-full bg-secondary px-3 py-1 text-muted-foreground text-xs"
-        >
-          Solo lectura
-        </span>
-      ) : (
-        <div className="ml-auto flex shrink-0 items-center gap-2">
-          {(status === 'assistant' || status === 'resolved') && (
-            <AssistantSwitch on disabled={busy} onToggle={onTake} />
+      <div className="ml-auto flex shrink-0 items-center gap-2">
+        <button
+          type="button"
+          data-testid="context-toggle"
+          aria-pressed={contextOpen}
+          onClick={onToggleContext}
+          className={cn(
+            'flex h-8 items-center gap-1.5 rounded-full px-3 font-semibold text-xs transition-colors',
+            contextOpen ? 'bg-primary/15 text-primary' : 'bg-secondary text-foreground hover:bg-accent',
           )}
-          {status === 'waiting' && (
+        >
+          <PanelRight className="size-3.5" strokeWidth={1.9} />
+          {t.console.contextButton}
+        </button>
+        {(status === 'assistant' || status === 'resolved') && (
+          <AssistantSwitch on disabled={busy} onToggle={onTake} />
+        )}
+        {status === 'waiting' && (
+          <Button
+            type="button"
+            size="sm"
+            data-testid="take-button"
+            disabled={busy}
+            onClick={onTake}
+            className="h-8 rounded-full px-4 text-xs"
+          >
+            {t.console.take}
+          </Button>
+        )}
+        {mine && (
+          <>
+            <AssistantSwitch
+              on={false}
+              disabled={busy}
+              onToggle={() => onRelease('returned_to_agent')}
+            />
             <Button
               type="button"
+              variant="secondary"
               size="sm"
-              data-testid="take-button"
+              data-testid="resolve-button"
               disabled={busy}
-              onClick={onTake}
-              className="h-8 rounded-full px-4 text-xs"
+              onClick={() => onRelease('resolved')}
+              className="h-8 rounded-full px-3 text-xs"
             >
-              Tomar
+              {t.console.resolve}
             </Button>
-          )}
-          {mine && (
-            <>
-              <AssistantSwitch
-                on={false}
-                disabled={busy}
-                onToggle={() => onRelease('returned_to_agent')}
-              />
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                data-testid="resolve-button"
-                disabled={busy}
-                onClick={() => onRelease('resolved')}
-                className="h-8 rounded-full px-3 text-xs"
-              >
-                Resolver
-              </Button>
-            </>
-          )}
-        </div>
-      )}
+          </>
+        )}
+      </div>
     </header>
   );
 }

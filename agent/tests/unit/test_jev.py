@@ -116,14 +116,22 @@ def test_timeout_raises_jev_unavailable():
         raise httpx.ReadTimeout("timed out", request=request)
 
     client = _client_with_handler(handler)
-    with pytest.raises(JevUnavailable):
+    with pytest.raises(JevUnavailable, match="request failed: ReadTimeout: timed out"):
         asyncio.run(client.classify("hola", ROUTES))
 
 
-def test_529_raises_jev_unavailable():
+def test_529_raises_jev_unavailable_with_the_status():
     client = _client_with_handler(lambda r: httpx.Response(529, json={"error": "overloaded"}))
-    with pytest.raises(JevUnavailable):
+    with pytest.raises(JevUnavailable, match="^HTTP 529$"):
         asyncio.run(client.classify("hola", ROUTES))
+
+
+def test_unavailable_reason_never_carries_the_text_or_the_key():
+    client = _client_with_handler(lambda r: httpx.Response(401, text="bad key for mensaje secreto"))
+    with pytest.raises(JevUnavailable) as info:
+        asyncio.run(client.classify("mensaje secreto", ROUTES))
+    assert "mensaje secreto" not in str(info.value)
+    assert client._api_key not in str(info.value)
 
 
 def test_reuses_a_single_http_client_across_calls():
@@ -140,5 +148,30 @@ def test_missing_probability_for_the_chosen_guardrail_raises_jev_unavailable():
         "type": "choice", "choice": "OK", "confidence": 0.95, "probabilities": {},
     }
     client = _client_with_handler(lambda r: httpx.Response(200, json=body))
-    with pytest.raises(JevUnavailable):
+    with pytest.raises(JevUnavailable, match="incomplete answer: KeyError"):
         asyncio.run(client.classify("hola", ROUTES))
+
+
+def _sent_body(context):
+    bodies = []
+
+    def handler(request):
+        bodies.append(json.loads(request.content))
+        return httpx.Response(200, json=_sample_response_body())
+
+    client = JevClient(api_key="k", url="https://jev.test/v1", timeout=2.0, transport=httpx.MockTransport(handler))
+    asyncio.run(client.classify("me cobran mucho", ROUTES, context=context))
+    return bodies[0]
+
+
+def test_the_state_is_the_transcript_followed_by_the_last_message():
+    body = _sent_body("Cliente: quiero cancelar\nDavid: ¿Por qué quieres cancelarlo?")
+    assert body["state"] == "Cliente: quiero cancelar\nDavid: ¿Por qué quieres cancelarlo?\nCliente: me cobran mucho"
+    assert "what does the customer want now, in this conversation" in body["questions"]["intent"]["instructions"].lower()
+    assert "last message" in body["questions"]["guardrail"]["instructions"]
+
+
+def test_without_a_transcript_the_state_is_the_message_alone():
+    body = _sent_body(None)
+    assert body["state"] == "me cobran mucho"
+    assert body["questions"]["intent"]["instructions"] == "What is the customer asking for?"

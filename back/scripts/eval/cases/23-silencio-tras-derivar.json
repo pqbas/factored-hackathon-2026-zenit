@@ -1,0 +1,48 @@
+{
+  "id": "23",
+  "language": "es",
+  "group": "despues-de-derivar",
+  "customer": {
+    "token": "demo-mx-3",
+    "user": 5,
+    "segment": "Plus",
+    "name": "Fernando"
+  },
+  "steps": [
+    {
+      "say": "hay un cobro raro en mi tarjeta"
+    },
+    {
+      "say": "la 3677"
+    },
+    {
+      "say": "el de Cable TV de 361.19 del 16 de junio"
+    },
+    {
+      "say": "no reconozco ese cargo"
+    },
+    {
+      "say": "nunca contraté ningún servicio de cable"
+    },
+    {
+      "say": "sí, confirmo"
+    },
+    {
+      "say": "hola? sigue ahí?"
+    }
+  ],
+  "expected": {
+    "firstIntent": "COMPLAINT",
+    "outcome": "D",
+    "reason": "complaint",
+    "handoffFacts": [
+      "card_last4",
+      "transaction_date",
+      "merchant",
+      "amount",
+      "complaint_type",
+      "description"
+    ],
+    "silentAfter": 6
+  }
+}

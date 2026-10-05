@@ -5,13 +5,14 @@ import {
   saveMessages,
   getChatById,
   getMessagesByChatId,
+  updateChatAgentState,
 } from '@chat-template/db';
 import { skipInEphemeralMode } from '../helpers';
 
 // Never curie: history.test.ts expects curie to have no chats.
 // A second advisor, via headers on babbage's context (ADVISOR_EMAILS in
 // playwright.config.ts). curie must stay chat-free, and ada is an admin, who
-// only supervises.
+// can also take chats.
 const ASESOR2 = {
   'X-Forwarded-User': 'asesor2',
   'X-Forwarded-Email': 'asesor2@example.com',
@@ -92,33 +93,76 @@ test.describe('/api/advisor (with database)', () => {
       expect(release.status()).toBe(403);
     });
 
-    test('the admin reads the console but gets 403 on every write', async ({
+    test('the admin takes, answers and releases like an advisor', async ({
       babbageContext,
       adaContext,
     }) => {
       const chatId = await createChat(babbageContext);
 
-      const inbox = await adaContext.request.get(
-        '/api/advisor/conversations?limit=100',
+      const take = await adaContext.request.post(
+        `/api/advisor/conversations/${chatId}/take`,
+        { data: {} },
       );
-      expect(inbox.status()).toBe(200);
-      const messages = await adaContext.request.get(
-        `/api/advisor/conversations/${chatId}/messages`,
+      expect(take.status()).toBe(200);
+      expect((await take.json()).chat.assignedTo).toBe(
+        `${adaContext.name}@example.com`,
       );
-      expect(messages.status()).toBe(200);
 
+      const send = await adaContext.request.post(
+        `/api/advisor/conversations/${chatId}/messages`,
+        { data: { text: 'hola' } },
+      );
+      expect(send.status()).toBe(201);
+
+      const release = await adaContext.request.post(
+        `/api/advisor/conversations/${chatId}/release`,
+        { data: { outcome: 'resolved' } },
+      );
+      expect(release.status()).toBe(200);
+      expect((await release.json()).chat.handledBy).toBe('ai_agent');
+    });
+
+    test('admin and advisor get 409 on a chat the other one holds', async ({
+      babbageContext,
+      adaContext,
+    }) => {
+      const heldByAdvisor = await createChat(babbageContext);
+      await babbageContext.request.post(
+        `/api/advisor/conversations/${heldByAdvisor}/take`,
+        { data: {} },
+      );
+      const adminTake = await adaContext.request.post(
+        `/api/advisor/conversations/${heldByAdvisor}/take`,
+        { data: { force: true } },
+      );
+      expect(adminTake.status()).toBe(409);
+      expect((await adminTake.json()).assignedTo).toBe(
+        `${babbageContext.name}@example.com`,
+      );
       for (const [path, data] of [
-        ['take', {}],
         ['messages', { text: 'hola' }],
         ['release', { outcome: 'resolved' }],
       ] as const) {
         const response = await adaContext.request.post(
-          `/api/advisor/conversations/${chatId}/${path}`,
+          `/api/advisor/conversations/${heldByAdvisor}/${path}`,
           { data },
         );
-        expect(response.status()).toBe(403);
-        expect((await response.json()).code).toBe('forbidden:chat');
+        expect(response.status()).toBe(409);
       }
+
+      const heldByAdmin = await createChat(babbageContext);
+      await adaContext.request.post(
+        `/api/advisor/conversations/${heldByAdmin}/take`,
+        { data: {} },
+      );
+      const advisorTake = await babbageContext.request.post(
+        `/api/advisor/conversations/${heldByAdmin}/take`,
+        { data: {} },
+      );
+      expect(advisorTake.status()).toBe(409);
+      expect((await advisorTake.json()).assignedTo).toBe(
+        `${adaContext.name}@example.com`,
+      );
     });
 
     test('/users is for the admin only', async ({
@@ -603,6 +647,117 @@ test.describe('/api/advisor (with database)', () => {
   });
 
   test.describe('bandeja filters', () => {
+    test("each inbox chat carries the customer's last message as lastMessage", async ({
+      babbageContext,
+    }) => {
+      const chatId = await createChat(babbageContext);
+      // With David it's only listed under handledBy=ai_agent; once taken, in
+      // the default (human) inbox.
+      const inboxRow = async (handledBy = '') => {
+        const { chats } = await (
+          await babbageContext.request.get(
+            `/api/advisor/conversations?userId=${babbageContext.name}-id&limit=100${handledBy}`,
+          )
+        ).json();
+        return chats.find((c: any) => c.id === chatId);
+      };
+
+      expect((await inboxRow('&handledBy=ai_agent')).lastMessage).toBeNull();
+
+      const longQuestion = `Hola   ${'a'.repeat(200)}`;
+      await (await postChatMessage(babbageContext, chatId, longQuestion)).text();
+
+      // The advisor takes the chat and replies: the row keeps showing what the
+      // customer said last, not the agent's, the advisor's or the notices.
+      await babbageContext.request.post(
+        `/api/advisor/conversations/${chatId}/take`,
+        { data: {} },
+      );
+      await babbageContext.request.post(
+        `/api/advisor/conversations/${chatId}/messages`,
+        { data: { text: 'Respuesta del asesor' } },
+      );
+
+      const { lastMessage } = await inboxRow();
+      expect(lastMessage.senderType).toBe('customer');
+      expect(lastMessage.text).toHaveLength(140);
+      expect(lastMessage.text.startsWith('Hola a')).toBe(true);
+      expect(lastMessage.text.endsWith('…')).toBe(true);
+      expect(typeof lastMessage.createdAt).toBe('string');
+
+      // Customer routes don't carry the preview.
+      const { chats } = await (
+        await babbageContext.request.get('/api/history?limit=100')
+      ).json();
+      const historyRow = chats.find((c: any) => c.id === chatId);
+      expect(historyRow).toBeDefined();
+      expect(historyRow).not.toHaveProperty('lastMessage');
+    });
+
+    test('a message from before senderType counts as the customer when its role is user', async ({
+      babbageContext,
+    }) => {
+      const chatId = await createChat(babbageContext);
+      await saveMessages({
+        messages: [
+          {
+            id: generateUUID(),
+            chatId,
+            role: 'user',
+            parts: [{ type: 'text', text: 'mensaje viejo del cliente' }],
+            attachments: [],
+            createdAt: new Date(),
+            blocked: false,
+            senderType: null,
+            senderId: null,
+          },
+        ],
+      });
+
+      const { chats } = await (
+        await babbageContext.request.get(
+          `/api/advisor/conversations?userId=${babbageContext.name}-id&limit=100&handledBy=ai_agent`,
+        )
+      ).json();
+      const row = chats.find((c: any) => c.id === chatId);
+      expect(row.lastMessage.text).toBe('mensaje viejo del cliente');
+      expect(row.lastMessage.senderType).toBeNull();
+    });
+
+    test("the default inbox holds only human cases; David's come with handledBy=ai_agent", async ({
+      babbageContext,
+    }) => {
+      const withDavid = await createChat(babbageContext);
+      const queued = await createChat(babbageContext);
+      await updateChatAgentState({ chatId: queued, handledBy: 'human_queue' });
+      const taken = await createChat(babbageContext);
+      await babbageContext.request.post(
+        `/api/advisor/conversations/${taken}/take`,
+        { data: {} },
+      );
+
+      const ids = async (query: string) => {
+        const { chats } = await (
+          await babbageContext.request.get(
+            `/api/advisor/conversations?userId=${babbageContext.name}-id&limit=100${query}`,
+          )
+        ).json();
+        return chats.map((c: any) => c.id);
+      };
+
+      for (const query of ['', '&status=open']) {
+        const inbox = await ids(query);
+        expect(inbox).toContain(queued);
+        expect(inbox).toContain(taken);
+        expect(inbox).not.toContain(withDavid);
+      }
+
+      const david = await ids('&status=open&handledBy=ai_agent');
+      expect(david).toContain(withDavid);
+      expect(david).not.toContain(queued);
+      expect(david).not.toContain(taken);
+    });
+
     test('assignedTo=me, status and handledBy filter the inbox', async ({
       babbageContext,
     }) => {

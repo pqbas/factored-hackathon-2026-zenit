@@ -1,8 +1,8 @@
-import { ASSISTANT_NAME } from '@/lib/assistant';
 // Pure display helpers for the advisor console: no side effects, no fetch.
 
 import { format, isSameDay, subDays } from 'date-fns';
-import { es } from 'date-fns/locale';
+
+import { dateLocale, tr } from '@/lib/i18n';
 
 // "Santiago Martínez" -> "SM"; "ana@banco.test" -> "AN"; "Ana" -> "AN".
 export function getInitials(name: string): string {
@@ -33,13 +33,59 @@ export function matchesQuery(query: string, ...fields: (string | null)[]): boole
   return fields.some((field) => field && normalize(field).includes(needle));
 }
 
+// Deterministic avatar color per bank customer, so the same customer always
+// gets the same color, in the list and in the open chat. Soft hues, no grays;
+// the lighter ones go a step darker so the white initials stay readable.
+const AVATAR_COLORS = [
+  'bg-linear-to-b from-rose-500 to-rose-600',
+  'bg-linear-to-b from-orange-500 to-orange-600',
+  'bg-linear-to-b from-amber-600 to-amber-700',
+  'bg-linear-to-b from-emerald-600 to-emerald-700',
+  'bg-linear-to-b from-teal-600 to-teal-700',
+  'bg-linear-to-b from-sky-600 to-sky-700',
+  'bg-linear-to-b from-indigo-500 to-indigo-600',
+  'bg-linear-to-b from-violet-500 to-violet-600',
+];
+
+// A stable slot in a palette of `size` colors for a key (FNV-1a: similar ids
+// like CUS000123 and CUS000132 land on different colors).
+export function paletteIndex(key: string, size: number): number {
+  let hash = 2166136261;
+  for (const char of key) hash = Math.imul(hash ^ char.charCodeAt(0), 16777619) >>> 0;
+  return hash % size;
+}
+
+export function avatarColor(key: string): string {
+  return AVATAR_COLORS[paletteIndex(key, AVATAR_COLORS.length)];
+}
+
+// The bank customer behind a chat; the app user only when there's none (in
+// prod every evaluation chat comes from the same app user). customerId first:
+// the back builds customerKey from it when it exists.
+export function avatarKeyOf(chat: {
+  customerId?: string | null;
+  customerKey?: string | null;
+  userId: string;
+}): string {
+  return chat.customerId || chat.customerKey || chat.userId;
+}
+
 export type ConversationStatus = 'assistant' | 'waiting' | 'advisor' | 'resolved';
 
+// The four states a conversation is always in (docs/flujo-atencion.md §5).
 export const STATUS_LABEL: Record<ConversationStatus, string> = {
-  assistant: `Con ${ASSISTANT_NAME}`,
-  waiting: 'Sin atender',
-  advisor: 'En atención',
-  resolved: 'Resuelto',
+  get assistant() {
+    return tr().console.status.assistant;
+  },
+  get waiting() {
+    return tr().console.status.waiting;
+  },
+  get advisor() {
+    return tr().console.status.advisor;
+  },
+  get resolved() {
+    return tr().console.status.resolved;
+  },
 };
 
 export type DayGroup<T> = {
@@ -57,10 +103,10 @@ export function groupByDay<T extends { sentAt: string }>(
   for (const item of items) {
     const date = new Date(item.sentAt);
     const label = isSameDay(date, now)
-      ? 'Hoy'
+      ? tr().today
       : isSameDay(date, yesterday)
-        ? 'Ayer'
-        : format(date, "d 'de' MMMM", { locale: es });
+        ? tr().yesterday
+        : format(date, "d 'de' MMMM", { locale: dateLocale() });
 
     const currentGroup = groups[groups.length - 1];
     if (currentGroup && currentGroup.label === label) {
@@ -76,6 +122,6 @@ export function groupByDay<T extends { sentAt: string }>(
 export function formatListTime(iso: string, now: Date): string {
   const date = new Date(iso);
   if (isSameDay(date, now)) return format(date, 'HH:mm');
-  if (isSameDay(date, subDays(now, 1))) return 'Ayer';
+  if (isSameDay(date, subDays(now, 1))) return tr().yesterday;
   return format(date, 'dd/MM/yyyy');
 }

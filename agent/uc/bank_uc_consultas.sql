@@ -59,3 +59,42 @@ RETURN
     AND (list_transactions.product_last4 IS NULL OR p.product_number_last4 = list_transactions.product_last4)
   ORDER BY t.transaction_date DESC
   LIMIT 10;
+
+CREATE OR REPLACE FUNCTION ${catalog}.bank_uc_consultas.get_cases(
+  customer_id STRING COMMENT 'The session customer id whose complaints and cases to return.'
+)
+RETURNS TABLE (
+  complaint_id STRING,
+  creation_date TIMESTAMP,
+  case_type STRING,
+  category STRING,
+  subcategory STRING,
+  claimed_amount DECIMAL(15,2),
+  currency STRING,
+  priority STRING,
+  status STRING,
+  is_open BOOLEAN,
+  resolution_date TIMESTAMP,
+  resolution STRING,
+  compensation_granted DECIMAL(15,2)
+)
+COMMENT 'Returns the customer 10 most recent complaints and cases: id, date, type, category, subcategory, claimed amount and currency, priority, status (Open, In Process, Resolved, Closed, Rejected), whether it is open, resolution date, resolution and compensation granted.'
+RETURN
+  SELECT
+    complaint_id,
+    creation_date,
+    case_type,
+    category,
+    subcategory,
+    claimed_amount,
+    currency,
+    priority,
+    status,
+    is_open,
+    resolution_date,
+    resolution,
+    compensation_granted
+  FROM ${catalog}.bank_gold.customer_cases
+  WHERE customer_id = get_cases.customer_id
+  ORDER BY creation_date DESC
+  LIMIT 10;

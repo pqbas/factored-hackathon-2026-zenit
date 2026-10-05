@@ -1,32 +1,46 @@
-import { MessagesSquare } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import useSWR from 'swr';
 import useSWRInfinite from 'swr/infinite';
+import { useSearchParams } from 'react-router-dom';
 
-import { ConversationList } from '@/components/conversations/conversation-list';
+import { InboxList } from '@/components/conversations/inbox-list';
+import { InboxViews } from '@/components/conversations/inbox-views';
+import { ReasonScopeSwitch } from '@/components/conversations/reason-scope-switch';
 import { ConversationView } from '@/components/conversations/conversation-view';
-import { SidebarToggle } from '@/components/sidebar-toggle';
+import { CustomerContextPanel } from '@/components/conversations/customer-context-panel';
 import { toast } from '@/components/toast';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
+import { useLang } from '@/contexts/LangContext';
 import { useSession } from '@/contexts/SessionContext';
 import {
   type AdvisorChat,
   type AdvisorChatPage,
   type AdvisorMessage,
+  customerConversationsUrl,
+  customerKeyOf,
+  fetchCustomerConversations,
   fetchInbox,
+  type InboxItem,
   fetchMessages,
-  type InboxFilter,
+  type InboxView,
+  countsUrl,
+  fetchCounts,
   fetchUsers,
-  inboxFiltersFor,
-  inboxUrl,
+  viewUrl,
+  viewFromParams,
+  viewParams,
   mergeMessages,
   POLL_MS,
   releaseConversation,
   replyToConversation,
   takeConversation,
   toBubble,
+  davidViewLabel,
 } from '@/lib/advisor';
-import { matchesQuery } from '@/lib/conversations';
+import { matchesQuery, STATUS_LABEL } from '@/lib/conversations';
+import { handoffReasonLabel } from '@/lib/handoff-case';
+import { tr } from '@/lib/i18n';
+import { cn } from '@/lib/utils';
 
 // Messages of the open conversation: full list on open, then only the new
 // ones every POLL_MS.
@@ -67,28 +81,70 @@ function useConversationMessages(chatId: string | null) {
   return { messages, append: (m: AdvisorMessage) => apply([m], false), refresh };
 }
 
+const CONTEXT_KEY = 'console:context-open';
+
+function readContextOpen(): boolean {
+  try {
+    return localStorage.getItem(CONTEXT_KEY) !== 'false';
+  } catch {
+    return true;
+  }
+}
+
+function viewTitle(view: InboxView): string {
+  if (view.kind === 'reason') return handoffReasonLabel(view.reason);
+  const titles = {
+    inbox: tr().console.inbox,
+    david: davidViewLabel(),
+    waiting: STATUS_LABEL.waiting,
+    advisor: STATUS_LABEL.advisor,
+    resolved: tr().console.resolvedView,
+  };
+  return titles[view.kind];
+}
+
 export default function ConversationsPage() {
+  const { t } = useLang();
   const { session, role } = useSession();
   const me = session?.user?.email;
-  // The admin supervises (read-only, everything); the advisor attends.
-  const readOnly = role === 'admin';
-  const [filter, setFilter] = useState<InboxFilter>(readOnly ? 'all' : 'open');
+  // Both attend; the admin also supervises every user's chats.
+  const isAdmin = role === 'admin';
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [view, setView] = useState<InboxView>(() => viewFromParams(searchParams));
   const [userId, setUserId] = useState<string | null>(null);
-  const { data: users } = useSWR(readOnly ? '/api/advisor/users' : null, fetchUsers, {
+  const { data: users } = useSWR(isAdmin ? '/api/advisor/users' : null, fetchUsers, {
     revalidateOnFocus: false,
   });
   const [query, setQuery] = useState('');
-  const [selected, setSelected] = useState<AdvisorChat | null>(null);
+  // The open row: a customer, shown with every conversation they had.
+  const [selected, setSelected] = useState<InboxItem | null>(null);
   const [busy, setBusy] = useState(false);
   // Same persisted open/closed state as the Agente section's sidebar.
   const isCollapsed = localStorage.getItem('sidebar:state') === 'false';
+  // The customer context panel stays as the advisor last left it (open by default).
+  const [contextOpen, setContextOpen] = useState(() => readContextOpen());
+  function toggleContext() {
+    const next = !contextOpen;
+    setContextOpen(next);
+    try {
+      localStorage.setItem(CONTEXT_KEY, String(next));
+    } catch {
+      // Private mode: it just isn't remembered.
+    }
+  }
+
+  // Counters in the views sidebar, on the same polling as the inbox.
+  const { data: counts, mutate: mutateCounts } = useSWR(countsUrl(userId), fetchCounts, {
+    refreshInterval: POLL_MS,
+    revalidateOnFocus: false,
+  });
 
   const { data: pages, size, setSize, mutate } = useSWRInfinite<AdvisorChatPage>(
     (index, previous: AdvisorChatPage | null) => {
       if (previous && !previous.hasMore) return null;
-      return inboxUrl(filter, {
+      return viewUrl(view, {
         userId,
-        startingAfter: index > 0 ? previous?.chats.at(-1)?.id : undefined,
+        startingAfter: index > 0 && previous?.chats.length ? customerKeyOf(previous.chats.at(-1)!) : undefined,
       });
     },
     fetchInbox,
@@ -99,28 +155,119 @@ export default function ConversationsPage() {
     () =>
       (pages ?? [])
         .flatMap((page) => page.chats)
-        .filter((chat) => matchesQuery(query, chat.userEmail, chat.title)),
+        .filter((chat) =>
+          matchesQuery(query, chat.customerName, chat.userEmail, chat.title),
+        ),
     [pages, query],
   );
   const hasMore = pages?.at(-1)?.hasMore ?? false;
 
-  // Keep the open conversation in sync with each inbox refresh; it stays open
+  function openView(next: InboxView) {
+    setView(next);
+    setSelected(null);
+    setSearchParams(viewParams(next), { replace: true });
+  }
+
+  // An empty inbox means nobody needs a person; say what David has instead.
+  const davidCount = counts?.david ?? 0;
+  const inboxEmpty =
+    view.kind === 'inbox' && !query ? (
+      <span data-testid="inbox-empty-david">
+        {t.console.noCases}
+        {davidCount > 0 && (
+          <>
+            {' '}
+            <button
+              type="button"
+              data-testid="inbox-empty-david-link"
+              onClick={() => openView({ kind: 'david' })}
+              className="text-primary hover:underline"
+            >
+              {t.console.davidAttending(davidCount)}
+            </button>
+          </>
+        )}
+      </span>
+    ) : view.kind === 'reason' && view.scope === 'david' && !query ? (
+      <span data-testid="inbox-empty-reason-david">
+        {t.console.davidNoCases}
+      </span>
+    ) : undefined;
+
+  // Keep the open customer in sync with each inbox refresh; it stays open
   // even when it no longer matches the current filter.
-  const fresh = chats.find((chat) => chat.id === selected?.id);
-  const current = fresh ?? selected;
+  const selectedKey = selected ? customerKeyOf(selected) : null;
+  const row = chats.find((chat) => customerKeyOf(chat) === selectedKey) ?? selected;
+
+  // All the customer's conversations, oldest first. The latest is the active
+  // one: actions and the composer apply to it; earlier ones are read-only.
+  const { data: conversations, mutate: mutateConversations } = useSWR(
+    row ? customerConversationsUrl(customerKeyOf(row)) : null,
+    fetchCustomerConversations,
+    { refreshInterval: POLL_MS, revalidateOnFocus: false },
+  );
+  const timeline: AdvisorChat[] = conversations?.length ? conversations : row ? [row] : [];
+  const current = timeline.at(-1) ?? null;
+
+  // A handed-off case is read in the context panel: open it for that
+  // conversation, without saving the choice (the toggle still closes it).
+  const hasCase = !!current?.handoff;
+  useEffect(() => {
+    if (hasCase) setContextOpen(true);
+  }, [current?.id, hasCase]);
+
+  // Esc closes the open chat, like a click outside it.
+  const isOpen = !!current;
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setSelected(null);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isOpen]);
 
   const { messages, append, refresh } = useConversationMessages(current?.id ?? null);
   const bubbles = useMemo(() => messages.map((m) => toBubble(m, me)), [messages, me]);
+
+  // Earlier conversations don't change: load them once.
+  const earlierIds = timeline.slice(0, -1).map((chat) => chat.id);
+  const { data: earlierMessages } = useSWR(
+    earlierIds.length ? ['advisor-earlier', ...earlierIds] : null,
+    ([, ...ids]: string[]) =>
+      Promise.all(ids.map((id) => fetchMessages(id).then((r) => r.messages))),
+    { revalidateOnFocus: false, revalidateIfStale: false },
+  );
+  const segments = useMemo(
+    () =>
+      timeline.map((chat, i) => ({
+        chat,
+        bubbles:
+          i === timeline.length - 1
+            ? bubbles
+            : (earlierMessages?.[i] ?? []).map((m) => toBubble(m, me)),
+      })),
+    [timeline, bubbles, earlierMessages, me],
+  );
+
+  // An action's answer updates the active conversation right away.
+  function applyChat(chat: AdvisorChat) {
+    mutateConversations(
+      (list) => (list?.length ? list.map((c) => (c.id === chat.id ? chat : c)) : [chat]),
+      { revalidate: true },
+    );
+  }
 
   async function act(run: () => Promise<void>) {
     setBusy(true);
     try {
       await run();
     } catch {
-      toast({ type: 'error', description: 'No se pudo completar la acción.' });
+      toast({ type: 'error', description: t.console.actionFailed });
     } finally {
       setBusy(false);
       mutate();
+      mutateCounts();
     }
   }
 
@@ -129,12 +276,12 @@ export default function ConversationsPage() {
     act(async () => {
       const result = await takeConversation(current.id);
       if (result.ok) {
-        setSelected(result.chat);
+        applyChat(result.chat);
         refresh();
       } else {
         toast({
           type: 'error',
-          description: `Ya la atiende ${result.assignedTo ?? 'otra persona'}.`,
+          description: t.console.alreadyHeld(result.assignedTo ?? t.console.otherPerson),
         });
       }
     });
@@ -145,10 +292,10 @@ export default function ConversationsPage() {
     act(async () => {
       const result = await releaseConversation(current.id, outcome);
       if (result.ok) {
-        setSelected(result.chat);
+        applyChat(result.chat);
         refresh();
       } else {
-        toast({ type: 'error', description: 'Esta conversación ya no es tuya.' });
+        toast({ type: 'error', description: t.console.notYours });
       }
     });
   }
@@ -161,55 +308,99 @@ export default function ConversationsPage() {
         append(result.message);
         return true;
       }
-      toast({ type: 'error', description: 'Otra persona tomó esta conversación.' });
+      toast({ type: 'error', description: t.console.takenByOther });
       mutate();
       return false;
     } catch {
-      toast({ type: 'error', description: 'No se pudo enviar el mensaje.' });
+      toast({ type: 'error', description: t.console.sendFailed });
       return false;
     }
   }
 
   return (
     <SidebarProvider defaultOpen={!isCollapsed}>
-      <ConversationList
-        chats={chats}
-        selectedId={current?.id ?? null}
-        onSelect={(id) => setSelected(chats.find((chat) => chat.id === id) ?? null)}
-        query={query}
-        onQueryChange={setQuery}
-        filter={filter}
-        onFilterChange={setFilter}
-        hasMore={hasMore}
-        onLoadMore={() => setSize(size + 1)}
-        filters={inboxFiltersFor(readOnly ? 'admin' : 'advisor')}
-        users={readOnly ? (users ?? []) : undefined}
+      <InboxViews
+        view={view}
+        onViewChange={openView}
+        isAdmin={isAdmin}
+        users={users ?? []}
         userId={userId}
         onUserChange={setUserId}
+        counts={counts}
       />
       <SidebarInset className="h-dvh min-h-0 overflow-hidden md:h-[calc(100dvh-1rem)]">
-        {current ? (
-          <ConversationView
-            chat={current}
-            bubbles={bubbles}
-            me={me}
-            readOnly={readOnly}
-            busy={busy}
-            onTake={handleTake}
-            onRelease={handleRelease}
-            onSend={handleSend}
-          />
-        ) : (
-          <div className="flex h-full flex-col">
-            <div className="px-2 py-1.5">
-              <SidebarToggle />
-            </div>
-            <div className="flex flex-1 flex-col items-center justify-center gap-2 text-muted-foreground">
-              <MessagesSquare className="h-10 w-10" />
-              <p>Elige una conversación</p>
-            </div>
+        {/* The list stays whole; an open chat floats over it as a side peek
+            (Notion), starting right after the name column so the names stay
+            visible and clickable. A click outside a row or Esc closes it. */}
+        <div className="relative h-full min-h-0">
+          <div
+            className="h-full min-w-0"
+            onClick={(event) => {
+              const onRow = (event.target as HTMLElement).closest('[data-testid^="conversation-row-"]');
+              if (current && !onRow) setSelected(null);
+            }}
+          >
+            <InboxList
+              title={viewTitle(view)}
+              chats={chats}
+              grouping={view.kind === 'inbox' ? 'reason' : view.kind === 'david' ? 'david' : null}
+              me={me}
+              selectedKey={selectedKey}
+              onOpen={(key) => setSelected(chats.find((chat) => customerKeyOf(chat) === key) ?? null)}
+              query={query}
+              onQueryChange={setQuery}
+              hasMore={hasMore}
+              empty={pages ? inboxEmpty : undefined}
+              onLoadMore={() => setSize(size + 1)}
+              toolbar={
+                view.kind === 'reason' ? (
+                  <ReasonScopeSwitch
+                    scope={view.scope ?? 'inbox'}
+                    inboxCount={counts?.reasons[view.reason] ?? 0}
+                    davidCount={counts?.davidByReason[view.reason]}
+                    onChange={(scope) => openView({ ...view, scope })}
+                  />
+                ) : undefined
+              }
+            />
           </div>
-        )}
+          {current && (
+            <div
+              data-testid="conversation-peek"
+              role="dialog"
+              aria-label={t.console.conversation}
+              className={cn(
+                'absolute inset-y-2 right-2 z-20 flex overflow-hidden rounded-xl border border-border bg-background shadow-2xl',
+                // The list padding, dot, avatar and name columns end at
+                // 20.25rem (inbox-list.tsx grid). With the context panel open
+                // and under 1600px there's no room left: it covers the list.
+                contextOpen ? 'left-2 min-[1600px]:left-[20.75rem]' : 'left-[20.75rem]',
+              )}
+            >
+              <div className="h-full min-w-0 flex-1">
+                <ConversationView
+                  chat={current}
+                  segments={segments}
+                  me={me}
+                  busy={busy}
+                  contextOpen={contextOpen}
+                  onToggleContext={toggleContext}
+                  onTake={handleTake}
+                  onRelease={handleRelease}
+                  onSend={handleSend}
+                  onClose={() => setSelected(null)}
+                />
+              </div>
+              {contextOpen && (
+                <CustomerContextPanel
+                  key={selectedKey ?? current.id}
+                  chatId={current.id}
+                  handoff={current.handoff ?? null}
+                />
+              )}
+            </div>
+          )}
+        </div>
       </SidebarInset>
     </SidebarProvider>
   );

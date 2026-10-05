@@ -1,0 +1,26 @@
+{
+  "id": "09",
+  "language": "pt",
+  "group": "consultas",
+  "customer": {
+    "token": "demo-mx-2",
+    "user": 4,
+    "segment": "Basic",
+    "name": "Eduardo"
+  },
+  "steps": [
+    {
+      "say": "quero ver as últimas compras do meu cartão"
+    }
+  ],
+  "expected": {
+    "firstIntent": "GENERAL_INQUIRY",
+    "outcome": "R",
+    "mustMatch": [
+      "Cable TV|Teatro Nacional|(deseja|gostaria de|quer) ver (os |as )?(últimos |últimas )?(10 )?(movimentos|compras|lançamentos)"
+    ],
+    "mustNotMatch": [
+      "\\b(tus movimientos|tienes)\\b"
+    ]
+  }
+}

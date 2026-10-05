@@ -1,58 +1,56 @@
 import { format, isToday, isYesterday } from 'date-fns';
-import { es } from 'date-fns/locale';
 import { ArrowDownLeft, ArrowUpRight } from 'lucide-react';
 
+import { useLang } from '@/contexts/LangContext';
+import { dateLocale, tr } from '@/lib/i18n';
 import {
   formatMoney,
-  parseDate,
+  productName,
   signedAmount,
+  type Transaction,
   transactionLabel,
   transactionStatusLabel,
   transactionTypeLabel,
 } from '@/lib/products';
 import { cn } from '@/lib/utils';
-import type { MockTransaction } from '@/mocks/products';
 
 function formatTxDate(value: string): string {
-  const date = parseDate(value);
+  const date = new Date(value);
   const time = format(date, 'HH:mm');
-  if (isToday(date)) return `Hoy, ${time}`;
-  if (isYesterday(date)) return `Ayer, ${time}`;
-  return format(date, "d MMM yyyy, HH:mm", { locale: es });
+  if (isToday(date)) return `${tr().today}, ${time}`;
+  if (isYesterday(date)) return `${tr().yesterday}, ${time}`;
+  return format(date, 'd MMM yyyy, HH:mm', { locale: dateLocale() });
 }
 
 export function TransactionList({
   transactions,
-  productNames,
+  showProduct = false,
 }: {
-  transactions: MockTransaction[];
-  productNames?: Record<string, string>;
+  transactions: Transaction[];
+  showProduct?: boolean;
 }) {
+  const { t } = useLang();
   if (transactions.length === 0) {
     return (
       <p className="px-4 py-6 text-center text-muted-foreground text-sm">
-        Todavía no hay movimientos.
+        {t.products.noMovements}
       </p>
     );
   }
 
   return (
     <ul className="flex flex-col">
-      {transactions.map((tx) => {
+      {transactions.map((tx, index) => {
         const amount = signedAmount(tx);
         const incoming = amount > 0;
-        const status = transactionStatusLabel(tx.transactionStatus);
+        const status = transactionStatusLabel(tx.status);
         const Icon = incoming ? ArrowDownLeft : ArrowUpRight;
-        const detail = [
-          transactionTypeLabel(tx.transactionType),
-          productNames?.[tx.productId],
-          tx.transactionCity,
-        ]
+        const detail = [transactionTypeLabel(tx.type), showProduct && productName(tx)]
           .filter(Boolean)
           .join(' · ');
         return (
           <li
-            key={tx.transactionId}
+            key={`${tx.date}-${tx.last4}-${index}`}
             data-testid="transaction-row"
             className="flex items-center gap-3 rounded-[10px] px-3 py-2.5 hover:bg-secondary/60"
           >
@@ -67,11 +65,9 @@ export function TransactionList({
               <Icon className="size-4" strokeWidth={1.8} />
             </span>
             <div className="flex min-w-0 flex-1 flex-col">
-              <span className="truncate font-medium text-sm">
-                {transactionLabel(tx)}
-              </span>
+              <span className="truncate font-medium text-sm">{transactionLabel(tx)}</span>
               <span className="truncate text-muted-foreground text-xs">
-                {detail} · {formatTxDate(tx.transactionDate)}
+                {detail} · {formatTxDate(tx.date)}
               </span>
             </div>
             <div className="flex flex-col items-end">
@@ -84,11 +80,7 @@ export function TransactionList({
                 {incoming ? '+' : '−'}
                 {formatMoney(Math.abs(amount), tx.currency)}
               </span>
-              {status && (
-                <span className="text-[11px] text-muted-foreground">
-                  {status}
-                </span>
-              )}
+              {status && <span className="text-[11px] text-muted-foreground">{status}</span>}
             </div>
           </li>
         );

@@ -16,10 +16,17 @@ import { chatRouter } from './routes/chat';
 import { historyRouter } from './routes/history';
 import { advisorRouter } from './routes/advisor';
 import { sessionRouter } from './routes/session';
+import { authRouter } from './routes/auth';
+import { getDemoAuth, requireSessionInPasswordMode } from './middleware/auth';
+import { getAuthMode } from './demo-auth';
 import { messagesRouter } from './routes/messages';
 import { configRouter } from './routes/config';
 import { demoCustomersRouter } from './routes/demo-customers';
+import { productsRouter } from './routes/products';
 import { ChatSDKError } from '@chat-template/core/errors';
+import { isDatabaseAvailable } from '@chat-template/db';
+import { backfillCustomerNames } from './customer-name';
+import { startAgentQueueWorker } from './agent-queue';
 
 // ESM-compatible __dirname
 const __filename = fileURLToPath(import.meta.url);
@@ -37,7 +44,13 @@ const PORT =
 // CORS configuration
 app.use(
   cors({
-    origin: isDevelopment ? 'http://localhost:3000' : true,
+    // Password mode (AWS) serves its own UI: no other origin gets credentials.
+    origin:
+      getAuthMode() === 'password'
+        ? false
+        : isDevelopment
+          ? 'http://localhost:3000'
+          : true,
     credentials: true,
   }),
 );
@@ -47,9 +60,22 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // Health check endpoint (for Playwright tests)
+// In password mode a missing or invalid secret fails the health check, so the
+// deployment is rejected instead of serving an app nobody can sign in to.
+const demoAuthError =
+  getAuthMode() === 'password' && 'error' in getDemoAuth()
+    ? (getDemoAuth() as { error: string }).error
+    : null;
+if (demoAuthError) {
+  console.error(`[auth] Password mode is misconfigured: ${demoAuthError}`);
+}
 app.get('/ping', (_req, res) => {
+  if (demoAuthError) return res.status(503).send('misconfigured');
   res.status(200).send('pong');
 });
+
+app.use(requireSessionInPasswordMode);
+app.use('/api', authRouter);
 
 // API routes
 app.use('/api/chat', chatRouter);
@@ -59,6 +85,7 @@ app.use('/api/session', sessionRouter);
 app.use('/api/messages', messagesRouter);
 app.use('/api/config', configRouter);
 app.use('/api/demo-customers', demoCustomersRouter);
+app.use('/api/products', productsRouter);
 
 // Serve static files in production
 if (!isDevelopment) {
@@ -171,6 +198,17 @@ async function startServer() {
     console.log(`Backend server is running on http://localhost:${PORT}`);
     console.log(`Environment: ${isDevelopment ? 'development' : 'production'}`);
   });
+
+  if (isDatabaseAvailable()) {
+    void backfillCustomerNames();
+    // Only one deployment answers the queued turns (the Databricks App); the
+    // others run with AGENT_QUEUE_WORKER=off.
+    if (process.env.AGENT_QUEUE_WORKER === 'off') {
+      console.log('[agent-queue] Worker disabled (AGENT_QUEUE_WORKER=off)');
+    } else {
+      startAgentQueueWorker();
+    }
+  }
 }
 
 startServer();

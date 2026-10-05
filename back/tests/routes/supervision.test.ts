@@ -35,7 +35,7 @@ test.describe('Supervision in the advisor console (with database)', () => {
     // Other workers create chats in parallel on the same database; with the
     // default limit of 10 they can push these two off the first page.
     const response = await adaContext.request.get(
-      '/api/advisor/conversations?limit=100',
+      '/api/advisor/conversations?limit=100&handledBy=ai_agent',
     );
     expect(response.status()).toBe(200);
 
@@ -62,7 +62,7 @@ test.describe('Supervision in the advisor console (with database)', () => {
     const babbageUserId = `${babbageContext.name}-id`;
 
     const response = await adaContext.request.get(
-      `/api/advisor/conversations?userId=${babbageUserId}`,
+      `/api/advisor/conversations?userId=${babbageUserId}&handledBy=ai_agent`,
     );
     expect(response.status()).toBe(200);
 
