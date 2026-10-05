@@ -26,7 +26,7 @@ export function fraudDashboardUrl(window: {
 export async function fetchFraudDashboard(
   url: string,
 ): Promise<FraudDashboard> {
-  const response = await fetch(url, { credentials: 'include' });
+  const response = await fetch(url, { credentials: 'include', signal: AbortSignal.timeout(15_000) });
   if (!response.ok)
     throw new Error(`Fraud dashboard request failed (${response.status})`);
   const body = await response.json();
@@ -34,7 +34,7 @@ export async function fetchFraudDashboard(
     body?.snapshot?.schemaVersion !== 1 ||
     !Array.isArray(body?.snapshot?.model?.versions) ||
     !Array.isArray(body?.snapshot?.dataset?.countries) ||
-    !['available', 'unavailable', 'error'].includes(body?.operational?.status)
+    !['available', 'unavailable', 'error', 'loading'].includes(body?.operational?.status)
   ) {
     throw new Error('Invalid fraud dashboard response');
   }

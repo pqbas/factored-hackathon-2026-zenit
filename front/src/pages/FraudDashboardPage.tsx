@@ -14,6 +14,7 @@ import { fraudCopy } from '@/lib/fraud-copy';
 import { fetchFraudDashboard, fraudDashboardUrl } from '@/lib/fraud-dashboard';
 import { browserTimeZone, rangeDays, type MetricsRange } from '@/lib/metrics';
 import { cn } from '@/lib/utils';
+import { AnalyticsSourcePanel } from '@/components/analytics-source';
 
 export default function FraudDashboardPage() {
   const { lang } = useLang();
@@ -23,6 +24,7 @@ export default function FraudDashboardPage() {
   );
   const [range, setRange] = useState<MetricsRange>('month');
   const [asOf, setAsOf] = useState(() => new Date());
+  const [refreshError, setRefreshError] = useState(false);
   const window = useMemo(
     () => rangeDays(range, asOf, browserTimeZone()),
     [range, asOf],
@@ -32,13 +34,15 @@ export default function FraudDashboardPage() {
     fetchFraudDashboard,
     {
       revalidateOnFocus: false,
-      refreshInterval: tab === 'operations' ? 60000 : 0,
+      refreshInterval: data => data?.source?.updating || data?.operational?.cache?.updating ? 2500 : 60000,
       keepPreviousData: false,
+      onSuccess: () => setRefreshError(false),
     },
   );
   const refresh = () => {
     setAsOf(new Date());
-    void mutate();
+    setRefreshError(false);
+    void mutate(fetchFraudDashboard(`${fraudDashboardUrl(window)}&refresh=1`), { revalidate: false }).catch(() => setRefreshError(true));
   };
 
   return (
@@ -74,6 +78,9 @@ export default function FraudDashboardPage() {
             {isValidating ? c.refreshing : c.refresh}
           </Button>
         </header>
+        {data && <AnalyticsSourcePanel source={data.source} fallback={!data.source?.statementId} />}
+        {(error || refreshError) && data && <p role="status" className="text-sm text-tint-amber-fg">{lang === 'pt' ? 'A atualização da tela falhou; mostrando o último resultado recebido.' : 'Falló la actualización de la pantalla; se muestra el último resultado recibido.'}</p>}
+        {data?.snapshot.dataset.scope === 'training_validation' && <p className="text-sm text-muted-foreground">{lang === 'pt' ? 'Panorama consultado no Databricks: treinamento e validação até 2025-12-31. O teste final de 2026 permanece separado.' : 'Panorama consultado en Databricks: entrenamiento y validación hasta 2025-12-31. El test final de 2026 permanece separado.'}</p>}
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border">
           <div
             role="group"
@@ -138,7 +145,7 @@ export default function FraudDashboardPage() {
             ))}
           </div>
         )}
-        {error ? (
+        {error && !data ? (
           <div
             role="alert"
             className="flex min-h-64 flex-col items-center justify-center gap-4 text-center"

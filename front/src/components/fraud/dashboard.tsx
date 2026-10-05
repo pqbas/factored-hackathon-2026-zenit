@@ -436,11 +436,10 @@ export function DataOverview({ snapshot }: { snapshot: FraudSnapshot }) {
           note={`${c.ratioNote} ${f.n(Math.round(d.total / d.fraud))} ${c.transactions}.`}
         />
         <Stat
-          label={c.cleanIds}
-          value={f.pct((d.total - d.nullIds - d.duplicates) / d.total, 0)}
+          label={d.duplicates === null ? (lang === 'pt' ? 'IDs completos' : 'IDs completos') : c.cleanIds}
+          value={f.pct((d.total - d.nullIds - (d.duplicates ?? 0)) / d.total, 0)}
           note={
-            lang === 'pt'
-              ? `${f.n(d.duplicates)} duplicados · ${f.n(d.nullIds)} IDs nulos`
+            d.duplicates === null ? (lang === 'pt' ? 'Unicidade não recalculada nesta consulta' : 'Unicidad no recalculada en esta consulta')
               : `${f.n(d.duplicates)} duplicados · ${f.n(d.nullIds)} IDs nulos`
           }
         />
@@ -583,7 +582,7 @@ export function OperationOverview({
         role="status"
         className="rounded-xl border border-border bg-card/30 p-6 text-sm leading-relaxed text-muted-foreground"
       >
-        {o.status === 'error' ? c.operationalError : c.unavailable}
+        {o.status === 'loading' ? (lang === 'pt' ? 'Preparando os dados de reclamos em segundo plano…' : 'Preparando los datos de reclamos en segundo plano…') : o.status === 'error' ? c.operationalError : c.unavailable}
       </div>
     );
   const days = [];
@@ -604,6 +603,11 @@ export function OperationOverview({
   const binPeak = Math.max(1, ...o.scoreBins.map((b) => b.total));
   return (
     <div className="space-y-5" data-testid="fraud-operation">
+      {o.cache && <p role="status" className="text-sm text-muted-foreground">
+        {lang === 'pt' ? 'Base de reclamos da aplicação' : 'Base de reclamos de la aplicación'} · {o.cache.updatedAt ? new Date(o.cache.updatedAt).toLocaleString(lang === 'pt' ? 'pt-BR' : 'es-PE') : '—'}
+        {o.cache.updating && (lang === 'pt' ? ' · Atualizando' : ' · Actualizando')}
+        {o.cache.lastRefreshFailed && (lang === 'pt' ? ' · Atualização falhou; último resultado válido' : ' · Falló la actualización; último resultado válido')}
+      </p>}
       <p className="text-sm leading-relaxed text-muted-foreground">
         {c.complaintNote}
       </p>
@@ -1023,7 +1027,7 @@ export function EvidenceFooter({ snapshot }: { snapshot: FraudSnapshot }) {
           {c.historical}
         </p>
         <p className="break-all font-mono text-sm text-muted-foreground">
-          {snapshot.dataset.source} · Delta v{snapshot.dataset.deltaVersion} ·{' '}
+          {snapshot.dataset.source} · {snapshot.dataset.deltaVersion === null ? 'Latest read' : `Delta v${snapshot.dataset.deltaVersion}`} ·{' '}
           {snapshot.dataset.profiledAt}
         </p>
         <p className="break-all font-mono text-sm text-muted-foreground">

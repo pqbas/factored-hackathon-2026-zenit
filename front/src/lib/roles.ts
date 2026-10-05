@@ -2,7 +2,7 @@
 // still enforces permissions on every API call.
 
 export type Role = 'customer' | 'advisor' | 'admin';
-export type Section = 'agent' | 'products' | 'chats' | 'metrics' | 'fraud';
+export type Section = 'agent' | 'products' | 'chats' | 'metrics' | 'fraud' | 'retention';
 
 const ROLES: Role[] = ['customer', 'advisor', 'admin'];
 
@@ -15,6 +15,7 @@ export const SECTION_ROLES: Record<Section, Role[]> = {
   // Resolution metrics are for the admin only (the back 403s everyone else).
   metrics: ['admin'],
   fraud: ['admin'],
+  retention: ['admin'],
 };
 
 function isRole(value: unknown): value is Role {
@@ -51,5 +52,6 @@ export function sectionForPath(pathname: string): Section {
   if (pathname.startsWith('/conversations')) return 'chats';
   if (pathname.startsWith('/metrics')) return 'metrics';
   if (pathname.startsWith('/fraud')) return 'fraud';
+  if (pathname.startsWith('/retention')) return 'retention';
   return 'agent';
 }
