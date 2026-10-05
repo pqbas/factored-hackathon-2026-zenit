@@ -1,123 +1,101 @@
-# Bank Assistant
+<h1 align="center">Zenit</h1>
 
-An AI-assisted customer-service platform for retail banks. AI agents talk to customers in Spanish and Portuguese and resolve routine requests on their own, within explicit bank policy. Human supervisors oversee those conversations from a console that surfaces the cases that matter most to the bank, such as possible fraud or customers at risk of leaving. The first workflow is card and account charge disputes.
+<p align="center">AI-assisted customer service for retail banks: an AI agent answers customers and hands off to human advisors with full context.</p>
 
-**Main features**
+<p align="center">
+  <img src="docs/arquitectura-aws-databricks.drawio.png" alt="Zenit architecture on AWS and Databricks">
+</p>
 
-- **AI customer agent (es/pt):** understands the request, finds the customer's transaction, asks when something is ambiguous, and files the case once the customer confirms.
-- **Policy outside the model:** eligibility, escalation and permissions are versioned, deterministic rules. The LLM only reads language, and every decision records the rules that fired.
-- **Secure by design:**
-  - Identity comes from a trusted session, never from chat text.
-  - Every data read is scoped to that customer.
-  - Actions are reported only after they are verified.
-- **Human handoff with context:** escalated cases carry the request, verified facts, actions taken, policy rules and open questions, so the customer never repeats themselves.
-- **Supervisor console (planned):**
-  - Watch live conversations and their traces.
-  - Take over a conversation, or approve or reject escalated cases.
-  - Receive prioritized alerts for fraud, churn risk, SLA breaches and security events.
-- **Fraud risk model (planned):** a model trained on transaction history scores each disputed charge, and the policy uses the score to route cases to fraud analysts.
-- **Governed data platform:** a bronze → silver → gold pipeline on Databricks with a data contract, quality report and lineage.
-- **Measurable:** use-case scenarios double as tests and as the evaluation set. It reports automated resolution, handoff quality, unsafe outcomes, latency and cost.
+## Features
 
-Built on Databricks (Apps, Unity Catalog, Lakebase, MLflow, Foundation Model API) with LangGraph, for the Factored AI & Data Hackathon 2026.
+- AI customer agent (David) in Spanish and Portuguese: answers credit card and
+  savings account questions, registers complaints and checks their status.
+- Intent and guardrail classification with Jev; keyword rules as fallback.
+- Policy outside the model: handoff rules are deterministic code, the LLM only
+  reads language and writes the reply.
+- Secure by design: the customer's identity comes from the session, never from
+  the chat text, and every data read is fixed SQL filtered by that customer.
+- Human handoff with context: David collects and verifies the case first, then
+  stops replying until an advisor returns the chat.
+- Advisor console: an inbox of human cases and a separate view of the chats
+  David is handling.
+- Turn queue in the back: messages that arrive while the agent is answering wait
+  in Lakebase and are processed in order.
+- Governed data: a bronze → silver → gold pipeline on Databricks, copied to
+  Lakebase as read-only synced tables.
 
-## Architecture
+## Development
 
-```mermaid
-flowchart TB
-    subgraph WEB["Databricks App (chat)"]
-        UI["front/ · React chat UI"]
-        EX["back/ · Express server<br/>(serves front · auth · proxy · chat history)"]
-    end
-    subgraph AGENT["agent/ · Databricks App"]
-        AS["MLflow AgentServer<br/>POST /invocations"]
-        LG["LangGraph state machine<br/>(deterministic routing)"]
-    end
-    LLM["LLM · Databricks FM API<br/>(intent + slots only)"]
-    LB[("Lakebase Postgres<br/>conversation checkpoints")]
-    subgraph UC["Unity Catalog · via SQL warehouse"]
-        GOLD[("bank_gold.*<br/>customer_360 · customer_transactions")]
-        OPS[("bank_ops.dispute_cases")]
-    end
-    subgraph DATA["data/ · serverless job"]
-        PIPE["CSV → bronze → silver → gold"]
-    end
-    ML["ml/ · fraud risk scoring<br/>(planned)"]
-    SUP["Supervisor console / analyst<br/>(planned)"]
+The platform has three components that run independently:
 
-    UI <--> EX
-    EX <-->|SSE · API_PROXY| AS
-    AS <--> LG
-    LG -->|understand message| LLM
-    LG <-->|checkpoint read/write| LB
-    LG -->|reads scoped to session customer| GOLD
-    LG -->|write + verify case| OPS
-    PIPE --> GOLD
-    ML -.->|transaction_risk| GOLD
-    OPS -.-> SUP
-    SUP -.->|"POST /invocations<br/>review_result"| AS
-```
-
-Dashed arrows are designed but not built yet ([docs/agent_architecture.md](docs/agent_architecture.md)).
-
-The agent and the back read the bank's data from read-only Lakebase synced tables (`bank_ro`), not from the SQL warehouse: lineage, freshness policy and cost in [docs/datos-banco-lakebase.md](docs/datos-banco-lakebase.md).
-
-| Layer | Choice | Why |
-|---|---|---|
-| Agent control flow | LangGraph graph routed by code (`dispute/graph.py`) | Every transition is named, testable and auditable. LLM output never picks the next step. |
-| Understanding | LLM with validated JSON output; keyword baseline as fallback | The model only reads language; policy, permissions and actions stay in code. |
-| Data access | SQL warehouse over Unity Catalog, every query filtered by the session's customer | A prompt cannot widen what the agent sees. |
-| Checkpointing | Lakebase Postgres via `AsyncCheckpointSaver` (in memory for local dev) | Conversations survive restarts; an external reviewer can write into a paused thread. |
-| Human review | Escalated cases carry a handoff packet; the reviewer answers via `/invocations` (planned) | No long-lived sockets; the next turn picks up the decision from the checkpoint. |
-
-## Layout
-
-| Path | What |
-|---|---|
-| `agent/agent_server/dispute/` | Workflow: session, NLU, policy, data access, graph ([details](agent/DISPUTE_WORKFLOW.md)) |
-| `agent/tests/` | Workflow tests |
-| `data/` | Data contract, dummy data generator, bronze/silver/gold pipeline ([details](data/README.md)) |
-| `front/` | Chat UI (React + Vite) |
-| `back/` | Express server for the chat: serves `front/`, auth, chat history, proxies to the agent over HTTP |
-| `ml/` | Fraud risk model: features, training, batch scoring ([proposal](docs/ml_fraud_model_proposal.md)) |
-
-## Run
+**Agent** is a LangGraph graph served at `POST /invocations`.
 
 ```bash
-# Data (once, or after new files)
+cd agent && uv run start-server                 # → :8000 (needs agent/.env)
+cd agent && uv run --group dev pytest tests -q  # tests
+```
+
+**Back** is an Express server: API, demo login, chat history and the turn queue.
+It serves the built front.
+
+```bash
+cd front && npm install && npm run build
+cd back && npm install && npm run build && npm run start   # → :3000
+```
+
+**Front** is the React chat UI and advisor console. For hot reload, run
+`npm run dev` in `back` (port 3001) and in `front` (port 3000).
+
+`back/.env` needs `DATABRICKS_CONFIG_PROFILE` and
+`API_PROXY=http://localhost:8000/invocations`.
+
+## Deployment
+
+The back (with the front built in) and the agent run on AWS App Runner
+(us-west-2). Chats and bank data stay in Lakebase, and the LLM runs on
+Databricks Model Serving.
+
+### Data (once, or after new files)
+
+Requirements: Databricks CLI.
+
+```bash
 python data/generate_dummy_data.py
 databricks fs cp -r --overwrite data/dummy_output dbfs:/Volumes/workspace/bank_bronze/landing
 cd data && databricks bundle deploy && databricks bundle run bank_data_pipeline
-
-# Agent API on http://localhost:8000/invocations (needs agent/.env, see DISPUTE_WORKFLOW.md)
-cd agent && uv run start-server
-
-# Chat UI: build front, then back serves it on http://localhost:3000
-# (back/.env: DATABRICKS_CONFIG_PROFILE, API_PROXY=http://localhost:8000/invocations)
-cd front && npm install && npm run build
-cd back && npm install && npm run build && npm run start
-# UI dev with hot reload: `npm run dev` in back (port 3001) and in front (port 3000)
-
-# Tests
-cd agent && uv run --group dev pytest tests -q
 ```
 
-## TODO
+The gold and silver tables are copied to Lakebase with the scripts in
+`back/scripts/bank-ro/`.
 
-- [ ] **Vista de supervisor** para ver las conversaciones de los usuarios con los agentes (y las alertas: fraude, churn, SLA). Diseño: [docs/agent_architecture.md §6](docs/agent_architecture.md).
-- [ ] **Crear y entrenar el modelo de ML de clasificación de fraude**. Propuesta: [docs/ml_fraud_model_proposal.md](docs/ml_fraud_model_proposal.md); código en `ml/`.
-- [ ] **Definir los casos de uso del agente de IA**, con el comportamiento esperado de cada uno. Posibles casos:
-  - [ ] UC-01 Consultas generales sobre sus productos (saldo, límite y cupo, estado, vencimiento, tasa, mora, últimos movimientos)
-  - [x] UC-02 Cargo no reconocido (implementado)
-  - [ ] UC-03 Cargo duplicado
-  - [ ] UC-04 "Me cobraron pero fue rechazado" (declinado o pendiente)
-  - [ ] UC-05 Reembolso o reverso no recibido
-  - [ ] UC-06 Suscripción no cancelada
-  - [ ] UC-07 Posible tarjeta comprometida (usa el modelo de fraude)
-  - [ ] UC-08 Seguimiento de un reclamo
-- [ ] **Validar el pipeline de procesamiento de datos** con el dataset real de Factored (bronze → silver → gold, reporte de calidad `bank_silver._dq_report`). Guía: [data/README.md](data/README.md).
-- [ ] **Definir la arquitectura del agente**: núcleo compartido + un playbook por caso de uso, y revisión humana con reanudación. Propuesta: [docs/agent_architecture.md](docs/agent_architecture.md).
+### Back and agent on AWS
+
+Requirements: an AWS session, Docker, `jq`, `openssl`.
+
+```bash
+cd back && scripts/aws/deploy.sh    # build, push and roll out the back
+cd agent && scripts/aws/deploy.sh   # build, push and roll out the agent
+```
+
+First-time setup (ECR, IAM roles, secrets, services):
+[back](back/scripts/aws/README.md) and [agent](agent/scripts/aws/README.md).
+
+## Docs
+
+- [Architecture on AWS + Databricks](docs/arquitectura-aws-databricks.md):
+  flow, services and decisions.
+- [Attention flow](docs/flujo-atencion.md): conversation stages and handoff to
+  advisors.
+- [Agent and back limits](docs/limites-agente-back.md): who stores what.
+- [Bank data in Lakebase](docs/datos-banco-lakebase.md): synced tables and
+  access.
+- [Agent](agent/README.md): use cases and technical decisions.
+- [Data pipeline](data/README.md): data contract and bronze/silver/gold.
+- [Fraud model proposal](docs/ml_fraud_model_proposal.md).
 
 ## License
 
-Derived from the Databricks [banking-agent-accelerator](https://github.com/databricks-industry-solutions/banking-agent-accelerator) and modified by the team. See [LICENSE.md](LICENSE.md) and [NOTICE.md](NOTICE.md).
+Built for the Factored AI & Data Hackathon 2026. Derived from the Databricks
+[banking-agent-accelerator](https://github.com/databricks-industry-solutions/banking-agent-accelerator)
+and modified by the team. See [LICENSE.md](LICENSE.md) and
+[NOTICE.md](NOTICE.md).
