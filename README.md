@@ -1,9 +1,9 @@
-<h1 align="center">Bank Assistant</h1>
+<h1 align="center">Zenit</h1>
 
 <p align="center">AI-assisted customer service for retail banks: an AI agent answers customers and hands off to human advisors with full context.</p>
 
 <p align="center">
-  <img src="docs/arquitectura-aws-databricks.drawio.png" alt="Bank Assistant architecture on AWS and Databricks">
+  <img src="docs/arquitectura-aws-databricks.drawio.png" alt="Zenit architecture on AWS and Databricks">
 </p>
 
 ## Features

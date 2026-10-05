@@ -1,4 +1,4 @@
-# Arquitectura AWS + Databricks
+# Zenit: arquitectura AWS + Databricks
 
 Diagrama: [`arquitectura-aws-databricks.drawio`](arquitectura-aws-databricks.drawio) (PNG editable: `arquitectura-aws-databricks.drawio.png`).
 
