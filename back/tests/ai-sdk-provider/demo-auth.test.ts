@@ -6,6 +6,7 @@ import {
   getAuthMode,
   hashPassword,
   loadDemoAuthConfig,
+  parseDemoLogins,
   parseDemoUsers,
   readCookie,
   readSession,
@@ -138,5 +139,19 @@ test.describe('demo auth (password mode)', () => {
     expect(clientIp(['1.1.1.1', '3.3.3.3'], undefined)).toBe('3.3.3.3');
     expect(clientIp(undefined, '10.0.0.1')).toBe('10.0.0.1');
     expect(clientIp(undefined, undefined)).toBe('unknown');
+  });
+
+  test('the demo logins are the listed rows, and never throw', () => {
+    const rows = [
+      { username: 'admin', password: 'pw-admin' },
+      { username: 'cliente', password: 'pw-cliente' },
+    ];
+    expect(parseDemoLogins(JSON.stringify(rows))).toEqual(rows);
+    expect(parseDemoLogins(undefined)).toEqual([]);
+    expect(parseDemoLogins('')).toEqual([]);
+    expect(parseDemoLogins('{not json')).toEqual([]);
+    expect(parseDemoLogins('{"username":"admin"}')).toEqual([]);
+    expect(parseDemoLogins('[{"username":"admin"}]')).toEqual([]);
+    expect(parseDemoLogins('[{"username":"","password":"x"}]')).toEqual([]);
   });
 });

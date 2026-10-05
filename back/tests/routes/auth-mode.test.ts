@@ -18,4 +18,8 @@ test.describe('auth mode: databricks', () => {
     expect(login.status()).toBe(404);
     expect((await adaContext.request.post('/api/logout')).status()).toBe(404);
   });
+
+  test('the demo logins do not exist', async ({ adaContext }) => {
+    expect((await adaContext.request.get('/api/demo-logins')).status()).toBe(404);
+  });
 });
