@@ -1,6 +1,6 @@
 # Fraud assessment in the original assistant
 
-Status: implemented locally on 2026-10-04 against `origin/main` commit `d79df69` (PR #131). The separate dispute demo was removed. Live transaction lookup and a persisted advisor handoff remain blocked by data permissions and the intentionally disabled chat database.
+Status: integrated into the existing AWS agent and web/backend on 2026-10-05, using image tag `0ebfff68` after merging `origin/main` commit `20e0e98`. See [the AWS integration report](../../reports/2026-10-05/aws_integration_report.md). The separate dispute demo was removed. The earlier local launch had personal-identity access failures and intentionally disabled chat persistence; those restrictions do not describe the production identity.
 
 ## What is integrated
 
@@ -28,7 +28,7 @@ The local launch has chat persistence disabled. The diagram's handoff/console st
 
 ## Model availability contract
 
-The tool accepts no customer ID, transaction ID or score. It reads the V5/V6 aggregate reports from `ml/reports/2026-10-04`. `FRAUD_REPORT_DIR` can point to a packaged directory; missing or malformed evidence returns `unavailable`.
+The tool accepts no customer ID, transaction ID or score. Locally it reads the V5/V6 aggregate reports from `ml/reports/2026-10-04`; the AWS image uses compact copies in `agent/configs/fraud-evidence` when the repository reports directory is absent. `FRAUD_REPORT_DIR` takes precedence without falling back to another directory when its evidence is missing or malformed. Invalid or absent evidence returns `unavailable`.
 
 ```json
 {
@@ -65,7 +65,7 @@ Live read checks found:
 - `workspace.bank_silver.products`, `complaints`, `customers`: missing `SELECT` (SQLSTATE `42501`).
 - Lakebase: password authentication rejected for the personal CLI identity.
 
-Reading `workspace.bank_silver.transactions` for ML does not confer access to these other resources. An owner must authorize the relevant reads before real bank lookup can work. No grants were executed.
+Reading `workspace.bank_silver.transactions` for ML does not confer access to these other resources. These checks concern the personal local identity; they were not repeated as the newly authenticated `pqbas` identity. The existing production Databricks service principals retain their prior access. No grants were executed.
 
 ## Validation
 

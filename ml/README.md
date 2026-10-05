@@ -64,8 +64,8 @@ Phase 0/1 EDA notebook execution: [report](reports/2026-10-02/eda_report.md), [a
 
 ## Dispute integration contract
 
-The [dispute integration contract](spec/28-09-26-fraud-model/dispute_integration.md) defines a customer-reported charge review workflow using authorized lookup and the existing human-handoff interfaces. Predictive fraud scoring stays unavailable for decision use. The contract documents current source gaps and acceptance cases; it is not a deployed integration.
+The [dispute integration contract](spec/28-09-26-fraud-model/dispute_integration.md) defines a customer-reported charge review workflow using authorized lookup and the existing human-handoff interfaces. Model availability and human-review policy are integrated into the existing AWS application. Predictive fraud scoring stays unavailable for decision use.
 
 ## Integration with the original application
 
-The ML branch now incorporates current `main` (PR #131). The standalone dispute demo was removed. The original agent exposes experimental model availability through `get_fraud_assessment`, and verified complaint handoffs carry that policy into the existing advisor UI. Predictive inference remains unavailable; real bank reads are blocked by permissions and local chat persistence is disabled. See [the local run guide](../LOCAL_MAIN_INTEGRATION.md) and [observed validation](reports/2026-10-04/main_integration_report.md).
+The ML branch incorporates `main` through commit `20e0e98`. The standalone dispute demo was removed. The original agent exposes experimental model availability through `get_fraud_assessment`, and verified complaint handoffs carry that policy into the existing advisor UI. Predictive inference remains unavailable. The earlier local run used the personal identity and disabled chat persistence; production keeps its existing service principals and Lakebase configuration. See [the local run guide](../LOCAL_MAIN_INTEGRATION.md), [local validation](reports/2026-10-04/main_integration_report.md), and [the verified AWS integration](reports/2026-10-05/aws_integration_report.md).

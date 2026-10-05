@@ -71,4 +71,13 @@ python -m pytest ml/tests/ -q
 
 ## Review and validation
 
-See [the integration spec](ml/spec/28-09-26-fraud-model/dispute_integration.md) and [the observed validation report](ml/reports/2026-10-04/main_integration_report.md). Changes and the merge are local commits on `feat/diego-ml-fraud-features`; no push or deployment was performed.
+See [the integration spec](ml/spec/28-09-26-fraud-model/dispute_integration.md) and [the observed validation report](ml/reports/2026-10-04/main_integration_report.md). At the 2026-10-04 local validation, changes and the merge were local commits on `feat/diego-ml-fraud-features`; no push or deployment had been performed.
+
+## Existing AWS application updated on 2026-10-05
+
+The existing agent and web/backend were subsequently updated in AWS App Runner
+with image tag `0ebfff68`. Production retains its prior service principals,
+Lakebase configuration and password authentication; the local warehouse-read
+override above was not enabled there. See [the AWS integration report](ml/reports/2026-10-05/aws_integration_report.md).
+This local guide still describes a launch without chat persistence. Git commits
+remain local, while the authorized container images were published to ECR.
