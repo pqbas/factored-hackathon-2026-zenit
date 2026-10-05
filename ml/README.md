@@ -65,3 +65,7 @@ Phase 0/1 EDA notebook execution: [report](reports/2026-10-02/eda_report.md), [a
 ## Dispute integration contract
 
 The [dispute integration contract](spec/28-09-26-fraud-model/dispute_integration.md) defines a customer-reported charge review workflow using authorized lookup and the existing human-handoff interfaces. Predictive fraud scoring stays unavailable for decision use. The contract documents current source gaps and acceptance cases; it is not a deployed integration.
+
+## Integration with the original application
+
+The ML branch now incorporates current `main` (PR #131). The standalone dispute demo was removed. The original agent exposes experimental model availability through `get_fraud_assessment`, and verified complaint handoffs carry that policy into the existing advisor UI. Predictive inference remains unavailable; real bank reads are blocked by permissions and local chat persistence is disabled. See [the local run guide](../LOCAL_MAIN_INTEGRATION.md) and [observed validation](reports/2026-10-04/main_integration_report.md).

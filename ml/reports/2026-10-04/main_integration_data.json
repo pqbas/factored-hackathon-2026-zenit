@@ -1,0 +1,82 @@
+{
+  "date": "2026-10-04",
+  "branch": "feat/diego-ml-fraud-features",
+  "main_commit": "d79df69",
+  "main_pr": 131,
+  "merge_commit": "9a5da4d",
+  "demo_removal_commit": "a3a3d79",
+  "runtime": {
+    "frontend": "http://127.0.0.1:3000",
+    "backend": "http://127.0.0.1:3001",
+    "agent": "http://127.0.0.1:8000",
+    "chat_history": false,
+    "bank_read_source": "databricks",
+    "profile": "personal"
+  },
+  "tests": {
+    "agent_unit_and_integration": 450,
+    "backend_provider_unit": 179,
+    "frontend_unit": 130,
+    "ml_unit": 66,
+    "total_passed": 825
+  },
+  "builds": {
+    "frontend": "passed",
+    "backend_server_only": "passed",
+    "database_migration_run": false
+  },
+  "live_checks": {
+    "browser_greeting_through_original_stack": "passed",
+    "browser_page_errors": 0,
+    "agent_complaint_http_status": 200,
+    "complaint_use_case": "COMPLAINT",
+    "fraud_score_status": "not_validated",
+    "risk_score": null,
+    "fraud_prediction": null,
+    "automatic_decisions_enabled": false,
+    "complaint_handoff": null,
+    "bank_read_failure_handled_safely": true
+  },
+  "access_blockers": [
+    {
+      "resource": "Lakebase bank-assistant-chat-db",
+      "result": "personal identity password authentication rejected"
+    },
+    {
+      "resource": "workspace.bank_gold",
+      "missing_privilege": "USE SCHEMA",
+      "sqlstate": "42501"
+    },
+    {
+      "resource": "workspace.bank_silver.products",
+      "missing_privilege": "SELECT",
+      "sqlstate": "42501"
+    },
+    {
+      "resource": "workspace.bank_silver.complaints",
+      "missing_privilege": "SELECT",
+      "sqlstate": "42501"
+    },
+    {
+      "resource": "workspace.bank_silver.customers",
+      "missing_privilege": "SELECT",
+      "sqlstate": "42501"
+    }
+  ],
+  "limits": [
+    "No verified live transaction lookup or persisted advisor handoff was completed",
+    "No predictive inference artifact or serving endpoint was created",
+    "No claim about production model quality is made"
+  ],
+  "source_tables_modified": false,
+  "database_created_or_modified": false,
+  "permissions_changed": false,
+  "customer_records_committed": false,
+  "training_code_and_evidence_preserved": true,
+  "pushed": false,
+  "deployed": false,
+  "implementation_commits": [
+    "cfb5f5e",
+    "752c713"
+  ]
+}

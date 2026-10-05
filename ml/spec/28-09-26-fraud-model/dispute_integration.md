@@ -1,116 +1,80 @@
-# Dispute integration with an unpromoted fraud model
+# Fraud assessment in the original assistant
 
-Status: proposed integration contract, 2026-10-04. This document defines implementation work; it does not deploy a service or establish that the complete flow currently works.
+Status: implemented locally on 2026-10-04 against `origin/main` commit `d79df69` (PR #131). The separate dispute demo was removed. Live transaction lookup and a persisted advisor handoff remain blocked by data permissions and the intentionally disabled chat database.
 
-## Product behavior
+## What is integrated
 
-Deliver an assistant for unrecognized-charge intake, transaction lookup, clarification, and human review. The trained fraud candidates remain offline experiments because none met the utility gate. Their measured precision is not changed, simulated upward, or used as an individual transaction probability.
+The original React frontend, Express backend and LangGraph agent remain the application. `get_fraud_assessment` is a native tool inside the existing agent, not a second chatbot or a model-serving endpoint.
 
-A customer saying that a charge is unrecognized is a report requiring investigation, not a verified fraud label. A human-review request can be justified by that report and workflow policy without a predictive fraud score. The assistant must not infer that the customer or merchant committed fraud.
-
-## Intended flow
+The complaint route runs the availability tool in code before collecting the complaint. It also exposes the tool to the LLM. Its result accompanies the turn as `custom_outputs.fraud_assessment`, including when bank reads fail. After the original collector verifies the charge and obtains confirmation, code attaches the same policy to `custom_outputs.handoff.facts.fraud_assessment`. The existing backend preserves those facts, and the original advisor case card shows a Spanish/Portuguese review notice. No new handoff reason or database field is introduced.
 
 ```mermaid
-sequenceDiagram
-    participant C as Customer chat
-    participant B as Backend
-    participant A as Assistant
-    participant T as Authorized transaction tool
-    participant H as Advisor console
-    C->>B: Report an unrecognized charge
-    B->>A: Message and trusted session
-    A->>T: Lookup transactions scoped to the session customer
-    T-->>A: Permitted transaction facts or a typed failure
-    A-->>C: Ask the customer to identify and confirm the charge
-    C->>B: Confirm the transaction and request review
-    B->>A: Confirmation and trusted session
-    A-->>B: Human-review request with verified facts
-    B->>B: Persist the existing handoff workflow and verify the outcome
-    B-->>C: Confirm the saved handoff or report failure
-    H->>B: Claim the conversation through existing advisor API
-    H-->>C: Continue the investigation
+flowchart LR
+    UI[Original React chat] --> B[Original Express backend]
+    B --> A[Original LangGraph agent]
+    A --> F[get_fraud_assessment
+local aggregate evidence]
+    A --> T[Existing customer-scoped bank tools]
+    F --> O[Turn custom_outputs
+null score, human review]
+    T --> V[Original charge verification
+and customer confirmation]
+    V --> H[Existing complaint handoff
+with assessment facts]
+    H --> C[Original advisor case card]
 ```
 
-This is a target flow. Backend operational handoff writes are separate from the read-only ML experiments. No database schema/table creation, migration, write, or deployment is performed by preparing this contract. Runtime integration must use the existing operational APIs and their authorization/confirmation policy; source transaction tables remain read only.
+The local launch has chat persistence disabled. The diagram's handoff/console steps describe the existing application path when data access and authorized persistence are available; they were verified with fixtures, not performed against a live database during this task.
 
-## Responsibilities
+## Model availability contract
 
-| Component | Responsibility |
-|---|---|
-| Customer UI | Collect the report and clarification; show verified tool facts and confirmed case/handoff status. Do not show a fraud percentage. |
-| Assistant | Classify the request, gather required slots, invoke authorized tools, and prepare a factual review summary. State missing information explicitly. |
-| Transaction tool | Enforce customer ownership from a trusted session outside LLM-generated text; return only permitted transaction facts. |
-| Policy/backend | Validate conditions and confirmation, authorize the action, save it idempotently, and report success only after persistence is verified. |
-| Advisor console | Present the reported charge, verified facts, customer statement, outstanding questions, and saved conversation state. |
-| Fraud training | Retain V1–V6 metrics, provenance, and limitations as offline evaluation evidence. No inference call or score-driven routing in this integration version. |
-
-The backend must validate handoff reason codes and conditions outside model prose. LLM-generated values never define policy or authorize an action.
-
-## Existing interfaces and implementation gaps
-
-Read-only inspection found these local interfaces:
-
-- `back/packages/ai-sdk-providers/src/providers-server.ts` accepts `custom_outputs.handoff` with `reason`, `summary`, and `facts`, plus `use_case`, `intent`, `language`, and `blocked`.
-- `back/packages/db/src/schema.ts` includes conversation states `ai_agent`, `human_queue`, and `human_agent`.
-- `front/src/lib/handoff.ts` handles those states, customer notices, and message polling.
-- `agent/configs/routing.yaml` currently sends `COMPLAINT` to `respond` rather than a transaction-dispute tool workflow.
-- The inspected non-streaming handler in `agent/src/main.py` returns `custom_outputs` containing `thread_id` only. This contract therefore must not be described as already connected end to end.
-
-These findings concern checked-out source, not a verified live deployment. Some older agent documentation describes different handoff/storage versions. Follow current code and verify the deployed revision before implementation. Preserve the existing backend ownership of conversations.
-
-## Proposed handoff payload
-
-The following example matches the backend's object shape. The new reason value and nested facts are proposals that must be validated against backend policy before use. Example identifiers and amounts are fictional fixtures, not customer records.
+The tool accepts no customer ID, transaction ID or score. It reads the V5/V6 aggregate reports from `ml/reports/2026-10-04`. `FRAUD_REPORT_DIR` can point to a packaged directory; missing or malformed evidence returns `unavailable`.
 
 ```json
 {
-  "use_case": "UC-02",
-  "intent": "COMPLAINT",
-  "language": "es",
-  "handoff": {
-    "reason": "unrecognized_charge_review",
-    "summary": "Customer reports the selected charge as unrecognized and requests review. Fraud has not been established.",
-    "facts": {
-      "transaction_id": "fixture-tx-001",
-      "amount": 120.0,
-      "currency": "USD",
-      "transaction_verified": true,
-      "customer_report_confirmed": true,
-      "fraud_assessment": {
-        "status": "not_validated",
-        "risk_score": null,
-        "decision_use": false
-      },
-      "unresolved_questions": ["Was this transaction authorized by the customer?"]
-    }
-  }
+  "schema_version": "1.0",
+  "scope": "model_availability",
+  "score_status": "not_validated",
+  "risk_score": null,
+  "fraud_prediction": null,
+  "automatic_decisions_enabled": false,
+  "review_required": true,
+  "reason_codes": ["NO_VALIDATED_INFERENCE_ARTIFACT", "HUMAN_REVIEW_REQUIRED"]
 }
 ```
 
-`transaction_verified` means the lookup found an accessible transaction belonging to the session customer. It does not mean its legitimacy or fraud outcome was verified. Confirmation must be tied to that transaction; a free-form claim or an LLM assertion is insufficient.
+The actual result also includes a small `experiments` list with candidate/run IDs and measured aggregate validation precision, recall and alert counts. These are offline measurements, never an individual transaction probability. They are not displayed to customers as a fraud percentage. A report claiming promotion cannot enable inference in this implementation.
 
-The `fraud_assessment` object is status metadata, not an existing model-serving response. No model binary was logged in V5/V6 and there is no validated scoring endpoint to call. Its fields convey that a score is unavailable for decision use. Never replace null with zero, a generated high score, or an offline precision metric.
+Neither V5 nor V6 logged an executable model binary. No validated inference endpoint, online feature service or transaction scoring implementation exists. All V1–V6 training code, notebooks and results are preserved. No new training run was launched for this integration.
 
-## UI and communication examples
+## Verification and policy
 
-Customer copy after a verified handoff: “Your request has been sent for review. An advisor will continue the investigation.” Localize to Spanish and Portuguese in the product. Until persistence is confirmed, do not state that a case or handoff was created. Do not promise a refund, block a product, or claim that fraud was confirmed.
+Customer identity continues to come from the trusted session; `bind_customer` discards any LLM-supplied customer ID. The original collector and `verify_case` enforce product ownership and match the charge against bank rows. The model availability tool does not accept a transaction and does not establish that a charge is fraudulent.
 
-Advisor copy: “Unrecognized-charge report — review pending.” Show transaction facts and the customer's statement separately. If model status is relevant to the advisor, show “Predictive fraud assessment unavailable for decision use.” Keep training metrics in the evaluation report rather than the customer flow.
+Human review follows the customer's complaint and the existing verified/confirmed workflow, independently of model metrics. An unavailable bank read produces the original tool-failure response and no handoff. The assistant must not assert a saved case, confirmed fraud, refund or account block when it has no verified result.
 
-No operational priority formula or monetary threshold is invented here. Approved workflow policy must define those independently of the weak model; preserve transaction currency when evaluating any amount rule.
+## Local data access
 
-## Learned component and acceptance evidence
+`main` now uses Lakebase for bank reads. The personal CLI user's Lakebase connection was rejected. An explicit `BANK_READ_SOURCE=databricks` option lets the same bank tools and backend product queries read the existing Gold tables through the SQL Statements API. Lakebase remains the default; there is no automatic fallback or permission grant.
 
-Evaluate the assistant's intent classification and clarification against a documented keyword/rule baseline on the same held-out Spanish/Portuguese cases. Use independently reviewed expected intents, slot values, tool permissions, and handoff outcomes. Team-written examples must be labeled synthetic and held out by scenario/template families; do not claim supplied templated contact text is a real unrecognized-charge conversation dataset.
+The agent adapter accepts only its three existing customer-scoped SELECT templates. Backend statements come only from the existing application queries and use allowlisted bank tables. Values stay parameterized; responses are bounded and incomplete/failed results are rejected. Warehouse statements cancel after the configured wait. No table, schema, UC function or database is created or modified.
 
-Measure classification quality with denominators and per-class results, correct transaction selection, confirmation behavior, handoff-summary completeness, unsafe outcomes, latency, and measured cost. Report repeated-run variability where relevant. “Complaint recorded” or “handoff completed” is an intake outcome, not a resolved financial dispute.
+Live read checks found:
 
-Acceptance scenarios include an authenticated single match, multiple possible charges, no match, customer changing the selection, a request for another customer's transaction, missing/expired session, tool failure, persistence failure, duplicate retries, prompt injection, and multilingual ambiguity. A positive outcome requires the correct permitted action and verified result, not only a fluent answer.
+- `workspace.bank_gold`: missing `USE SCHEMA` (SQLSTATE `42501`). SELECT on the required Gold tables cannot be established while schema access is blocked.
+- `workspace.bank_silver.products`, `complaints`, `customers`: missing `SELECT` (SQLSTATE `42501`).
+- Lakebase: password authentication rejected for the personal CLI identity.
 
-Implementation sequence: confirm the deployed checkout and target; connect the complaint workflow to existing permitted tools; validate the handoff contract/policy; connect emitted outputs to backend state; verify the existing customer/advisor UI; evaluate held-out cases; document observed results. Source-table writes and new ML-serving resources are not prerequisites for this version.
+Reading `workspace.bank_silver.transactions` for ML does not confer access to these other resources. An owner must authorize the relevant reads before real bank lookup can work. No grants were executed.
 
-## Future model replacement
+## Validation
 
-A fraud model can become an additional input only after demonstrating useful operating precision/recall, verifying label and feature timing, persisting an executable artifact, and passing a frozen final evaluation. Its rollout must define feature freshness, latency, score failure behavior, and monitoring. It never silently changes the meaning of current intake outcomes.
+See [the local integration guide](../../../LOCAL_MAIN_INTEGRATION.md) for exact launch commands and [the validation report](../../reports/2026-10-04/main_integration_report.md) for observed results.
+
+Validation includes model availability without fabricated scores, missing/corrupt evidence, a forged promotion claim, customer-ID override rejection, SELECT-template restrictions, incomplete results, the original complaint handoff, backend fact preservation, and the original UI's review notice. The real browser greeting traversed frontend → backend → agent. A real complaint returned the explicit experimental model status and the safe bank-read failure.
+
+## Future predictive inference
+
+Prediction requires a saved executable model, reproducible features available at decision time, a useful frozen operating point, verified label provenance, and independent evaluation. It must define latency, freshness, failure behavior and monitoring before rollout. Those requirements are separate from connecting the experimental status to the existing complaint workflow.
 
 References: [V6 result](../../reports/2026-10-04/training_v6_advanced_report.md), [V5 result](../../reports/2026-10-04/training_v5_catboost_report.md), [fraud-model requirements](requirements.md).
