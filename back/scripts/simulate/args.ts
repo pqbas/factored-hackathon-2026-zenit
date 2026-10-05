@@ -13,6 +13,8 @@ export type DayArgs = {
   dryRun: boolean;
   force: boolean;
   label: string | null;
+  // Share of the handoffs an advisor takes at the end (0 = none, as before).
+  advisorShare: number;
 };
 
 const isDay = (s: string) =>
@@ -32,6 +34,7 @@ export function parseDayArgs(argv: string[]): DayArgs {
     dryRun: false,
     force: false,
     label: null,
+    advisorShare: 0,
   };
   for (let i = 0; i < argv.length; i++) {
     const flag = argv[i];
@@ -48,7 +51,15 @@ export function parseDayArgs(argv: string[]): DayArgs {
     else if (flag === '--dry-run') args.dryRun = true;
     else if (flag === '--force') args.force = true;
     else if (flag === '--label') args.label = value();
+    else if (flag === '--advisor-share') args.advisorShare = Number(value());
     else throw new Error(`Unknown flag: ${flag}`);
+  }
+  if (
+    Number.isNaN(args.advisorShare) ||
+    args.advisorShare < 0 ||
+    args.advisorShare > 1
+  ) {
+    throw new Error('--advisor-share must be between 0 and 1');
   }
   if (!Number.isInteger(args.count) || args.count < 1) {
     throw new Error('--count must be a positive integer');
@@ -168,4 +179,17 @@ export function parseBackfillArgs(argv: string[]): BackfillArgs {
 // runs/backfill-<from>_<to>.json
 export function backfillFileName(from: string, to: string): string {
   return `backfill-${from}_${to}.json`;
+}
+
+// What the advisor does with each waiting handoff, in order: the first
+// round(share × n) are taken, alternating resolve (→ human) and hand back so
+// David closes (→ assisted); the rest stay in the queue (null).
+export function advisorActions(
+  handoffs: number,
+  share: number,
+): Array<'resolved' | 'returned' | null> {
+  const taken = Math.round(handoffs * share);
+  return Array.from({ length: handoffs }, (_, i) =>
+    i < taken ? (i % 2 === 0 ? 'resolved' : 'returned') : null,
+  );
 }

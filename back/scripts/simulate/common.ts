@@ -58,7 +58,40 @@ export function cliToken(): Record<string, string> {
   return { Authorization: `Bearer ${out.access_token}` };
 }
 
-export function identities(base: string) {
+const isDatabricksApp = (base: string) =>
+  new URL(base).hostname.endsWith('.databricksapps.com');
+
+// The demo login of password mode (AWS): the admin's session cookie, from
+// SIM_ADMIN_USER / SIM_ADMIN_PASSWORD. Never logged.
+export async function passwordLogin(base: string): Promise<string> {
+  const username = process.env.SIM_ADMIN_USER;
+  const password = process.env.SIM_ADMIN_PASSWORD;
+  if (!username || !password) {
+    throw new Error(
+      `${base} uses the demo login: set SIM_ADMIN_USER and SIM_ADMIN_PASSWORD`,
+    );
+  }
+  const response = await fetch(`${base}/api/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password }),
+  });
+  if (!response.ok) {
+    throw new Error(`POST /api/login -> HTTP ${response.status}`);
+  }
+  const cookie = response.headers.get('set-cookie')?.split(';')[0];
+  if (!cookie) throw new Error('POST /api/login set no session cookie');
+  return cookie;
+}
+
+// Locally: X-Forwarded-* headers. A Databricks App: the CLI user's token.
+// Anything else (AWS, password mode): the admin's cookie, as customer and
+// admin both, like the CLI user on Databricks.
+export async function identities(base: string) {
+  if (!isLocal(base) && !isDatabricksApp(base)) {
+    const headers = { Cookie: await passwordLogin(base) };
+    return { customer: () => headers, admin: () => headers };
+  }
   if (isLocal(base)) {
     const customer = {
       'X-Forwarded-User': 'sim-cliente',

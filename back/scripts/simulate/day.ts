@@ -16,7 +16,13 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PRICING_ASSUMPTIONS } from '../../server/src/pricing';
 import { sendMessage } from '../simulate-customers';
-import { type DayArgs, endOfDayUtc, parseDayArgs, runFileName } from './args';
+import {
+  advisorActions,
+  type DayArgs,
+  endOfDayUtc,
+  parseDayArgs,
+  runFileName,
+} from './args';
 import { identities, openLakebase } from './common';
 import {
   allocateMix,
@@ -35,7 +41,7 @@ import {
 const HERE = dirname(fileURLToPath(import.meta.url));
 const MAX_COST_USD = 3;
 
-type Ids = ReturnType<typeof identities>;
+type Ids = Awaited<ReturnType<typeof identities>>;
 
 async function pool<T>(
   items: T[],
@@ -142,6 +148,52 @@ async function runConversation(
   return { record, sent };
 }
 
+async function post(
+  base: string,
+  path: string,
+  headers: Record<string, string>,
+  body?: unknown,
+) {
+  const response = await fetch(`${base}${path}`, {
+    method: 'POST',
+    headers: { ...headers, 'Content-Type': 'application/json' },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  if (!response.ok) {
+    throw new Error(
+      `POST ${path} -> HTTP ${response.status} ${(await response.text()).slice(0, 200)}`,
+    );
+  }
+}
+
+const THANKS = { es: 'gracias, eso es todo', pt: 'obrigado, é só isso' };
+
+// --advisor-share: the advisor takes the handoff and resolves it (→ human),
+// or hands it back and the customer says goodbye so David closes it
+// (→ assisted).
+async function advise(
+  base: string,
+  ids: Ids,
+  record: ConversationRecord,
+  action: 'resolved' | 'returned',
+) {
+  const path = `/api/advisor/conversations/${record.chatId}`;
+  await post(base, `${path}/take`, ids.admin());
+  await post(base, `${path}/release`, ids.admin(), {
+    outcome: action === 'resolved' ? 'resolved' : 'returned_to_agent',
+  });
+  if (action === 'returned') {
+    await sendMessage(
+      base,
+      ids.customer(),
+      record.chatId,
+      THANKS[record.language],
+      record.token,
+    );
+  }
+  record.advisor = action;
+}
+
 async function readState(base: string, ids: Ids, record: ConversationRecord) {
   const chat = await get<ChatView>(
     base,
@@ -219,7 +271,7 @@ async function main(args: DayArgs) {
     );
 
     mkdirSync(runsDir, { recursive: true });
-    const ids = identities(args.base);
+    const ids = await identities(args.base);
     const results: Array<Awaited<ReturnType<typeof runConversation>>> = [];
     const flush = (extra: Record<string, unknown> = {}) =>
       writeFileSync(
@@ -264,10 +316,25 @@ async function main(args: DayArgs) {
         },
       );
 
-      // Handoffs stay in the queue: no advisor takes or releases them.
+      // Handoffs stay in the queue unless --advisor-share hands some to an
+      // advisor.
       for (const r of results) {
         try {
           await readState(args.base, ids, r.record);
+        } catch (error) {
+          r.record.error ??=
+            error instanceof Error ? error.message : String(error);
+        }
+      }
+      const waiting = results.filter(
+        (r) => r.record.handoffReason && !r.record.closed && !r.record.error,
+      );
+      const actions = advisorActions(waiting.length, args.advisorShare);
+      for (const [i, r] of waiting.entries()) {
+        const action = actions[i];
+        if (!action) continue;
+        try {
+          await advise(args.base, ids, r.record, action);
         } catch (error) {
           r.record.error ??=
             error instanceof Error ? error.message : String(error);

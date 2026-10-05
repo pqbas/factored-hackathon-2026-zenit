@@ -12,11 +12,12 @@ export function assertLocalBase(base: string, allowProd = false): void {
   if (
     allowProd &&
     url.protocol === 'https:' &&
-    url.hostname.endsWith('.databricksapps.com')
+    (url.hostname.endsWith('.databricksapps.com') ||
+      url.hostname.endsWith('.awsapprunner.com'))
   ) {
     return;
   }
   throw new Error(
-    `Refusing to run against ${url.hostname}: the evaluation only runs on localhost or 127.0.0.1 (or a Databricks App with --allow-prod).`,
+    `Refusing to run against ${url.hostname}: the evaluation only runs on localhost or 127.0.0.1 (or a Databricks App or App Runner service with --allow-prod).`,
   );
 }

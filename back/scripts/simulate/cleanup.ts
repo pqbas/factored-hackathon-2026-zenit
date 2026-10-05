@@ -52,7 +52,7 @@ async function main(args: CleanupArgs) {
     }
   }
 
-  const ids = identities(args.base);
+  const ids = await identities(args.base);
   let deleted = 0;
   for (const id of chatIds) {
     const response = await fetch(`${args.base}/api/chat/${id}`, {

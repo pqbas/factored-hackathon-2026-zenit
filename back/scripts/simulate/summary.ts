@@ -22,6 +22,8 @@ export type ConversationRecord = {
   handoffReason: string | null;
   handledBy: string | null;
   closed: boolean;
+  // --advisor-share: what the advisor did with this handoff.
+  advisor?: 'resolved' | 'returned';
   error?: string;
   turns: TurnRecord[];
 };
