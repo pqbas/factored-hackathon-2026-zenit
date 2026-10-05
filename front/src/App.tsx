@@ -13,6 +13,7 @@ import ChatPage from '@/pages/ChatPage';
 import ConversationsPage from '@/pages/ConversationsPage';
 import ProductsPage from '@/pages/ProductsPage';
 import MetricsPage from '@/pages/MetricsPage';
+import FraudDashboardPage from '@/pages/FraudDashboardPage';
 import { RequireSection } from '@/components/require-section';
 import { AuthGate } from '@/components/auth-gate';
 
@@ -58,6 +59,7 @@ function App() {
                           </RequireSection>
                         }
                       />
+                      <Route path="fraud" element={<RequireSection section="fraud"><FraudDashboardPage /></RequireSection>} />
                       <Route
                         path="products"
                         element={

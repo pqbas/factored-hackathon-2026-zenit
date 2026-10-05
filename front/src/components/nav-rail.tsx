@@ -7,6 +7,7 @@ import {
   Moon,
   Sun,
   Wallet,
+  ShieldCheck,
   type LucideIcon,
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
@@ -74,6 +75,10 @@ const NAV_ITEMS: NavItem[] = [
     section: 'metrics',
     icon: ChartColumn,
     isActive: (pathname) => pathname.startsWith('/metrics'),
+  },
+  {
+    id: 'fraud', label: (t) => t.nav.fraud, to: '/fraud', section: 'fraud',
+    icon: ShieldCheck, isActive: (pathname) => pathname.startsWith('/fraud'),
   },
 ];
 
