@@ -19,6 +19,7 @@ import {
   getCustomerInbox,
   getChatsByCustomerKey,
   getResolutionMetrics,
+  getFraudDashboardAggregates,
   getTurnMetrics,
   HUMAN_HANDLED_BY,
   getLastCustomerMessages,
@@ -37,6 +38,8 @@ import { toLastMessagePreview } from '../inbox';
 import { getCustomerContext } from '../bank-data';
 import { withHandoff, withHandoffs } from '../handoff-view';
 import { PRICING_ASSUMPTIONS, estimateCostUsd } from '../pricing';
+import fraudSnapshot from '../data/fraud-dashboard.json';
+import { aggregateFraudRows, validFraudWindow } from '../fraud-dashboard';
 
 export const advisorRouter: RouterType = Router();
 
@@ -384,6 +387,29 @@ const metricsQuerySchema = z.object({
   from: z.iso.date().optional(),
   to: z.iso.date().optional(),
   tz: z.string().refine(isTimeZone).optional(),
+});
+
+// Historical evidence remains accessible when operational storage is unavailable.
+// This endpoint performs one SELECT and never initiates scoring or warehouse jobs.
+advisorRouter.get('/fraud-dashboard', requireAdmin, async (req: Request, res: Response) => {
+  const query = metricsQuerySchema.safeParse(req.query);
+  if (!query.success || !query.data.from || !query.data.to
+    || !validFraudWindow(query.data.from, query.data.to)) {
+    return res.status(400).json({ error: 'Provide valid from/to dates spanning at most 31 days and an IANA timezone.' });
+  }
+  res.setHeader('Cache-Control', 'no-store');
+  const window = { from: query.data.from, to: query.data.to, tz: query.data.tz ?? 'UTC' };
+  let operational = aggregateFraudRows([], 'unavailable');
+  if (isDatabaseAvailable()) {
+    try {
+      operational = aggregateFraudRows(await getFraudDashboardAggregates(window));
+    } catch {
+      // Do not log facts, credentials or bank identifiers on a dashboard failure.
+      console.error('[/api/advisor/fraud-dashboard] Aggregate query failed');
+      operational = aggregateFraudRows([], 'error');
+    }
+  }
+  return res.json({ snapshot: fraudSnapshot, operational, window, refreshedAt: new Date().toISOString() });
 });
 
 /**

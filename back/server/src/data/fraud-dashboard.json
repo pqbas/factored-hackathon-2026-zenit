@@ -1,0 +1,672 @@
+{
+  "schemaVersion": 1,
+  "publishedAt": "2026-10-05",
+  "dataset": {
+    "source": "workspace.bank_silver.transactions",
+    "deltaVersion": 1,
+    "profiledAt": "2026-09-28",
+    "total": 4425008,
+    "fraud": 4316,
+    "nullIds": 0,
+    "nullLabels": 0,
+    "duplicates": 0,
+    "dateRange": {
+      "min_date": "2023-06-17T06:01:30.000Z",
+      "max_date": "2026-06-18T05:59:41.000Z"
+    },
+    "countries": [
+      {
+        "label": "México",
+        "total": 2146309,
+        "fraud": 2132
+      },
+      {
+        "label": "Colombia",
+        "total": 1289503,
+        "fraud": 1198
+      },
+      {
+        "label": "Argentina",
+        "total": 867561,
+        "fraud": 864
+      },
+      {
+        "label": "USA",
+        "total": 40621,
+        "fraud": 38
+      },
+      {
+        "label": "Spain",
+        "total": 40542,
+        "fraud": 39
+      },
+      {
+        "label": "Brazil",
+        "total": 40472,
+        "fraud": 45
+      }
+    ],
+    "channels": [
+      {
+        "label": "POS",
+        "total": 1548161,
+        "fraud": 1467
+      },
+      {
+        "label": "ATM",
+        "total": 1328334,
+        "fraud": 1331
+      },
+      {
+        "label": "Web",
+        "total": 663445,
+        "fraud": 656
+      },
+      {
+        "label": "App",
+        "total": 663414,
+        "fraud": 634
+      },
+      {
+        "label": "Branch",
+        "total": 132495,
+        "fraud": 143
+      },
+      {
+        "label": "Transfer",
+        "total": 89159,
+        "fraud": 85
+      }
+    ],
+    "types": [
+      {
+        "label": "Purchase",
+        "total": 1083406,
+        "fraud": 1086
+      },
+      {
+        "label": "Withdrawal",
+        "total": 964673,
+        "fraud": 951
+      },
+      {
+        "label": "Transfer",
+        "total": 896438,
+        "fraud": 798
+      },
+      {
+        "label": "Payment",
+        "total": 738964,
+        "fraud": 730
+      },
+      {
+        "label": "Deposit",
+        "total": 609409,
+        "fraud": 607
+      },
+      {
+        "label": "Adjustment",
+        "total": 132118,
+        "fraud": 144
+      }
+    ],
+    "currencies": [
+      {
+        "label": "USD",
+        "total": 2437979
+      },
+      {
+        "label": "COP",
+        "total": 1194444
+      },
+      {
+        "label": "ARS",
+        "total": 792585
+      }
+    ],
+    "monthly": [
+      {
+        "month": "2023-06",
+        "total": 56260,
+        "fraud": 54
+      },
+      {
+        "month": "2023-07",
+        "total": 121313,
+        "fraud": 138
+      },
+      {
+        "month": "2023-08",
+        "total": 127592,
+        "fraud": 137
+      },
+      {
+        "month": "2023-09",
+        "total": 119559,
+        "fraud": 97
+      },
+      {
+        "month": "2023-10",
+        "total": 127793,
+        "fraud": 140
+      },
+      {
+        "month": "2023-11",
+        "total": 121984,
+        "fraud": 125
+      },
+      {
+        "month": "2023-12",
+        "total": 125969,
+        "fraud": 123
+      },
+      {
+        "month": "2024-01",
+        "total": 122201,
+        "fraud": 121
+      },
+      {
+        "month": "2024-02",
+        "total": 117135,
+        "fraud": 118
+      },
+      {
+        "month": "2024-03",
+        "total": 121588,
+        "fraud": 135
+      },
+      {
+        "month": "2024-04",
+        "total": 121330,
+        "fraud": 125
+      },
+      {
+        "month": "2024-05",
+        "total": 126371,
+        "fraud": 132
+      },
+      {
+        "month": "2024-06",
+        "total": 121816,
+        "fraud": 110
+      },
+      {
+        "month": "2024-07",
+        "total": 128772,
+        "fraud": 115
+      },
+      {
+        "month": "2024-08",
+        "total": 122764,
+        "fraud": 129
+      },
+      {
+        "month": "2024-09",
+        "total": 117525,
+        "fraud": 131
+      },
+      {
+        "month": "2024-10",
+        "total": 127493,
+        "fraud": 137
+      },
+      {
+        "month": "2024-11",
+        "total": 121481,
+        "fraud": 122
+      },
+      {
+        "month": "2024-12",
+        "total": 122761,
+        "fraud": 107
+      },
+      {
+        "month": "2025-01",
+        "total": 122180,
+        "fraud": 122
+      },
+      {
+        "month": "2025-02",
+        "total": 110465,
+        "fraud": 110
+      },
+      {
+        "month": "2025-03",
+        "total": 123716,
+        "fraud": 112
+      },
+      {
+        "month": "2025-04",
+        "total": 120744,
+        "fraud": 103
+      },
+      {
+        "month": "2025-05",
+        "total": 126997,
+        "fraud": 131
+      },
+      {
+        "month": "2025-06",
+        "total": 118788,
+        "fraud": 140
+      },
+      {
+        "month": "2025-07",
+        "total": 126882,
+        "fraud": 130
+      },
+      {
+        "month": "2025-08",
+        "total": 126039,
+        "fraud": 119
+      },
+      {
+        "month": "2025-09",
+        "total": 118563,
+        "fraud": 107
+      },
+      {
+        "month": "2025-10",
+        "total": 129268,
+        "fraud": 125
+      },
+      {
+        "month": "2025-11",
+        "total": 120775,
+        "fraud": 103
+      },
+      {
+        "month": "2025-12",
+        "total": 122382,
+        "fraud": 115
+      }
+    ],
+    "quality": [
+      {
+        "id": "merchant_category",
+        "missing": 3396215,
+        "total": 4425008
+      },
+      {
+        "id": "amount_usd_raw",
+        "missing": 2537456,
+        "total": 4425008
+      },
+      {
+        "id": "amount_usd_normalized",
+        "missing": 99477,
+        "total": 4425008
+      },
+      {
+        "id": "labels",
+        "missing": 0,
+        "total": 4425008
+      },
+      {
+        "id": "ids",
+        "missing": 0,
+        "total": 4425008
+      }
+    ],
+    "audit": {
+      "before": "2025-07-01",
+      "auditedAt": "2026-10-05",
+      "transactions": 2994597,
+      "registrationAfter": 744640,
+      "openingAfter": 741683,
+      "digitalEvents": 10529594,
+      "digitalUnlinked": 2526222,
+      "processingBefore": 2646273
+    }
+  },
+  "model": {
+    "version": "v7_gold_lakebase_c3",
+    "algorithm": "CatBoost",
+    "threshold": 0.042594873940121264,
+    "source": "workspace.bank_gold.customer_transactions",
+    "deltaVersion": 1,
+    "runId": "663c44e0c3de40718830f5362dce5a9b",
+    "validationFrom": "2025-07-01",
+    "validationTo": "2025-12-31",
+    "experimental": true,
+    "automaticDecisionsEnabled": false,
+    "finalTestUsed": false,
+    "versions": [
+      {
+        "id": "V7",
+        "metrics": {
+          "rows": 743909,
+          "fraud": 699,
+          "prevalence": 0.0009396310570244479,
+          "average_precision": 0.0010660571297085048,
+          "roc_auc": 0.49682886721577146,
+          "distinct_scores": 315384,
+          "threshold": 0.042594873940121264,
+          "alerts": 7224,
+          "tp": 6,
+          "fp": 7218,
+          "fn": 693,
+          "tn": 735992,
+          "precision": 0.0008305647840531562,
+          "recall": 0.008583690987124463,
+          "alert_rate": 0.009710865173025196
+        },
+        "role": "serving",
+        "sourceLayer": "gold",
+        "runId": "663c44e0c3de40718830f5362dce5a9b"
+      },
+      {
+        "id": "V8",
+        "metrics": {
+          "rows": 743909,
+          "fraud": 699,
+          "prevalence": 0.0009396310570244479,
+          "average_precision": 0.000992739507589491,
+          "roc_auc": 0.5158376091924181,
+          "distinct_scores": 532935,
+          "threshold": 0.0014291930349341238,
+          "alerts": 7371,
+          "tp": 4,
+          "fp": 7367,
+          "fn": 695,
+          "tn": 735843,
+          "precision": 0.000542667209333876,
+          "recall": 0.005722460658082976,
+          "alert_rate": 0.009908469987592568
+        },
+        "role": "rejected",
+        "sourceLayer": "silver",
+        "runId": "4bad27824082499e8675958c1e0bf56f"
+      },
+      {
+        "id": "V9",
+        "metrics": {
+          "rows": 743909,
+          "fraud": 699,
+          "prevalence": 0.0009396310570244479,
+          "average_precision": 0.000940195641371852,
+          "roc_auc": 0.4990969161168198,
+          "distinct_scores": 338,
+          "threshold": 0.36574689032665736,
+          "alerts": 7814,
+          "tp": 4,
+          "fp": 7810,
+          "fn": 695,
+          "tn": 735400,
+          "precision": 0.0005119017148707448,
+          "recall": 0.005722460658082976,
+          "alert_rate": 0.010503972932173155
+        },
+        "role": "rejected",
+        "sourceLayer": "gold",
+        "runId": "8d10d8910ac349a0ab65545dbe532469"
+      }
+    ],
+    "monthly": [
+      {
+        "month": "2025-07",
+        "v7": {
+          "rows": 126882,
+          "fraud": 130,
+          "prevalence": 0.0010245740136504784,
+          "average_precision": 0.0012013670212091174,
+          "roc_auc": 0.4968824039189793,
+          "distinct_scores": 85367,
+          "threshold": 0.042594873940121264,
+          "alerts": 1242,
+          "tp": 3,
+          "fp": 1239,
+          "fn": 127,
+          "tn": 125513,
+          "precision": 0.0024154589371980675,
+          "recall": 0.023076923076923078,
+          "alert_rate": 0.00978862249964534
+        },
+        "v9": {
+          "rows": 126882,
+          "fraud": 130,
+          "prevalence": 0.0010245740136504784,
+          "average_precision": 0.0010437885784799904,
+          "roc_auc": 0.4881843770026994,
+          "distinct_scores": 224,
+          "threshold": 0.36574689032665736,
+          "alerts": 1357,
+          "tp": 2,
+          "fp": 1355,
+          "fn": 128,
+          "tn": 125397,
+          "precision": 0.0014738393515106854,
+          "recall": 0.015384615384615385,
+          "alert_rate": 0.010694976434797686
+        }
+      },
+      {
+        "month": "2025-08",
+        "v7": {
+          "rows": 126039,
+          "fraud": 119,
+          "prevalence": 0.0009441522068566079,
+          "average_precision": 0.0009539567752818457,
+          "roc_auc": 0.49538459125708734,
+          "distinct_scores": 86246,
+          "threshold": 0.042594873940121264,
+          "alerts": 1198,
+          "tp": 0,
+          "fp": 1198,
+          "fn": 119,
+          "tn": 124722,
+          "precision": 0,
+          "recall": 0,
+          "alert_rate": 0.00950499448583375
+        },
+        "v9": {
+          "rows": 126039,
+          "fraud": 119,
+          "prevalence": 0.0009441522068566079,
+          "average_precision": 0.000936617113162219,
+          "roc_auc": 0.49923584268523163,
+          "distinct_scores": 222,
+          "threshold": 0.36574689032665736,
+          "alerts": 1358,
+          "tp": 0,
+          "fp": 1358,
+          "fn": 119,
+          "tn": 124562,
+          "precision": 0,
+          "recall": 0,
+          "alert_rate": 0.010774442831187172
+        }
+      },
+      {
+        "month": "2025-09",
+        "v7": {
+          "rows": 118563,
+          "fraud": 107,
+          "prevalence": 0.000902473790305576,
+          "average_precision": 0.0008633245022779897,
+          "roc_auc": 0.4849398712026201,
+          "distinct_scores": 80630,
+          "threshold": 0.042594873940121264,
+          "alerts": 1113,
+          "tp": 1,
+          "fp": 1112,
+          "fn": 106,
+          "tn": 117344,
+          "precision": 0.0008984725965858042,
+          "recall": 0.009345794392523364,
+          "alert_rate": 0.009387414286075757
+        },
+        "v9": {
+          "rows": 118563,
+          "fraud": 107,
+          "prevalence": 0.000902473790305576,
+          "average_precision": 0.0010460172809471134,
+          "roc_auc": 0.5287602747248238,
+          "distinct_scores": 207,
+          "threshold": 0.36574689032665736,
+          "alerts": 1212,
+          "tp": 1,
+          "fp": 1211,
+          "fn": 106,
+          "tn": 117245,
+          "precision": 0.0008250825082508251,
+          "recall": 0.009345794392523364,
+          "alert_rate": 0.010222413400470635
+        }
+      },
+      {
+        "month": "2025-10",
+        "v7": {
+          "rows": 129268,
+          "fraud": 125,
+          "prevalence": 0.0009669833214716713,
+          "average_precision": 0.008937457289020406,
+          "roc_auc": 0.4832440008362822,
+          "distinct_scores": 87561,
+          "threshold": 0.042594873940121264,
+          "alerts": 1259,
+          "tp": 1,
+          "fp": 1258,
+          "fn": 124,
+          "tn": 127885,
+          "precision": 0.0007942811755361397,
+          "recall": 0.008,
+          "alert_rate": 0.009739456013862674
+        },
+        "v9": {
+          "rows": 129268,
+          "fraud": 125,
+          "prevalence": 0.0009669833214716713,
+          "average_precision": 0.0009220458188296066,
+          "roc_auc": 0.485373175472151,
+          "distinct_scores": 201,
+          "threshold": 0.36574689032665736,
+          "alerts": 1375,
+          "tp": 0,
+          "fp": 1375,
+          "fn": 125,
+          "tn": 127768,
+          "precision": 0,
+          "recall": 0,
+          "alert_rate": 0.010636816536188384
+        }
+      },
+      {
+        "month": "2025-11",
+        "v7": {
+          "rows": 120775,
+          "fraud": 103,
+          "prevalence": 0.0008528255019664665,
+          "average_precision": 0.0009276166350193163,
+          "roc_auc": 0.5036501497761403,
+          "distinct_scores": 84088,
+          "threshold": 0.042594873940121264,
+          "alerts": 1205,
+          "tp": 1,
+          "fp": 1204,
+          "fn": 102,
+          "tn": 119468,
+          "precision": 0.0008298755186721991,
+          "recall": 0.009708737864077669,
+          "alert_rate": 0.00997723038708342
+        },
+        "v9": {
+          "rows": 120775,
+          "fraud": 103,
+          "prevalence": 0.0008528255019664665,
+          "average_precision": 0.0008597949116887593,
+          "roc_auc": 0.5024650790524519,
+          "distinct_scores": 211,
+          "threshold": 0.36574689032665736,
+          "alerts": 1280,
+          "tp": 1,
+          "fp": 1279,
+          "fn": 102,
+          "tn": 119393,
+          "precision": 0.00078125,
+          "recall": 0.009708737864077669,
+          "alert_rate": 0.010598219830262885
+        }
+      },
+      {
+        "month": "2025-12",
+        "v7": {
+          "rows": 122382,
+          "fraud": 115,
+          "prevalence": 0.0009396806719942475,
+          "average_precision": 0.0009521811134952328,
+          "roc_auc": 0.5170363434834881,
+          "distinct_scores": 82194,
+          "threshold": 0.042594873940121264,
+          "alerts": 1207,
+          "tp": 0,
+          "fp": 1207,
+          "fn": 115,
+          "tn": 121060,
+          "precision": 0,
+          "recall": 0,
+          "alert_rate": 0.009862561487800493
+        },
+        "v9": {
+          "rows": 122382,
+          "fraud": 115,
+          "prevalence": 0.0009396806719942475,
+          "average_precision": 0.0009921510132866948,
+          "roc_auc": 0.49609436368944515,
+          "distinct_scores": 216,
+          "threshold": 0.36574689032665736,
+          "alerts": 1232,
+          "tp": 0,
+          "fp": 1232,
+          "fn": 115,
+          "tn": 121035,
+          "precision": 0,
+          "recall": 0,
+          "alert_rate": 0.010066839894755765
+        }
+      }
+    ],
+    "digitalCoverage": [
+      {
+        "id": "V8",
+        "covered": 44840,
+        "total": 743909
+      },
+      {
+        "id": "V9",
+        "covered": 413088,
+        "total": 743909
+      }
+    ]
+  },
+  "evidence": [
+    {
+      "path": "ml/reports/2026-09-28/profile_data.json",
+      "sha256": "c9537ab3c9447211303762fea235d9ad80d9227d811ac49a9c2936dd229c4602"
+    },
+    {
+      "path": "ml/reports/2026-09-28/features_data.json",
+      "sha256": "211195b24ed9f50044bbf6ad8ea3bec90d5ade0cb4a74bc2b13f92ed4395ffc3"
+    },
+    {
+      "path": "agent/configs/fraud-model/manifest.json",
+      "sha256": "08d96647f42d72b9b09e147ede9171ffcd87072cb4ce3143f9cf31f94adae90a"
+    },
+    {
+      "path": "ml/reports/2026-10-05/training_v8_digital_data.json",
+      "sha256": "1bf66a86bb5a872062f2bfa90297cd9a3b91b1105ee153c55809b65fa9e52d55"
+    },
+    {
+      "path": "ml/reports/2026-10-05/training_v9_digital_data.json",
+      "sha256": "9fe4dc4fa8b28c24b55acaf4040fc812f98da86a5002f36fb8a68b457579582a"
+    },
+    {
+      "path": "ml/reports/2026-10-05/digital_access_and_quality_report.md",
+      "sha256": "bcb517f6279f35f9ab8bf5505f87a14369e6ae1bf185ef420591e8510b2aa787"
+    },
+    {
+      "path": "ml/reports/2026-10-05/dimension_timing_audit_report.md",
+      "sha256": "bab67d75500388e6414cf219e2f93f802e4753634b783c8fb99302789856faf1"
+    }
+  ]
+}
