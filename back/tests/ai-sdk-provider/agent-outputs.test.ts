@@ -2,6 +2,26 @@ import { expect, test } from '@playwright/test';
 import { parseAgentOutputs } from '@chat-template/ai-sdk-providers';
 
 test.describe('parseAgentOutputs', () => {
+  test('preserves a real zero score and false threshold flag in existing handoff facts', () => {
+    const assessment = { scope: 'transaction_inference', score_status: 'experimental_prediction',
+      risk_score: 0, fraud_prediction: false, automatic_decisions_enabled: false, review_required: true };
+    const outputs = parseAgentOutputs({ handoff: {
+      reason: 'complaint', summary: 'Verified charge',
+      facts: { verified_data: { transaction_id: 'TX-UNIT' }, fraud_assessment: assessment },
+    } });
+    expect(outputs.handoff?.facts?.fraud_assessment).toEqual(assessment);
+    expect(outputs.handoff?.facts?.verified_data).toEqual({ transaction_id: 'TX-UNIT' });
+  });
+  test('preserves the experimental fraud assessment in the existing complaint handoff', () => {
+    const assessment = { scope: 'model_availability', score_status: 'not_validated',
+      risk_score: null, automatic_decisions_enabled: false, review_required: true };
+    const outputs = parseAgentOutputs({ handoff: {
+      reason: 'complaint', summary: 'Verified charge reported by customer',
+      facts: { verified_data: { merchant: 'Fixture merchant' }, fraud_assessment: assessment },
+    } });
+    expect(outputs.handoff?.facts?.fraud_assessment).toEqual(assessment);
+    expect(outputs.handoff?.reason).toBe('complaint');
+  });
   test('reads the full contract shape', () => {
     const outputs = parseAgentOutputs({
       thread_id: 'chat-1',

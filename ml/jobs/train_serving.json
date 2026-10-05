@@ -1,0 +1,12 @@
+{
+  "run_name": "Executable fraud model for existing AWS assistant",
+  "timeout_seconds": 1800,
+  "tasks": [{
+    "task_key": "train_executable_fraud",
+    "notebook_task": {"notebook_path": "/Shared/fraud-eda/11_executable_fraud_predictions", "source": "WORKSPACE"},
+    "environment_key": "fraud_serving", "timeout_seconds": 1800, "max_retries": 0
+  }],
+  "environments": [{"environment_key": "fraud_serving", "spec": {
+    "environment_version": "4", "dependencies": ["catboost==1.2.8"]
+  }}]
+}

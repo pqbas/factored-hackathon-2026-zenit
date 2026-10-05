@@ -142,6 +142,10 @@ export async function bankQuery(
   text: string,
   params: string[] = [],
 ): Promise<BankRow[]> {
+  if (process.env.BANK_READ_SOURCE === 'databricks') {
+    const { warehouseBankQuery } = await import('./bank-warehouse');
+    return warehouseBankQuery(text, params);
+  }
   const pool = await getPool();
   const rows = await pool.unsafe(text, params);
   return rows.map((row) =>

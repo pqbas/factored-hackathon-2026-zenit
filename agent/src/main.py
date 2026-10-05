@@ -102,7 +102,7 @@ async def _process_agent_astream_events(
             for node_name, node_data in event[1].items():
                 if not node_data:
                     continue
-                for key in ("classification", "use_case", "handoff", "paused", "guard"):
+                for key in ("classification", "use_case", "handoff", "paused", "guard", "fraud_assessment"):
                     if key in node_data:
                         turn[key] = node_data[key]
                 if len(node_data.get("messages", [])) > 0:
@@ -214,6 +214,8 @@ async def streaming(
         turn["handoff"], turn["paused"], usage.totals(), settings.llm_endpoint, prompt_version(),
         settings.classifier, turn["guard"],
     )
+    if turn.get("fraud_assessment") is not None:
+        custom_outputs["fraud_assessment"] = turn["fraud_assessment"]
     if turn["paused"]:
         # No text item at all: the smallest event that carries custom_outputs.
         yield ResponsesAgentStreamEvent(type="response.in_progress", custom_outputs=custom_outputs)

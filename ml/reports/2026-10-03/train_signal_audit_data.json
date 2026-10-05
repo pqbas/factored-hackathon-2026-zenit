@@ -1,0 +1,1663 @@
+{
+  "status": "SUCCEEDED",
+  "source_table": "workspace.bank_silver.transactions",
+  "delta_version": 1,
+  "statement_id": "01f1bf47-ea1b-15ef-858d-e941cfc97080",
+  "training_end_exclusive": "2025-07-01",
+  "sql_warehouse_session_timezone": "not captured",
+  "source_timestamp_timezone": "unconfirmed",
+  "validation_used": false,
+  "final_test_used": false,
+  "source_tables_modified": false,
+  "row_level_records_exported": false,
+  "sql": "WITH training AS (\n  SELECT\n    CASE WHEN transaction_date < TIMESTAMP '2025-01-01' THEN 'fit'\n         WHEN transaction_date < TIMESTAMP '2025-04-01' THEN 'selection'\n         ELSE 'operating_point' END AS audit_partition,\n    transaction_date, is_fraud, currency, channel, transaction_country,\n    transaction_type, transaction_category, merchant_category\n  FROM workspace.bank_silver.transactions VERSION AS OF 1\n  WHERE transaction_date < TIMESTAMP '2025-07-01'\n    AND is_fraud IS NOT NULL\n), expanded AS (\n  SELECT audit_partition, CAST(is_fraud AS INT) AS label,\n         feature, COALESCE(NULLIF(TRIM(bucket), ''), '__missing__') AS bucket\n  FROM training\n  LATERAL VIEW STACK(9,\n    'all', 'all',\n    'currency', CAST(currency AS STRING),\n    'channel', CAST(channel AS STRING),\n    'transaction_country', CAST(transaction_country AS STRING),\n    'transaction_type', CAST(transaction_type AS STRING),\n    'transaction_category', CAST(transaction_category AS STRING),\n    'merchant_category', CAST(merchant_category AS STRING),\n    'hour', CAST(HOUR(transaction_date) AS STRING),\n    'year_month', DATE_FORMAT(transaction_date, 'yyyy-MM')\n  ) categories AS feature, bucket\n)\nSELECT audit_partition, feature, bucket, COUNT(*) AS rows,\n       SUM(label) AS fraud, AVG(label) AS fraud_rate\nFROM expanded\nGROUP BY audit_partition, feature, bucket\nORDER BY audit_partition, feature, bucket",
+  "aggregate_rows": [
+    {
+      "audit_partition": "fit",
+      "feature": "all",
+      "bucket": "all",
+      "rows": 2271707,
+      "fraud": 2296,
+      "fraud_rate": 0.001010693720625063
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "channel",
+      "bucket": "ATM",
+      "rows": 681465,
+      "fraud": 707,
+      "fraud_rate": 0.0010374707431782997
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "channel",
+      "bucket": "App",
+      "rows": 340529,
+      "fraud": 356,
+      "fraud_rate": 0.0010454322539343198
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "channel",
+      "bucket": "Branch",
+      "rows": 67931,
+      "fraud": 87,
+      "fraud_rate": 0.001280711310005741
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "channel",
+      "bucket": "POS",
+      "rows": 795225,
+      "fraud": 760,
+      "fraud_rate": 0.0009557043604011443
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "channel",
+      "bucket": "Transfer",
+      "rows": 45850,
+      "fraud": 40,
+      "fraud_rate": 0.0008724100327153762
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "channel",
+      "bucket": "Web",
+      "rows": 340707,
+      "fraud": 346,
+      "fraud_rate": 0.0010155353426844766
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "currency",
+      "bucket": "ARS",
+      "rows": 407209,
+      "fraud": 408,
+      "fraud_rate": 0.0010019424914478807
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "currency",
+      "bucket": "COP",
+      "rows": 613172,
+      "fraud": 608,
+      "fraud_rate": 0.0009915651725780042
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "currency",
+      "bucket": "USD",
+      "rows": 1251326,
+      "fraud": 1280,
+      "fraud_rate": 0.001022914891882691
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "hour",
+      "bucket": "0",
+      "rows": 94057,
+      "fraud": 103,
+      "fraud_rate": 0.0010950806425890683
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "hour",
+      "bucket": "1",
+      "rows": 94960,
+      "fraud": 84,
+      "fraud_rate": 0.0008845829823083403
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "hour",
+      "bucket": "10",
+      "rows": 94503,
+      "fraud": 91,
+      "fraud_rate": 0.0009629323936806239
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "hour",
+      "bucket": "11",
+      "rows": 94837,
+      "fraud": 97,
+      "fraud_rate": 0.001022807554013729
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "hour",
+      "bucket": "12",
+      "rows": 94478,
+      "fraud": 109,
+      "fraud_rate": 0.0011537077414847901
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "hour",
+      "bucket": "13",
+      "rows": 95009,
+      "fraud": 99,
+      "fraud_rate": 0.0010420065467482028
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "hour",
+      "bucket": "14",
+      "rows": 94773,
+      "fraud": 102,
+      "fraud_rate": 0.0010762558956664873
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "hour",
+      "bucket": "15",
+      "rows": 94281,
+      "fraud": 83,
+      "fraud_rate": 0.0008803470476554131
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "hour",
+      "bucket": "16",
+      "rows": 94896,
+      "fraud": 85,
+      "fraud_rate": 0.0008957174169617265
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "hour",
+      "bucket": "17",
+      "rows": 94971,
+      "fraud": 84,
+      "fraud_rate": 0.0008844805256341409
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "hour",
+      "bucket": "18",
+      "rows": 95531,
+      "fraud": 76,
+      "fraud_rate": 0.0007955532758999696
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "hour",
+      "bucket": "19",
+      "rows": 94120,
+      "fraud": 81,
+      "fraud_rate": 0.0008606034849128771
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "hour",
+      "bucket": "2",
+      "rows": 94742,
+      "fraud": 98,
+      "fraud_rate": 0.0010343881277574889
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "hour",
+      "bucket": "20",
+      "rows": 94814,
+      "fraud": 90,
+      "fraud_rate": 0.0009492269074187356
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "hour",
+      "bucket": "21",
+      "rows": 93955,
+      "fraud": 100,
+      "fraud_rate": 0.0010643393113724654
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "hour",
+      "bucket": "22",
+      "rows": 94722,
+      "fraud": 88,
+      "fraud_rate": 0.0009290344376174489
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "hour",
+      "bucket": "23",
+      "rows": 94436,
+      "fraud": 108,
+      "fraud_rate": 0.0011436316658901267
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "hour",
+      "bucket": "3",
+      "rows": 94502,
+      "fraud": 100,
+      "fraud_rate": 0.0010581786628854415
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "hour",
+      "bucket": "4",
+      "rows": 94232,
+      "fraud": 104,
+      "fraud_rate": 0.0011036590542490873
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "hour",
+      "bucket": "5",
+      "rows": 94381,
+      "fraud": 97,
+      "fraud_rate": 0.0010277492291880781
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "hour",
+      "bucket": "6",
+      "rows": 94908,
+      "fraud": 89,
+      "fraud_rate": 0.0009377502423399503
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "hour",
+      "bucket": "7",
+      "rows": 94969,
+      "fraud": 103,
+      "fraud_rate": 0.0010845644368162241
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "hour",
+      "bucket": "8",
+      "rows": 94672,
+      "fraud": 103,
+      "fraud_rate": 0.0010879668751056278
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "hour",
+      "bucket": "9",
+      "rows": 94958,
+      "fraud": 122,
+      "fraud_rate": 0.001284778533667516
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "merchant_category",
+      "bucket": "Entertainment",
+      "rows": 78791,
+      "fraud": 86,
+      "fraud_rate": 0.0010914952215354545
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "merchant_category",
+      "bucket": "Food",
+      "rows": 131840,
+      "fraud": 134,
+      "fraud_rate": 0.0010163834951456311
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "merchant_category",
+      "bucket": "Health",
+      "rows": 52965,
+      "fraud": 60,
+      "fraud_rate": 0.0011328235627301047
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "merchant_category",
+      "bucket": "Other",
+      "rows": 79561,
+      "fraud": 80,
+      "fraud_rate": 0.0010055177788112267
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "merchant_category",
+      "bucket": "Services",
+      "rows": 105318,
+      "fraud": 106,
+      "fraud_rate": 0.0010064756261987504
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "merchant_category",
+      "bucket": "Transport",
+      "rows": 79502,
+      "fraud": 84,
+      "fraud_rate": 0.0010565771930265905
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "merchant_category",
+      "bucket": "__missing__",
+      "rows": 1743730,
+      "fraud": 1746,
+      "fraud_rate": 0.0010013018070458156
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "transaction_category",
+      "bucket": "Entertainment",
+      "rows": 132926,
+      "fraud": 143,
+      "fraud_rate": 0.001075786527842559
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "transaction_category",
+      "bucket": "Food",
+      "rows": 221881,
+      "fraud": 221,
+      "fraud_rate": 0.0009960294031485346
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "transaction_category",
+      "bucket": "Health",
+      "rows": 89364,
+      "fraud": 95,
+      "fraud_rate": 0.0010630679020634708
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "transaction_category",
+      "bucket": "Other",
+      "rows": 133753,
+      "fraud": 140,
+      "fraud_rate": 0.001046705494456199
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "transaction_category",
+      "bucket": "Services",
+      "rows": 177488,
+      "fraud": 174,
+      "fraud_rate": 0.000980347967186514
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "transaction_category",
+      "bucket": "Transport",
+      "rows": 133520,
+      "fraud": 141,
+      "fraud_rate": 0.0010560215698022768
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "transaction_category",
+      "bucket": "__missing__",
+      "rows": 1382775,
+      "fraud": 1382,
+      "fraud_rate": 0.000999439532823489
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "transaction_country",
+      "bucket": "Argentina",
+      "rows": 445619,
+      "fraud": 446,
+      "fraud_rate": 0.0010008549904739251
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "transaction_country",
+      "bucket": "Brazil",
+      "rows": 20873,
+      "fraud": 25,
+      "fraud_rate": 0.0011977195419920472
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "transaction_country",
+      "bucket": "Colombia",
+      "rows": 662082,
+      "fraud": 646,
+      "fraud_rate": 0.0009757099573768808
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "transaction_country",
+      "bucket": "M\u00e9xico",
+      "rows": 1101634,
+      "fraud": 1134,
+      "fraud_rate": 0.001029379993718422
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "transaction_country",
+      "bucket": "Spain",
+      "rows": 20799,
+      "fraud": 26,
+      "fraud_rate": 0.0012500600990432232
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "transaction_country",
+      "bucket": "USA",
+      "rows": 20700,
+      "fraud": 19,
+      "fraud_rate": 0.0009178743961352657
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "transaction_type",
+      "bucket": "Adjustment",
+      "rows": 67773,
+      "fraud": 78,
+      "fraud_rate": 0.0011509008012040192
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "transaction_type",
+      "bucket": "Deposit",
+      "rows": 312528,
+      "fraud": 324,
+      "fraud_rate": 0.0010367071110428505
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "transaction_type",
+      "bucket": "Payment",
+      "rows": 379463,
+      "fraud": 387,
+      "fraud_rate": 0.0010198622790627808
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "transaction_type",
+      "bucket": "Purchase",
+      "rows": 556134,
+      "fraud": 579,
+      "fraud_rate": 0.0010411159900311794
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "transaction_type",
+      "bucket": "Transfer",
+      "rows": 460955,
+      "fraud": 416,
+      "fraud_rate": 0.0009024742111485937
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "transaction_type",
+      "bucket": "Withdrawal",
+      "rows": 494854,
+      "fraud": 512,
+      "fraud_rate": 0.0010346486034264653
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "year_month",
+      "bucket": "2023-06",
+      "rows": 56260,
+      "fraud": 54,
+      "fraud_rate": 0.0009598293636686811
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "year_month",
+      "bucket": "2023-07",
+      "rows": 121313,
+      "fraud": 138,
+      "fraud_rate": 0.001137553271289969
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "year_month",
+      "bucket": "2023-08",
+      "rows": 127592,
+      "fraud": 137,
+      "fraud_rate": 0.00107373503040943
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "year_month",
+      "bucket": "2023-09",
+      "rows": 119559,
+      "fraud": 97,
+      "fraud_rate": 0.0008113149156483409
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "year_month",
+      "bucket": "2023-10",
+      "rows": 127793,
+      "fraud": 140,
+      "fraud_rate": 0.0010955216639409043
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "year_month",
+      "bucket": "2023-11",
+      "rows": 121984,
+      "fraud": 125,
+      "fraud_rate": 0.0010247245540398742
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "year_month",
+      "bucket": "2023-12",
+      "rows": 125969,
+      "fraud": 123,
+      "fraud_rate": 0.0009764307091427256
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "year_month",
+      "bucket": "2024-01",
+      "rows": 122201,
+      "fraud": 121,
+      "fraud_rate": 0.0009901719298532744
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "year_month",
+      "bucket": "2024-02",
+      "rows": 117135,
+      "fraud": 118,
+      "fraud_rate": 0.0010073846416527939
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "year_month",
+      "bucket": "2024-03",
+      "rows": 121588,
+      "fraud": 135,
+      "fraud_rate": 0.0011103069381846894
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "year_month",
+      "bucket": "2024-04",
+      "rows": 121330,
+      "fraud": 125,
+      "fraud_rate": 0.0010302480837385641
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "year_month",
+      "bucket": "2024-05",
+      "rows": 126371,
+      "fraud": 132,
+      "fraud_rate": 0.001044543447468169
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "year_month",
+      "bucket": "2024-06",
+      "rows": 121816,
+      "fraud": 110,
+      "fraud_rate": 0.0009030012477835423
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "year_month",
+      "bucket": "2024-07",
+      "rows": 128772,
+      "fraud": 115,
+      "fraud_rate": 0.0008930512844407169
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "year_month",
+      "bucket": "2024-08",
+      "rows": 122764,
+      "fraud": 129,
+      "fraud_rate": 0.0010507966504838553
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "year_month",
+      "bucket": "2024-09",
+      "rows": 117525,
+      "fraud": 131,
+      "fraud_rate": 0.0011146564560731759
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "year_month",
+      "bucket": "2024-10",
+      "rows": 127493,
+      "fraud": 137,
+      "fraud_rate": 0.0010745687998556784
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "year_month",
+      "bucket": "2024-11",
+      "rows": 121481,
+      "fraud": 122,
+      "fraud_rate": 0.0010042722730303503
+    },
+    {
+      "audit_partition": "fit",
+      "feature": "year_month",
+      "bucket": "2024-12",
+      "rows": 122761,
+      "fraud": 107,
+      "fraud_rate": 0.0008716123198735755
+    },
+    {
+      "audit_partition": "operating_point",
+      "feature": "all",
+      "bucket": "all",
+      "rows": 366529,
+      "fraud": 374,
+      "fraud_rate": 0.0010203831074758068
+    },
+    {
+      "audit_partition": "operating_point",
+      "feature": "channel",
+      "bucket": "ATM",
+      "rows": 110259,
+      "fraud": 114,
+      "fraud_rate": 0.0010339292030582536
+    },
+    {
+      "audit_partition": "operating_point",
+      "feature": "channel",
+      "bucket": "App",
+      "rows": 54841,
+      "fraud": 47,
+      "fraud_rate": 0.0008570230302146205
+    },
+    {
+      "audit_partition": "operating_point",
+      "feature": "channel",
+      "bucket": "Branch",
+      "rows": 10955,
+      "fraud": 10,
+      "fraud_rate": 0.0009128251939753537
+    },
+    {
+      "audit_partition": "operating_point",
+      "feature": "channel",
+      "bucket": "POS",
+      "rows": 127899,
+      "fraud": 129,
+      "fraud_rate": 0.001008608355030141
+    },
+    {
+      "audit_partition": "operating_point",
+      "feature": "channel",
+      "bucket": "Transfer",
+      "rows": 7380,
+      "fraud": 9,
+      "fraud_rate": 0.0012195121951219512
+    },
+    {
+      "audit_partition": "operating_point",
+      "feature": "channel",
+      "bucket": "Web",
+      "rows": 55195,
+      "fraud": 65,
+      "fraud_rate": 0.001177642902436815
+    },
+    {
+      "audit_partition": "operating_point",
+      "feature": "currency",
+      "bucket": "ARS",
+      "rows": 66074,
+      "fraud": 75,
+      "fraud_rate": 0.001135090958622151
+    },
+    {
+      "audit_partition": "operating_point",
+      "feature": "currency",
+      "bucket": "COP",
+      "rows": 98759,
+      "fraud": 79,
+      "fraud_rate": 0.0007999270952520783
+    },
+    {
+      "audit_partition": "operating_point",
+      "feature": "currency",
+      "bucket": "USD",
+      "rows": 201696,
+      "fraud": 220,
+      "fraud_rate": 0.0010907504363001745
+    },
+    {
+      "audit_partition": "operating_point",
+      "feature": "hour",
+      "bucket": "0",
+      "rows": 15241,
+      "fraud": 20,
+      "fraud_rate": 0.0013122498523718915
+    },
+    {
+      "audit_partition": "operating_point",
+      "feature": "hour",
+      "bucket": "1",
+      "rows": 15346,
+      "fraud": 15,
+      "fraud_rate": 0.0009774534080542162
+    },
+    {
+      "audit_partition": "operating_point",
+      "feature": "hour",
+      "bucket": "10",
+      "rows": 15281,
+      "fraud": 11,
+      "fraud_rate": 0.0007198481774752961
+    },
+    {
+      "audit_partition": "operating_point",
+      "feature": "hour",
+      "bucket": "11",
+      "rows": 15271,
+      "fraud": 23,
+      "fraud_rate": 0.001506122716259577
+    },
+    {
+      "audit_partition": "operating_point",
+      "feature": "hour",
+      "bucket": "12",
+      "rows": 15437,
+      "fraud": 17,
+      "fraud_rate": 0.0011012502429228477
+    },
+    {
+      "audit_partition": "operating_point",
+      "feature": "hour",
+      "bucket": "13",
+      "rows": 15247,
+      "fraud": 15,
+      "fraud_rate": 0.000983800091821342
+    },
+    {
+      "audit_partition": "operating_point",
+      "feature": "hour",
+      "bucket": "14",
+      "rows": 15326,
+      "fraud": 9,
+      "fraud_rate": 0.0005872373743964505
+    },
+    {
+      "audit_partition": "operating_point",
+      "feature": "hour",
+      "bucket": "15",
+      "rows": 15466,
+      "fraud": 15,
+      "fraud_rate": 0.0009698693909220224
+    },
+    {
+      "audit_partition": "operating_point",
+      "feature": "hour",
+      "bucket": "16",
+      "rows": 15176,
+      "fraud": 13,
+      "fraud_rate": 0.000856615709014233
+    },
+    {
+      "audit_partition": "operating_point",
+      "feature": "hour",
+      "bucket": "17",
+      "rows": 15290,
+      "fraud": 18,
+      "fraud_rate": 0.0011772400261608894
+    },
+    {
+      "audit_partition": "operating_point",
+      "feature": "hour",
+      "bucket": "18",
+      "rows": 15251,
+      "fraud": 15,
+      "fraud_rate": 0.0009835420628155531
+    },
+    {
+      "audit_partition": "operating_point",
+      "feature": "hour",
+      "bucket": "19",
+      "rows": 15281,
+      "fraud": 12,
+      "fraud_rate": 0.0007852889208821412
+    },
+    {
+      "audit_partition": "operating_point",
+      "feature": "hour",
+      "bucket": "2",
+      "rows": 15272,
+      "fraud": 11,
+      "fraud_rate": 0.0007202723939235202
+    },
+    {
+      "audit_partition": "operating_point",
+      "feature": "hour",
+      "bucket": "20",
+      "rows": 15153,
+      "fraud": 12,
+      "fraud_rate": 0.0007919223916056226
+    },
+    {
+      "audit_partition": "operating_point",
+      "feature": "hour",
+      "bucket": "21",
+      "rows": 15372,
+      "fraud": 20,
+      "fraud_rate": 0.0013010668748373666
+    },
+    {
+      "audit_partition": "operating_point",
+      "feature": "hour",
+      "bucket": "22",
+      "rows": 15450,
+      "fraud": 16,
+      "fraud_rate": 0.001035598705501618
+    },
+    {
+      "audit_partition": "operating_point",
+      "feature": "hour",
+      "bucket": "23",
+      "rows": 15068,
+      "fraud": 13,
+      "fraud_rate": 0.0008627555083620919
+    },
+    {
+      "audit_partition": "operating_point",
+      "feature": "hour",
+      "bucket": "3",
+      "rows": 15097,
+      "fraud": 17,
+      "fraud_rate": 0.0011260515334172352
+    },
+    {
+      "audit_partition": "operating_point",
+      "feature": "hour",
+      "bucket": "4",
+      "rows": 15337,
+      "fraud": 13,
+      "fraud_rate": 0.0008476233944056856
+    },
+    {
+      "audit_partition": "operating_point",
+      "feature": "hour",
+      "bucket": "5",
+      "rows": 15296,
+      "fraud": 18,
+      "fraud_rate": 0.0011767782426778243
+    },
+    {
+      "audit_partition": "operating_point",
+      "feature": "hour",
+      "bucket": "6",
+      "rows": 15355,
+      "fraud": 23,
+      "fraud_rate": 0.001497883425594269
+    },
+    {
+      "audit_partition": "operating_point",
+      "feature": "hour",
+      "bucket": "7",
+      "rows": 15180,
+      "fraud": 14,
+      "fraud_rate": 0.000922266139657444
+    },
+    {
+      "audit_partition": "operating_point",
+      "feature": "hour",
+      "bucket": "8",
+      "rows": 15054,
+      "fraud": 19,
+      "fraud_rate": 0.0012621230237810548
+    },
+    {
+      "audit_partition": "operating_point",
+      "feature": "hour",
+      "bucket": "9",
+      "rows": 15282,
+      "fraud": 15,
+      "fraud_rate": 0.0009815469179426776
+    },
+    {
+      "audit_partition": "operating_point",
+      "feature": "merchant_category",
+      "bucket": "Entertainment",
+      "rows": 12882,
+      "fraud": 20,
+      "fraud_rate": 0.0015525539512498058
+    },
+    {
+      "audit_partition": "operating_point",
+      "feature": "merchant_category",
+      "bucket": "Food",
+      "rows": 21312,
+      "fraud": 28,
+      "fraud_rate": 0.001313813813813814
+    },
+    {
+      "audit_partition": "operating_point",
+      "feature": "merchant_category",
+      "bucket": "Health",
+      "rows": 8443,
+      "fraud": 10,
+      "fraud_rate": 0.0011844131232974062
+    },
+    {
+      "audit_partition": "operating_point",
+      "feature": "merchant_category",
+      "bucket": "Other",
+      "rows": 12876,
+      "fraud": 12,
+      "fraud_rate": 0.0009319664492078285
+    },
+    {
+      "audit_partition": "operating_point",
+      "feature": "merchant_category",
+      "bucket": "Services",
+      "rows": 17054,
+      "fraud": 16,
+      "fraud_rate": 0.0009381963175794535
+    },
+    {
+      "audit_partition": "operating_point",
+      "feature": "merchant_category",
+      "bucket": "Transport",
+      "rows": 12786,
+      "fraud": 13,
+      "fraud_rate": 0.0010167370561551697
+    },
+    {
+      "audit_partition": "operating_point",
+      "feature": "merchant_category",
+      "bucket": "__missing__",
+      "rows": 281176,
+      "fraud": 275,
+      "fraud_rate": 0.0009780351096821919
+    },
+    {
+      "audit_partition": "operating_point",
+      "feature": "transaction_category",
+      "bucket": "Entertainment",
+      "rows": 21613,
+      "fraud": 26,
+      "fraud_rate": 0.00120297968815065
+    },
+    {
+      "audit_partition": "operating_point",
+      "feature": "transaction_category",
+      "bucket": "Food",
+      "rows": 35980,
+      "fraud": 45,
+      "fraud_rate": 0.0012506948304613673
+    },
+    {
+      "audit_partition": "operating_point",
+      "feature": "transaction_category",
+      "bucket": "Health",
+      "rows": 14217,
+      "fraud": 18,
+      "fraud_rate": 0.0012660898923823592
+    },
+    {
+      "audit_partition": "operating_point",
+      "feature": "transaction_category",
+      "bucket": "Other",
+      "rows": 21528,
+      "fraud": 17,
+      "fraud_rate": 0.0007896692679301375
+    },
+    {
+      "audit_partition": "operating_point",
+      "feature": "transaction_category",
+      "bucket": "Services",
+      "rows": 28737,
+      "fraud": 23,
+      "fraud_rate": 0.000800361902773428
+    },
+    {
+      "audit_partition": "operating_point",
+      "feature": "transaction_category",
+      "bucket": "Transport",
+      "rows": 21542,
+      "fraud": 19,
+      "fraud_rate": 0.0008819979574784143
+    },
+    {
+      "audit_partition": "operating_point",
+      "feature": "transaction_category",
+      "bucket": "__missing__",
+      "rows": 222912,
+      "fraud": 226,
+      "fraud_rate": 0.0010138530002871088
+    },
+    {
+      "audit_partition": "operating_point",
+      "feature": "transaction_country",
+      "bucket": "Argentina",
+      "rows": 72343,
+      "fraud": 79,
+      "fraud_rate": 0.0010920199604661127
+    },
+    {
+      "audit_partition": "operating_point",
+      "feature": "transaction_country",
+      "bucket": "Brazil",
+      "rows": 3227,
+      "fraud": 4,
+      "fraud_rate": 0.0012395413696932136
+    },
+    {
+      "audit_partition": "operating_point",
+      "feature": "transaction_country",
+      "bucket": "Colombia",
+      "rows": 106560,
+      "fraud": 91,
+      "fraud_rate": 0.000853978978978979
+    },
+    {
+      "audit_partition": "operating_point",
+      "feature": "transaction_country",
+      "bucket": "M\u00e9xico",
+      "rows": 177716,
+      "fraud": 193,
+      "fraud_rate": 0.0010860023858290757
+    },
+    {
+      "audit_partition": "operating_point",
+      "feature": "transaction_country",
+      "bucket": "Spain",
+      "rows": 3337,
+      "fraud": 3,
+      "fraud_rate": 0.0008990110878034162
+    },
+    {
+      "audit_partition": "operating_point",
+      "feature": "transaction_country",
+      "bucket": "USA",
+      "rows": 3346,
+      "fraud": 4,
+      "fraud_rate": 0.001195457262402869
+    },
+    {
+      "audit_partition": "operating_point",
+      "feature": "transaction_type",
+      "bucket": "Adjustment",
+      "rows": 10995,
+      "fraud": 14,
+      "fraud_rate": 0.0012733060482037289
+    },
+    {
+      "audit_partition": "operating_point",
+      "feature": "transaction_type",
+      "bucket": "Deposit",
+      "rows": 50589,
+      "fraud": 48,
+      "fraud_rate": 0.0009488228666310858
+    },
+    {
+      "audit_partition": "operating_point",
+      "feature": "transaction_type",
+      "bucket": "Payment",
+      "rows": 61299,
+      "fraud": 55,
+      "fraud_rate": 0.0008972413905610206
+    },
+    {
+      "audit_partition": "operating_point",
+      "feature": "transaction_type",
+      "bucket": "Purchase",
+      "rows": 89842,
+      "fraud": 106,
+      "fraud_rate": 0.001179849068364462
+    },
+    {
+      "audit_partition": "operating_point",
+      "feature": "transaction_type",
+      "bucket": "Transfer",
+      "rows": 73898,
+      "fraud": 73,
+      "fraud_rate": 0.000987848114969282
+    },
+    {
+      "audit_partition": "operating_point",
+      "feature": "transaction_type",
+      "bucket": "Withdrawal",
+      "rows": 79906,
+      "fraud": 78,
+      "fraud_rate": 0.0009761469726929142
+    },
+    {
+      "audit_partition": "operating_point",
+      "feature": "year_month",
+      "bucket": "2025-04",
+      "rows": 120744,
+      "fraud": 103,
+      "fraud_rate": 0.0008530444576956205
+    },
+    {
+      "audit_partition": "operating_point",
+      "feature": "year_month",
+      "bucket": "2025-05",
+      "rows": 126997,
+      "fraud": 131,
+      "fraud_rate": 0.0010315204296164476
+    },
+    {
+      "audit_partition": "operating_point",
+      "feature": "year_month",
+      "bucket": "2025-06",
+      "rows": 118788,
+      "fraud": 140,
+      "fraud_rate": 0.001178570225948749
+    },
+    {
+      "audit_partition": "selection",
+      "feature": "all",
+      "bucket": "all",
+      "rows": 356361,
+      "fraud": 344,
+      "fraud_rate": 0.0009653132637971046
+    },
+    {
+      "audit_partition": "selection",
+      "feature": "channel",
+      "bucket": "ATM",
+      "rows": 107101,
+      "fraud": 96,
+      "fraud_rate": 0.0008963501741346952
+    },
+    {
+      "audit_partition": "selection",
+      "feature": "channel",
+      "bucket": "App",
+      "rows": 53352,
+      "fraud": 52,
+      "fraud_rate": 0.0009746588693957114
+    },
+    {
+      "audit_partition": "selection",
+      "feature": "channel",
+      "bucket": "Branch",
+      "rows": 10767,
+      "fraud": 8,
+      "fraud_rate": 0.0007430110522894028
+    },
+    {
+      "audit_partition": "selection",
+      "feature": "channel",
+      "bucket": "POS",
+      "rows": 124770,
+      "fraud": 122,
+      "fraud_rate": 0.0009777991504368038
+    },
+    {
+      "audit_partition": "selection",
+      "feature": "channel",
+      "bucket": "Transfer",
+      "rows": 7082,
+      "fraud": 8,
+      "fraud_rate": 0.0011296243998870376
+    },
+    {
+      "audit_partition": "selection",
+      "feature": "channel",
+      "bucket": "Web",
+      "rows": 53289,
+      "fraud": 58,
+      "fraud_rate": 0.0010884047364371635
+    },
+    {
+      "audit_partition": "selection",
+      "feature": "currency",
+      "bucket": "ARS",
+      "rows": 63621,
+      "fraud": 59,
+      "fraud_rate": 0.0009273667499724934
+    },
+    {
+      "audit_partition": "selection",
+      "feature": "currency",
+      "bucket": "COP",
+      "rows": 96356,
+      "fraud": 87,
+      "fraud_rate": 0.0009029017393831209
+    },
+    {
+      "audit_partition": "selection",
+      "feature": "currency",
+      "bucket": "USD",
+      "rows": 196384,
+      "fraud": 198,
+      "fraud_rate": 0.001008228776275053
+    },
+    {
+      "audit_partition": "selection",
+      "feature": "hour",
+      "bucket": "0",
+      "rows": 14984,
+      "fraud": 11,
+      "fraud_rate": 0.0007341163908168713
+    },
+    {
+      "audit_partition": "selection",
+      "feature": "hour",
+      "bucket": "1",
+      "rows": 14757,
+      "fraud": 15,
+      "fraud_rate": 0.0010164667615368977
+    },
+    {
+      "audit_partition": "selection",
+      "feature": "hour",
+      "bucket": "10",
+      "rows": 14728,
+      "fraud": 11,
+      "fraud_rate": 0.0007468766974470396
+    },
+    {
+      "audit_partition": "selection",
+      "feature": "hour",
+      "bucket": "11",
+      "rows": 14859,
+      "fraud": 13,
+      "fraud_rate": 0.0008748906386701663
+    },
+    {
+      "audit_partition": "selection",
+      "feature": "hour",
+      "bucket": "12",
+      "rows": 14687,
+      "fraud": 16,
+      "fraud_rate": 0.0010893987880438484
+    },
+    {
+      "audit_partition": "selection",
+      "feature": "hour",
+      "bucket": "13",
+      "rows": 14941,
+      "fraud": 14,
+      "fraud_rate": 0.0009370189411685965
+    },
+    {
+      "audit_partition": "selection",
+      "feature": "hour",
+      "bucket": "14",
+      "rows": 14701,
+      "fraud": 15,
+      "fraud_rate": 0.0010203387524658186
+    },
+    {
+      "audit_partition": "selection",
+      "feature": "hour",
+      "bucket": "15",
+      "rows": 14905,
+      "fraud": 11,
+      "fraud_rate": 0.0007380073800738007
+    },
+    {
+      "audit_partition": "selection",
+      "feature": "hour",
+      "bucket": "16",
+      "rows": 14635,
+      "fraud": 14,
+      "fraud_rate": 0.0009566108643662453
+    },
+    {
+      "audit_partition": "selection",
+      "feature": "hour",
+      "bucket": "17",
+      "rows": 14942,
+      "fraud": 14,
+      "fraud_rate": 0.0009369562307589345
+    },
+    {
+      "audit_partition": "selection",
+      "feature": "hour",
+      "bucket": "18",
+      "rows": 14865,
+      "fraud": 21,
+      "fraud_rate": 0.0014127144298688194
+    },
+    {
+      "audit_partition": "selection",
+      "feature": "hour",
+      "bucket": "19",
+      "rows": 14729,
+      "fraud": 18,
+      "fraud_rate": 0.0012220788919818045
+    },
+    {
+      "audit_partition": "selection",
+      "feature": "hour",
+      "bucket": "2",
+      "rows": 14833,
+      "fraud": 12,
+      "fraud_rate": 0.0008090069439762691
+    },
+    {
+      "audit_partition": "selection",
+      "feature": "hour",
+      "bucket": "20",
+      "rows": 14883,
+      "fraud": 15,
+      "fraud_rate": 0.0010078613182826044
+    },
+    {
+      "audit_partition": "selection",
+      "feature": "hour",
+      "bucket": "21",
+      "rows": 14797,
+      "fraud": 14,
+      "fraud_rate": 0.0009461377306210719
+    },
+    {
+      "audit_partition": "selection",
+      "feature": "hour",
+      "bucket": "22",
+      "rows": 14993,
+      "fraud": 13,
+      "fraud_rate": 0.000867071299939972
+    },
+    {
+      "audit_partition": "selection",
+      "feature": "hour",
+      "bucket": "23",
+      "rows": 14839,
+      "fraud": 16,
+      "fraud_rate": 0.0010782397735696475
+    },
+    {
+      "audit_partition": "selection",
+      "feature": "hour",
+      "bucket": "3",
+      "rows": 15042,
+      "fraud": 11,
+      "fraud_rate": 0.0007312857332801489
+    },
+    {
+      "audit_partition": "selection",
+      "feature": "hour",
+      "bucket": "4",
+      "rows": 14969,
+      "fraud": 19,
+      "fraud_rate": 0.001269289865722493
+    },
+    {
+      "audit_partition": "selection",
+      "feature": "hour",
+      "bucket": "5",
+      "rows": 14839,
+      "fraud": 9,
+      "fraud_rate": 0.0006065098726329267
+    },
+    {
+      "audit_partition": "selection",
+      "feature": "hour",
+      "bucket": "6",
+      "rows": 14810,
+      "fraud": 14,
+      "fraud_rate": 0.0009453072248480756
+    },
+    {
+      "audit_partition": "selection",
+      "feature": "hour",
+      "bucket": "7",
+      "rows": 14856,
+      "fraud": 24,
+      "fraud_rate": 0.0016155088852988692
+    },
+    {
+      "audit_partition": "selection",
+      "feature": "hour",
+      "bucket": "8",
+      "rows": 14818,
+      "fraud": 11,
+      "fraud_rate": 0.0007423403968146848
+    },
+    {
+      "audit_partition": "selection",
+      "feature": "hour",
+      "bucket": "9",
+      "rows": 14949,
+      "fraud": 13,
+      "fraud_rate": 0.0008696233861796776
+    },
+    {
+      "audit_partition": "selection",
+      "feature": "merchant_category",
+      "bucket": "Entertainment",
+      "rows": 12543,
+      "fraud": 12,
+      "fraud_rate": 0.0009567089213106913
+    },
+    {
+      "audit_partition": "selection",
+      "feature": "merchant_category",
+      "bucket": "Food",
+      "rows": 20869,
+      "fraud": 24,
+      "fraud_rate": 0.001150031146676889
+    },
+    {
+      "audit_partition": "selection",
+      "feature": "merchant_category",
+      "bucket": "Health",
+      "rows": 8205,
+      "fraud": 6,
+      "fraud_rate": 0.0007312614259597807
+    },
+    {
+      "audit_partition": "selection",
+      "feature": "merchant_category",
+      "bucket": "Other",
+      "rows": 12549,
+      "fraud": 19,
+      "fraud_rate": 0.0015140648657263527
+    },
+    {
+      "audit_partition": "selection",
+      "feature": "merchant_category",
+      "bucket": "Services",
+      "rows": 16535,
+      "fraud": 20,
+      "fraud_rate": 0.0012095554883580285
+    },
+    {
+      "audit_partition": "selection",
+      "feature": "merchant_category",
+      "bucket": "Transport",
+      "rows": 12713,
+      "fraud": 9,
+      "fraud_rate": 0.00070793675764965
+    },
+    {
+      "audit_partition": "selection",
+      "feature": "merchant_category",
+      "bucket": "__missing__",
+      "rows": 272947,
+      "fraud": 254,
+      "fraud_rate": 0.000930583593151784
+    },
+    {
+      "audit_partition": "selection",
+      "feature": "transaction_category",
+      "bucket": "Entertainment",
+      "rows": 21064,
+      "fraud": 23,
+      "fraud_rate": 0.0010919103684010635
+    },
+    {
+      "audit_partition": "selection",
+      "feature": "transaction_category",
+      "bucket": "Food",
+      "rows": 34992,
+      "fraud": 32,
+      "fraud_rate": 0.0009144947416552355
+    },
+    {
+      "audit_partition": "selection",
+      "feature": "transaction_category",
+      "bucket": "Health",
+      "rows": 13808,
+      "fraud": 16,
+      "fraud_rate": 0.0011587485515643105
+    },
+    {
+      "audit_partition": "selection",
+      "feature": "transaction_category",
+      "bucket": "Other",
+      "rows": 21013,
+      "fraud": 31,
+      "fraud_rate": 0.001475277209346595
+    },
+    {
+      "audit_partition": "selection",
+      "feature": "transaction_category",
+      "bucket": "Services",
+      "rows": 27884,
+      "fraud": 38,
+      "fraud_rate": 0.0013627886960263951
+    },
+    {
+      "audit_partition": "selection",
+      "feature": "transaction_category",
+      "bucket": "Transport",
+      "rows": 21173,
+      "fraud": 12,
+      "fraud_rate": 0.0005667595522599537
+    },
+    {
+      "audit_partition": "selection",
+      "feature": "transaction_category",
+      "bucket": "__missing__",
+      "rows": 216427,
+      "fraud": 192,
+      "fraud_rate": 0.0008871351541166305
+    },
+    {
+      "audit_partition": "selection",
+      "feature": "transaction_country",
+      "bucket": "Argentina",
+      "rows": 69681,
+      "fraud": 72,
+      "fraud_rate": 0.0010332802342101863
+    },
+    {
+      "audit_partition": "selection",
+      "feature": "transaction_country",
+      "bucket": "Brazil",
+      "rows": 3285,
+      "fraud": 3,
+      "fraud_rate": 0.0009132420091324201
+    },
+    {
+      "audit_partition": "selection",
+      "feature": "transaction_country",
+      "bucket": "Colombia",
+      "rows": 103979,
+      "fraud": 91,
+      "fraud_rate": 0.0008751767183758259
+    },
+    {
+      "audit_partition": "selection",
+      "feature": "transaction_country",
+      "bucket": "M\u00e9xico",
+      "rows": 172836,
+      "fraud": 173,
+      "fraud_rate": 0.0010009488763914926
+    },
+    {
+      "audit_partition": "selection",
+      "feature": "transaction_country",
+      "bucket": "Spain",
+      "rows": 3275,
+      "fraud": 2,
+      "fraud_rate": 0.0006106870229007634
+    },
+    {
+      "audit_partition": "selection",
+      "feature": "transaction_country",
+      "bucket": "USA",
+      "rows": 3305,
+      "fraud": 3,
+      "fraud_rate": 0.000907715582450832
+    },
+    {
+      "audit_partition": "selection",
+      "feature": "transaction_type",
+      "bucket": "Adjustment",
+      "rows": 10747,
+      "fraud": 8,
+      "fraud_rate": 0.000744393784311901
+    },
+    {
+      "audit_partition": "selection",
+      "feature": "transaction_type",
+      "bucket": "Deposit",
+      "rows": 48796,
+      "fraud": 44,
+      "fraud_rate": 0.0009017132551848512
+    },
+    {
+      "audit_partition": "selection",
+      "feature": "transaction_type",
+      "bucket": "Payment",
+      "rows": 59549,
+      "fraud": 65,
+      "fraud_rate": 0.0010915380610925457
+    },
+    {
+      "audit_partition": "selection",
+      "feature": "transaction_type",
+      "bucket": "Purchase",
+      "rows": 87802,
+      "fraud": 94,
+      "fraud_rate": 0.0010705906471378784
+    },
+    {
+      "audit_partition": "selection",
+      "feature": "transaction_type",
+      "bucket": "Transfer",
+      "rows": 71951,
+      "fraud": 69,
+      "fraud_rate": 0.0009589859765673862
+    },
+    {
+      "audit_partition": "selection",
+      "feature": "transaction_type",
+      "bucket": "Withdrawal",
+      "rows": 77516,
+      "fraud": 64,
+      "fraud_rate": 0.000825635997729501
+    },
+    {
+      "audit_partition": "selection",
+      "feature": "year_month",
+      "bucket": "2025-01",
+      "rows": 122180,
+      "fraud": 122,
+      "fraud_rate": 0.0009985267637911278
+    },
+    {
+      "audit_partition": "selection",
+      "feature": "year_month",
+      "bucket": "2025-02",
+      "rows": 110465,
+      "fraud": 110,
+      "fraud_rate": 0.0009957905218847599
+    },
+    {
+      "audit_partition": "selection",
+      "feature": "year_month",
+      "bucket": "2025-03",
+      "rows": 123716,
+      "fraud": 112,
+      "fraud_rate": 0.0009052992337288629
+    }
+  ],
+  "digital_event_access_recheck": {
+    "statement_id": "01f1bf47-4b68-10b9-b169-fb926ec2882e",
+    "date": "2026-10-03",
+    "status": "FAILED",
+    "sql_state": "42501",
+    "message": "User does not have SELECT on Table workspace.bank_silver.digital_events"
+  }
+}

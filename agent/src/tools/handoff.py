@@ -157,7 +157,7 @@ def _verified_charge(
     )
     if charge is None:
         return "Ese cargo no está en los movimientos de esa tarjeta. Pídele al cliente que elija uno de la lista."
-    return {
+    verified = {
         "card_last4": card_last4,
         "transaction_date": transaction_date,
         "merchant": charge["merchant_name"],
@@ -165,6 +165,9 @@ def _verified_charge(
         "currency": charge["currency"],
         "transaction_status": charge["transaction_status"],
     }
+    if charge.get("transaction_id"):
+        verified["transaction_id"] = charge["transaction_id"]
+    return verified
 
 
 def _verify_case_status(case: "CaseStatusCase", rows_by_tool: dict[str, list[dict]]) -> dict | str:

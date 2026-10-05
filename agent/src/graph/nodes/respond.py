@@ -1,3 +1,4 @@
+import json
 import logging
 from pathlib import Path
 
@@ -13,6 +14,8 @@ from src.tools.bind_customer import bind_customer
 from src.tools.collector import CollectorUnavailable, card_to_fetch, extract_fields, next_step
 from src.tools.grounding import ungrounded
 from src.tools.handoff import HANDOFF_TOOL_NAME, handoff_tool, tool_rows, verify_case
+from src.tools.fraud import fraud_assessment, fraud_tool
+from src.tools.transaction_risk import transaction_risk_tool
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +39,30 @@ _MAX_TOOL_ROUNDS = 4
 
 
 async def respond(
+    state: AgentState, llm, routes: list[IntentRoute], intent_threshold: float, tools_for
+) -> dict:
+    # Run the availability tool outside model-generated prose. It remains useful
+    # when a bank read fails, and can never replace the verified-charge checks.
+    route = next((r for r in routes if r.intent == state.get("use_case")), None)
+    assessment = None
+    if route and route.handoff_reason == "complaint":
+        assessment = json.loads(await fraud_tool().ainvoke({}))
+    result = await _respond(state, llm, routes, intent_threshold, tools_for)
+    transaction_id = None
+    handoff = result.get("handoff")
+    if handoff and handoff.get("reason") == "complaint":
+        transaction_id = handoff["facts"]["verified_data"].get("transaction_id")
+    if route and route.handoff_reason == "complaint" and transaction_id:
+        tool = transaction_risk_tool((state.get("session") or {}).get("customer_id"))
+        assessment = json.loads(await tool.ainvoke({"transaction_id":transaction_id}))
+        if handoff:
+            handoff["facts"]["fraud_assessment"] = assessment
+    if assessment is not None:
+        result["fraud_assessment"] = assessment
+    return result
+
+
+async def _respond(
     state: AgentState, llm, routes: list[IntentRoute], intent_threshold: float, tools_for
 ) -> dict:
     classification = state.get("classification") or {}
@@ -185,11 +212,15 @@ def _tool_down(state: AgentState) -> str:
 async def _bound_tools(state: AgentState, route: IntentRoute, tools_for) -> list:
     customer_id = state["session"]["customer_id"]
     fail_tools = state["session"].get("fail_tools", ())
-    return [
+    tools = [
         bind_customer(tool, customer_id, fail=tool.name.split("__")[-1] in fail_tools)
         for schema in route.schemas
         for tool in await tools_for(schema)
     ]
+    if route.handoff_reason == "complaint":
+        tools.append(fraud_tool())
+        tools.append(transaction_risk_tool(customer_id))
+    return tools
 
 
 async def _collect(state: AgentState, llm, route: IntentRoute, tools_for) -> dict:
@@ -233,6 +264,10 @@ def _hand_off(state: AgentState, route: IntentRoute, verified_data: dict, rows_b
             "verified_data": verified_data,
         },
     }
+    if route.handoff_reason == "complaint":
+        # Code attaches the policy after verification, regardless of the LLM's tool choices.
+        # Neither customer text nor an LLM-supplied score can enable automatic decisions.
+        handoff["facts"]["fraud_assessment"] = fraud_assessment()
     return {"messages": [AIMessage(content=HANDOFF_REPLY[reply_language(language)])], "handoff": handoff}
 
 

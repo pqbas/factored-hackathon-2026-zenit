@@ -17,6 +17,24 @@ export interface AgentHandoff {
   resolvedAt: string | null;
 }
 
+// Legacy assessments without a prediction still require human review.
+export function needsFraudReview(handoff: AgentHandoff): boolean {
+  const assessment = handoff.facts?.fraud_assessment;
+  return handoff.reason === 'complaint' && typeof assessment === 'object' && assessment !== null
+    && !Array.isArray(assessment)
+    && (assessment as Record<string, unknown>).review_required === true;
+}
+
+export function fraudPrediction(handoff: AgentHandoff): { score: number; alert: boolean } | null {
+  if (!needsFraudReview(handoff)) return null;
+  const a = handoff.facts!.fraud_assessment as Record<string, unknown>;
+  if (a.scope !== 'transaction_inference' || a.score_status !== 'experimental_prediction'
+    || a.score_type !== 'uncalibrated_model_output' || a.automatic_decisions_enabled !== false
+    || typeof a.risk_score !== 'number' || !Number.isFinite(a.risk_score)
+    || a.risk_score < 0 || a.risk_score > 1 || typeof a.fraud_prediction !== 'boolean') return null;
+  return { score: a.risk_score * 100, alert: a.fraud_prediction };
+}
+
 // The three reasons David hands a case to the inbox, in filter order
 // (docs/flujo-atencion.md). One name per reason, used everywhere: filters,
 // sections, header chip, handoff card, dividers.
@@ -32,7 +50,7 @@ export function handoffReasonLabel(reason: string | null | undefined): string {
 }
 
 // Keys shown together with another one, not on their own row.
-const FOLDED = new Set(['currency', 'product_last4']);
+const FOLDED = new Set(['currency', 'product_last4', 'transaction_id']);
 
 export interface CaseField {
   key: string;

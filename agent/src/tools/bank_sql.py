@@ -28,6 +28,7 @@ WHERE customer_id = %(customer_id)s
 
 LIST_TRANSACTIONS = """
 SELECT
+  t.transaction_id,
   t.transaction_date,
   p.product_type,
   p.product_number_last4,
@@ -72,6 +73,7 @@ GET_PRODUCTS_COLUMNS = [
     "product_type", "product_number_last4", "currency", "current_balance", "credit_limit", "available_credit",
 ]
 LIST_TRANSACTIONS_COLUMNS = [
+    "transaction_id",
     "transaction_date", "product_type", "product_number_last4", "transaction_type", "merchant_name",
     "amount", "currency", "transaction_status",
 ]

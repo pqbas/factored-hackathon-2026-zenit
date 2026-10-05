@@ -1,0 +1,94 @@
+{
+  "deployment": {
+    "observed_at_utc": "2026-10-05T06:28:02.065239+00:00",
+    "services": {
+      "agent": {
+        "arn": "arn:aws:apprunner:us-west-2:335741630127:service/bank-assistant-agent/eebc9cee095845e9842f77d236a0a139",
+        "status": "RUNNING",
+        "url": "https://qidmxa8upf.us-west-2.awsapprunner.com",
+        "image": "335741630127.dkr.ecr.us-west-2.amazonaws.com/bank-assistant-agent:0ebfff68",
+        "source_configuration_without_image_sha256": "f6ce572087a0042dbb77332ee3e0334238acf971a59bfafff14f10813b9369ab"
+      },
+      "back": {
+        "arn": "arn:aws:apprunner:us-west-2:335741630127:service/bank-assistant-back/59771fd802f84b48a73871414cec486f",
+        "status": "RUNNING",
+        "url": "https://wzmpasrvja.us-west-2.awsapprunner.com",
+        "image": "335741630127.dkr.ecr.us-west-2.amazonaws.com/bank-assistant-back:0ebfff68",
+        "source_configuration_without_image_sha256": "4b346ec534afbde4737aa74f60763e9bdf9a15d27c165a0740921503ae106360"
+      }
+    }
+  },
+  "databricks_authentication": {
+    "profile": "pqbas",
+    "verified_user": "pcubasm1@gmail.com",
+    "host": "https://dbc-184e79fe-04dc.cloud.databricks.com"
+  },
+  "code_commit": "0ebfff6829083d73c536696d850689311e5586fc",
+  "merged_main_commit": "20e0e98",
+  "previous_images": {
+    "agent": "335741630127.dkr.ecr.us-west-2.amazonaws.com/bank-assistant-agent:2e133a9c",
+    "back": "335741630127.dkr.ecr.us-west-2.amazonaws.com/bank-assistant-back:d79df692"
+  },
+  "operations": {
+    "agent": "cb423e667c28438585fead8e6576eced",
+    "back": "f5a9a3aaf464499c975b6dbb6e386671"
+  },
+  "image_digests": {
+    "agent": "sha256:02efb2c53128c3b6e0f9629f17615657ba34e7b4fb5780b8ace4f259e5da36d3",
+    "back": "sha256:291509c47cb24314ee7bd7b744825d18748b2a67354bddb772b93acbcc3f7de6"
+  },
+  "agent_verification": {
+    "http_status": 200,
+    "use_case": "COMPLAINT",
+    "score_status": "not_validated",
+    "risk_score": null,
+    "fraud_prediction": null,
+    "review_required": true,
+    "automatic_decisions_enabled": false,
+    "experiment_candidates": [
+      "C3",
+      "A1_xgb_enhanced"
+    ],
+    "handoff_created": false,
+    "health_http_status": 200,
+    "unauthenticated_invocation_http_status": 401,
+    "test_scope": "Direct agent request for an incomplete complaint; no backend chat persistence or confirmed transaction"
+  },
+  "web_verification": {
+    "observed_at_utc": "2026-10-05T06:27:08.201205+00:00",
+    "url": "https://wzmpasrvja.us-west-2.awsapprunner.com",
+    "page_http_status": 200,
+    "ping_http_status": 200,
+    "ping_response": "pong",
+    "session_http_status": 200,
+    "auth_mode": "password",
+    "anonymous_session": true,
+    "frontend_bundle_path": "/assets/index-yUiVyDLY.js",
+    "frontend_bundle_http_status": 200,
+    "ml_review_notice_present": true,
+    "fraud_handoff_parser_present": true,
+    "test_scope": "Public GET requests only; no login, chat persistence or database mutation"
+  },
+  "validation": {
+    "agent_unit_and_integration_tests_passed": 452,
+    "aggregate_packaging_check": "passed",
+    "agent_container_build": "passed",
+    "backend_and_frontend_container_build": "passed",
+    "offline_agent_container_evidence_check": "passed"
+  },
+  "configuration_preservation": {
+    "backend_source_configuration_without_image": "matches pre-update baseline",
+    "agent_source_configuration_without_image": "matches baseline collected while agent update was in progress",
+    "production_bank_read_source": "original Lakebase path; no BANK_READ_SOURCE override",
+    "agent_classifier": "original Jev classifier"
+  },
+  "scope": {
+    "new_services_created": false,
+    "database_migrations_executed": false,
+    "permission_grants_executed": false,
+    "credentials_committed": false,
+    "customer_records_committed": false,
+    "git_push_executed": false,
+    "predictive_fraud_inference_enabled": false
+  }
+}

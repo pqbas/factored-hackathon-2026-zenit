@@ -1,0 +1,25 @@
+{
+  "run_name": "Fraud V5 CatBoost capacity challenger",
+  "timeout_seconds": 3600,
+  "tasks": [
+    {
+      "task_key": "train_v5_catboost",
+      "notebook_task": {
+        "notebook_path": "/Shared/fraud-eda/09_catboost_challenger",
+        "source": "WORKSPACE"
+      },
+      "environment_key": "catboost_v5",
+      "timeout_seconds": 3600,
+      "max_retries": 0
+    }
+  ],
+  "environments": [
+    {
+      "environment_key": "catboost_v5",
+      "spec": {
+        "environment_version": "4",
+        "dependencies": ["catboost==1.2.8"]
+      }
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "verified_at_utc": "2026-10-05T07:42:55Z",
+  "test_reference": "ML-E2E-20261005-023840",
+  "customer_login_via_ui": true,
+  "advisor_login_via_ui": true,
+  "complaint_submitted_via_ui": true,
+  "customer_confirmation_via_ui": true,
+  "advisor_opened_conversation_via_ui": true,
+  "real_model_score_rendered": true,
+  "score_persisted_after_reload": true,
+  "persisted_transaction_matches_verified_charge": true,
+  "model_run_id": "663c44e0c3de40718830f5362dce5a9b",
+  "score_status": "experimental_prediction",
+  "review_required": true,
+  "automatic_decisions_enabled": false,
+  "final_conversation_state": "human_queue",
+  "browser_error_count": 0,
+  "source_bank_tables_modified": false,
+  "application_chat_and_handoff_created": true,
+  "test_conversation_deleted": false,
+  "advisor_claimed_case": false
+}

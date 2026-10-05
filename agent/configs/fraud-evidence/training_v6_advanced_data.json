@@ -1,0 +1,24 @@
+{
+  "evidence_source": {
+    "path": "ml/reports/2026-10-04/training_v6_advanced_data.json",
+    "sha256": "ab63ad23ab5b1dd022f4dba147618c0472013fda20e15e700d98d4d0e6d15d28"
+  },
+  "selected_candidate": {
+    "candidate": "A1_xgb_enhanced",
+    "run_id": "90fa68f654814330b0c0f6d904e3dff0"
+  },
+  "promotion_status": "NOT_PROMOTED_PENDING_UTILITY_AND_PROVENANCE",
+  "model_binary_logged": false,
+  "exploratory_validation": {
+    "frozen_budget_results": [
+      {
+        "budget": 0.01,
+        "metrics": {
+          "precision": 0.0010615711252653928,
+          "recall": 0.011444921316165951,
+          "alerts": 7536
+        }
+      }
+    ]
+  }
+}

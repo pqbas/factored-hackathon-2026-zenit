@@ -22,7 +22,7 @@ PRODUCT = {
     "current_balance": Decimal("120.50"), "credit_limit": Decimal("1000.00"), "available_credit": Decimal("879.50"),
 }
 TRANSACTION = {
-    "transaction_date": datetime(2026, 6, 8, 15, 0, 51, tzinfo=timezone.utc), "product_type": "Tarjeta Crédito",
+    "transaction_id": "TX-TEST", "transaction_date": datetime(2026, 6, 8, 15, 0, 51, tzinfo=timezone.utc), "product_type": "Tarjeta Crédito",
     "product_number_last4": "4930", "transaction_type": "Purchase", "merchant_name": "Internet Plus",
     "amount": Decimal("329.44"), "currency": "USD", "transaction_status": "Approved",
 }
@@ -79,7 +79,9 @@ def test_the_selected_columns_match_the_uc_function(function, template, columns)
     selected = template.split("FROM", 1)[0]
     selected = re.sub(r"CASE.*?END AS (\w+)", r"\1", selected, flags=re.S)
     selected = [re.sub(r"^\w+\.", "", c.strip()) for c in selected.replace("SELECT", "").split(",")]
-    assert selected == _uc_columns(function) == columns
+    assert selected == columns
+    # Local Lakebase inference adds the owned transaction reference; UC is unchanged.
+    assert [c for c in selected if c != "transaction_id"] == _uc_columns(function)
 
 
 def test_the_bank_ro_schema_must_be_a_plain_identifier(monkeypatch):

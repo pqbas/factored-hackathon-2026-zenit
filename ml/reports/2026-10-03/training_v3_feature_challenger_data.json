@@ -1,0 +1,828 @@
+{
+  "source_table": "workspace.bank_silver.transactions",
+  "delta_version": 1,
+  "feature_version": "v3_transaction_context",
+  "train_end_exclusive": "2025-07-01",
+  "validation_end_exclusive": "2026-01-01",
+  "final_test_used": false,
+  "seed": 42,
+  "review_budget_assumption": 0.1,
+  "split_counts": {
+    "train": {
+      "split": "train",
+      "rows": 2994597,
+      "fraud": 3014.0,
+      "min_date": "2023-06-17 06:01:30",
+      "max_date": "2025-06-30 23:59:46"
+    },
+    "validation": {
+      "split": "validation",
+      "rows": 743909,
+      "fraud": 699.0,
+      "min_date": "2025-07-01 00:00:21",
+      "max_date": "2025-12-31 23:59:23"
+    }
+  },
+  "feature_allowlist": [
+    "amount",
+    "log_abs_amount",
+    "amount_sign",
+    "amount_usd_norm",
+    "hour",
+    "weekday",
+    "is_weekend",
+    "customer_tx_count_1h",
+    "customer_tx_count_24h",
+    "customer_tx_count_7d",
+    "seconds_since_prev_tx",
+    "customer_same_currency_tx_count_30d",
+    "customer_same_currency_mean_abs_amount_30d",
+    "customer_amount_ratio_30d",
+    "latitude_coarse",
+    "longitude_coarse",
+    "geo_present",
+    "currency",
+    "transaction_type",
+    "channel",
+    "transaction_country",
+    "merchant_category",
+    "transaction_category"
+  ],
+  "preprocessing": "Median imputation and categorical indexers fitted on train only; one-hot encoding; no sampling.",
+  "metric_primary": "Spark BinaryClassificationEvaluator areaUnderPR (stepwise PR area).",
+  "attempts": [
+    {
+      "model": "M1_logistic_regression",
+      "params": {
+        "class_weight": "none",
+        "C": 1.0,
+        "max_iter": 100,
+        "seed": 42
+      },
+      "status": "SUCCESS",
+      "run_id": "5d4d955e66c04243b36df11a3035b79d",
+      "validation_area_under_pr": 0.000923638067574357,
+      "validation_rows": 743909,
+      "validation_positives": 699,
+      "validation_prevalence": 0.0009396310570244479,
+      "training_rows": 2994597,
+      "training_positives": 3014,
+      "runtime_seconds": 39.205242304000194,
+      "iterations": 2,
+      "converged": true
+    },
+    {
+      "model": "M1_logistic_regression",
+      "params": {
+        "class_weight": "balanced",
+        "C": 1.0,
+        "max_iter": 100,
+        "seed": 42
+      },
+      "status": "SUCCESS",
+      "run_id": "7a13c98bb1fd489c9b1528853be519b8",
+      "validation_area_under_pr": 0.000925702377263025,
+      "validation_rows": 743909,
+      "validation_positives": 699,
+      "validation_prevalence": 0.0009396310570244479,
+      "training_rows": 2994597,
+      "training_positives": 3014,
+      "runtime_seconds": 30.971214108999902,
+      "iterations": 7,
+      "converged": true
+    },
+    {
+      "model": "M2_decision_tree",
+      "params": {
+        "class_weight": "none",
+        "max_depth": 5,
+        "min_instances_per_node": 1000,
+        "seed": 42
+      },
+      "status": "SUCCESS",
+      "run_id": "2ecfd69193bf48dd83da13e18e28a9e3",
+      "validation_area_under_pr": 0.0009396310570244479,
+      "validation_rows": 743909,
+      "validation_positives": 699,
+      "validation_prevalence": 0.0009396310570244479,
+      "training_rows": 2994597,
+      "training_positives": 3014,
+      "runtime_seconds": 28.618723489000104,
+      "converged": null
+    },
+    {
+      "model": "M2_decision_tree",
+      "params": {
+        "class_weight": "balanced",
+        "max_depth": 5,
+        "min_instances_per_node": 1000,
+        "seed": 42
+      },
+      "status": "SUCCESS",
+      "run_id": "fff9e8d7059d4a42b77dce1c7dd6ba5e",
+      "validation_area_under_pr": 0.0009197619186179153,
+      "validation_rows": 743909,
+      "validation_positives": 699,
+      "validation_prevalence": 0.0009396310570244479,
+      "training_rows": 2994597,
+      "training_positives": 3014,
+      "runtime_seconds": 26.338791055,
+      "converged": null
+    },
+    {
+      "model": "M3_random_forest",
+      "params": {
+        "class_weight": "balanced",
+        "num_trees": 20,
+        "max_depth": 6,
+        "min_instances_per_node": 1000,
+        "feature_subset_strategy": "sqrt",
+        "seed": 42
+      },
+      "status": "SUCCESS",
+      "run_id": "a7c00e8d953240d9a015aaad59882fcf",
+      "validation_area_under_pr": 0.0009409507178118773,
+      "validation_rows": 743909,
+      "validation_positives": 699,
+      "validation_prevalence": 0.0009396310570244479,
+      "training_rows": 2994597,
+      "training_positives": 3014,
+      "runtime_seconds": 40.20918397399987,
+      "converged": null
+    }
+  ],
+  "baselines": {
+    "B0_constant_train_prevalence": {
+      "score": 0.0010064793359507139,
+      "validation_area_under_pr": 0.0009396310570244479,
+      "validation_rows": 743909,
+      "validation_positives": 699
+    },
+    "B1_always_non_fraud": {
+      "accuracy": 0.9990603689429756,
+      "recall": 0.0,
+      "validation_rows": 743909,
+      "validation_positives": 699,
+      "warning": "High accuracy is uninformative under severe class imbalance."
+    }
+  },
+  "non_converged_logistic_attempts": [],
+  "best_validation_area_under_pr": 0.0009409507178118773,
+  "selected_candidate": {
+    "model": "M3_random_forest",
+    "params": {
+      "class_weight": "balanced",
+      "num_trees": 20,
+      "max_depth": 6,
+      "min_instances_per_node": 1000,
+      "feature_subset_strategy": "sqrt",
+      "seed": 42
+    },
+    "status": "SUCCESS",
+    "run_id": "a7c00e8d953240d9a015aaad59882fcf",
+    "validation_area_under_pr": 0.0009409507178118773,
+    "validation_rows": 743909,
+    "validation_positives": 699,
+    "validation_prevalence": 0.0009396310570244479,
+    "training_rows": 2994597,
+    "training_positives": 3014,
+    "runtime_seconds": 40.20918397399987,
+    "converged": null
+  },
+  "area_under_pr_lift_over_b0": 1.319660787429391e-06,
+  "selection_note": "Selected the candidate with the highest validation areaUnderPR; promotion is evaluated separately against B0.",
+  "selected_model": "M3_random_forest",
+  "selected_params": {
+    "class_weight": "balanced",
+    "num_trees": 20,
+    "max_depth": 6,
+    "min_instances_per_node": 1000,
+    "feature_subset_strategy": "sqrt",
+    "seed": 42
+  },
+  "selected_validation_run_id": "a7c00e8d953240d9a015aaad59882fcf",
+  "selected_model_spec": {
+    "model_id": "M3_random_forest",
+    "parameters": {
+      "class_weight": "balanced",
+      "num_trees": 20,
+      "max_depth": 6,
+      "min_instances_per_node": 1000,
+      "feature_subset_strategy": "sqrt",
+      "seed": 42
+    },
+    "feature_version": "v3_transaction_context",
+    "feature_columns": [
+      "amount_imputed",
+      "log_abs_amount_imputed",
+      "amount_sign_imputed",
+      "amount_usd_norm_imputed",
+      "hour_imputed",
+      "weekday_imputed",
+      "is_weekend_imputed",
+      "customer_tx_count_1h_imputed",
+      "customer_tx_count_24h_imputed",
+      "customer_tx_count_7d_imputed",
+      "seconds_since_prev_tx_imputed",
+      "customer_same_currency_tx_count_30d_imputed",
+      "customer_same_currency_mean_abs_amount_30d_imputed",
+      "customer_amount_ratio_30d_imputed",
+      "latitude_coarse_imputed",
+      "longitude_coarse_imputed",
+      "geo_present_imputed",
+      "currency_ohe_USD",
+      "currency_ohe_COP",
+      "currency_ohe_ARS",
+      "currency_ohe___unknown",
+      "currency_ohe_invalidValues",
+      "transaction_type_ohe_Purchase",
+      "transaction_type_ohe_Withdrawal",
+      "transaction_type_ohe_Transfer",
+      "transaction_type_ohe_Payment",
+      "transaction_type_ohe_Deposit",
+      "transaction_type_ohe_Adjustment",
+      "transaction_type_ohe___unknown",
+      "transaction_type_ohe_invalidValues",
+      "channel_ohe_POS",
+      "channel_ohe_ATM",
+      "channel_ohe_Web",
+      "channel_ohe_App",
+      "channel_ohe_Branch",
+      "channel_ohe_Transfer",
+      "channel_ohe___unknown",
+      "channel_ohe_invalidValues",
+      "transaction_country_ohe_México",
+      "transaction_country_ohe_Colombia",
+      "transaction_country_ohe_Argentina",
+      "transaction_country_ohe_Spain",
+      "transaction_country_ohe_Brazil",
+      "transaction_country_ohe_USA",
+      "transaction_country_ohe___unknown",
+      "transaction_country_ohe_invalidValues",
+      "merchant_category_ohe___missing__",
+      "merchant_category_ohe_Food",
+      "merchant_category_ohe_Services",
+      "merchant_category_ohe_Transport",
+      "merchant_category_ohe_Other",
+      "merchant_category_ohe_Entertainment",
+      "merchant_category_ohe_Health",
+      "merchant_category_ohe___unknown",
+      "merchant_category_ohe_invalidValues",
+      "transaction_category_ohe___missing__",
+      "transaction_category_ohe_Food",
+      "transaction_category_ohe_Services",
+      "transaction_category_ohe_Other",
+      "transaction_category_ohe_Transport",
+      "transaction_category_ohe_Entertainment",
+      "transaction_category_ohe_Health",
+      "transaction_category_ohe___unknown",
+      "transaction_category_ohe_invalidValues"
+    ],
+    "input_predictors": [
+      "amount",
+      "log_abs_amount",
+      "amount_sign",
+      "amount_usd_norm",
+      "hour",
+      "weekday",
+      "is_weekend",
+      "customer_tx_count_1h",
+      "customer_tx_count_24h",
+      "customer_tx_count_7d",
+      "seconds_since_prev_tx",
+      "customer_same_currency_tx_count_30d",
+      "customer_same_currency_mean_abs_amount_30d",
+      "customer_amount_ratio_30d",
+      "latitude_coarse",
+      "longitude_coarse",
+      "geo_present",
+      "currency",
+      "transaction_type",
+      "channel",
+      "transaction_country",
+      "merchant_category",
+      "transaction_category"
+    ],
+    "preprocessing": "Spark Pipeline fitted on train only; median imputation; train-fitted StringIndexer/OneHotEncoder with handleInvalid=keep.",
+    "model_binary_logged": false,
+    "binary_artifact_note": "Databricks Serverless MLflow Spark model logging requires a writable Unity Catalog Volume. None is currently available to this principal; no existing data volume was reused.",
+    "feature_importances": [
+      {
+        "feature": "amount_imputed",
+        "importance": 0.067400235686312
+      },
+      {
+        "feature": "log_abs_amount_imputed",
+        "importance": 0.06146847467880005
+      },
+      {
+        "feature": "amount_sign_imputed",
+        "importance": 0.0
+      },
+      {
+        "feature": "amount_usd_norm_imputed",
+        "importance": 0.07980724152727123
+      },
+      {
+        "feature": "hour_imputed",
+        "importance": 0.1172990384743909
+      },
+      {
+        "feature": "weekday_imputed",
+        "importance": 0.05105366137994128
+      },
+      {
+        "feature": "is_weekend_imputed",
+        "importance": 0.015246871225434147
+      },
+      {
+        "feature": "customer_tx_count_1h_imputed",
+        "importance": 0.003023013785272385
+      },
+      {
+        "feature": "customer_tx_count_24h_imputed",
+        "importance": 0.004318794267358082
+      },
+      {
+        "feature": "customer_tx_count_7d_imputed",
+        "importance": 0.04324696729126749
+      },
+      {
+        "feature": "seconds_since_prev_tx_imputed",
+        "importance": 0.05647389269389733
+      },
+      {
+        "feature": "customer_same_currency_tx_count_30d_imputed",
+        "importance": 0.04678216198341304
+      },
+      {
+        "feature": "customer_same_currency_mean_abs_amount_30d_imputed",
+        "importance": 0.04979241298602201
+      },
+      {
+        "feature": "customer_amount_ratio_30d_imputed",
+        "importance": 0.019665647886660313
+      },
+      {
+        "feature": "latitude_coarse_imputed",
+        "importance": 0.05362094728913687
+      },
+      {
+        "feature": "longitude_coarse_imputed",
+        "importance": 0.04474735101683881
+      },
+      {
+        "feature": "geo_present_imputed",
+        "importance": 0.008615857274865895
+      },
+      {
+        "feature": "currency_ohe_USD",
+        "importance": 0.010066982393362206
+      },
+      {
+        "feature": "currency_ohe_COP",
+        "importance": 0.015711753802427206
+      },
+      {
+        "feature": "currency_ohe_ARS",
+        "importance": 0.010262743530829557
+      },
+      {
+        "feature": "currency_ohe___unknown",
+        "importance": 0.0
+      },
+      {
+        "feature": "currency_ohe_invalidValues",
+        "importance": 0.0
+      },
+      {
+        "feature": "transaction_type_ohe_Purchase",
+        "importance": 0.0074845036738837465
+      },
+      {
+        "feature": "transaction_type_ohe_Withdrawal",
+        "importance": 0.010236976158234243
+      },
+      {
+        "feature": "transaction_type_ohe_Transfer",
+        "importance": 0.020576702489713657
+      },
+      {
+        "feature": "transaction_type_ohe_Payment",
+        "importance": 0.006588063355300437
+      },
+      {
+        "feature": "transaction_type_ohe_Deposit",
+        "importance": 0.011469812622123937
+      },
+      {
+        "feature": "transaction_type_ohe_Adjustment",
+        "importance": 0.002983995456421616
+      },
+      {
+        "feature": "transaction_type_ohe___unknown",
+        "importance": 0.0
+      },
+      {
+        "feature": "transaction_type_ohe_invalidValues",
+        "importance": 0.0
+      },
+      {
+        "feature": "channel_ohe_POS",
+        "importance": 0.020837514301431624
+      },
+      {
+        "feature": "channel_ohe_ATM",
+        "importance": 0.004861622639985408
+      },
+      {
+        "feature": "channel_ohe_Web",
+        "importance": 0.005943696446771578
+      },
+      {
+        "feature": "channel_ohe_App",
+        "importance": 0.01579756268818419
+      },
+      {
+        "feature": "channel_ohe_Branch",
+        "importance": 0.01018671766621185
+      },
+      {
+        "feature": "channel_ohe_Transfer",
+        "importance": 0.004780323420130046
+      },
+      {
+        "feature": "channel_ohe___unknown",
+        "importance": 0.0
+      },
+      {
+        "feature": "channel_ohe_invalidValues",
+        "importance": 0.0
+      },
+      {
+        "feature": "transaction_country_ohe_México",
+        "importance": 0.010950500428306946
+      },
+      {
+        "feature": "transaction_country_ohe_Colombia",
+        "importance": 0.007955634198094485
+      },
+      {
+        "feature": "transaction_country_ohe_Argentina",
+        "importance": 0.009458727356447053
+      },
+      {
+        "feature": "transaction_country_ohe_Spain",
+        "importance": 0.0075991920877876516
+      },
+      {
+        "feature": "transaction_country_ohe_Brazil",
+        "importance": 0.004110051746706218
+      },
+      {
+        "feature": "transaction_country_ohe_USA",
+        "importance": 0.0088972972062098
+      },
+      {
+        "feature": "transaction_country_ohe___unknown",
+        "importance": 0.0
+      },
+      {
+        "feature": "transaction_country_ohe_invalidValues",
+        "importance": 0.0
+      },
+      {
+        "feature": "merchant_category_ohe___missing__",
+        "importance": 0.0060532649247525975
+      },
+      {
+        "feature": "merchant_category_ohe_Food",
+        "importance": 0.0032717636444867674
+      },
+      {
+        "feature": "merchant_category_ohe_Services",
+        "importance": 0.0028309558995092588
+      },
+      {
+        "feature": "merchant_category_ohe_Transport",
+        "importance": 0.003167494111943592
+      },
+      {
+        "feature": "merchant_category_ohe_Other",
+        "importance": 0.004327382463514602
+      },
+      {
+        "feature": "merchant_category_ohe_Entertainment",
+        "importance": 0.0032521425430123724
+      },
+      {
+        "feature": "merchant_category_ohe_Health",
+        "importance": 0.0068429521986098675
+      },
+      {
+        "feature": "merchant_category_ohe___unknown",
+        "importance": 0.0
+      },
+      {
+        "feature": "merchant_category_ohe_invalidValues",
+        "importance": 0.0
+      },
+      {
+        "feature": "transaction_category_ohe___missing__",
+        "importance": 0.0011935125800664542
+      },
+      {
+        "feature": "transaction_category_ohe_Food",
+        "importance": 0.0019193568251286135
+      },
+      {
+        "feature": "transaction_category_ohe_Services",
+        "importance": 0.006456649419053594
+      },
+      {
+        "feature": "transaction_category_ohe_Other",
+        "importance": 0.0037594125446190453
+      },
+      {
+        "feature": "transaction_category_ohe_Transport",
+        "importance": 0.010884675218683299
+      },
+      {
+        "feature": "transaction_category_ohe_Entertainment",
+        "importance": 0.00781696068110558
+      },
+      {
+        "feature": "transaction_category_ohe_Health",
+        "importance": 0.008900533830068728
+      },
+      {
+        "feature": "transaction_category_ohe___unknown",
+        "importance": 0.0
+      },
+      {
+        "feature": "transaction_category_ohe_invalidValues",
+        "importance": 0.0
+      }
+    ]
+  },
+  "model_binary_logged": false,
+  "selected_validation_auc_roc": 0.5088346006099399,
+  "validation_threshold_for_10pct_review_budget": 0.5196215957344188,
+  "validation_at_threshold": {
+    "threshold": 0.5196215957344188,
+    "tp": 63,
+    "fp": 74326,
+    "tn": 668884,
+    "fn": 636,
+    "precision": 0.000846899407170415,
+    "recall": 0.09012875536480687,
+    "f1": 0.0016780311101640742,
+    "review_rate": 0.09999744592416546,
+    "rows": 743909,
+    "positives": 699
+  },
+  "validation_recall_at_top_k": {
+    "0.1pct": {
+      "reviewed": 744,
+      "capacity": 744,
+      "tp": 1,
+      "recall": 0.001430615164520744,
+      "precision": 0.0013440860215053765,
+      "precision_lift_over_prevalence": 1.4304401833648686,
+      "boundary_tie": {
+        "slots_from_boundary_tie": 6,
+        "boundary_tie_rows": 7,
+        "boundary_tie_positives": 0,
+        "tp_if_tie_has_fewest_frauds": 1,
+        "tp_if_tie_has_most_frauds": 1,
+        "boundary_score": 0.551024149960921,
+        "tie_split_required": true,
+        "minimum_precision": 0.0013440860215053765,
+        "maximum_precision": 0.0013440860215053765
+      },
+      "tie_breaking": "transaction_id ascending; deterministic only, not a risk signal"
+    },
+    "0.5pct": {
+      "reviewed": 3720,
+      "capacity": 3720,
+      "tp": 1,
+      "recall": 0.001430615164520744,
+      "precision": 0.00026881720430107527,
+      "precision_lift_over_prevalence": 0.28608803667297367,
+      "boundary_tie": {
+        "slots_from_boundary_tie": 1,
+        "boundary_tie_rows": 1,
+        "boundary_tie_positives": 0,
+        "tp_if_tie_has_fewest_frauds": 1,
+        "tp_if_tie_has_most_frauds": 1,
+        "boundary_score": 0.5405127081840877,
+        "tie_split_required": false,
+        "minimum_precision": 0.00026881720430107527,
+        "maximum_precision": 0.00026881720430107527
+      },
+      "tie_breaking": "transaction_id ascending; deterministic only, not a risk signal"
+    },
+    "1pct": {
+      "reviewed": 7440,
+      "capacity": 7440,
+      "tp": 4,
+      "recall": 0.005722460658082976,
+      "precision": 0.0005376344086021505,
+      "precision_lift_over_prevalence": 0.5721760733459473,
+      "boundary_tie": {
+        "slots_from_boundary_tie": 1,
+        "boundary_tie_rows": 1,
+        "boundary_tie_positives": 0,
+        "tp_if_tie_has_fewest_frauds": 4,
+        "tp_if_tie_has_most_frauds": 4,
+        "boundary_score": 0.5360487804217089,
+        "tie_split_required": false,
+        "minimum_precision": 0.0005376344086021505,
+        "maximum_precision": 0.0005376344086021505
+      },
+      "tie_breaking": "transaction_id ascending; deterministic only, not a risk signal"
+    },
+    "2pct": {
+      "reviewed": 14879,
+      "capacity": 14879,
+      "tp": 13,
+      "recall": 0.01859799713876967,
+      "precision": 0.0008737146313596344,
+      "precision_lift_over_prevalence": 0.929848609013039,
+      "boundary_tie": {
+        "slots_from_boundary_tie": 2,
+        "boundary_tie_rows": 5,
+        "boundary_tie_positives": 0,
+        "tp_if_tie_has_fewest_frauds": 13,
+        "tp_if_tie_has_most_frauds": 13,
+        "boundary_score": 0.5313562966227886,
+        "tie_split_required": true,
+        "minimum_precision": 0.0008737146313596344,
+        "maximum_precision": 0.0008737146313596344
+      },
+      "tie_breaking": "transaction_id ascending; deterministic only, not a risk signal"
+    },
+    "5pct": {
+      "reviewed": 37196,
+      "capacity": 37196,
+      "tp": 32,
+      "recall": 0.045779685264663805,
+      "precision": 0.0008603075599526831,
+      "precision_lift_over_prevalence": 0.9155801668338205,
+      "boundary_tie": {
+        "slots_from_boundary_tie": 1,
+        "boundary_tie_rows": 4,
+        "boundary_tie_positives": 0,
+        "tp_if_tie_has_fewest_frauds": 32,
+        "tp_if_tie_has_most_frauds": 32,
+        "boundary_score": 0.5250335249891313,
+        "tie_split_required": true,
+        "minimum_precision": 0.0008603075599526831,
+        "maximum_precision": 0.0008603075599526831
+      },
+      "tie_breaking": "transaction_id ascending; deterministic only, not a risk signal"
+    },
+    "10pct": {
+      "reviewed": 74391,
+      "capacity": 74391,
+      "tp": 63,
+      "recall": 0.09012875536480687,
+      "precision": 0.0008468766383030206,
+      "precision_lift_over_prevalence": 0.9012863420935074,
+      "boundary_tie": {
+        "slots_from_boundary_tie": 2,
+        "boundary_tie_rows": 2,
+        "boundary_tie_positives": 0,
+        "tp_if_tie_has_fewest_frauds": 63,
+        "tp_if_tie_has_most_frauds": 63,
+        "boundary_score": 0.5196215211115514,
+        "tie_split_required": false,
+        "minimum_precision": 0.0008468766383030206,
+        "maximum_precision": 0.0008468766383030206
+      },
+      "tie_breaking": "transaction_id ascending; deterministic only, not a risk signal"
+    },
+    "20pct": {
+      "reviewed": 148782,
+      "capacity": 148782,
+      "tp": 144,
+      "recall": 0.20600858369098712,
+      "precision": 0.0009678590152034521,
+      "precision_lift_over_prevalence": 1.0300415338211513,
+      "boundary_tie": {
+        "slots_from_boundary_tie": 18,
+        "boundary_tie_rows": 30,
+        "boundary_tie_positives": 0,
+        "tp_if_tie_has_fewest_frauds": 144,
+        "tp_if_tie_has_most_frauds": 144,
+        "boundary_score": 0.512148331827963,
+        "tie_split_required": true,
+        "minimum_precision": 0.0009678590152034521,
+        "maximum_precision": 0.0009678590152034521
+      },
+      "tie_breaking": "transaction_id ascending; deterministic only, not a risk signal"
+    }
+  },
+  "validation_subgroups_at_threshold": [
+    {
+      "dimension": "transaction_country",
+      "value": "Argentina",
+      "rows": 145632,
+      "fraud": 148,
+      "precision": 0.000646551724137931,
+      "recall": 0.02027027027027027
+    },
+    {
+      "dimension": "transaction_country",
+      "value": "Brazil",
+      "rows": 6823,
+      "fraud": 8,
+      "precision": 0.0016863406408094434,
+      "recall": 0.25
+    },
+    {
+      "dimension": "transaction_country",
+      "value": "Colombia",
+      "rows": 216521,
+      "fraud": 213,
+      "precision": 0.0013677217663149667,
+      "recall": 0.03286384976525822
+    },
+    {
+      "dimension": "transaction_country",
+      "value": "México",
+      "rows": 361113,
+      "fraud": 322,
+      "precision": 0.000775218837817759,
+      "recall": 0.14906832298136646
+    },
+    {
+      "dimension": "transaction_country",
+      "value": "Spain",
+      "rows": 6842,
+      "fraud": 6,
+      "precision": 0.002173913043478261,
+      "recall": 0.3333333333333333
+    },
+    {
+      "dimension": "transaction_country",
+      "value": "USA",
+      "rows": 6978,
+      "fraud": 2,
+      "precision": 0.0016474464579901153,
+      "recall": 0.5
+    },
+    {
+      "dimension": "channel",
+      "value": "ATM",
+      "rows": 224009,
+      "fraud": 241,
+      "precision": 0.000996665005558324,
+      "recall": 0.1078838174273859
+    },
+    {
+      "dimension": "channel",
+      "value": "App",
+      "rows": 111226,
+      "fraud": 84,
+      "precision": 0.0008072801996183766,
+      "recall": 0.13095238095238096
+    },
+    {
+      "dimension": "channel",
+      "value": "Branch",
+      "rows": 22194,
+      "fraud": 21,
+      "precision": 0.0009702457956015524,
+      "recall": 0.14285714285714285
+    },
+    {
+      "dimension": "channel",
+      "value": "POS",
+      "rows": 259984,
+      "fraud": 236,
+      "precision": 0.0006566772133006984,
+      "recall": 0.046610169491525424
+    },
+    {
+      "dimension": "channel",
+      "value": "Transfer",
+      "rows": 14984,
+      "fraud": 13,
+      "precision": 0.0006435006435006435,
+      "recall": 0.07692307692307693
+    },
+    {
+      "dimension": "channel",
+      "value": "Web",
+      "rows": 111512,
+      "fraud": 104,
+      "precision": 0.0008283756306950824,
+      "recall": 0.10576923076923077
+    }
+  ],
+  "promotion_decision": "no_candidate_beats_baseline_or_finds_positives_within_budget",
+  "total_runtime_seconds": 255.4519926600001,
+  "mlflow_experiment_path": "/Shared/fraud-eda/phase3-feature-challenger",
+  "mlflow_parent_run_id": "ef4218aa133c468a8a0899e92eb80019"
+}

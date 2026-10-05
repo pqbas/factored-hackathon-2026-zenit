@@ -1,0 +1,33 @@
+{
+  "date": "2026-10-02",
+  "smoke_run": {
+    "run_id": 381480640153506,
+    "task_run_id": 346787125930929,
+    "result": "SUCCESS",
+    "run_page_url": "https://dbc-184e79fe-04dc.cloud.databricks.com/?o=7474647867986650#job/179300007747661/run/346787125930929",
+    "performance_target": "STANDARD",
+    "environment_version": "4",
+    "source_table": "workspace.bank_silver.transactions",
+    "delta_version": 1,
+    "train_only": true,
+    "sample_fraction": 0.01,
+    "rows": 29857,
+    "fraud": 34,
+    "approximate_full_train_rows": 2985700,
+    "logistic_fit_seconds": 12.487151198999982,
+    "decision_tree_fit_seconds": 4.763105547000123,
+    "total_smoke_code_seconds": 25.740996996000035,
+    "purpose": "Spark ML compatibility and runtime estimate only; no quality result"
+  },
+  "prior_environment_attempt": {
+    "run_id": 559958584817860,
+    "result": "FAILED",
+    "failure": "The default serverless environment rejected the PySpark ML Imputer constructor as not whitelisted.",
+    "data_effect": "No source tables or other database resources were modified."
+  },
+  "full_phase2_run": {
+    "run_id": 159901119079178,
+    "status_at_report_creation": "RUNNING",
+    "final_test_accessed": false
+  }
+}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { type AgentHandoff, caseFields, handoffReasonLabel } from '@/lib/handoff-case';
+import { type AgentHandoff, caseFields, fraudPrediction, handoffReasonLabel, needsFraudReview } from '@/lib/handoff-case';
 
 const handoff = (verifiedData: Record<string, unknown> | null): AgentHandoff => ({
   reason: 'complaint',
@@ -22,6 +22,29 @@ describe('handoffReasonLabel', () => {
 });
 
 describe('caseFields', () => {
+  it('accepts a genuine zero score and false alert while rejecting invalid predictions', () => {
+    const assessment = { scope: 'transaction_inference', score_status: 'experimental_prediction',
+      score_type: 'uncalibrated_model_output', automatic_decisions_enabled: false,
+      review_required: true, risk_score: 0, fraud_prediction: false };
+    const value = (a: Record<string, unknown>) => ({ ...handoff(null), facts: { fraud_assessment: a } });
+    expect(fraudPrediction(value(assessment))).toEqual({ score: 0, alert: false });
+    expect(fraudPrediction(value({ ...assessment, risk_score: 0.25, fraud_prediction: true })))
+      .toEqual({ score: 25, alert: true });
+    for (const risk_score of [null, '0.2', NaN, Infinity, -1, 1.1]) {
+      expect(fraudPrediction(value({ ...assessment, risk_score }))).toBeNull();
+    }
+    expect(fraudPrediction(value({ ...assessment, automatic_decisions_enabled: true }))).toBeNull();
+    expect(fraudPrediction(value({ ...assessment, scope: 'model_availability' }))).toBeNull();
+    expect(caseFields(handoff({ transaction_id: 'INTERNAL-ID', merchant: 'Store' })))
+      .toEqual([{ key: 'merchant', label: 'Comercio', value: 'Store' }]);
+  });
+  it('shows review only for a complaint with a structured assessment', () => {
+    const value = handoff({ merchant: 'Verified merchant' });
+    expect(needsFraudReview(value)).toBe(false);
+    expect(needsFraudReview({ ...value, facts: { fraud_assessment: { review_required: true, risk_score: null } } })).toBe(true);
+    expect(needsFraudReview({ ...value, reason: 'retention', facts: { fraud_assessment: { review_required: true } } })).toBe(false);
+    expect(needsFraudReview({ ...value, facts: { fraud_assessment: 'fake score' } })).toBe(false);
+  });
   it('shows a complaint charge as a record, values as they come', () => {
     const fields = caseFields(
       handoff({

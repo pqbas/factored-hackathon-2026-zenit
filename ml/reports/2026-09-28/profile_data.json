@@ -1,0 +1,1148 @@
+{
+  "metadata": {
+    "source_table": "workspace.bank_silver.transactions",
+    "delta_version": 1,
+    "warehouse_id": "07ca55766c9c5097",
+    "profile_name": "personal",
+    "started_at": "2026-09-28T22:11:39.042644+00:00",
+    "tool": "ml/profile.py",
+    "phase": "0"
+  },
+  "results": [
+    {
+      "label": "row_counts",
+      "data": {
+        "statement_id": "01f1bb89-943b-13cb-96f2-6f94a13abac2",
+        "external_links": [
+          {
+            "link_id": "chunk_0",
+            "data_array": [
+              [
+                "4425008",
+                "4425008",
+                "0"
+              ]
+            ]
+          }
+        ],
+        "schema": {
+          "column_count": 3,
+          "columns": [
+            {
+              "name": "total_rows",
+              "position": 0,
+              "type_name": "LONG",
+              "type_text": "BIGINT"
+            },
+            {
+              "name": "distinct_ids",
+              "position": 1,
+              "type_name": "LONG",
+              "type_text": "BIGINT"
+            },
+            {
+              "name": "null_ids",
+              "position": 2,
+              "type_name": "LONG",
+              "type_text": "BIGINT"
+            }
+          ]
+        },
+        "total_row_count": 1,
+        "truncated": false,
+        "state": "SUCCEEDED",
+        "execution_ms": 3090.8228979969863
+      }
+    },
+    {
+      "label": "key_duplicates",
+      "data": {
+        "statement_id": "01f1bb89-9643-1b6f-8a3e-046cc032e0e3",
+        "external_links": [
+          {
+            "link_id": "chunk_0",
+            "data_array": [
+              [
+                "4425008",
+                "0"
+              ]
+            ]
+          }
+        ],
+        "schema": {
+          "column_count": 2,
+          "columns": [
+            {
+              "name": "total_rows_after_dedup",
+              "position": 0,
+              "type_name": "LONG",
+              "type_text": "BIGINT"
+            },
+            {
+              "name": "duplicate_count",
+              "position": 1,
+              "type_name": "LONG",
+              "type_text": "BIGINT"
+            }
+          ]
+        },
+        "total_row_count": 1,
+        "truncated": false,
+        "state": "SUCCEEDED",
+        "execution_ms": 2460.138990001724
+      }
+    },
+    {
+      "label": "label_distribution",
+      "data": {
+        "statement_id": "01f1bb89-97a1-177c-8971-3b5f7799ea36",
+        "external_links": [
+          {
+            "link_id": "chunk_0",
+            "data_array": [
+              [
+                "4425008",
+                "0",
+                "4316",
+                "4420692"
+              ]
+            ]
+          }
+        ],
+        "schema": {
+          "column_count": 4,
+          "columns": [
+            {
+              "name": "total_rows",
+              "position": 0,
+              "type_name": "LONG",
+              "type_text": "BIGINT"
+            },
+            {
+              "name": "null_labels",
+              "position": 1,
+              "type_name": "LONG",
+              "type_text": "BIGINT"
+            },
+            {
+              "name": "positives",
+              "position": 2,
+              "type_name": "LONG",
+              "type_text": "BIGINT"
+            },
+            {
+              "name": "negatives",
+              "position": 3,
+              "type_name": "LONG",
+              "type_text": "BIGINT"
+            }
+          ]
+        },
+        "total_row_count": 1,
+        "truncated": false,
+        "state": "SUCCEEDED",
+        "execution_ms": 2306.8616810014646
+      }
+    },
+    {
+      "label": "date_range",
+      "data": {
+        "statement_id": "01f1bb89-98e9-1af4-8c6f-bcb21843bfa4",
+        "external_links": [
+          {
+            "link_id": "chunk_0",
+            "data_array": [
+              [
+                "2023-06-17T06:01:30.000Z",
+                "2026-06-18T05:59:41.000Z"
+              ]
+            ]
+          }
+        ],
+        "schema": {
+          "column_count": 2,
+          "columns": [
+            {
+              "name": "min_date",
+              "position": 0,
+              "type_name": "TIMESTAMP",
+              "type_text": "TIMESTAMP"
+            },
+            {
+              "name": "max_date",
+              "position": 1,
+              "type_name": "TIMESTAMP",
+              "type_text": "TIMESTAMP"
+            }
+          ]
+        },
+        "total_row_count": 1,
+        "truncated": false,
+        "state": "SUCCEEDED",
+        "execution_ms": 2217.3557819987764
+      }
+    },
+    {
+      "label": "monthly_totals",
+      "data": {
+        "statement_id": "01f1bb89-9a3e-1b55-a602-f2477c55e114",
+        "external_links": [
+          {
+            "link_id": "chunk_0",
+            "data_array": [
+              [
+                "2023-06-01T00:00:00.000Z",
+                "56260",
+                "54"
+              ],
+              [
+                "2023-07-01T00:00:00.000Z",
+                "121313",
+                "138"
+              ],
+              [
+                "2023-08-01T00:00:00.000Z",
+                "127592",
+                "137"
+              ],
+              [
+                "2023-09-01T00:00:00.000Z",
+                "119559",
+                "97"
+              ],
+              [
+                "2023-10-01T00:00:00.000Z",
+                "127793",
+                "140"
+              ],
+              [
+                "2023-11-01T00:00:00.000Z",
+                "121984",
+                "125"
+              ],
+              [
+                "2023-12-01T00:00:00.000Z",
+                "125969",
+                "123"
+              ],
+              [
+                "2024-01-01T00:00:00.000Z",
+                "122201",
+                "121"
+              ],
+              [
+                "2024-02-01T00:00:00.000Z",
+                "117135",
+                "118"
+              ],
+              [
+                "2024-03-01T00:00:00.000Z",
+                "121588",
+                "135"
+              ],
+              [
+                "2024-04-01T00:00:00.000Z",
+                "121330",
+                "125"
+              ],
+              [
+                "2024-05-01T00:00:00.000Z",
+                "126371",
+                "132"
+              ],
+              [
+                "2024-06-01T00:00:00.000Z",
+                "121816",
+                "110"
+              ],
+              [
+                "2024-07-01T00:00:00.000Z",
+                "128772",
+                "115"
+              ],
+              [
+                "2024-08-01T00:00:00.000Z",
+                "122764",
+                "129"
+              ],
+              [
+                "2024-09-01T00:00:00.000Z",
+                "117525",
+                "131"
+              ],
+              [
+                "2024-10-01T00:00:00.000Z",
+                "127493",
+                "137"
+              ],
+              [
+                "2024-11-01T00:00:00.000Z",
+                "121481",
+                "122"
+              ],
+              [
+                "2024-12-01T00:00:00.000Z",
+                "122761",
+                "107"
+              ],
+              [
+                "2025-01-01T00:00:00.000Z",
+                "122180",
+                "122"
+              ],
+              [
+                "2025-02-01T00:00:00.000Z",
+                "110465",
+                "110"
+              ],
+              [
+                "2025-03-01T00:00:00.000Z",
+                "123716",
+                "112"
+              ],
+              [
+                "2025-04-01T00:00:00.000Z",
+                "120744",
+                "103"
+              ],
+              [
+                "2025-05-01T00:00:00.000Z",
+                "126997",
+                "131"
+              ],
+              [
+                "2025-06-01T00:00:00.000Z",
+                "118788",
+                "140"
+              ],
+              [
+                "2025-07-01T00:00:00.000Z",
+                "126882",
+                "130"
+              ],
+              [
+                "2025-08-01T00:00:00.000Z",
+                "126039",
+                "119"
+              ],
+              [
+                "2025-09-01T00:00:00.000Z",
+                "118563",
+                "107"
+              ],
+              [
+                "2025-10-01T00:00:00.000Z",
+                "129268",
+                "125"
+              ],
+              [
+                "2025-11-01T00:00:00.000Z",
+                "120775",
+                "103"
+              ],
+              [
+                "2025-12-01T00:00:00.000Z",
+                "122382",
+                "115"
+              ],
+              [
+                "2026-01-01T00:00:00.000Z",
+                "121962",
+                "109"
+              ],
+              [
+                "2026-02-01T00:00:00.000Z",
+                "115098",
+                "87"
+              ],
+              [
+                "2026-03-01T00:00:00.000Z",
+                "123915",
+                "111"
+              ],
+              [
+                "2026-04-01T00:00:00.000Z",
+                "126492",
+                "117"
+              ],
+              [
+                "2026-05-01T00:00:00.000Z",
+                "127559",
+                "109"
+              ],
+              [
+                "2026-06-01T00:00:00.000Z",
+                "71476",
+                "70"
+              ]
+            ]
+          }
+        ],
+        "schema": {
+          "column_count": 3,
+          "columns": [
+            {
+              "name": "month",
+              "position": 0,
+              "type_name": "TIMESTAMP",
+              "type_text": "TIMESTAMP"
+            },
+            {
+              "name": "total",
+              "position": 1,
+              "type_name": "LONG",
+              "type_text": "BIGINT"
+            },
+            {
+              "name": "fraud_count",
+              "position": 2,
+              "type_name": "LONG",
+              "type_text": "BIGINT"
+            }
+          ]
+        },
+        "total_row_count": 37,
+        "truncated": false,
+        "state": "SUCCEEDED",
+        "execution_ms": 1932.6874180005689
+      }
+    },
+    {
+      "label": "country_profile",
+      "data": {
+        "statement_id": "01f1bb89-9b69-1f59-b1d5-990e3c671151",
+        "external_links": [
+          {
+            "link_id": "chunk_0",
+            "data_array": [
+              [
+                "México",
+                "2146309",
+                "2132"
+              ],
+              [
+                "Colombia",
+                "1289503",
+                "1198"
+              ],
+              [
+                "Argentina",
+                "867561",
+                "864"
+              ],
+              [
+                "USA",
+                "40621",
+                "38"
+              ],
+              [
+                "Spain",
+                "40542",
+                "39"
+              ],
+              [
+                "Brazil",
+                "40472",
+                "45"
+              ]
+            ]
+          }
+        ],
+        "schema": {
+          "column_count": 3,
+          "columns": [
+            {
+              "name": "country",
+              "position": 0,
+              "type_name": "STRING",
+              "type_text": "STRING"
+            },
+            {
+              "name": "total",
+              "position": 1,
+              "type_name": "LONG",
+              "type_text": "BIGINT"
+            },
+            {
+              "name": "fraud_count",
+              "position": 2,
+              "type_name": "LONG",
+              "type_text": "BIGINT"
+            }
+          ]
+        },
+        "total_row_count": 6,
+        "truncated": false,
+        "state": "SUCCEEDED",
+        "execution_ms": 1939.9334209992958
+      }
+    },
+    {
+      "label": "channel_profile",
+      "data": {
+        "statement_id": "01f1bb89-9ca0-1804-b07a-6d2ecefac954",
+        "external_links": [
+          {
+            "link_id": "chunk_0",
+            "data_array": [
+              [
+                "POS",
+                "1548161",
+                "1467"
+              ],
+              [
+                "ATM",
+                "1328334",
+                "1331"
+              ],
+              [
+                "Web",
+                "663445",
+                "656"
+              ],
+              [
+                "App",
+                "663414",
+                "634"
+              ],
+              [
+                "Branch",
+                "132495",
+                "143"
+              ],
+              [
+                "Transfer",
+                "89159",
+                "85"
+              ]
+            ]
+          }
+        ],
+        "schema": {
+          "column_count": 3,
+          "columns": [
+            {
+              "name": "channel",
+              "position": 0,
+              "type_name": "STRING",
+              "type_text": "STRING"
+            },
+            {
+              "name": "total",
+              "position": 1,
+              "type_name": "LONG",
+              "type_text": "BIGINT"
+            },
+            {
+              "name": "fraud_count",
+              "position": 2,
+              "type_name": "LONG",
+              "type_text": "BIGINT"
+            }
+          ]
+        },
+        "total_row_count": 6,
+        "truncated": false,
+        "state": "SUCCEEDED",
+        "execution_ms": 2047.6451499998802
+      }
+    },
+    {
+      "label": "type_profile",
+      "data": {
+        "statement_id": "01f1bb89-9dca-1d1c-8df1-d79b61db8c1e",
+        "external_links": [
+          {
+            "link_id": "chunk_0",
+            "data_array": [
+              [
+                "Purchase",
+                "1083406",
+                "1086"
+              ],
+              [
+                "Withdrawal",
+                "964673",
+                "951"
+              ],
+              [
+                "Transfer",
+                "896438",
+                "798"
+              ],
+              [
+                "Payment",
+                "738964",
+                "730"
+              ],
+              [
+                "Deposit",
+                "609409",
+                "607"
+              ],
+              [
+                "Adjustment",
+                "132118",
+                "144"
+              ]
+            ]
+          }
+        ],
+        "schema": {
+          "column_count": 3,
+          "columns": [
+            {
+              "name": "transaction_type",
+              "position": 0,
+              "type_name": "STRING",
+              "type_text": "STRING"
+            },
+            {
+              "name": "total",
+              "position": 1,
+              "type_name": "LONG",
+              "type_text": "BIGINT"
+            },
+            {
+              "name": "fraud_count",
+              "position": 2,
+              "type_name": "LONG",
+              "type_text": "BIGINT"
+            }
+          ]
+        },
+        "total_row_count": 6,
+        "truncated": false,
+        "state": "SUCCEEDED",
+        "execution_ms": 2049.724693999451
+      }
+    },
+    {
+      "label": "partition_check",
+      "data": {
+        "statement_id": "01f1bb89-9efe-18bd-92b3-6c288b05947c",
+        "external_links": [
+          {
+            "link_id": "chunk_0",
+            "data_array": [
+              [
+                "train",
+                "2994597",
+                "3014"
+              ],
+              [
+                "validation",
+                "743909",
+                "699"
+              ],
+              [
+                "test",
+                "686502",
+                "603"
+              ]
+            ]
+          }
+        ],
+        "schema": {
+          "column_count": 3,
+          "columns": [
+            {
+              "name": "partition_label",
+              "position": 0,
+              "type_name": "STRING",
+              "type_text": "STRING"
+            },
+            {
+              "name": "total",
+              "position": 1,
+              "type_name": "LONG",
+              "type_text": "BIGINT"
+            },
+            {
+              "name": "fraud_count",
+              "position": 2,
+              "type_name": "LONG",
+              "type_text": "BIGINT"
+            }
+          ]
+        },
+        "total_row_count": 3,
+        "truncated": false,
+        "state": "SUCCEEDED",
+        "execution_ms": 1748.7490060011623
+      }
+    },
+    {
+      "label": "missing_v1_features",
+      "data": {
+        "statement_id": "01f1bb89-a017-1c01-9a9a-52aca72d340b",
+        "external_links": [
+          {
+            "link_id": "chunk_0",
+            "data_array": [
+              [
+                "4425008",
+                "0",
+                "0",
+                "2537456",
+                "0",
+                "0",
+                "3396215",
+                "0",
+                "0"
+              ]
+            ]
+          }
+        ],
+        "schema": {
+          "column_count": 9,
+          "columns": [
+            {
+              "name": "total",
+              "position": 0,
+              "type_name": "LONG",
+              "type_text": "BIGINT"
+            },
+            {
+              "name": "null_amount",
+              "position": 1,
+              "type_name": "LONG",
+              "type_text": "BIGINT"
+            },
+            {
+              "name": "null_currency",
+              "position": 2,
+              "type_name": "LONG",
+              "type_text": "BIGINT"
+            },
+            {
+              "name": "null_amount_usd",
+              "position": 3,
+              "type_name": "LONG",
+              "type_text": "BIGINT"
+            },
+            {
+              "name": "null_transaction_type",
+              "position": 4,
+              "type_name": "LONG",
+              "type_text": "BIGINT"
+            },
+            {
+              "name": "null_channel",
+              "position": 5,
+              "type_name": "LONG",
+              "type_text": "BIGINT"
+            },
+            {
+              "name": "null_merchant_category",
+              "position": 6,
+              "type_name": "LONG",
+              "type_text": "BIGINT"
+            },
+            {
+              "name": "null_country",
+              "position": 7,
+              "type_name": "LONG",
+              "type_text": "BIGINT"
+            },
+            {
+              "name": "null_date",
+              "position": 8,
+              "type_name": "LONG",
+              "type_text": "BIGINT"
+            }
+          ]
+        },
+        "total_row_count": 1,
+        "truncated": false,
+        "state": "SUCCEEDED",
+        "execution_ms": 2038.167615999555
+      }
+    },
+    {
+      "label": "amount_stats",
+      "data": {
+        "statement_id": "01f1bb89-a155-10ee-993a-d1fbeaa2fb5b",
+        "external_links": [
+          {
+            "link_id": "chunk_0",
+            "data_array": [
+              [
+                "4425008",
+                "0",
+                "0",
+                "5.00",
+                "39999828.48",
+                "30.68",
+                "180.59",
+                "5398.22",
+                "4315225.61",
+                "3.272936896E7"
+              ]
+            ]
+          }
+        ],
+        "schema": {
+          "column_count": 10,
+          "columns": [
+            {
+              "name": "total",
+              "position": 0,
+              "type_name": "LONG",
+              "type_text": "BIGINT"
+            },
+            {
+              "name": "zero_amount",
+              "position": 1,
+              "type_name": "LONG",
+              "type_text": "BIGINT"
+            },
+            {
+              "name": "negative_amount",
+              "position": 2,
+              "type_name": "LONG",
+              "type_text": "BIGINT"
+            },
+            {
+              "name": "min_amount",
+              "position": 3,
+              "type_name": "DECIMAL",
+              "type_precision": 15,
+              "type_scale": 2,
+              "type_text": "DECIMAL(15,2)"
+            },
+            {
+              "name": "max_amount",
+              "position": 4,
+              "type_name": "DECIMAL",
+              "type_precision": 15,
+              "type_scale": 2,
+              "type_text": "DECIMAL(15,2)"
+            },
+            {
+              "name": "p01",
+              "position": 5,
+              "type_name": "DOUBLE",
+              "type_text": "DOUBLE"
+            },
+            {
+              "name": "p10",
+              "position": 6,
+              "type_name": "DOUBLE",
+              "type_text": "DOUBLE"
+            },
+            {
+              "name": "p50",
+              "position": 7,
+              "type_name": "DOUBLE",
+              "type_text": "DOUBLE"
+            },
+            {
+              "name": "p90",
+              "position": 8,
+              "type_name": "DOUBLE",
+              "type_text": "DOUBLE"
+            },
+            {
+              "name": "p99",
+              "position": 9,
+              "type_name": "DOUBLE",
+              "type_text": "DOUBLE"
+            }
+          ]
+        },
+        "total_row_count": 1,
+        "truncated": false,
+        "state": "SUCCEEDED",
+        "execution_ms": 4609.102672999143
+      }
+    },
+    {
+      "label": "currency_distribution",
+      "data": {
+        "statement_id": "01f1bb89-a3fe-15c5-9320-1f2015508446",
+        "external_links": [
+          {
+            "link_id": "chunk_0",
+            "data_array": [
+              [
+                "USD",
+                "2437979",
+                "0"
+              ],
+              [
+                "COP",
+                "1194444",
+                "1135008"
+              ],
+              [
+                "ARS",
+                "792585",
+                "752544"
+              ]
+            ]
+          }
+        ],
+        "schema": {
+          "column_count": 3,
+          "columns": [
+            {
+              "name": "currency",
+              "position": 0,
+              "type_name": "STRING",
+              "type_text": "STRING"
+            },
+            {
+              "name": "total",
+              "position": 1,
+              "type_name": "LONG",
+              "type_text": "BIGINT"
+            },
+            {
+              "name": "has_usd",
+              "position": 2,
+              "type_name": "LONG",
+              "type_text": "BIGINT"
+            }
+          ]
+        },
+        "total_row_count": 3,
+        "truncated": false,
+        "state": "SUCCEEDED",
+        "execution_ms": 1947.086093998223
+      }
+    },
+    {
+      "label": "fraud_score_leakage",
+      "data": {
+        "statement_id": "01f1bb89-a523-1f7a-9bf8-e3cca9f09d8e",
+        "external_links": [
+          {
+            "link_id": "chunk_0",
+            "data_array": [
+              [
+                "4425008",
+                "885157",
+                "999",
+                "999",
+                "0",
+                "3539851",
+                "15.031166",
+                "0.00",
+                "99.99"
+              ]
+            ]
+          }
+        ],
+        "schema": {
+          "column_count": 9,
+          "columns": [
+            {
+              "name": "total",
+              "position": 0,
+              "type_name": "LONG",
+              "type_text": "BIGINT"
+            },
+            {
+              "name": "null_fraud_score",
+              "position": 1,
+              "type_name": "LONG",
+              "type_text": "BIGINT"
+            },
+            {
+              "name": "high_fraud_score",
+              "position": 2,
+              "type_name": "LONG",
+              "type_text": "BIGINT"
+            },
+            {
+              "name": "high_score_positive",
+              "position": 3,
+              "type_name": "LONG",
+              "type_text": "BIGINT"
+            },
+            {
+              "name": "high_score_negative",
+              "position": 4,
+              "type_name": "LONG",
+              "type_text": "BIGINT"
+            },
+            {
+              "name": "scored_count",
+              "position": 5,
+              "type_name": "LONG",
+              "type_text": "BIGINT"
+            },
+            {
+              "name": "mean_score",
+              "position": 6,
+              "type_name": "DECIMAL",
+              "type_precision": 9,
+              "type_scale": 6,
+              "type_text": "DECIMAL(9,6)"
+            },
+            {
+              "name": "min_score",
+              "position": 7,
+              "type_name": "DECIMAL",
+              "type_precision": 5,
+              "type_scale": 2,
+              "type_text": "DECIMAL(5,2)"
+            },
+            {
+              "name": "max_score",
+              "position": 8,
+              "type_name": "DECIMAL",
+              "type_precision": 5,
+              "type_scale": 2,
+              "type_text": "DECIMAL(5,2)"
+            }
+          ]
+        },
+        "total_row_count": 1,
+        "truncated": false,
+        "state": "SUCCEEDED",
+        "execution_ms": 1842.0312390007894
+      }
+    },
+    {
+      "label": "fraud_score_vs_label",
+      "data": {
+        "statement_id": "01f1bb89-a643-10d8-bfcb-f9a4d5fb5a48",
+        "external_links": [
+          {
+            "link_id": "chunk_0",
+            "data_array": [
+              [
+                "null",
+                "false",
+                "884266"
+              ],
+              [
+                "null",
+                "true",
+                "891"
+              ],
+              [
+                "<30",
+                "false",
+                "3535817"
+              ],
+              [
+                "<30",
+                "true",
+                "1052"
+              ],
+              [
+                "30-49",
+                "false",
+                "609"
+              ],
+              [
+                "30-49",
+                "true",
+                "703"
+              ],
+              [
+                "50-69",
+                "true",
+                "671"
+              ],
+              [
+                ">=70",
+                "true",
+                "999"
+              ]
+            ]
+          }
+        ],
+        "schema": {
+          "column_count": 3,
+          "columns": [
+            {
+              "name": "score_bucket",
+              "position": 0,
+              "type_name": "STRING",
+              "type_text": "STRING"
+            },
+            {
+              "name": "is_fraud",
+              "position": 1,
+              "type_name": "BOOLEAN",
+              "type_text": "BOOLEAN"
+            },
+            {
+              "name": "n",
+              "position": 2,
+              "type_name": "LONG",
+              "type_text": "BIGINT"
+            }
+          ]
+        },
+        "total_row_count": 8,
+        "truncated": false,
+        "state": "SUCCEEDED",
+        "execution_ms": 1844.583275000332
+      }
+    },
+    {
+      "label": "distinct_categories",
+      "data": {
+        "statement_id": "01f1bb89-a76d-1a99-8082-e4cd42e5e032",
+        "external_links": [
+          {
+            "link_id": "chunk_0",
+            "data_array": [
+              [
+                "6",
+                "6",
+                "6",
+                "6",
+                "3"
+              ]
+            ]
+          }
+        ],
+        "schema": {
+          "column_count": 5,
+          "columns": [
+            {
+              "name": "n_types",
+              "position": 0,
+              "type_name": "LONG",
+              "type_text": "BIGINT"
+            },
+            {
+              "name": "n_channels",
+              "position": 1,
+              "type_name": "LONG",
+              "type_text": "BIGINT"
+            },
+            {
+              "name": "n_merchant_categories",
+              "position": 2,
+              "type_name": "LONG",
+              "type_text": "BIGINT"
+            },
+            {
+              "name": "n_countries",
+              "position": 3,
+              "type_name": "LONG",
+              "type_text": "BIGINT"
+            },
+            {
+              "name": "n_currencies",
+              "position": 4,
+              "type_name": "LONG",
+              "type_text": "BIGINT"
+            }
+          ]
+        },
+        "total_row_count": 1,
+        "truncated": false,
+        "state": "SUCCEEDED",
+        "execution_ms": 2354.098645002523
+      }
+    }
+  ]
+}

@@ -1405,7 +1405,7 @@ _LAKEBASE_PRODUCT = {
     "current_balance": Decimal("120.50"), "credit_limit": Decimal("1000.00"), "available_credit": Decimal("879.50"),
 }
 _LAKEBASE_TRANSACTION = {
-    "transaction_date": datetime(2026, 6, 8, 15, 0, 51, tzinfo=timezone.utc), "product_type": "Tarjeta Crédito",
+    "transaction_id": "TX-TEST", "transaction_date": datetime(2026, 6, 8, 15, 0, 51, tzinfo=timezone.utc), "product_type": "Tarjeta Crédito",
     "product_number_last4": "4930", "transaction_type": "Purchase", "merchant_name": "Internet Plus",
     "amount": Decimal("329.44"), "currency": "USD", "transaction_status": "Approved",
 }
@@ -1438,8 +1438,12 @@ def test_a_balance_turn_answers_from_the_lakebase_rows():
     assert "879.50" in tool_message.content
 
 
-def test_a_confirmed_and_verified_complaint_is_handed_off_over_lakebase():
+def test_a_confirmed_and_verified_complaint_is_handed_off_over_lakebase(monkeypatch):
     pool = FakePool(products=[_LAKEBASE_PRODUCT], transactions=[_LAKEBASE_TRANSACTION])
+    from importlib import import_module
+    from src.tools.transaction_risk import transaction_risk_tool
+    monkeypatch.setattr(import_module("src.graph.nodes.respond"), "transaction_risk_tool",
+        lambda customer_id: transaction_risk_tool(customer_id, pool))
     llm = _SummarizingToolLLM([
         AIMessage(content="", tool_calls=[
             {"name": "get_products", "args": {}, "id": "c1"},
@@ -1453,6 +1457,12 @@ def test_a_confirmed_and_verified_complaint_is_handed_off_over_lakebase():
     assert result["handoff"]["reason"] == "complaint"
     assert result["handoff"]["facts"]["verified_data"]["merchant"] == "Internet Plus"
     assert pool.queries[1][1] == {"customer_id": "CLI-TEST", "product_last4": "4930"}
+    score = result["handoff"]["facts"]["fraud_assessment"]
+    assert score["score_status"] == "experimental_prediction"
+    assert 0 <= score["risk_score"] <= 1
+    assert score == result["fraud_assessment"]
+    assert score["automatic_decisions_enabled"] is False
+    assert pool.queries[-1][1] == {"customer_id": "CLI-TEST", "transaction_id": "TX-TEST"}
 
 
 def test_a_lakebase_timeout_ends_in_the_tool_failure_reply_with_no_handoff_and_no_figures():

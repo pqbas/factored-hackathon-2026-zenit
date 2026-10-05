@@ -20,6 +20,7 @@ dependencies = [
     "httpx",
     "pydantic",
     "pyyaml",
+    "catboost==1.2.8",
 ]
 
 [build-system]
