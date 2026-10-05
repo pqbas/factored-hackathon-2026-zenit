@@ -135,7 +135,9 @@ límite. Un banco con cientos de conversaciones simultáneas necesita:
 
 ## 5. Arquitectura objetivo e identidades
 
-El prototipo corre todo en Databricks Apps. En producción, las
+El prototipo corre el back, el front y el agente en AWS App Runner, con los
+datos y el LLM en Databricks
+([diagrama](arquitectura-aws-databricks.md)). En producción, las
 responsabilidades se separan según quién usa cada parte y con qué identidad:
 
 ```text
@@ -162,15 +164,12 @@ En el prototipo, el cliente se simula con sesiones demo dentro de la misma App
 
 ### Hoy
 
-Hay dos despliegues en paralelo, con los mismos datos (Lakebase) y el mismo
-LLM (Qwen):
+La app corre en AWS App Runner (us-west-2): un servicio para back + front y
+otro para el agente. Los datos (Lakebase) y el LLM (Qwen) siguen en
+Databricks. Las Apps de Databricks, el despliegue original, están detenidas
+para que todo corra en una sola nube.
 
-| Despliegue | Dónde | Para qué |
-| --- | --- | --- |
-| Databricks Apps | Workspace de Databricks | El original; queda como respaldo |
-| AWS App Runner (us-west-2) | Un servicio para back + front y otro para el agente | Demo y entorno de desarrollo |
-
-Por qué se sumó AWS:
+Por qué se pasó a AWS:
 
 - Las Apps de Databricks no tienen salida a internet con este plan, así que no
   pueden usar Jev (clasifica en 0.28 s) ni herramientas de trazas externas.
@@ -194,7 +193,8 @@ En producción se migraría a ECS Fargate, con la misma imagen de contenedor,
 porque App Runner no ofrece:
 
 - procesos de fondo: en reposo recorta la CPU, y la cola de turnos del back
-  necesita correr sola (hoy está encendida solo en Databricks);
+  necesita correr sola (hoy está encendida en App Runner y funciona con el
+  tráfico de la demo, pero sin pedidos puede atrasarse);
 - pedidos de más de 120 s o WebSockets;
 - contenedores acompañantes (seguridad, monitoreo);
 - deploys graduales (canary, blue/green controlado);
