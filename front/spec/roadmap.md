@@ -654,3 +654,13 @@ Shipped en PR #125. Los e2e (`login.test.ts`) quedaron escritos y sin correr: el
 Spec: `spec/01-10-26-indicador-espera/`.
 
 Shipped en PR #131.
+
+---
+
+## Phase 40: Credenciales demo en el login (In progress)
+
+**Goal:** que quien vea la demo en AWS entre sin pedir las contraseñas.
+
+- [ ] El login muestra una tabla con los usuarios demo y sus contraseñas, que el back lee de `DEMO_LOGINS_JSON` (secret opcional); clic en una fila llena el formulario.
+
+Spec: `spec/05-10-26-credenciales-demo/`.
