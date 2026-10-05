@@ -65,5 +65,3 @@ Phase 0/1 EDA notebook execution: [report](reports/2026-10-02/eda_report.md), [a
 ## Dispute integration contract
 
 The [dispute integration contract](spec/28-09-26-fraud-model/dispute_integration.md) defines a customer-reported charge review workflow using authorized lookup and the existing human-handoff interfaces. Predictive fraud scoring stays unavailable for decision use. The contract documents current source gaps and acceptance cases; it is not a deployed integration.
-
-A [local synthetic integration demo](../agent/LOCAL_DISPUTE_DEMO.md) now verifies fixture lookup, explicit review confirmation, the backend-compatible handoff envelope, advisor claim, and advisor reply without a database or remote model. It is a deterministic integration harness; the existing production apps still require wiring and held-out learned-component evaluation.

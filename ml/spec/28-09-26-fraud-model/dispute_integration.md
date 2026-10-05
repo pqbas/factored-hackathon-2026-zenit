@@ -1,6 +1,6 @@
 # Dispute integration with an unpromoted fraud model
 
-Status: production integration contract with a **tested local synthetic adapter**, 2026-10-04. The [local demo](../../../agent/LOCAL_DISPUTE_DEMO.md) connects fixture lookup, confirmation, handoff, and advisor reply using an in-memory adapter. The original agent/backend/frontend applications are not yet connected or deployed as this workflow.
+Status: proposed integration contract, 2026-10-04. This document defines implementation work; it does not deploy a service or establish that the complete flow currently works.
 
 ## Product behavior
 
@@ -114,7 +114,3 @@ Implementation sequence: confirm the deployed checkout and target; connect the c
 A fraud model can become an additional input only after demonstrating useful operating precision/recall, verifying label and feature timing, persisting an executable artifact, and passing a frozen final evaluation. Its rollout must define feature freshness, latency, score failure behavior, and monitoring. It never silently changes the meaning of current intake outcomes.
 
 References: [V6 result](../../reports/2026-10-04/training_v6_advanced_report.md), [V5 result](../../reports/2026-10-04/training_v5_catboost_report.md), [fraud-model requirements](requirements.md).
-
-## Local implementation evidence
-
-The offline adapter is implemented in `agent/src/local_dispute_demo.py`, with reusable intake policy in `agent/src/dispute_intake.py`. It uses the existing `policy_escalation` handoff reason and nested `facts.verified_data`, with predictive assessment explicitly unavailable for decision use. A separate customer/advisor harness is available at localhost port 8010. The [validation report](../../../agent/reports/2026-10-04/local_dispute_demo_report.md) records 133 selected-suite passes and successful Chrome workflows. This does not validate learned-component quality or change the production implementation gaps above.
