@@ -57,3 +57,10 @@ refreshed Lakebase mirror; this does not establish real-time payment capture.
 Git commits remain local on `feat/diego-ml-fraud-features`; no Git push or PR
 was performed. Authorized container images were published to ECR and deployed
 to the existing services. No source table, schema, grant or fixture was changed.
+
+## Subsequent persisted web verification
+
+After explicit user authorization, the complete customer-to-advisor browser
+workflow also passed, including persistence across reload. See [the end-to-end
+report](web_end_to_end_report.md). The controlled test case remains in the human
+queue; no source bank table was modified.

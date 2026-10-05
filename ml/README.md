@@ -76,3 +76,5 @@ The ML branch incorporates `main` through commit `20e0e98`. The standalone dispu
 
 The native prediction path is now deployed to the existing AWS agent and
 web/backend with image tag `00539622`. See [verified deployed predictions](reports/2026-10-05/aws_predictions_report.md).
+
+The [persisted web-to-advisor test](reports/2026-10-05/web_end_to_end_report.md) also passed: a customer submitted and confirmed a marked test complaint, and an advisor reopened its stored native prediction after a page reload.
