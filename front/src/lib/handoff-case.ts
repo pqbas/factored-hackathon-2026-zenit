@@ -17,6 +17,14 @@ export interface AgentHandoff {
   resolvedAt: string | null;
 }
 
+// No numeric score is shown while the experiment has no validated inference artifact.
+export function needsFraudReview(handoff: AgentHandoff): boolean {
+  const assessment = handoff.facts?.fraud_assessment;
+  return handoff.reason === 'complaint' && typeof assessment === 'object' && assessment !== null
+    && !Array.isArray(assessment)
+    && (assessment as Record<string, unknown>).review_required === true;
+}
+
 // The three reasons David hands a case to the inbox, in filter order
 // (docs/flujo-atencion.md). One name per reason, used everywhere: filters,
 // sections, header chip, handoff card, dividers.

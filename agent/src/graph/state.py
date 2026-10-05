@@ -15,3 +15,4 @@ class AgentState(TypedDict):
     confirmation: bool
     paused: bool
     guard: dict | None
+    fraud_assessment: dict | None

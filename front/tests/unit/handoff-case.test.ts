@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { type AgentHandoff, caseFields, handoffReasonLabel } from '@/lib/handoff-case';
+import { type AgentHandoff, caseFields, handoffReasonLabel, needsFraudReview } from '@/lib/handoff-case';
 
 const handoff = (verifiedData: Record<string, unknown> | null): AgentHandoff => ({
   reason: 'complaint',
@@ -22,6 +22,13 @@ describe('handoffReasonLabel', () => {
 });
 
 describe('caseFields', () => {
+  it('shows review only for a complaint with a structured assessment', () => {
+    const value = handoff({ merchant: 'Verified merchant' });
+    expect(needsFraudReview(value)).toBe(false);
+    expect(needsFraudReview({ ...value, facts: { fraud_assessment: { review_required: true, risk_score: null } } })).toBe(true);
+    expect(needsFraudReview({ ...value, reason: 'retention', facts: { fraud_assessment: { review_required: true } } })).toBe(false);
+    expect(needsFraudReview({ ...value, facts: { fraud_assessment: 'fake score' } })).toBe(false);
+  });
   it('shows a complaint charge as a record, values as they come', () => {
     const fields = caseFields(
       handoff({

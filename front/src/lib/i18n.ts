@@ -190,6 +190,7 @@ const es = {
     handoffTitle: `Caso derivado por ${ASSISTANT_NAME}`,
     handoffClosed: 'Cerrado',
     noVerifiedData: 'Sin datos verificados.',
+    fraudReview: 'Evaluación ML: sin score validado. Este reclamo requiere revisión humana.',
     customerData: 'Datos del cliente',
     caseLabels: {
       card_last4: 'Tarjeta',
@@ -588,6 +589,7 @@ const pt: Messages = {
     handoffTitle: `Caso transferido por ${ASSISTANT_NAME}`,
     handoffClosed: 'Fechado',
     noVerifiedData: 'Sem dados verificados.',
+    fraudReview: 'Avaliação ML: sem score validado. Esta reclamação requer revisão humana.',
     customerData: 'Dados do cliente',
     caseLabels: {
       card_last4: 'Cartão',

@@ -2,7 +2,7 @@ import { ChevronDown, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
 
 import { useLang } from '@/contexts/LangContext';
-import { type AgentHandoff, caseFields } from '@/lib/handoff-case';
+import { type AgentHandoff, caseFields, needsFraudReview } from '@/lib/handoff-case';
 import { cn } from '@/lib/utils';
 
 // The case David handed off: reason, summary and the data he verified against
@@ -48,6 +48,11 @@ export function HandoffCard({
       </button>
       {open && (
         <div className="flex flex-col gap-2.5 border-border border-t px-3.5 pt-2.5 pb-3">
+          {needsFraudReview(handoff) && (
+            <p data-testid="fraud-review-notice" className="text-muted-foreground text-xs">
+              {t.console.fraudReview}
+            </p>
+          )}
           {handoff.summary && (
             <p data-testid="handoff-summary" className="whitespace-pre-wrap break-words text-[13px] leading-relaxed">
               {handoff.summary}
