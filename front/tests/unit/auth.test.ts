@@ -1,6 +1,17 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-import { authModeOf, isSessionExpired, loginErrorOf } from '@/lib/auth';
+import { authModeOf, isSessionExpired, loginErrorOf, fetchDemoLogins } from '@/lib/auth';
+
+it('preserves optional deployed demo choices and handles unavailable/malformed configuration', async () => {
+  try {
+    vi.stubGlobal('fetch',vi.fn().mockResolvedValue(new Response(JSON.stringify({logins:[{username:'fixture',password:'fixture-only'}]}))));
+    expect(await fetchDemoLogins()).toEqual([{username:'fixture',password:'fixture-only'}]);
+    vi.stubGlobal('fetch',vi.fn().mockResolvedValue(new Response(JSON.stringify({logins:[{username:1,password:'fixture-only'}]}))));
+    expect(await fetchDemoLogins()).toEqual([]);
+    vi.stubGlobal('fetch',vi.fn().mockRejectedValue(new Error('Fixture network failure')));
+    expect(await fetchDemoLogins()).toEqual([]);
+  } finally { vi.unstubAllGlobals(); }
+});
 
 describe('authModeOf', () => {
   it('is password only when the back says so', () => {

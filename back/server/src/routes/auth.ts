@@ -12,6 +12,7 @@ import {
   createAttemptLimiter,
   findDemoUser,
   getAuthMode,
+  parseDemoLogins,
   sessionCookie,
   signSession,
 } from '../demo-auth';
@@ -85,4 +86,8 @@ authRouter.post('/logout', passwordModeOnly, (_req: Request, res: Response) => {
   const secure = 'config' in demo ? demo.config.secureCookie : true;
   res.setHeader('Set-Cookie', sessionCookie('', secure, 0));
   res.status(204).end();
+});
+
+authRouter.get('/demo-logins', passwordModeOnly, (_req: Request, res: Response) => {
+  res.json({ logins: parseDemoLogins(process.env.DEMO_LOGINS_JSON) });
 });

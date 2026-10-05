@@ -57,6 +57,16 @@ export function parseDemoUsers(raw: string | undefined): DemoUser[] {
   return result.data;
 }
 
+// Optional public demo choices already present in the deployed login screen.
+const demoLoginsSchema = z.array(z.object({ username: z.string().min(1), password: z.string().min(1) }));
+export function parseDemoLogins(raw: string | undefined) {
+  if (!raw) return [];
+  try {
+    const result = demoLoginsSchema.safeParse(JSON.parse(raw));
+    return result.success ? result.data : [];
+  } catch { return []; }
+}
+
 // The secret that signs the cookies; at least 32 characters.
 export function requireSessionSecret(raw: string | undefined): string {
   if (!raw || raw.length < 32) {

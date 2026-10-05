@@ -67,6 +67,14 @@ test('requires a session and an admin role on the API', async () => {
       (await fetch(url(), { headers: { cookie: await cookie(role) } })).status,
     ).toBe(403);
 });
+test('preserves the deployed public demo choices without exposing configured user hashes', async () => {
+  process.env.DEMO_LOGINS_JSON=JSON.stringify([{username:'fixture',password:'fixture-only'}]);
+  const res=await fetch(`${base}/api/demo-logins`);
+  expect(res.status).toBe(200);expect(await res.json()).toEqual({logins:[{username:'fixture',password:'fixture-only'}]});
+  process.env.DEMO_LOGINS_JSON='not json';
+  expect(await (await fetch(`${base}/api/demo-logins`)).json()).toEqual({logins:[]});
+  delete process.env.DEMO_LOGINS_JSON;
+});
 test('retention is admin-only and returns a cache state without waiting for compute', async () => {
   const path=`${base}/api/advisor/retention-dashboard`;
   expect((await fetch(path)).status).toBe(401);

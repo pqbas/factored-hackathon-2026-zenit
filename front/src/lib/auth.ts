@@ -47,6 +47,19 @@ export async function logout(): Promise<void> {
   await fetch('/api/logout', { method: 'POST', credentials: 'include' });
 }
 
+export type DemoLogin = { username: string; password: string };
+export async function fetchDemoLogins(): Promise<DemoLogin[]> {
+  try {
+    const response = await fetch('/api/demo-logins', { credentials: 'include' });
+    if (!response.ok) return [];
+    const body = await response.json();
+    return Array.isArray(body?.logins) && body.logins.every((row: unknown) => {
+      const value = row as Partial<DemoLogin> | null;
+      return typeof value?.username === 'string' && typeof value?.password === 'string';
+    }) ? body.logins : [];
+  } catch { return []; }
+}
+
 // The session expired: an /api/* call answered 401 with exactly this code.
 // The demo customer's 401s (code 'unauthorized:chat', an invalid or expired
 // customer token) are a different thing and don't end the session.
@@ -69,7 +82,7 @@ function pathOf(input: RequestInfo | URL): string {
   }
 }
 
-const SKIP = new Set(['/api/session', '/api/login', '/api/logout']);
+const SKIP = new Set(['/api/session', '/api/login', '/api/logout', '/api/demo-logins']);
 
 // Wraps window.fetch once, so no /api/* call can miss an expired session.
 // Returns the function that removes the wrapper.
