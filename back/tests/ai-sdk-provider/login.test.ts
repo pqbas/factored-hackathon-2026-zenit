@@ -163,4 +163,24 @@ test.describe('login (password mode)', () => {
     const empty = await fetch(`${base}/api/login`, { method: 'POST' });
     expect(empty.status).toBe(401);
   });
+
+  test('the demo logins are public, and empty without the variable', async () => {
+    const rows = [{ username: 'cliente', password: 'pw-cliente' }];
+    process.env.DEMO_LOGINS_JSON = JSON.stringify(rows);
+    try {
+      const listed = await fetch(`${base}/api/demo-logins`);
+      expect(listed.status).toBe(200);
+      expect(await listed.json()).toEqual({ logins: rows });
+
+      delete process.env.DEMO_LOGINS_JSON;
+      const none = await fetch(`${base}/api/demo-logins`);
+      expect(await none.json()).toEqual({ logins: [] });
+
+      process.env.DEMO_LOGINS_JSON = 'broken';
+      const broken = await fetch(`${base}/api/demo-logins`);
+      expect(await broken.json()).toEqual({ logins: [] });
+    } finally {
+      delete process.env.DEMO_LOGINS_JSON;
+    }
+  });
 });

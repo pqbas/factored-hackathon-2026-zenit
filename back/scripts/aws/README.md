@@ -29,7 +29,7 @@ All of them are tagged `project=bank-assistant`.
 | ECR repository | `bank-assistant-back` |
 | IAM role, pulls the image | `bank-assistant-apprunner-ecr-access` |
 | IAM role, reads the secrets | `bank-assistant-back-instance` |
-| Secrets Manager | `bank-assistant/databricks-sp` (the principal, created apart), `bank-assistant/back/session-secret`, `bank-assistant/back/demo-users` |
+| Secrets Manager | `bank-assistant/databricks-sp` (the principal, created apart), `bank-assistant/back/session-secret`, `bank-assistant/back/demo-users`, optional `bank-assistant/back/demo-logins` |
 | App Runner service | `bank-assistant-back` (1 vCPU, 2 GB, health check `/ping`) |
 
 ## First time
@@ -41,6 +41,9 @@ scripts/aws/deploy.sh --push         # build and push the commit's image
 # One hash per demo user (admin, asesor, cliente):
 printf '%s' "$PASSWORD" | node scripts/aws/hash-password.mjs
 export DEMO_USERS_JSON='[{"username":"admin","email":"...","name":"...","passwordHash":"..."}]'
+# Optional, demo only: the credentials the login screen lists, as
+# [{"username":"admin","password":"..."}]. Without it there is no table.
+export DEMO_LOGINS_JSON='[...]'
 scripts/aws/setup.sh secrets
 
 export IMAGE_TAG=<tag printed by deploy.sh --push>
@@ -48,6 +51,10 @@ export PGHOST=... API_PROXY=...
 export ADMIN_EMAILS=... ADVISOR_EMAILS=... DEMO_CUSTOMERS_JSON=...
 scripts/aws/setup.sh service
 ```
+
+`demo-logins` feeds `GET /api/demo-logins`, which is public: define it only
+for a demo. Removing the secret from the service (or never creating it) hides
+the table.
 
 Secrets are typed into the shell or read from a password manager. They never
 go into a file of the repo or into the image.

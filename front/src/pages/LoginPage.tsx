@@ -1,11 +1,11 @@
-import { type FormEvent, useState } from 'react';
+import { type FormEvent, useEffect, useState } from 'react';
 
 import { BrandMark } from '@/components/brand-mark';
 import { LangToggle } from '@/components/lang-toggle';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { useLang } from '@/contexts/LangContext';
 import { useSession } from '@/contexts/SessionContext';
-import { LoginError, type LoginErrorKind } from '@/lib/auth';
+import { type DemoLogin, LoginError, type LoginErrorKind, fetchDemoLogins } from '@/lib/auth';
 
 // The demo login (password mode, outside Databricks Apps). The session is the
 // HttpOnly cookie the back sets: nothing is stored here.
@@ -16,6 +16,21 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<LoginErrorKind | null>(null);
+  const [demoLogins, setDemoLogins] = useState<DemoLogin[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    fetchDemoLogins().then((rows) => active && setDemoLogins(rows));
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  function pick(row: DemoLogin) {
+    setUsername(row.username);
+    setPassword(row.password);
+    setError(null);
+  }
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -36,7 +51,7 @@ export default function LoginPage() {
     'h-10 w-full rounded-lg bg-secondary px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/40';
 
   return (
-    <main className="relative flex min-h-dvh items-center justify-center bg-background px-4">
+    <main className="relative flex min-h-dvh flex-col items-center justify-center gap-4 bg-background px-4 py-8">
       <div className="absolute top-3 right-3">
         <TooltipProvider delayDuration={0}>
           <LangToggle />
@@ -97,6 +112,37 @@ export default function LoginPage() {
           {sending ? t.auth.submitting : t.auth.submit}
         </button>
       </form>
+      {demoLogins.length > 0 && (
+        <section data-testid="demo-logins" className="flex w-full max-w-sm flex-col gap-2 rounded-2xl bg-card px-6 py-5">
+          <h2 className="font-medium text-sm">{t.auth.demoTitle}</h2>
+          <table className="w-full text-left text-sm">
+            <thead className="text-muted-foreground">
+              <tr>
+                <th className="py-1 font-medium">{t.auth.username}</th>
+                <th className="py-1 font-medium">{t.auth.password}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {demoLogins.map((row) => (
+                <tr
+                  key={row.username}
+                  data-testid={`demo-login-${row.username}`}
+                  tabIndex={0}
+                  onClick={() => pick(row)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') pick(row);
+                  }}
+                  className="cursor-pointer rounded hover:bg-secondary focus:bg-secondary focus:outline-none"
+                >
+                  <td className="py-1.5 pr-2">{row.username}</td>
+                  <td className="py-1.5 font-mono">{row.password}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="text-muted-foreground text-xs">{t.auth.demoHint}</p>
+        </section>
+      )}
     </main>
   );
 }
