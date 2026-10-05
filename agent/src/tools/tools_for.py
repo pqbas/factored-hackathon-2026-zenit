@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from langchain_core.tools import BaseTool
 
+from src.config import settings
 from src.tools.bank_sql import bank_tools
 from src.tools.lakebase import LazyLakebasePool
 
@@ -9,9 +10,17 @@ _lakebase_tools: list[BaseTool] | None = None
 
 
 async def tools_for(schema: str) -> list[BaseTool]:
-    # Lakebase only: the managed MCP path (UC functions on serverless) is off for good, so a
-    # Lakebase failure ends in the tool-failure reply, never in MCP.
+    # Lakebase is the default. The warehouse path is an explicit local setting;
+    # there is no automatic MCP fallback after a read failure.
     global _lakebase_tools
     if _lakebase_tools is None:
-        _lakebase_tools = bank_tools(LazyLakebasePool())
+        if settings.bank_read_source == "databricks":
+            from src.tools.databricks_bank import DatabricksBankPool
+
+            pool = DatabricksBankPool()
+        elif settings.bank_read_source == "lakebase":
+            pool = LazyLakebasePool()
+        else:
+            raise ValueError("BANK_READ_SOURCE must be lakebase or databricks")
+        _lakebase_tools = bank_tools(pool)
     return _lakebase_tools

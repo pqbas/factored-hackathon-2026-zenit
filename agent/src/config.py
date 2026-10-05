@@ -23,6 +23,8 @@ class Settings:
     bank_ro_schema: str
     sim_sessions_table: str
     agent_token: str | None
+    bank_read_source: str
+    bank_sql_warehouse_id: str
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -49,6 +51,8 @@ class Settings:
             sim_sessions_table=os.getenv("SIM_SESSIONS_TABLE", "bank_sessions.sim_sessions"),
             # The shared token callers must send in x-agent-token (AWS); unset, there is no check.
             agent_token=os.getenv("AGENT_TOKEN") or None,
+            bank_read_source=os.getenv("BANK_READ_SOURCE", "lakebase"),
+            bank_sql_warehouse_id=os.getenv("BANK_SQL_WAREHOUSE_ID", "07ca55766c9c5097"),
         )
 
 

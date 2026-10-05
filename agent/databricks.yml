@@ -14,6 +14,9 @@ resources:
       source_code_path: ./
 
       # Resources which this app has access to
+      # get_fraud_assessment reads local aggregate reports only: no new UC resource.
+      # BANK_READ_SOURCE=databricks is local opt-in and requires the developer's
+      # existing SELECT grants on bank_gold. This change does not deploy or grant access.
       resources:
         - name: 'experiment'
           experiment:
