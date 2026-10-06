@@ -211,9 +211,12 @@ porque App Runner no ofrece:
   variable (`API_PROXY`) al crearse. En producción, el back lee esa URL en
   runtime (por ejemplo, de un parámetro de SSM que escribe el stack) y los dos
   servicios se crean y actualizan a la vez.
-- **Login.** El de AWS es de demo (tres usuarios fijos). En producción, SSO
-  corporativo para la consola y la identidad del banco para los clientes
-  (§5).
+- **Login.** El de AWS es de demo: tres usuarios fijos con contraseña, que
+  además se muestran en la pantalla de login. En producción, SSO corporativo
+  para la consola y la identidad del banco para los clientes (§5), siempre con
+  segundo factor por app autenticadora (TOTP, como Google o Microsoft
+  Authenticator) en vez de depender solo de una contraseña. Las credenciales
+  de la demo se quitan (secret `demo-logins`).
 - **Front con CloudFront.** Hoy lo sirve el back. En producción, S3 +
   CloudFront: ver la sección siguiente.
 - **Cuenta de AWS.** Los recursos se crearon con la cuenta raíz. En
