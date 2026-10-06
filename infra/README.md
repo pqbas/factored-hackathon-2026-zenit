@@ -1,10 +1,17 @@
 # Zenit on AWS with CDK
 
-The AWS deployment of Zenit as code (AWS CDK, TypeScript), with CloudFront in
-front: the UI comes from S3 and `/api/*` goes to the back on App Runner. It
-runs next to the deployment made with the bash scripts (`bank-assistant-back`,
-`bank-assistant-agent`), which it doesn't touch. Spec:
-`spec/05-10-26-cdk-cloudfront/`.
+The AWS deployment of Zenit as code (AWS CDK, TypeScript). It replaced the
+bash scripts (`back/scripts/aws/`, `agent/scripts/aws/`): their services
+`bank-assistant-back` and `bank-assistant-agent` were deleted on 2026-10-05.
+Spec: `spec/05-10-26-cdk-cloudfront/`.
+
+**CloudFront is off today, and production should have it on.** The stack
+can put CloudFront in front (the UI from S3, `/api/*` to the back), but this
+AWS account isn't verified for CloudFront: creating the distribution fails
+with "Your account must be verified before you can add new CloudFront
+resources" (Request ID `77d57753-96d7-4883-b1dc-e2e6ad737cc3`). Until AWS
+Support verifies the account, the back serves the UI, as the bash setup did.
+Why and how to turn it on: [`docs/camino-a-produccion.md`](../docs/camino-a-produccion.md) §6.
 
 ## What it creates
 
@@ -16,8 +23,8 @@ Stack `ZenitStack` (account 335741630127, us-west-2), every resource tagged
 | IAM role, pulls the images | `zenit-apprunner-ecr-access` |
 | IAM roles, read the secrets | `zenit-back-instance`, `zenit-agent-instance` (only their own ARNs) |
 | App Runner services | `zenit-back` (`/ping`), `zenit-agent` (`/health`), 1 vCPU and 2 GB each |
-| S3 bucket | the built front, private, read only by CloudFront |
-| CloudFront | default → S3 (app routes → `index.html`); `/api/*` and `/ping` → `zenit-back`, no cache |
+| S3 bucket (only with `-c cloudfront=on`) | the built front, private, read only by CloudFront |
+| CloudFront (only with `-c cloudfront=on`) | default → S3 (app routes → `index.html`); `/api/*` and `/ping` → `zenit-back`, no cache |
 
 It reuses, and never changes:
 
@@ -43,7 +50,11 @@ BACK_TAG=<tag> AGENT_TAG=<tag> scripts/deploy.sh
 ```
 
 The script builds the front of the current checkout and runs `cdk deploy`.
-The URLs are in `cdk.out/outputs.json` (`Url` is CloudFront's).
+The URLs are in `cdk.out/outputs.json`: `Url` is the app's (the back's
+without CloudFront, CloudFront's with it).
+
+With CloudFront, once the account is verified: add `-c cloudfront=on` to the
+`cdk deploy` line of `scripts/deploy.sh`, or run it by hand.
 
 ## After a deploy
 
@@ -56,9 +67,8 @@ The URLs are in `cdk.out/outputs.json` (`Url` is CloudFront's).
 
 - The `/api/*` origin times out after 60 s without bytes, the maximum
   without a quota increase. The chat stream starts sending right away.
-- Both backs run the turn queue on the same Lakebase. Claims are safe
-  (`FOR UPDATE SKIP LOCKED`), but the stream cache is per back, so use one
-  URL at a time while both exist.
+- The account allows only 2 App Runner services per region, so there is no
+  room for a second deployment next to this one.
 - Cost with demo traffic: CloudFront ≈ USD 0 (free tier), S3 cents, the two
   App Runner services ≈ USD 1 per day.
 

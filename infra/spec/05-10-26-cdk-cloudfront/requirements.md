@@ -37,6 +37,8 @@ And it changes in these ways:
 - Costo con tráfico de demo: CloudFront ≈ USD 0 (capa gratuita: 1 TB y 10 M de requests al mes), S3 centavos, y los dos App Runner nuevos ≈ USD 1 por día mientras convivan con los actuales.
 - Dominio propio y certificado quedan fuera; se usa el dominio `*.cloudfront.net`.
 
+- Cambio del 05/10/2026: CloudFront queda opcional (`-c cloudfront=on`) y apagado, porque la cuenta de AWS no está verificada para CloudFront y además tiene un tope de 2 App Runner por región. No hubo despliegue en paralelo: se borraron `bank-assistant-*` y el stack los reemplaza. En producción CloudFront va encendido (`docs/camino-a-produccion.md` §6).
+
 ## 3. Context
 
 - `back/scripts/aws/common.sh`, `setup.sh`, `deploy.sh`, `README.md`: recursos, variables y secrets del back.
