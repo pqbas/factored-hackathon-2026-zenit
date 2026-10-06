@@ -88,6 +88,10 @@ authRouter.post('/logout', passwordModeOnly, (_req: Request, res: Response) => {
   res.status(204).end();
 });
 
+/**
+ * GET /api/demo-logins - The credentials the login screen lists, from the
+ * optional DEMO_LOGINS_JSON. Public (nobody has a session yet): demo only.
+ */
 authRouter.get('/demo-logins', passwordModeOnly, (_req: Request, res: Response) => {
   res.json({ logins: parseDemoLogins(process.env.DEMO_LOGINS_JSON) });
 });

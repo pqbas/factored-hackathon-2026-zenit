@@ -57,14 +57,23 @@ export function parseDemoUsers(raw: string | undefined): DemoUser[] {
   return result.data;
 }
 
-// Optional public demo choices already present in the deployed login screen.
-const demoLoginsSchema = z.array(z.object({ username: z.string().min(1), password: z.string().min(1) }));
-export function parseDemoLogins(raw: string | undefined) {
+const demoLoginsSchema = z.array(
+  z.object({ username: z.string().min(1), password: z.string().min(1) }),
+);
+
+export type DemoLogin = z.infer<typeof demoLoginsSchema>[number];
+
+// The credentials the login screen shows (DEMO_LOGINS_JSON, optional and
+// demo-only). Unlike parseDemoUsers it never throws: a missing or broken
+// value just means no table.
+export function parseDemoLogins(raw: string | undefined): DemoLogin[] {
   if (!raw) return [];
   try {
     const result = demoLoginsSchema.safeParse(JSON.parse(raw));
     return result.success ? result.data : [];
-  } catch { return []; }
+  } catch {
+    return [];
+  }
 }
 
 // The secret that signs the cookies; at least 32 characters.

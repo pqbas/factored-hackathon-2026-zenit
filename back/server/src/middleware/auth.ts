@@ -75,8 +75,13 @@ export async function authMiddleware(
 }
 
 // In password mode every /api/* route needs a session, except the ones that
-// create, read or end it. Mounted before the routers; a no-op on Databricks.
-const OPEN_API_PATHS = new Set(['/api/session', '/api/login', '/api/logout', '/api/demo-logins']);
+// create, read or end it, and the demo credentials the login lists. Mounted before the routers; a no-op on Databricks.
+const OPEN_API_PATHS = new Set([
+  '/api/session',
+  '/api/login',
+  '/api/logout',
+  '/api/demo-logins',
+]);
 export function requireSessionInPasswordMode(
   req: Request,
   res: Response,

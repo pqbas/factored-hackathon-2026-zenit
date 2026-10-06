@@ -43,21 +43,29 @@ export async function login(username: string, password: string): Promise<ClientS
   return res.json();
 }
 
-export async function logout(): Promise<void> {
-  await fetch('/api/logout', { method: 'POST', credentials: 'include' });
-}
-
 export type DemoLogin = { username: string; password: string };
+
+// The credentials the back lists for the demo (GET /api/demo-logins). Any
+// failure is no table, never an error on the login screen.
 export async function fetchDemoLogins(): Promise<DemoLogin[]> {
   try {
-    const response = await fetch('/api/demo-logins', { credentials: 'include' });
-    if (!response.ok) return [];
-    const body = await response.json();
-    return Array.isArray(body?.logins) && body.logins.every((row: unknown) => {
-      const value = row as Partial<DemoLogin> | null;
-      return typeof value?.username === 'string' && typeof value?.password === 'string';
-    }) ? body.logins : [];
-  } catch { return []; }
+    const res = await fetch('/api/demo-logins', { credentials: 'include' });
+    if (!res.ok) return [];
+    const body = await res.json();
+    if (!Array.isArray(body?.logins)) return [];
+    return body.logins.every(
+      (row: unknown) =>
+        typeof (row as DemoLogin)?.username === 'string' && typeof (row as DemoLogin)?.password === 'string',
+    )
+      ? body.logins
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function logout(): Promise<void> {
+  await fetch('/api/logout', { method: 'POST', credentials: 'include' });
 }
 
 // The session expired: an /api/* call answered 401 with exactly this code.

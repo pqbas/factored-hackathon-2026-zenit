@@ -11,6 +11,10 @@ const USERS: Record<string, { password: string; role: string; email: string }> =
   cliente: { password: 'pw-cliente', role: 'customer', email: 'cliente@banco.test' },
 };
 
+async function mockDemoLogins(page: Page, logins: { username: string; password: string }[]) {
+  await page.route('**/api/demo-logins', (route) => route.fulfill({ json: { logins } }));
+}
+
 async function mockPasswordAuth(page: Page) {
   const state: { user: { email: string; name: string; role: string } | null; expired: boolean } = {
     user: null,
@@ -89,6 +93,35 @@ test.describe('Demo login', () => {
     await page.getByTestId('nav-agent').click();
     await page.getByTestId('nav-products').click();
     await expect(page.getByTestId('login-form')).toBeVisible();
+  });
+
+  test('the demo logins table fills the form with a click', async ({ page }) => {
+    await mockPasswordAuth(page);
+    await mockDemoLogins(page, [
+      { username: 'admin', password: 'pw-admin' },
+      { username: 'cliente', password: 'pw-cliente' },
+    ]);
+    await page.goto('/');
+    await expect(page.getByTestId('demo-logins')).toBeVisible();
+    await expect(page.getByTestId('demo-login-admin')).toContainText('pw-admin');
+
+    await page.getByTestId('demo-login-cliente').click();
+    await expect(page.getByTestId('login-username')).toHaveValue('cliente');
+    await expect(page.getByTestId('login-password')).toHaveValue('pw-cliente');
+    // Picking a row doesn't sign in.
+    await expect(page.getByTestId('login-form')).toBeVisible();
+
+    await page.getByTestId('login-submit').click();
+    await expect(page.getByTestId('login-form')).toHaveCount(0);
+    await expect(page.getByTestId('nav-products')).toBeVisible();
+  });
+
+  test('without demo logins there is no table', async ({ page }) => {
+    await mockPasswordAuth(page);
+    await mockDemoLogins(page, []);
+    await page.goto('/');
+    await expect(page.getByTestId('login-form')).toBeVisible();
+    await expect(page.getByTestId('demo-logins')).toHaveCount(0);
   });
 
   test('the login is in Portuguese too', async ({ page }) => {

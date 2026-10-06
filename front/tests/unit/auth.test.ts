@@ -1,17 +1,6 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { authModeOf, isSessionExpired, loginErrorOf, fetchDemoLogins } from '@/lib/auth';
-
-it('preserves optional deployed demo choices and handles unavailable/malformed configuration', async () => {
-  try {
-    vi.stubGlobal('fetch',vi.fn().mockResolvedValue(new Response(JSON.stringify({logins:[{username:'fixture',password:'fixture-only'}]}))));
-    expect(await fetchDemoLogins()).toEqual([{username:'fixture',password:'fixture-only'}]);
-    vi.stubGlobal('fetch',vi.fn().mockResolvedValue(new Response(JSON.stringify({logins:[{username:1,password:'fixture-only'}]}))));
-    expect(await fetchDemoLogins()).toEqual([]);
-    vi.stubGlobal('fetch',vi.fn().mockRejectedValue(new Error('Fixture network failure')));
-    expect(await fetchDemoLogins()).toEqual([]);
-  } finally { vi.unstubAllGlobals(); }
-});
+import { authModeOf, fetchDemoLogins, isSessionExpired, loginErrorOf } from '@/lib/auth';
 
 describe('authModeOf', () => {
   it('is password only when the back says so', () => {
@@ -47,5 +36,30 @@ describe('isSessionExpired', () => {
     const response = res(401, { code: 'unauthorized' });
     await isSessionExpired(response);
     expect(await response.json()).toEqual({ code: 'unauthorized' });
+  });
+});
+
+describe('fetchDemoLogins', () => {
+  const stub = (impl: () => Promise<Response>) => vi.stubGlobal('fetch', vi.fn(impl));
+  const json = (status: number, body: unknown) => () =>
+    Promise.resolve(new Response(JSON.stringify(body), { status }));
+
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('returns the rows the back sends', async () => {
+    const logins = [{ username: 'admin', password: 'pw-admin' }];
+    stub(json(200, { logins }));
+    expect(await fetchDemoLogins()).toEqual(logins);
+  });
+
+  it('is empty on a 404, a network error and an unexpected shape', async () => {
+    stub(json(404, {}));
+    expect(await fetchDemoLogins()).toEqual([]);
+    stub(() => Promise.reject(new TypeError('network')));
+    expect(await fetchDemoLogins()).toEqual([]);
+    stub(json(200, { logins: 'nope' }));
+    expect(await fetchDemoLogins()).toEqual([]);
+    stub(json(200, { logins: [{ username: 'admin' }] }));
+    expect(await fetchDemoLogins()).toEqual([]);
   });
 });
