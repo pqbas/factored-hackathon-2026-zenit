@@ -82,6 +82,8 @@ First-time setup (ECR, IAM roles, secrets, services):
 
 ## Docs
 
+- [Evaluation criteria](docs/evaluation-criteria.md): evidence for each
+  judging dimension.
 - [Architecture on AWS + Databricks](docs/arquitectura-aws-databricks.md):
   flow, services and decisions.
 - [Attention flow](docs/flujo-atencion.md): conversation stages and handoff to
