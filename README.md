@@ -52,8 +52,9 @@ cd back && npm install && npm run build && npm run start   # → :3000
 ## Deployment
 
 The back (with the front built in) and the agent run on AWS App Runner
-(us-west-2). Chats and bank data stay in Lakebase, and the LLM runs on
-Databricks Model Serving.
+(us-west-2) as two services, `zenit-back`
+(https://dmm3yembnz.us-west-2.awsapprunner.com) and `zenit-agent`. Chats and
+bank data stay in Lakebase, and the LLM runs on Databricks Model Serving.
 
 ### Data (once, or after new files)
 
@@ -70,15 +71,19 @@ The gold and silver tables are copied to Lakebase with the scripts in
 
 ### Back and agent on AWS
 
-Requirements: an AWS session, Docker, `jq`, `openssl`.
+The stack is defined with AWS CDK in `infra/`. Requirements: an AWS session,
+Node 20+, and Docker only to push new images.
 
 ```bash
-cd back && scripts/aws/deploy.sh    # build, push and roll out the back
-cd agent && scripts/aws/deploy.sh   # build, push and roll out the agent
+cd infra && npm ci
+BACK_TAG=<tag> AGENT_TAG=<tag> scripts/deploy.sh   # builds the front and runs cdk deploy
 ```
 
-First-time setup (ECR, IAM roles, secrets, services):
-[back](back/scripts/aws/README.md) and [agent](agent/scripts/aws/README.md).
+The tags are the images the current services run, or new ones pushed with
+`back/scripts/aws/deploy.sh --push` and `agent/scripts/aws/deploy.sh --push`.
+CDK replaced the bash deploy scripts and their services
+(`bank-assistant-back`, `bank-assistant-agent`, deleted 2026-10-05). Bootstrap, outputs and checks
+after a deploy: [infra/README.md](infra/README.md).
 
 ## Docs
 

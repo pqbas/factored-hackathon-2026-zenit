@@ -1,10 +1,14 @@
 # Admin fraud intelligence dashboard
 
 The `/fraud` section brings reviewed dataset evidence, persisted complaint
-prediction coverage, and honest model evaluation into the existing Zenit admin
-interface. The navigation entry and route are admin-only. The backend separately
-enforces authentication and the admin role; hiding the navigation is not the
-security boundary.
+prediction coverage, and retrospective model evaluation into the existing Zenit
+admin interface. Administrators open it from the shield icon in the left
+navigation or at
+[the published fraud dashboard](https://dmm3yembnz.us-west-2.awsapprunner.com/fraud).
+
+The navigation entry and route are admin-only. The backend separately enforces
+authentication and the admin role; hiding the navigation is not the security
+boundary.
 
 ## What the administrator can inspect
 
@@ -85,13 +89,15 @@ python ml/build_fraud_dashboard.py
 
 The backend bundles this small JSON into its existing server build. The frontend
 receives it through the protected API; it is not imported into the production
-browser bundle. The existing App Runner backend image already packages both the
-frontend and backend, so no separate dashboard service is needed.
+browser bundle. The `zenit-back` App Runner image (deployed with AWS CDK from
+`infra/`) already packages both the frontend and backend, so no separate
+dashboard service is needed.
 
 `GET /api/advisor/fraud-dashboard?from=YYYY-MM-DD&to=YYYY-MM-DD&tz=America/Lima`
 returns the cached overview with historical model/audit evidence, source status,
-operational aggregates, selected window and response timestamp with `Cache-Control: no-store`. No identifiers, case facts,
-customer names, raw transaction records or credentials are returned.
+operational aggregates, selected window and response timestamp with
+`Cache-Control: no-store`. It returns no identifiers, case facts, customer names,
+raw transaction records or credentials.
 
 ## Validation
 
@@ -126,10 +132,8 @@ step. The model binary, inference code and existing customer/advisor workflows
 are unchanged. No source data or schema was modified; narrowly scoped Databricks
 read privileges were added to the existing backend identity.
 
-Administrators can use the shield icon in the left navigation or open
-[the published fraud dashboard](https://wzmpasrvja.us-west-2.awsapprunner.com/fraud).
-Actual service OAuth reads, complaint aggregates and protected admin APIs passed
-live verification. Published browser checks exercised all views and five viewport
+In that deployment, actual service OAuth reads, complaint aggregates and
+protected admin APIs passed live verification. Published browser checks exercised all views and five viewport
 widths with no JavaScript errors; customer/advisor APIs returned 403. See the
 [deployment evidence](../ml/reports/2026-10-05/aws_admin_analytics_report.md) for
 permissions, query IDs and warm HTTP timings.

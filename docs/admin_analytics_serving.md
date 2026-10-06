@@ -30,8 +30,9 @@ flowchart LR
 
 Refreshes are demand-driven, not scheduled jobs. Concurrent readers share the
 same in-flight refresh. Browser API calls have a 15-second timeout; a failed
-HTTP refresh keeps an already-loaded dashboard visible with a warning. Browser polling is 2.5 seconds during refresh and 60
-seconds otherwise; polling does not itself cause a new scan within the TTL.
+HTTP refresh keeps an already-loaded dashboard visible with a warning. Browser
+polling is 2.5 seconds during refresh and 60 seconds otherwise; polling does not
+itself cause a new scan within the TTL.
 Country, priority and chart filters use the cached response locally. Changing
 the operational date range uses its own bounded application-database cache.
 
@@ -74,7 +75,7 @@ operations continue to read the existing application database.
 
 ## Deployment and scaling boundary
 
-The cache is shared by users **within one backend process**. It is not a durable,
+The cache is shared by users within one backend process. It is not a durable,
 distributed cache: restarts produce a cold cache, and additional replicas have
 independent caches. This implementation does not claim a global query limit
 across multiple App Runner replicas. A distributed cache or reviewed persisted

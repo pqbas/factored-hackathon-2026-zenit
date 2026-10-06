@@ -41,8 +41,8 @@ Por qué se eligieron estos flujos:
 - **Retención (3%):** llamadas de 8 min con 60.5% de resolución. David
   recolecta producto y motivo y deriva; la retención la hace el asesor.
 
-**Proyección, no medición.** David atiende por chat, no por voz. Las 10,306
-horas de llamadas transaccionales son el techo de lo que se podría desviar del
+David atiende por chat, no por voz. Las 10,306 horas de llamadas
+transaccionales son una proyección: el techo de lo que se podría desviar del
 teléfono al chat si esos clientes usaran el canal digital. No es un ahorro
 medido: depende de la adopción del canal, que este prototipo no mide. La voz
 queda como trabajo futuro ([`camino-a-produccion.md`](camino-a-produccion.md)).
@@ -55,7 +55,7 @@ queda como trabajo futuro ([`camino-a-produccion.md`](camino-a-produccion.md)).
   - **Práctica (dev), 40 casos:** con ellos se corrigió al agente, así que su
     "después" puede estar sobreajustado.
   - **Examen (holdout), 20 casos:** escritos y congelados aparte; el equipo
-    del agente nunca los vio. **Es la medición sin leakage.**
+    del agente nunca los vio. Es la medición sin leakage.
 - **Clientes reales del dataset:** 13 clientes; cada tarjeta, cargo, monto y
   reclamo que nombra un caso existe para ese cliente. Lo único inventado es a
   propósito: un cargo inexistente (dato erróneo), un CVV y una contraseña (dato
@@ -124,7 +124,8 @@ el CVV y la contraseña sin enmascarar).
 
 ## 5. Clasificador de intención (componente aprendido vs. baseline)
 
-39 mensajes etiquetados de los casos de práctica × 3 repeticiones, solo el primer mensaje, sin el holdout.
+39 mensajes etiquetados de los casos de práctica × 3 repeticiones, solo el
+primer mensaje, sin el holdout.
 
 | Clasificador | Exactitud | p50 | p95 | Nota |
 | --- | --- | --- | --- | --- |
@@ -136,9 +137,10 @@ el CVV y la contraseña sin enmascarar).
 | Gemma 3 12B | 0% | — | — | No devuelve la salida estructurada |
 | **Qwen 3 Next 80B (prod)** | **94.9%** | 2.72 s | **3.26 s** | 2% supera 4 s; 0 errores de salida |
 
-El clasificador evaluado y desplegado es Qwen; Jev es una alternativa externa que se midió en local. Se mantiene Qwen: es el más exacto y el más estable en la cola. Los modelos
-chicos no bajan la latencia, porque el piso de ~2.5 s es del endpoint y no del
-tamaño del modelo. Jev sería lo mejor (más exacto que los chicos y 10 veces más
+El clasificador evaluado y desplegado es Qwen; Jev es una alternativa externa
+que se midió en local. Se mantiene Qwen: es el más exacto y el más estable en
+la cola. Los modelos chicos no bajan la latencia, porque el piso de ~2.5 s es
+del endpoint y no del tamaño del modelo. Jev sería lo mejor (más exacto que los chicos y 10 veces más
 rápido), pero la App no puede salir a internet. Las reglas ya se usan donde son
 de alta precisión (letras del menú, confirmación, cancelación en curso,
 seguimiento del estado de un reclamo), y en esos turnos no se llama al LLM.

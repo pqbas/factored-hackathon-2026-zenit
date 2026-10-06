@@ -10,10 +10,6 @@ solo las solicitudes rutinarias que la política del banco permite automatizar y
 deriva el resto a un humano con todo el contexto, para que el cliente nunca
 repita su historia.
 
-## Principales características
-
--
-
 ## Casos de uso
 
 | ID    | Caso                | Acción                                                                                                                               | Volumen | Estado                                    |
@@ -75,12 +71,13 @@ Cada decisión técnica tiene su propio documento en [`docs/`](docs/):
 - [Herramientas sobre Lakebase](docs/14-herramientas-sobre-lakebase.md): por qué
   las herramientas de datos del banco leen `bank_ro` en Lakebase y no las UC
   functions, con el costo medido y cómo correrlo en local.
-- [Observabilidad](docs/15-observabilidad.md): por qué la App de prod no genera trazas
-  de MLflow y qué queda pendiente.
-- [El agente en AWS](docs/16-agente-en-aws.md): el mismo agente en App Runner, con
-  Jev, un token de entrada y la latencia medida.
-- [AgentCore frente a App Runner](docs/17-agentcore-vs-app-runner.md): el análisis de
-  factibilidad de llevar el agente a Bedrock AgentCore Runtime y por qué se eligió App Runner.
+- [Observabilidad](docs/15-observabilidad.md): por qué la App de prod no
+  genera trazas de MLflow y qué queda pendiente.
+- [El agente en AWS](docs/16-agente-en-aws.md): el mismo agente en App Runner,
+  con Jev, un token de entrada y la latencia medida.
+- [AgentCore frente a App Runner](docs/17-agentcore-vs-app-runner.md): si se
+  puede llevar el agente a Bedrock AgentCore Runtime y por qué se eligió App
+  Runner.
 
 ### Grafo principal
 
@@ -131,7 +128,9 @@ seguridad.
 
 ## Agente local para el runner de evaluación
 
-Los tokens de los casos de evaluación están en `configs/eval_sessions.json` (solo para local; la App no lo usa). Cada turno devuelve además `usage`, `model`, `prompt_version` y `classifier` en `custom_outputs`.
+Los tokens de los casos de evaluación están en `configs/eval_sessions.json`
+(solo para local; la App no lo usa). Cada turno devuelve además `usage`,
+`model`, `prompt_version` y `classifier` en `custom_outputs`.
 
 ```bash
 DEMO_SESSIONS_JSON="$(cat configs/eval_sessions.json)" CLASSIFIER=llm uv run start-server --port 8001
@@ -139,7 +138,10 @@ DEMO_SESSIONS_JSON="$(cat configs/eval_sessions.json)" CLASSIFIER=llm uv run sta
 
 ### Contra Lakebase
 
-Las herramientas leen `bank_ro` en Lakebase; no hay camino por MCP. En local usan tu identidad de Databricks, así que hace falta `databricks auth login` y acceso a la instancia `bank-assistant-chat-db`; el detalle está en [docs/14](docs/14-herramientas-sobre-lakebase.md).
+Las herramientas leen `bank_ro` en Lakebase; no hay camino por MCP. En local
+usan tu identidad de Databricks, así que hace falta `databricks auth login` y
+acceso a la instancia `bank-assistant-chat-db`. Detalle en
+[docs/14](docs/14-herramientas-sobre-lakebase.md).
 
 ```bash
 LAKEBASE_INSTANCE=bank-assistant-chat-db DEMO_SESSIONS_JSON="$(cat configs/eval_sessions.json)" CLASSIFIER=llm uv run start-server --port 8001

@@ -15,19 +15,19 @@ Método: perfilado local de las 13 tablas completas (`digital_events` con una mu
 
 | # | Problema | Impacto | Acción |
 |---|---|---|---|
-| 1 | Los CSV traen **BOM UTF-8** antes del primer encabezado | La primera columna (la PK en casi todas las tablas) queda como `﻿customer_id` y silver no la encuentra | Bronze quita el BOM de los nombres de columna |
-| 2 | Las tablas de hechos vienen en carpetas **`year=/month=/day=`** | Auto Loader agrega `year`, `month` y `day` como columnas extra | Bronze ignora esas columnas de partición (`cloudFiles.partitionColumns = ""`); la fecha ya está en `process_date` |
-| 3 | `product_type` viene **en español** ("Tarjeta Crédito", "Préstamo Personal", "Préstamo Hipotecario"…) | `customer_360` separaba saldos de crédito y depósito con nombres en inglés, así que los saldos de crédito salían en 0 | Gold clasifica los productos de crédito con la lista en español (y en inglés, para los datos dummy) |
-| 4 | País escrito de dos formas: **"México"** y "Mexico" (40,515 transacciones) | Agrupaciones y filtros por país partidos en dos | Silver normaliza "Mexico" → "México" (`VALUE_ALIASES`) y registra cuántos valores cambió |
-| 5 | **No existe MXN**: los productos de México están en USD (y parte de los de Colombia y Argentina también) | `customer_360` derivaba la moneda del país ("México → MXN"), lo cual es falso | Gold toma la moneda principal de los productos del cliente (`primary_currency`) |
+| 1 | Los CSV traen BOM UTF-8 antes del primer encabezado | La primera columna (la PK en casi todas las tablas) queda como `﻿customer_id` y silver no la encuentra | Bronze quita el BOM de los nombres de columna |
+| 2 | Las tablas de hechos vienen en carpetas `year=/month=/day=` | Auto Loader agrega `year`, `month` y `day` como columnas extra | Bronze ignora esas columnas de partición (`cloudFiles.partitionColumns = ""`); la fecha ya está en `process_date` |
+| 3 | `product_type` viene en español ("Tarjeta Crédito", "Préstamo Personal", "Préstamo Hipotecario"…) | `customer_360` separaba saldos de crédito y depósito con nombres en inglés, así que los saldos de crédito salían en 0 | Gold clasifica los productos de crédito con la lista en español (y en inglés, para los datos dummy) |
+| 4 | País escrito de dos formas: "México" y "Mexico" (40,515 transacciones) | Agrupaciones y filtros por país partidos en dos | Silver normaliza "Mexico" → "México" (`VALUE_ALIASES`) y registra cuántos valores cambió |
+| 5 | No existe MXN: los productos de México están en USD (y parte de los de Colombia y Argentina también) | `customer_360` derivaba la moneda del país ("México → MXN"), lo cual es falso | Gold toma la moneda principal de los productos del cliente (`primary_currency`) |
 | 6 | IDs reales con formato `CLI-…`; las sesiones demo del agente apuntaban a IDs dummy (`CUS…`) | El agente no habría encontrado clientes | Sesiones demo apuntadas a clientes reales (ver resultados) |
-| 7 | Auto Loader detiene el stream cuando aparece una **columna nueva**, y Databricks marca la tarea como fallida aunque se capture el error | Un cambio de esquema del proveedor rompería la carga | Reintentos a nivel de tarea en bronze (`max_retries: 2`); probado con el caso de prueba de actualización |
-| 8 | **El cómputo serverless de Free Edition no tiene salida a S3** ("Connection reset by peer") | No se puede leer el bucket de Factored desde Databricks en este workspace | Tarea `00_acquire` con tres modos: `s3` (credenciales en el secret scope `factored-datathon`, para workspaces con salida a internet), `archive` y `landing`. Aquí se usa `archive`: `data/scripts/upload_dataset.sh` sube un `.tar.gz` por tabla y Databricks lo extrae |
+| 7 | Auto Loader detiene el stream cuando aparece una columna nueva, y Databricks marca la tarea como fallida aunque se capture el error | Un cambio de esquema del proveedor rompería la carga | Reintentos a nivel de tarea en bronze (`max_retries: 2`); probado con el caso de prueba de actualización |
+| 8 | El cómputo serverless de Free Edition no tiene salida a S3 ("Connection reset by peer") | No se puede leer el bucket de Factored desde Databricks en este workspace | Tarea `00_acquire` con tres modos: `s3` (credenciales en el secret scope `factored-datathon`, para workspaces con salida a internet), `archive` y `landing`. Aquí se usa `archive`: `data/scripts/upload_dataset.sh` sube un `.tar.gz` por tabla y Databricks lo extrae |
 | 9 | Subir 7,671 CSV uno por uno con el CLI es lento (~12 min por tabla) y se corta ("context canceled") | Carga no reproducible | Un archivo comprimido por tabla: 5.1 GB de CSV → ~750 MB, subidos en ~3 min |
 
 ## Controles nuevos
 
-- **Controles de calidad que bloquean en silver:** una tabla con PK nulas, más de 1% de valores imposibles de convertir en alguna columna, una columna NOT NULL ausente, o sin filas, **no se sobrescribe** (queda la última versión buena) y el job falla, así gold no se construye sobre datos malos. Los duplicados de llave no bloquean, porque los reenvíos y las correcciones tardías son legítimos: se resuelven quedándose con la versión más reciente y se reportan.
+- **Controles de calidad que bloquean en silver:** una tabla con PK nulas, más de 1% de valores imposibles de convertir en alguna columna, una columna NOT NULL ausente, o sin filas, no se sobrescribe (queda la última versión buena) y el job falla, así gold no se construye sobre datos malos. Los duplicados de llave no bloquean, porque los reenvíos y las correcciones tardías son legítimos: se resuelven quedándose con la versión más reciente y se reportan.
 - **Severidad en el reporte:** `bank_silver._dq_report` registra cada verificación con `severity` (`critical` / `warning` / `info`).
 - **Caso de prueba de actualización** (`90_test_update_correctness`, job `bank-assistant-data-update-test`): datos sintéticos etiquetados, en esquemas aislados (`test_update_*`), que pasan por los mismos notebooks del pipeline. Verifica cuatro cosas:
   - que bronze lea solo los archivos nuevos;
@@ -35,7 +35,7 @@ Método: perfilado local de las 13 tablas completas (`digital_events` con una mu
   - que los duplicados se eliminen y se reporten;
   - que una columna nueva se conserve y que volver a correr sin archivos nuevos no cambie nada.
 
-  **Resultado: PASS en las 10 verificaciones** (corrida del 2026-09-26):
+  Resultado de la corrida del 2026-09-26: PASS en las 10 verificaciones.
 
   | Entrega | Verificación | Resultado |
   |---|---|---|
@@ -45,7 +45,7 @@ Método: perfilado local de las 13 tablas completas (`digital_events` con una mu
 
 ## Resultado de la carga real (2026-09-26)
 
-Job `bank-assistant-data-pipeline` (`source=archive`, `reset=true`): acquire → bronze → silver → gold, **SUCCESS**, sin bloqueos de calidad.
+Job `bank-assistant-data-pipeline` (`source=archive`, `reset=true`): acquire → bronze → silver → gold, SUCCESS, sin bloqueos de calidad.
 
 | Tabla | Filas en bronze/silver |
 |---|---|

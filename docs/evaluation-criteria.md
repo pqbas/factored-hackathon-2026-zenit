@@ -47,8 +47,10 @@ Backend, frontend, system integration and deployment.
   See [back/README.md](../back/README.md).
 - Front: React chat for customers and an advisor console with the handoff
   inbox. See [flujo-atencion.md](flujo-atencion.md).
-- Deployment: back and agent on AWS App Runner (us-west-2), images in ECR,
-  secrets in Secrets Manager, LLM on Databricks Model Serving. See
+- Deployment: back and agent on AWS App Runner (us-west-2) as `zenit-back`
+  and `zenit-agent`, defined with AWS CDK; images in ECR, secrets in Secrets
+  Manager, LLM on Databricks Model Serving. See
+  [infra/README.md](../infra/README.md),
   [arquitectura-aws-databricks.md](arquitectura-aws-databricks.md) and
   [demo-runbook.md](demo-runbook.md).
 - Tests: 841 automated tests (agent 462, front 133, back 180, ML 66) at the

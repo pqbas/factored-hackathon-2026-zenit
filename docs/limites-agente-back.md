@@ -6,7 +6,7 @@ Estado: **decidido** (28-09-26). Reemplaza lo que digan en contra
 
 ## Regla
 
-Una conversación se guarda en un solo lugar: **la base del back**. El agente es
+Una conversación se guarda en un solo lugar: la base del back. El agente es
 una función `historial → respuesta`, sin memoria entre requests y sin base de
 datos propia.
 

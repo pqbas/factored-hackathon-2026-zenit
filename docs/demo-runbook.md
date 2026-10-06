@@ -1,4 +1,4 @@
-# Demo runbook — customer complaint to advisor, with experimental fraud index
+# Demo runbook: customer complaint to advisor, with experimental fraud index
 
 This runbook demonstrates the deployed customer-to-advisor flow in the existing
 AWS application and explains how to interpret the experimental model index
@@ -15,8 +15,11 @@ experimental index and threshold result.
 ## Prerequisites
 
 - Access to the deployed application:
-  - Web/backend: `https://wzmpasrvja.us-west-2.awsapprunner.com`
-  - Agent: `https://qidmxa8upf.us-west-2.awsapprunner.com`
+  - Web/backend (`zenit-back`): `https://dmm3yembnz.us-west-2.awsapprunner.com`
+  - Agent (`zenit-agent`): `AgentUrl` in `infra/cdk.out/outputs.json`
+  - Both are deployed with AWS CDK (`infra/`). The earlier
+    `bank-assistant-back` and `bank-assistant-agent` URLs were deleted on
+    2026-10-05; the reports under `ml/reports/2026-10-05/` still cite them.
 - Two isolated browser sessions: one customer, one advisor.
 - A demo customer with an active credit-card or savings product and an owned charge.
 
@@ -30,7 +33,7 @@ experimental index and threshold result.
    the chat input. The human-handoff notice appears.
 4. **Advisor login.** In a separate session, sign in as the advisor and open
    Chats / Complaints.
-5. **Open the case.** Select the conversation created in step 2–3.
+5. **Open the case.** Select the conversation created in steps 2 and 3.
 6. **Show the card.** Point out the experimental index (out of 100), the
    frozen-threshold result, and the human-review wording.
 7. **Reload persistence.** Reload the advisor page and reopen the case to show
@@ -38,10 +41,10 @@ experimental index and threshold result.
 
 ## Interpreting the result honestly
 
-- The index is an **uncalibrated model output**, not a validated fraud probability
+- The index is an uncalibrated model output, not a validated fraud probability
   and not model precision. A value such as `3.40 / 100` is not a 3.40% fraud chance.
-- A positive flag does **not** confirm fraud; a negative flag does **not**
-  establish innocence.
+- A positive flag does not confirm fraud; a negative flag does not establish
+  innocence.
 - `review_required` is always true and `automatic_decisions_enabled` is always
   false. Human review is mandatory regardless of the index.
 - Engineering integration success is separate from predictive quality. V7

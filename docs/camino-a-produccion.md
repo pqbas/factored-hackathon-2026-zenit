@@ -1,8 +1,9 @@
 # Camino a producción
 
 Estado: **borrador**. Hoy cubre el costo y la frescura de los datos que lee
-David. Faltan capacidad, monitoreo, controles de acceso y retención (bloque 6
-de `spec/29-09-26-evidencia-hackathon/`).
+David, la observabilidad, la capacidad del LLM, las identidades y dónde corre la
+app. Faltan monitoreo, controles de acceso y retención (bloque 6 de
+`spec/29-09-26-evidencia-hackathon/`).
 
 ## 1. Dónde lee David los datos del banco
 
@@ -78,9 +79,9 @@ por lotes. Lakebase suma otro atraso, el tiempo entre refrescos.
 
 ## 3. Observabilidad
 
-Hoy la App del agente en prod corre **sin tracing**: MLflow intentaba subir cada
-traza a un storage de S3 al que la App no tiene salida, y fallaba en segundo
-plano. Por eso quedó apagado en prod; en local sigue activo.
+Hoy el agente en prod corre sin tracing. En la App de Databricks, MLflow
+intentaba subir cada traza a un storage de S3 al que la App no tiene salida, y
+fallaba en segundo plano. Por eso quedó apagado en prod; en local sigue activo.
 
 De prod queda registrado:
 
@@ -94,8 +95,8 @@ No queda el paso a paso de cada turno: qué herramienta se llamó, con qué
 parámetros y qué devolvió.
 
 Pendiente: elegir una herramienta de trazas. Se evaluarán Langfuse o
-LangSmith (free tier), o una tabla de trazas propia en Lakebase. La elección
-depende de si la App se migra a AWS.
+LangSmith (free tier), o una tabla de trazas propia en Lakebase. El agente ya
+corre en AWS (§6), que sí tiene salida a internet para una herramienta externa.
 
 ## 4. Capacidad del LLM
 
@@ -244,7 +245,7 @@ Por qué en producción:
 - Con tráfico de demo cuesta ~USD 0 (capa gratuita: 1 TB y 10 M de requests
   al mes).
 
-Por qué hoy no está: **la cuenta de AWS no lo permite.** El 05/10/2026 el
+Por qué hoy no está: la cuenta de AWS no lo permite. El 05/10/2026 el
 deploy de CDK falló al crear la distribución con este error:
 
 > Access denied for operation 'AWS::CloudFront::Distribution': Your account

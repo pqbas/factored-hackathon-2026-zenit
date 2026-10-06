@@ -28,18 +28,18 @@ Status (2026-10-05): **Phases 0 and 1 and exploratory V1–V9 experiments are co
 
 Phase 0 measurements: [reports/2026-09-28/profile_report.md](reports/2026-09-28/profile_report.md)
 
-- **4,425,008 rows** (matches previous team count; dictionary says 5,000,000).
-- **4,316 fraud positives (0.0975%)** — severe class imbalance confirmed.
-- **Zero null IDs, zero null labels, zero duplicates.**
-- **Temporal split viable**: train 2,994,597 (3,014 fraud), val 743,909 (699), test 686,502 (603).
-- **fraud_score >= 70 is strongly associated with the label** (999 rows, 100% fraudulent, 0 false positives). Excluded from predictors as a leakage precaution.
-- **76.8% of `merchant_category` is null** (only 6 distinct values among 23% populated). Limited signal.
+- 4,425,008 rows (matches previous team count; dictionary says 5,000,000).
+- 4,316 fraud positives (0.0975%): severe class imbalance confirmed.
+- Zero null IDs, zero null labels, zero duplicates.
+- Temporal split is viable: train 2,994,597 (3,014 fraud), val 743,909 (699), test 686,502 (603).
+- `fraud_score >= 70` is strongly associated with the label (999 rows, 100% fraudulent, 0 false positives). Excluded from predictors as a leakage precaution.
+- 76.8% of `merchant_category` is null (only 6 distinct values among 23% populated). Limited signal.
 - The smoke test validated Spark ML on Serverless environment v4; the full training workload and quality remain under evaluation.
 
 Phase 1 feature contract: [features.py](features.py), validation [reports/2026-09-28/features_report.md](reports/2026-09-28/features_report.md)
 
 - V1 predictors: `amount`, `currency`, `log_abs_amount`, `amount_sign`, `amount_usd_norm`, `transaction_type`, `channel`, `transaction_country`, `merchant_category`, `hour`, `weekday`, `is_weekend`.
-- **Normalized USD amount is viable**: only 2.25% missing (non-USD rows without a conversion), vs 57.3% for raw `amount_usd` (all USD rows lack a conversion because they are already USD). Conversion ratios are internally consistent per currency.
+- Normalized USD amount is viable: only 2.25% missing (non-USD rows without a conversion), vs 57.3% for raw `amount_usd` (all USD rows lack a conversion because they are already USD). Conversion ratios are internally consistent per currency.
 - No fitted preprocessing (imputers/encoders/scalers) in this phase; those are train-only and belong to Phase 2.
 
 ## Model training
@@ -52,15 +52,13 @@ The [review-budget curve](reports/2026-10-03/review_budget_curve_report.md) show
 
 The [fraud-score diagnostic](reports/2026-10-03/fraud_score_validation_diagnostic_report.md) found 100% observed precision at thresholds 50 and 70 on validation, with 37.05% and 21.89% recall respectively. This may be the strongest existing signal, but it must not be used as a real-time feature or rule until its producer confirms it is independent of the label and available before authorization.
 
-The [V5 improvement specification](spec/28-09-26-fraud-model/improvement_v5.md) is implemented through its capacity/encoding branch. A [training-only audit](reports/2026-10-03/train_signal_audit_report.md) confirmed internal-period support. The [V5 execution report](reports/2026-10-04/training_v5_catboost_report.md) records four CatBoost fits, natural-prevalence evaluation, frozen thresholds, and failure to attain supported 20%/50%/80% precision targets. Digital-event features remain unexecuted because SELECT is still blocked. Current negative results do not prove current labels are random, but do not justify a broad repeated parameter sweep on the same signals and inspected validation.
+The [V5 improvement specification](spec/28-09-26-fraud-model/improvement_v5.md) is implemented through its capacity/encoding branch. A [training-only audit](reports/2026-10-03/train_signal_audit_report.md) confirmed internal-period support. The [V5 execution report](reports/2026-10-04/training_v5_catboost_report.md) records four CatBoost fits, natural-prevalence evaluation, frozen thresholds, and failure to attain supported 20%/50%/80% precision targets. Digital-event features were not executed in V5 because SELECT was still blocked at the time. Current negative results do not prove current labels are random, but do not justify a broad repeated parameter sweep on the same signals and inspected validation.
 
-The [V6 advanced challenger](reports/2026-10-04/training_v6_advanced_report.md) completed XGBoost base/enhanced, balanced forest, Isolation Forest, a fixed rank blend, and a shuffled-label control. Enhanced XGBoost was selected, but later ROC-AUC was 0.5023 and frozen approximately 1% review precision **0.106% (8/7,536)**, below V5's 0.161%. No supported 20%/50%/80% precision target was feasible. Its seven new causal features did not produce useful later discrimination; no promotion or deployment occurred. See [V6 research and prerequisites](spec/28-09-26-fraud-model/improvement_v6.md).
+The [V6 advanced challenger](reports/2026-10-04/training_v6_advanced_report.md) completed XGBoost base/enhanced, balanced forest, Isolation Forest, a fixed rank blend, and a shuffled-label control. Enhanced XGBoost was selected, but later ROC-AUC was 0.5023 and frozen approximately 1% review precision 0.106% (8/7,536), below V5's 0.161%. No supported 20%/50%/80% precision target was feasible. Its seven new causal features did not produce useful later discrimination; no promotion or deployment occurred. See [V6 research and prerequisites](spec/28-09-26-fraud-model/improvement_v6.md).
 
 ## Exploratory notebook
 
-[Fraud EDA notebook](notebooks/01_fraud_eda.ipynb) organizes Phases 0/1 into questions, Spark aggregate queries, charts, and interpretation cells. See [execution instructions](notebooks/README.md). It was executed successfully on serverless against Delta version 1. See [the dated EDA report](reports/2026-10-02/eda_report.md) and aggregate evidence JSON.
-
-Phase 0/1 EDA notebook execution: [report](reports/2026-10-02/eda_report.md), [aggregate JSON evidence](reports/2026-10-02/eda_data.json). It ran on 2026-10-02 against Delta v1; no model training or source table writes occurred.
+[Fraud EDA notebook](notebooks/01_fraud_eda.ipynb) organizes Phases 0/1 into questions, Spark aggregate queries, charts, and interpretation cells. See [execution instructions](notebooks/README.md). It ran successfully on serverless on 2026-10-02 against Delta version 1; no model training or source table writes occurred. See [the dated EDA report](reports/2026-10-02/eda_report.md) and [aggregate JSON evidence](reports/2026-10-02/eda_data.json).
 
 ## Dispute integration contract
 
@@ -72,9 +70,9 @@ The ML branch incorporates `main` through commit `20e0e98`. The standalone dispu
 
 ## Executable experimental inference
 
-[V7 execution report](reports/2026-10-05/executable_predictions_report.md) records the native CatBoost artifact, shared training/serving contract and real per-transaction inference. Validation precision is **0.083056%**, below V5; no quality improvement or automatic decision utility is claimed. The original advisor workflow receives the experimental score and threshold flag while preserving human review. Incomplete complaints retain the V5/V6 availability notice.
+[V7 execution report](reports/2026-10-05/executable_predictions_report.md) records the native CatBoost artifact, shared training/serving contract and real per-transaction inference. Validation precision is 0.083056%, below V5; no quality improvement or automatic decision utility is claimed. The original advisor workflow receives the experimental score and threshold flag while preserving human review. Incomplete complaints retain the V5/V6 availability notice.
 
-The native prediction path is now deployed to the existing AWS agent and
+The native prediction path was deployed to the existing AWS agent and
 web/backend with image tag `00539622`. See [verified deployed predictions](reports/2026-10-05/aws_predictions_report.md).
 
 The [persisted web-to-advisor test](reports/2026-10-05/web_end_to_end_report.md) also passed: a customer submitted and confirmed a marked test complaint, and an advisor reopened its stored native prediction after a page reload.
