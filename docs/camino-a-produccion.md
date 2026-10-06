@@ -206,6 +206,11 @@ porque App Runner no ofrece:
 - **Infraestructura como código.** El despliegue ya está en AWS CDK
   (`infra/`) y reemplazó a los scripts de bash. Falta que incluya los service
   principals de Databricks y sus secretos, hoy creados a mano.
+- **Deploy en paralelo.** Hoy CloudFormation crea el agente y después el
+  back (~4 min cada uno), porque el back recibe la URL del agente como
+  variable (`API_PROXY`) al crearse. En producción, el back lee esa URL en
+  runtime (por ejemplo, de un parámetro de SSM que escribe el stack) y los dos
+  servicios se crean y actualizan a la vez.
 - **Login.** El de AWS es de demo (tres usuarios fijos). En producción, SSO
   corporativo para la consola y la identidad del banco para los clientes
   (§5).
