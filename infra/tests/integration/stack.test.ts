@@ -18,6 +18,7 @@ beforeAll(() => {
     backTag: 'backtag1',
     agentTag: 'agenttag1',
     frontDist,
+    cloudfront: true,
   });
   Tags.of(app).add('project', 'zenit');
   template = Template.fromStack(stack);

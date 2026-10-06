@@ -48,6 +48,9 @@ export interface ZenitStackProps extends StackProps {
   agentTag: string;
   // The built front (npm run build in front/), uploaded to the bucket.
   frontDist: string;
+  // CloudFront + S3 in front of the back. Off until AWS verifies the account
+  // for CloudFront; without it the back serves the front, as on the bash setup.
+  cloudfront: boolean;
 }
 
 type Pairs = Record<string, string>;
@@ -197,6 +200,13 @@ export class ZenitStack extends Stack {
       },
     });
 
+    new CfnOutput(this, 'BackUrl', { value: `https://${back.attrServiceUrl}` });
+    new CfnOutput(this, 'AgentUrl', { value: `https://${agent.attrServiceUrl}` });
+    if (!props.cloudfront) {
+      new CfnOutput(this, 'Url', { value: `https://${back.attrServiceUrl}` });
+      return;
+    }
+
     // The front: a private bucket that only CloudFront reads.
     const bucket = new Bucket(this, 'FrontBucket', {
       blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
@@ -248,7 +258,5 @@ export class ZenitStack extends Stack {
     });
 
     new CfnOutput(this, 'Url', { value: `https://${distribution.distributionDomainName}` });
-    new CfnOutput(this, 'BackUrl', { value: `https://${back.attrServiceUrl}` });
-    new CfnOutput(this, 'AgentUrl', { value: `https://${agent.attrServiceUrl}` });
   }
 }

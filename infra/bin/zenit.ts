@@ -16,6 +16,7 @@ new ZenitStack(app, 'ZenitStack', {
   backTag: required('backTag'),
   agentTag: required('agentTag'),
   frontDist: app.node.tryGetContext('frontDist') ?? join(REPO_ROOT, 'front', 'dist'),
+  cloudfront: app.node.tryGetContext('cloudfront') === 'on',
 });
 
 Tags.of(app).add('project', 'zenit');
