@@ -12,6 +12,13 @@ Updated: 2026-09-28. This file preserves working context; it contains no credent
 
 ## Direct workspace verification
 
+> **Status update (2026-09-28):** read access is now working. `SELECT` and
+> `DESCRIBE HISTORY` on `workspace.bank_silver.transactions` succeed with the
+> `personal` profile; Phase 0 profiling and Phase 1 feature validation both ran
+> against Delta version 1. The access-block notes in this section (the
+> `INSUFFICIENT_PERMISSIONS` bullet, the additional access checks and the
+> permission request) are historical and no longer current.
+
 - Host: `https://dbc-184e79fe-04dc.cloud.databricks.com`.
 - CLI: `personal` profile, OAuth authentication with the user's personal account. Do not switch to the owner's identity.
 - Catalog: `workspace`. Visible banking schemas: `bank_bronze`, `bank_silver`, `bank_gold`, `bank_ops`, `bank_uc_consultas`.
@@ -22,11 +29,19 @@ Updated: 2026-09-28. This file preserves working context; it contains no credent
 - SQL warehouse: `07ca55766c9c5097`.
 - An aggregate query on transactions failed with `INSUFFICIENT_PERMISSIONS`: missing `USE SCHEMA` on `workspace.bank_silver`. Visible metadata does not prove SELECT access. No permissions or tables were changed.
 
-> **Status update (2026-09-28):** read access is now working. `SELECT` and
-> `DESCRIBE HISTORY` on `workspace.bank_silver.transactions` succeed with the
-> `personal` profile; Phase 0 profiling and Phase 1 feature validation both ran
-> against Delta version 1. The access-block note above is historical and no
-> longer current.
+### Additional access checks (2026-09-28)
+
+- Actual `SELECT 1 ... LIMIT 1` queries failed because of missing USE SCHEMA on bank_bronze.transactions, bank_silver.transactions, bank_gold.customer_transactions, and bank_ops.dispute_cases. No customer data was returned.
+- The personal account belongs to workspace groups admins, users, and account users. This did not resolve Unity Catalog read permissions.
+- Warehouse 07ca55766c9c5097 ACL: users has CAN_USE and admins has CAN_MANAGE. Queries reach the data permission check.
+- MLflow experiment 945803452603434 (/Users/pcubasm1@gmail.com/bank-assistant-local): admins has CAN_MANAGE according to its ACL; listing experiments is allowed. No run was created and the shared experiment was not modified.
+- clusters list returned no clusters; this does not prove that serverless compute is unavailable. No training was executed.
+- Unity Catalog get-effective queries returned empty objects, even without a principal filter; these are not treated as exhaustive proof of missing privileges.
+- Creating tables/models within the banking schemas is blocked by the confirmed missing USE SCHEMA privilege. No CREATE operations were attempted and creation in other schemas was not checked; the specific CREATE MODEL/CREATE TABLE permissions remain unverified.
+
+### Permissions needed to continue
+
+The owner/administrator must grant the personal account USE CATALOG on workspace, USE SCHEMA on bank_silver, and SELECT on training tables. Also verify CAN USE on the warehouse. ML resource creation and permissions will be planned separately; write access to source tables is unnecessary.
 
 ## Documented ingestion and local code
 
@@ -48,10 +63,6 @@ Objective: estimate fraud risk per transaction and support human review routing;
 8. The article uses PaySim, rule-derived labels, and a random split. We have a supplied label: do not recreate it with rules or attribute real fraud improvements to imitating a synthetic rule.
 9. First verify whether synthetic fraud has learnable signal; report results even if they do not beat the baseline. Do not promise performance.
 10. Proposed future output: a score table with transaction_id, score, version, and timestamp. `bank_ml` was not among the visible schemas, nor was `transaction_risk` among visible gold tables. No model was trained or deployed in this review.
-
-## Permissions needed to continue
-
-The owner/administrator must grant the personal account USE CATALOG on workspace, USE SCHEMA on bank_silver, and SELECT on training tables. Also verify CAN USE on the warehouse. ML resource creation and permissions will be planned separately; write access to source tables is unnecessary.
 
 ## The 13 contract tables
 
@@ -405,14 +416,3 @@ PK: date, source_currency, target_currency. Deduplication order: unspecified.
 | buy_rate | DECIMAL(12,6) | no |
 | sell_rate | DECIMAL(12,6) | no |
 | source | STRING | no |
-
-
-## Additional access checks (2026-09-28)
-
-- Actual `SELECT 1 ... LIMIT 1` queries failed because of missing USE SCHEMA on bank_bronze.transactions, bank_silver.transactions, bank_gold.customer_transactions, and bank_ops.dispute_cases. No customer data was returned.
-- The personal account belongs to workspace groups admins, users, and account users. This did not resolve Unity Catalog read permissions.
-- Warehouse 07ca55766c9c5097 ACL: users has CAN_USE and admins has CAN_MANAGE. Queries reach the data permission check.
-- MLflow experiment 945803452603434 (/Users/pcubasm1@gmail.com/bank-assistant-local): admins has CAN_MANAGE according to its ACL; listing experiments is allowed. No run was created and the shared experiment was not modified.
-- clusters list returned no clusters; this does not prove that serverless compute is unavailable. No training was executed.
-- Unity Catalog get-effective queries returned empty objects, even without a principal filter; these are not treated as exhaustive proof of missing privileges.
-- Creating tables/models within the banking schemas is blocked by the confirmed missing USE SCHEMA privilege. No CREATE operations were attempted and creation in other schemas was not checked; the specific CREATE MODEL/CREATE TABLE permissions remain unverified.

@@ -12,7 +12,7 @@ Documento vivo del frente de datos: qué datos usamos, cómo se procesan, qué s
 | Origen | Dataset sintético de Factored Datathon 2026, `s3://factored-datathon-2026-s3-157725502942-us-east-2-an/data/` (solo lectura) |
 | Contenido | 13 tablas de un banco en México, Colombia y Argentina, del 2023-06-17 al 2026-06-17 |
 | Tamaño | 5.1 GB en CSV, 7,671 archivos. Las 6 dimensiones son un CSV cada una; las 7 tablas de hechos vienen en archivos diarios (`year=/month=/day=`) |
-| Credenciales | Secret scope `factored-datathon` en Databricks. **Nunca en el repo** |
+| Credenciales | Secret scope `factored-datathon` en Databricks. Nunca en el repo |
 | Copia local | `~/factored/hackathon-data/raw/` (fuera del repo) |
 | Tipo de dato | Sintético (no hay datos de clientes reales) |
 

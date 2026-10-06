@@ -44,15 +44,16 @@ BACK_TAG=<tag> AGENT_TAG=<tag> scripts/deploy.sh
 ```
 
 The script builds the front of the current checkout and runs `cdk deploy`.
-The URLs are in `cdk.out/outputs.json`: `Url` is the app's (the back's
-without CloudFront, CloudFront's with it).
+The URLs are in `cdk.out/outputs.json`: `BackUrl`, `AgentUrl`, and `Url`,
+the app's (the back's without CloudFront, CloudFront's with it). Today
+`zenit-back` answers at https://dmm3yembnz.us-west-2.awsapprunner.com.
 
 ## After a deploy
 
-- `https://<cloudfront>/ping` answers 200.
+- `<Url>/ping` answers 200.
 - Sign in, chat as a customer (the reply streams), open the advisor's inbox
   and the metrics.
-- Reloading `https://<cloudfront>/conversations` loads the app.
+- Reloading `<Url>/conversations` loads the app.
 
 ## Notes
 

@@ -1,10 +1,10 @@
 # Arquitectura del agente y modelo de casos de uso
 
-Estado: **propuesta para discutir en el equipo**. El código actual (`agent/agent_server/dispute/`) ya implementa la mayoría de estas piezas para el caso "cargo no reconocido".
+Estado: **propuesta para discutir en el equipo**. El código de esa etapa, hoy en `agent/legacy/agent_server/dispute/`, implementa la mayoría de estas piezas para el caso "cargo no reconocido".
 
 ## 1. Principios
 
-1. **Un solo dominio, en profundidad:** disputas de cargos. El reto premia la profundidad, no la cantidad de flujos. Cada "caso de uso" es una **variante del dominio de disputas**, no un producto nuevo.
+1. **Un solo dominio, en profundidad:** disputas de cargos. El reto premia la profundidad, no la cantidad de flujos. Cada "caso de uso" es una variante del dominio de disputas, no un producto nuevo.
 2. **El LLM entiende; el código decide.** El LLM solo clasifica el mensaje y extrae datos. La ruta, los permisos, la política y las acciones son determinísticos.
 3. **La identidad viene de la sesión**, nunca del texto del chat. Toda consulta filtra por el `customer_id` de la sesión.
 4. **Solo se informan acciones verificadas:** se escribe, se lee de vuelta y recién entonces se le confirma al cliente.
@@ -33,7 +33,7 @@ flowchart TB
 
 ## 3. Qué pasa en cada mensaje
 
-Cada mensaje del cliente recorre las mismas capas. Las marcadas como **núcleo** son compartidas por todos los casos de uso.
+Cada mensaje del cliente recorre las mismas capas. Las marcadas como núcleo son compartidas por todos los casos de uso.
 
 ```mermaid
 flowchart LR
@@ -71,7 +71,7 @@ flowchart LR
 
 ## 4. Qué es un caso de uso (playbook)
 
-Un caso de uso se agrega como un **playbook**: un paquete con contrato fijo, sin tocar el núcleo.
+Un caso de uso se agrega como un playbook: un paquete con contrato fijo, sin tocar el núcleo.
 
 ```
 agent_server/usecases/<id>/
@@ -121,7 +121,11 @@ turns:
 must_not: [mentions_refund_done, other_customer_data]
 ```
 
-Las fichas cumplen tres funciones: **especificación** (qué debe hacer el agente), **test automático** (pytest con datos fijos) y **set de evaluación** (baseline contra LLM, casos inseguros, derivaciones, latencia y costo por caso).
+Las fichas cumplen tres funciones:
+
+- especificación: qué debe hacer el agente;
+- test automático: pytest con datos fijos;
+- set de evaluación: baseline contra LLM, casos inseguros, derivaciones, latencia y costo por caso.
 
 ### Pasos para agregar un caso de uso
 
@@ -142,7 +146,7 @@ Las fichas cumplen tres funciones: **especificación** (qué debe hacer el agent
 | UC-04 | **"Me cobraron pero fue rechazado"** | transaction_status = Declined/Pending | Explicar con datos que no hubo cobro o que está pendiente → no se crea caso |
 | UC-05 | **Reembolso o reverso no recibido** | status = Reversed, merchant | Mostrar el reverso si existe; si no, caso `Open` |
 | UC-06 | **Suscripción no cancelada** (Netflix, Spotify…) | cargos recurrentes del mismo comercio | Listar los recurrentes, disputar el último; informar que la cancelación se hace con el comercio |
-| UC-07 | **Posible tarjeta comprometida** (varios cargos desconocidos o en otro país) | transactions + `transaction_risk` | Derivación **obligatoria** a fraude con recomendación de bloqueo; el agente no bloquea |
+| UC-07 | **Posible tarjeta comprometida** (varios cargos desconocidos o en otro país) | transactions + `transaction_risk` | Derivación obligatoria a fraude con recomendación de bloqueo; el agente no bloquea |
 | UC-08 | **Seguimiento de reclamo** ("¿cómo va mi caso?") | dispute_cases, complaints | Mostrar estado y plazo del caso del cliente; nunca de otro cliente |
 
 ### UC-01 Consultas generales: preguntas que cubre
@@ -172,7 +176,7 @@ Prioridad sugerida: UC-01, UC-02, UC-03, UC-04 y UC-08 primero (usan solo datos 
 
 ## 6. Consola de supervisión y alertas
 
-**Usuario:** un supervisor o analista del banco. Los agentes de IA atienden a los clientes; el supervisor usa la consola para vigilarlos y recibe **alertas priorizadas** de los casos que más le importan al banco. La consola es el "external async system" del diagrama: desde ahí se aprueba, se rechaza o se toma la conversación.
+**Usuario:** un supervisor o analista del banco. Los agentes de IA atienden a los clientes; el supervisor usa la consola para vigilarlos y recibe alertas priorizadas de los casos que más le importan al banco. La consola es el "external async system" del diagrama: desde ahí se aprueba, se rechaza o se toma la conversación.
 
 ```mermaid
 flowchart LR
@@ -201,13 +205,13 @@ flowchart LR
 
 ### Priorización
 
-`prioridad = severidad del tipo × valor del cliente × urgencia (SLA)`. Es una fórmula determinística y cada alerta guarda sus `reasons` (IDs de reglas y valores), así el supervisor sabe **por qué** está arriba en la lista.
+`prioridad = severidad del tipo × valor del cliente × urgencia (SLA)`. Es una fórmula determinística. Cada alerta guarda sus `reasons` (IDs de reglas y valores), así el supervisor sabe por qué está arriba en la lista.
 
 ### Acciones del supervisor
 
 - **Aprobar o rechazar** un caso escalado: el agente se lo comunica al cliente (sección 7).
 - **Tomar la conversación**: el agente pasa a modo pasivo y el humano responde.
-- **Marcar falso positivo o útil**: estas marcas son **etiquetas reales** para mejorar los umbrales y los modelos (fraude y churn).
+- **Marcar falso positivo o útil**: estas marcas son etiquetas reales para mejorar los umbrales y los modelos (fraude y churn).
 
 ### Datos
 
