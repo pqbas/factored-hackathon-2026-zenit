@@ -82,20 +82,60 @@ First-time setup (ECR, IAM roles, secrets, services):
 
 ## Docs
 
-- [Evaluation criteria](docs/evaluation-criteria.md): evidence for each
-  judging dimension.
+Grouped by the hackathon's evaluation dimensions. The evidence for each one,
+with its numbers, is in [Evaluation criteria](docs/evaluation-criteria.md).
+
+### Technical judgment
+
+Architecture, trade-offs, reliability, safety and production readiness.
+
 - [Architecture on AWS + Databricks](docs/arquitectura-aws-databricks.md):
   flow, services and decisions.
+- [Path to production](docs/camino-a-produccion.md): what changes for a real
+  bank, and why (CloudFront, LLM capacity, identities, login).
+- [Agent and back limits](docs/limites-agente-back.md): who stores what.
+- [Agent architecture](docs/agent_architecture.md): shared core, playbooks and
+  human review.
+
+### AI engineering
+
+Backend, frontend, system integration and deployment.
+
+- [Agent](agent/README.md): use cases and technical decisions.
 - [Attention flow](docs/flujo-atencion.md): conversation stages and handoff to
   advisors.
-- [Agent and back limits](docs/limites-agente-back.md): who stores what.
+- [Evaluation of David](docs/evaluacion.md): 60 test cases × 3 runs, before and
+  after, local and production.
+- [Deployment with CDK](infra/README.md): the AWS stack.
+- [Demo runbook](docs/demo-runbook.md).
+
+### Data engineering
+
+Data quality, pipelines, preparation and reproducibility.
+
+- [Data pipeline](data/README.md): data contract and bronze/silver/gold.
+- [Pipeline validation](docs/data_pipeline_validation.md).
 - [Bank data in Lakebase](docs/datos-banco-lakebase.md): synced tables and
   access.
-- [Agent](agent/README.md): use cases and technical decisions.
-- [Data pipeline](data/README.md): data contract and bronze/silver/gold.
+
+### Machine learning
+
+Modeling approach, evaluation, baselines and performance.
+
+- [Fraud model](ml/README.md): features, training and evaluation.
 - [Fraud model proposal](docs/ml_fraud_model_proposal.md).
-- [Admin fraud intelligence dashboard](docs/admin_fraud_dashboard.md): data insights, complaint prediction coverage, and model evaluation at `/fraud`.
-- [Admin retention dashboard](docs/admin_retention_dashboard.md): explainable customer follow-up signals at `/retention`, with asynchronous Databricks reads and shared process caches.
+- [Fraud data reference](docs/fraud_data_reference.md).
+
+### Data analytics
+
+Metrics, insights, visualization and decision support.
+
+- [Admin fraud intelligence dashboard](docs/admin_fraud_dashboard.md): data
+  insights, complaint prediction coverage and model evaluation at `/fraud`.
+- [Admin retention dashboard](docs/admin_retention_dashboard.md): customer
+  follow-up signals at `/retention`.
+- [Analytics serving](docs/admin_analytics_serving.md): how the dashboards read
+  and cache their data.
 
 ## License
 
