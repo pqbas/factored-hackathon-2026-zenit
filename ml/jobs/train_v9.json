@@ -1,0 +1,12 @@
+{
+  "run_name": "V9 longer digital-history fraud challenger",
+  "timeout_seconds": 3600,
+  "tasks": [{
+    "task_key": "train_v9_long_digital",
+    "notebook_task": {"notebook_path": "/Shared/fraud-eda/13_long_digital_history_challenger", "source": "WORKSPACE"},
+    "environment_key": "fraud_v9", "timeout_seconds": 3600, "max_retries": 0
+  }],
+  "environments": [{"environment_key": "fraud_v9", "spec": {
+    "environment_version": "4", "dependencies": ["catboost==1.2.8"]
+  }}]
+}

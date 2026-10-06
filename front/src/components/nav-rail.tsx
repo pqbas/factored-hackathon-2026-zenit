@@ -7,6 +7,8 @@ import {
   Moon,
   Sun,
   Wallet,
+  ShieldCheck,
+  UsersRound,
   type LucideIcon,
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
@@ -75,6 +77,12 @@ const NAV_ITEMS: NavItem[] = [
     icon: ChartColumn,
     isActive: (pathname) => pathname.startsWith('/metrics'),
   },
+  {
+    id: 'fraud', label: (t) => t.nav.fraud, to: '/fraud', section: 'fraud',
+    icon: ShieldCheck, isActive: (pathname) => pathname.startsWith('/fraud'),
+  },
+  { id: 'retention', label: t => t.nav.retention, to: '/retention', section: 'retention', icon: UsersRound,
+    isActive: pathname => pathname.startsWith('/retention') },
 ];
 
 export function NavRail() {

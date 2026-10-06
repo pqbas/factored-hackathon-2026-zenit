@@ -1,4 +1,7 @@
 import { Navigate, Routes, Route } from 'react-router-dom';
+import { lazy, Suspense } from 'react';
+import { Loader2 } from 'lucide-react';
+import { useLang } from '@/contexts/LangContext';
 import { ThemeProvider } from '@/components/theme-provider';
 import { SessionProvider } from '@/contexts/SessionContext';
 import { LangProvider } from '@/contexts/LangContext';
@@ -15,6 +18,13 @@ import ProductsPage from '@/pages/ProductsPage';
 import MetricsPage from '@/pages/MetricsPage';
 import { RequireSection } from '@/components/require-section';
 import { AuthGate } from '@/components/auth-gate';
+
+const FraudDashboardPage = lazy(() => import('@/pages/FraudDashboardPage'));
+const RetentionPage = lazy(() => import('@/pages/RetentionPage'));
+function DashboardLoading() {
+  const { lang } = useLang();
+  return <div role="status" className="flex min-h-64 flex-1 items-center justify-center gap-3 text-sm text-muted-foreground"><Loader2 className="size-5 animate-spin" />{lang === 'pt' ? 'Carregando painel…' : 'Cargando dashboard…'}</div>;
+}
 
 function App() {
   return (
@@ -58,6 +68,8 @@ function App() {
                           </RequireSection>
                         }
                       />
+                      <Route path="fraud" element={<RequireSection section="fraud"><Suspense fallback={<DashboardLoading />}><FraudDashboardPage /></Suspense></RequireSection>} />
+                      <Route path="retention" element={<RequireSection section="retention"><Suspense fallback={<DashboardLoading />}><RetentionPage /></Suspense></RequireSection>} />
                       <Route
                         path="products"
                         element={

@@ -24,7 +24,7 @@ ml/
 └── databricks.yml     # serverless jobs for training and scoring
 ```
 
-Status (2026-10-05): **Phases 0 and 1 and exploratory V1–V7 experiments are complete; no ML candidate is suitable for promotion.** V5 CatBoost completed four candidates; later-period ROC-AUC was 0.5038 and precision 0.161% at a frozen approximately 1% review threshold, without useful improvement. V4's selected tree had assigned a constant score. A separate diagnostic found unusually strong alignment between `fraud_score` and `is_fraud`, but its timing/provenance is unknown, so it may be leakage. The `digital_events` audit remains blocked on `SELECT`, rechecked 2026-10-04. Final test remains unopened.
+Status (2026-10-05): **Phases 0 and 1 and exploratory V1–V9 experiments are complete; no ML candidate is suitable for promotion.** V5 CatBoost completed four candidates; later-period ROC-AUC was 0.5038 and precision 0.161% at a frozen approximately 1% review threshold, without useful improvement. V4's selected tree had assigned a constant score. A separate diagnostic found unusually strong alignment between `fraud_score` and `is_fraud`, but its timing/provenance is unknown, so it may be leakage. Digital-event access now succeeds with the authorized `pqbas` profile; historical personal-profile failures do not establish the deployed application's access. V8/V9 tested five new candidates; longer history increased coverage to 55.53% but did not improve precision. V9 exactly replayed the V7 Gold baseline. Final test remains unopened.
 
 Phase 0 measurements: [reports/2026-09-28/profile_report.md](reports/2026-09-28/profile_report.md)
 
@@ -78,3 +78,32 @@ The native prediction path is now deployed to the existing AWS agent and
 web/backend with image tag `00539622`. See [verified deployed predictions](reports/2026-10-05/aws_predictions_report.md).
 
 The [persisted web-to-advisor test](reports/2026-10-05/web_end_to_end_report.md) also passed: a customer submitted and confirmed a marked test complaint, and an advisor reopened its stored native prediction after a page reload.
+
+## Newly accessible digital-history experiments
+
+The [access and quality audit](reports/2026-10-05/digital_access_and_quality_report.md)
+confirms owner-profile SELECT on digital events. Training-period timestamps have
+sub-day precision, but 2.53 million events have no customer and 2.65 million have
+processing dates earlier than event dates. Production arrival semantics remain
+unverified; experiments use a conservative end-of-processing-day proxy.
+
+[V8 completed](reports/2026-10-05/training_v8_digital_report.md): three CatBoost
+candidates, approximately 6% seven-day coverage, and only 4 true positives among
+7,371 later alerts (precision 0.054267%). It was rejected. Its native V7 comparator
+used Silver inputs; Gold's exchange-rate backfill makes that a source sensitivity,
+not an exact production-input replay.
+
+[V9 completed](reports/2026-10-05/training_v9_digital_report.md): two additional
+candidates, 55.53% coverage, and only 4 true positives among 7,814 later alerts
+(precision 0.051190%). The native V7 Gold replay exactly matches its original
+confusion counts and remains descriptively better. Both experiments were rejected.
+The [dimension timing audit](reports/2026-10-05/dimension_timing_audit_report.md)
+also found approximately one quarter of training transactions precede recorded
+registration/product opening; current snapshots are not reliable historical
+feature revisions. Label and arrival provenance remain the next prerequisites.
+
+To reproduce [V9](spec/28-09-26-fraud-model/improvement_v9.md), render a
+self-contained notebook with `python ml/render_v8.py --phase 9 --output /tmp/v9.py`,
+import it to `/Shared/fraud-eda/13_long_digital_history_challenger`, and submit
+`ml/jobs/train_v9.json` using the authorized owner profile. The 2026 final test,
+source banking tables, grants and current AWS model remain unchanged.

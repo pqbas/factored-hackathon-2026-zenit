@@ -37,6 +37,11 @@ import { toLastMessagePreview } from '../inbox';
 import { getCustomerContext } from '../bank-data';
 import { withHandoff, withHandoffs } from '../handoff-view';
 import { PRICING_ASSUMPTIONS, estimateCostUsd } from '../pricing';
+import fraudSnapshot from '../data/fraud-dashboard.json';
+import { validFraudWindow } from '../fraud-dashboard';
+import { cachedFraudOperations } from '../operational-cache';
+import { liveFraudDashboard, retentionDashboard } from '../analytics-data';
+import type { FraudSnapshot } from '../../../packages/utils/src/fraud-dashboard';
 
 export const advisorRouter: RouterType = Router();
 
@@ -384,6 +389,26 @@ const metricsQuerySchema = z.object({
   from: z.iso.date().optional(),
   to: z.iso.date().optional(),
   tz: z.string().refine(isTimeZone).optional(),
+});
+
+// Historical evidence remains accessible when operational storage is unavailable.
+// Reads cached aggregates immediately; background refreshes only execute SELECTs.
+advisorRouter.get('/fraud-dashboard', requireAdmin, async (req: Request, res: Response) => {
+  const query = metricsQuerySchema.safeParse(req.query);
+  if (!query.success || !query.data.from || !query.data.to
+    || !validFraudWindow(query.data.from, query.data.to)) {
+    return res.status(400).json({ error: 'Provide valid from/to dates spanning at most 31 days and an IANA timezone.' });
+  }
+  res.setHeader('Cache-Control', 'no-store');
+  const window = { from: query.data.from, to: query.data.to, tz: query.data.tz ?? 'UTC' };
+  const operational = cachedFraudOperations(window, req.query.refresh === '1');
+  const analytics = liveFraudDashboard(fraudSnapshot as FraudSnapshot, req.query.refresh === '1');
+  return res.json({ ...analytics, operational, window, refreshedAt: new Date().toISOString() });
+});
+
+advisorRouter.get('/retention-dashboard', requireAdmin, (req: Request, res: Response) => {
+  res.setHeader('Cache-Control', 'no-store');
+  return res.json(retentionDashboard(req.query.refresh === '1'));
 });
 
 /**

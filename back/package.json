@@ -36,6 +36,7 @@
     "db:up": "drizzle-kit up",
     "test": "npm run test:with-db && npm run test:ephemeral",
     "test:unit": "playwright test --config=playwright.unit.config.ts",
+    "test:fraud-dashboard": "playwright test --config=playwright.fraud.config.ts",
     "test:with-db": "PLAYWRIGHT=True TEST_MODE=with-db scripts/playwright-test.sh",
     "test:ephemeral": "PLAYWRIGHT=True TEST_MODE=ephemeral scripts/playwright-test.sh",
     "copy:front": "node scripts/copy-front.mjs"

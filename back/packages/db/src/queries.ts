@@ -35,6 +35,7 @@ import { ChatSDKError } from '@chat-template/core/errors';
 import type { LanguageModelV3Usage } from '@ai-sdk/provider';
 import { isDatabaseAvailable } from './connection';
 import { getAuthMethod, getAuthMethodDescription } from '@chat-template/auth';
+import { fraudDashboardQuery, type FraudAggregateRow } from './fraud-dashboard';
 
 // Re-export User type for external use
 export type { User } from './schema';
@@ -43,6 +44,12 @@ export type { User } from './schema';
 // use the Drizzle adapter for Auth.js / NextAuth
 // https://authjs.dev/reference/adapter/drizzle
 let _db: ReturnType<typeof drizzle>;
+
+// Admin fraud dashboard reads only persisted complaint aggregates.
+export async function getFraudDashboardAggregates(window: { from: string; to: string; tz: string }): Promise<FraudAggregateRow[]> {
+  const rows = await (await ensureDb()).execute(fraudDashboardQuery(window));
+  return Array.from(rows) as unknown as FraudAggregateRow[];
+}
 
 const getOrInitializeDb = async () => {
   if (!isDatabaseAvailable()) {
@@ -1645,4 +1652,3 @@ export async function getLastClosedMessageId({
     .limit(1);
   return row?.id ?? null;
 }
-
