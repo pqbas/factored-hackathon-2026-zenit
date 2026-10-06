@@ -5,13 +5,7 @@ bash scripts (`back/scripts/aws/`, `agent/scripts/aws/`): their services
 `bank-assistant-back` and `bank-assistant-agent` were deleted on 2026-10-05.
 Spec: `spec/05-10-26-cdk-cloudfront/`.
 
-**CloudFront is off today, and production should have it on.** The stack
-can put CloudFront in front (the UI from S3, `/api/*` to the back), but this
-AWS account isn't verified for CloudFront: creating the distribution fails
-with "Your account must be verified before you can add new CloudFront
-resources" (Request ID `77d57753-96d7-4883-b1dc-e2e6ad737cc3`). Until AWS
-Support verifies the account, the back serves the UI, as the bash setup did.
-Why and how to turn it on: [`docs/camino-a-produccion.md`](../docs/camino-a-produccion.md) §6.
+CloudFront is off: see [`docs/camino-a-produccion.md`](../docs/camino-a-produccion.md) §6.
 
 ## What it creates
 
@@ -52,9 +46,6 @@ BACK_TAG=<tag> AGENT_TAG=<tag> scripts/deploy.sh
 The script builds the front of the current checkout and runs `cdk deploy`.
 The URLs are in `cdk.out/outputs.json`: `Url` is the app's (the back's
 without CloudFront, CloudFront's with it).
-
-With CloudFront, once the account is verified: add `-c cloudfront=on` to the
-`cdk deploy` line of `scripts/deploy.sh`, or run it by hand.
 
 ## After a deploy
 
