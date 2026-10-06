@@ -164,8 +164,9 @@ En el prototipo, el cliente se simula con sesiones demo dentro de la misma App
 
 ### Hoy
 
-La app corre en AWS App Runner (us-west-2): un servicio para back + front y
-otro para el agente. Los datos (Lakebase) y el LLM (Qwen) siguen en
+La app corre en AWS App Runner (us-west-2): un servicio para back + front
+(`zenit-back`) y otro para el agente (`zenit-agent`), definidos con AWS CDK en
+[`infra/`](../infra/README.md). Los datos (Lakebase) y el LLM (Qwen) siguen en
 Databricks. Las Apps de Databricks, el despliegue original, están detenidas
 para que todo corra en una sola nube.
 
@@ -202,14 +203,22 @@ porque App Runner no ofrece:
 
 ### Pendiente antes de producción
 
-- **Infraestructura como código.** Hoy se despliega con scripts de bash y la
-  AWS CLI (`back/scripts/aws/`, `agent/scripts/aws/`). En producción,
-  Terraform o CDK, que incluya los service principals de Databricks y sus
-  secretos, hoy creados a mano.
-- **Login.** El de AWS es de demo (tres usuarios fijos). En producción, SSO
-  corporativo para la consola y la identidad del banco para los clientes
-  (§5).
-- **Front.** Hoy lo sirve el back. En producción, S3 + CloudFront.
+- **Infraestructura como código.** El despliegue ya está en AWS CDK
+  (`infra/`) y reemplazó a los scripts de bash. Falta que incluya los service
+  principals de Databricks y sus secretos, hoy creados a mano.
+- **Deploy en paralelo.** Hoy CloudFormation crea el agente y después el
+  back (~4 min cada uno), porque el back recibe la URL del agente como
+  variable (`API_PROXY`) al crearse. En producción, el back lee esa URL en
+  runtime (por ejemplo, de un parámetro de SSM que escribe el stack) y los dos
+  servicios se crean y actualizan a la vez.
+- **Login.** El de AWS es de demo: tres usuarios fijos con contraseña, que
+  además se muestran en la pantalla de login. En producción, SSO corporativo
+  para la consola y la identidad del banco para los clientes (§5), siempre con
+  segundo factor por app autenticadora (TOTP, como Google o Microsoft
+  Authenticator) en vez de depender solo de una contraseña. Las credenciales
+  de la demo se quitan (secret `demo-logins`).
+- **Front con CloudFront.** Hoy lo sirve el back. En producción, S3 +
+  CloudFront: ver la sección siguiente.
 - **Cuenta de AWS.** Los recursos se crearon con la cuenta raíz. En
   producción, usuarios o roles IAM con permisos acotados.
 - **Agente sin servidor.** Amazon Bedrock AgentCore Runtime cobra solo por
@@ -217,3 +226,38 @@ porque App Runner no ofrece:
   después: exige imagen ARM64, firmar las llamadas con SigV4 y leer los
   secretos por código, y varios puntos de su contrato no están confirmados en
   la documentación.
+
+### CloudFront: por qué no está hoy y por qué sí en producción
+
+**En producción, la app tiene que estar detrás de CloudFront.** El stack de
+CDK ya lo trae: el front sale de un bucket S3 privado y `/api/*` va al back en
+App Runner, sin caché. Se activa con `-c cloudfront=on` en el deploy
+([`infra/README.md`](../infra/README.md)).
+
+Por qué en producción:
+
+- El front (HTML, JS, CSS) se sirve desde la red de borde de AWS, cerca del
+  cliente, y el back solo atiende la API.
+- Permite dominio propio con certificado (ACM) y poner AWS WAF y Shield
+  delante de la app.
+- Un solo origen para el front y la API, sin CORS.
+- Con tráfico de demo cuesta ~USD 0 (capa gratuita: 1 TB y 10 M de requests
+  al mes).
+
+Por qué hoy no está: **la cuenta de AWS no lo permite.** El 05/10/2026 el
+deploy de CDK falló al crear la distribución con este error:
+
+> Access denied for operation 'AWS::CloudFront::Distribution': Your account
+> must be verified before you can add new CloudFront resources. To verify
+> your account, please contact AWS Support.
+> (Request ID `77d57753-96d7-4883-b1dc-e2e6ad737cc3`)
+
+- Es una restricción de cuentas nuevas o con poco uso, no del código.
+- Cambiar de región no sirve: CloudFront es global y el bloqueo es de la
+  cuenta.
+- La misma cuenta tiene un tope de 2 servicios App Runner por región, así que
+  tampoco se puede correr un despliegue en paralelo para probar.
+- Se destraba con un caso en AWS Support (*Account and billing*, gratis),
+  pidiendo verificar la cuenta 335741630127 para CloudFront. Después basta un
+  deploy con `-c cloudfront=on`.
+
