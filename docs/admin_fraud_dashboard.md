@@ -127,7 +127,7 @@ are unchanged. No source data or schema was modified; narrowly scoped Databricks
 read privileges were added to the existing backend identity.
 
 Administrators can use the shield icon in the left navigation or open
-[the published fraud dashboard](https://wzmpasrvja.us-west-2.awsapprunner.com/fraud).
+[the published fraud dashboard](https://dmm3yembnz.us-west-2.awsapprunner.com/fraud).
 Actual service OAuth reads, complaint aggregates and protected admin APIs passed
 live verification. Published browser checks exercised all views and five viewport
 widths with no JavaScript errors; customer/advisor APIs returned 403. See the

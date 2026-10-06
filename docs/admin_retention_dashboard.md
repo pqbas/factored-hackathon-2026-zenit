@@ -70,6 +70,6 @@ See [serving and cache policies](admin_analytics_serving.md) for deadlines,
 failure handling, read-only boundaries and deployment limitations.
 
 The module is deployed at
-[Zenit retention](https://wzmpasrvja.us-west-2.awsapprunner.com/retention).
+[Zenit retention](https://dmm3yembnz.us-west-2.awsapprunner.com/retention).
 See the [AWS deployment report](../ml/reports/2026-10-05/aws_admin_analytics_report.md)
 for live source verification, cache timings and admin-only browser checks.
