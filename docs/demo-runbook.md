@@ -15,8 +15,8 @@ experimental index and threshold result.
 ## Prerequisites
 
 - Access to the deployed application:
-  - Web/backend: `https://wzmpasrvja.us-west-2.awsapprunner.com`
-  - Agent: `https://qidmxa8upf.us-west-2.awsapprunner.com`
+  - Web/backend: `https://dmm3yembnz.us-west-2.awsapprunner.com`
+  - Agent: `https://5uiztf2nck.us-west-2.awsapprunner.com`
 - Two isolated browser sessions: one customer, one advisor.
 - A demo customer with an active credit-card or savings product and an owned charge.
 
