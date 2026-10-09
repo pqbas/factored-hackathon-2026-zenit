@@ -214,7 +214,7 @@ async def streaming(
         last_done = event
     custom_outputs = turn_custom_outputs(
         thread_id, turn["classification"], turn["use_case"], settings.guardrail_threshold,
-        turn["handoff"], turn["paused"], usage.totals(), settings.llm_endpoint, prompt_version(),
+        turn["handoff"], turn["paused"], usage.totals(), settings.llm_model if settings.llm_provider == "anthropic" else settings.llm_endpoint, prompt_version(),
         settings.classifier, turn["guard"],
     )
     if turn.get("fraud_assessment") is not None:
