@@ -2,7 +2,6 @@ import {
   CfnOutput,
   Duration,
   RemovalPolicy,
-  SecretValue,
   Stack,
   type StackProps,
 } from 'aws-cdk-lib';
@@ -56,12 +55,6 @@ export interface ZenitStackProps extends StackProps {
 type Pairs = Record<string, string>;
 const pairs = (values: Pairs) =>
   Object.entries(values).map(([name, value]) => ({ name, value }));
-
-// A JSON field of a secret as a CloudFormation dynamic reference, resolved at
-// deploy time. Only for fields that aren't secret (host, client id): the bash
-// setups read them from the same secret.
-const field = (arn: string, jsonField: string) =>
-  SecretValue.secretsManager(arn, { jsonField }).unsafeUnwrap();
 
 export class ZenitStack extends Stack {
   constructor(scope: Construct, id: string, props: ZenitStackProps) {
@@ -142,7 +135,8 @@ export class ZenitStack extends Stack {
     };
 
     const agentSecrets = {
-      DATABRICKS_CLIENT_SECRET: `${SECRETS.agentSp}:DATABRICKS_CLIENT_SECRET::`,
+      POSTGRES_URL: SECRETS.neonUrl,
+      ANTHROPIC_API_KEY: SECRETS.anthropicKey,
       JEV_API_KEY: SECRETS.jevApiKey,
       AGENT_TOKEN: SECRETS.agentToken,
     };
@@ -151,14 +145,13 @@ export class ZenitStack extends Stack {
       image: image(ECR_REPOS.agent, props.agentTag),
       healthPath: '/health',
       role: instanceRole('AgentInstanceRole', NAMES.agentInstanceRole, [
-        SECRETS.agentSp,
+        SECRETS.neonUrl,
+        SECRETS.anthropicKey,
         SECRETS.jevApiKey,
         SECRETS.agentToken,
       ]),
       env: {
         ...AGENT_ENV,
-        DATABRICKS_HOST: field(SECRETS.agentSp, 'DATABRICKS_HOST'),
-        DATABRICKS_CLIENT_ID: field(SECRETS.agentSp, 'DATABRICKS_CLIENT_ID'),
         DEMO_SESSIONS_JSON: readAppYamlEnv(
           join(REPO_ROOT, 'agent', 'app.yaml'),
           'DEMO_SESSIONS_JSON',
@@ -167,13 +160,12 @@ export class ZenitStack extends Stack {
       secrets: agentSecrets,
     });
 
-    const backClientId = field(SECRETS.backSp, 'DATABRICKS_CLIENT_ID');
     const back = service('BackService', {
       name: NAMES.back,
       image: image(ECR_REPOS.back, props.backTag),
       healthPath: '/ping',
       role: instanceRole('BackInstanceRole', NAMES.backInstanceRole, [
-        SECRETS.backSp,
+        SECRETS.neonUrl,
         SECRETS.sessionSecret,
         SECRETS.demoUsers,
         SECRETS.demoLogins,
@@ -181,10 +173,6 @@ export class ZenitStack extends Stack {
       ]),
       env: {
         ...BACK_ENV,
-        DATABRICKS_HOST: field(SECRETS.backSp, 'DATABRICKS_HOST'),
-        DATABRICKS_CLIENT_ID: backClientId,
-        // The back's principal is also its Postgres role on Lakebase.
-        PGUSER: backClientId,
         API_PROXY: `https://${agent.attrServiceUrl}/invocations`,
         DEMO_CUSTOMERS_JSON: readAppYamlEnv(
           join(REPO_ROOT, 'back', 'app.yaml'),
@@ -192,7 +180,8 @@ export class ZenitStack extends Stack {
         ),
       },
       secrets: {
-        DATABRICKS_CLIENT_SECRET: `${SECRETS.backSp}:DATABRICKS_CLIENT_SECRET::`,
+        POSTGRES_URL: SECRETS.neonUrl,
+        BANK_POSTGRES_URL: SECRETS.neonUrl,
         SESSION_SECRET: SECRETS.sessionSecret,
         DEMO_USERS_JSON: SECRETS.demoUsers,
         DEMO_LOGINS_JSON: SECRETS.demoLogins,

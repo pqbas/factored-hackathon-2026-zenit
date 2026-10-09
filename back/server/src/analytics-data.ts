@@ -6,6 +6,7 @@ import type {
 import type { FraudSnapshot } from '../../packages/utils/src/fraud-dashboard';
 import { AnalyticsCache } from './analytics-cache';
 import { analyticsWarehouseQuery } from './analytics-warehouse';
+import { analyticsSnapshotQuery, type SnapshotName } from './analytics-snapshot';
 import { RETENTION_SQL } from './retention-sql';
 import { FRAUD_LIVE_SQL } from './fraud-live-sql';
 import { z } from 'zod';
@@ -230,9 +231,16 @@ export function parseLiveFraud(
   return data;
 }
 
+// ANALYTICS_SOURCE=snapshot reads the warehouse result stored in Postgres, for
+// deployments without Databricks; it is still the Databricks SQL result.
+const analyticsQuery = (name: SnapshotName, statement: string) =>
+  process.env.ANALYTICS_SOURCE === 'snapshot'
+    ? analyticsSnapshotQuery(name)
+    : analyticsWarehouseQuery(statement);
+
 const retentionCache = new AnalyticsCache(async () => {
   const started = Date.now();
-  const result = await analyticsWarehouseQuery(RETENTION_SQL);
+  const result = await analyticsQuery('retention', RETENTION_SQL);
   return {
     data: parseRetention(result.rows),
     statementId: result.statementId,
@@ -241,7 +249,7 @@ const retentionCache = new AnalyticsCache(async () => {
 });
 const fraudCache = new AnalyticsCache(async () => {
   const started = Date.now();
-  const result = await analyticsWarehouseQuery(FRAUD_LIVE_SQL);
+  const result = await analyticsQuery('fraud_live', FRAUD_LIVE_SQL);
   return {
     data: parseLiveFraud(result.rows),
     statementId: result.statementId,

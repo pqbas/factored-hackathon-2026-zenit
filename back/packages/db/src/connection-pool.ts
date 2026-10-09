@@ -13,8 +13,11 @@ let currentToken: string | null = null;
 
 async function getConnection(): Promise<postgres.Sql> {
   const { default: postgres } = await import('postgres');
-  // Get the current token to check if it's changed
-  const freshToken = await getDatabricksToken();
+  // Get the current token to check if it's changed. A POSTGRES_URL carries its
+  // own credentials, so there is no token to renew.
+  const freshToken = process.env.POSTGRES_URL
+    ? null
+    : await getDatabricksToken();
 
   // If we have a connection but the token has changed, we need to recreate the connection
   // This ensures we're always using a valid token

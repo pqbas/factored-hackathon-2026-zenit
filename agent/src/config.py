@@ -7,6 +7,7 @@ from dataclasses import dataclass
 @dataclass(frozen=True)
 class Settings:
     llm_endpoint: str
+    llm_model: str
     tracing_enabled: bool
     demo_sessions_json: str | None
     classifier: str
@@ -20,6 +21,8 @@ class Settings:
     uc_catalog: str
     lakebase_instance: str
     lakebase_database: str
+    postgres_url: str | None
+    llm_provider: str
     bank_ro_schema: str
     sim_sessions_table: str
     agent_token: str | None
@@ -30,6 +33,7 @@ class Settings:
     def from_env(cls) -> "Settings":
         return cls(
             llm_endpoint=os.getenv("LLM_ENDPOINT", "databricks-qwen3-next-80b-a3b-instruct"),
+            llm_model=os.getenv("LLM_MODEL", "claude-haiku-5-5"),
             # MLflow tracing (on by default); the App turns it off: see docs/15.
             tracing_enabled=os.getenv("AGENT_TRACING", "on").strip().lower() not in ("off", "false", "0"),
             demo_sessions_json=os.getenv("DEMO_SESSIONS_JSON"),
@@ -46,6 +50,10 @@ class Settings:
             # lakebase (default) reads bank_ro in Lakebase; mcp is the rollback to the UC functions.
             lakebase_instance=os.getenv("LAKEBASE_INSTANCE", "bank-assistant-chat-db"),
             lakebase_database=os.getenv("LAKEBASE_DATABASE", "databricks_postgres"),
+            # A Postgres URL with its own credentials (e.g. Neon) replaces Lakebase when set.
+            postgres_url=os.getenv("POSTGRES_URL") or None,
+            # databricks (Model Serving, LLM_ENDPOINT) or anthropic (Claude API, LLM_MODEL).
+            llm_provider=os.getenv("LLM_PROVIDER", "databricks"),
             bank_ro_schema=os.getenv("BANK_RO_SCHEMA", "bank_ro"),
             # The daily simulation's sessions (sim- tokens), written by the back's script.
             sim_sessions_table=os.getenv("SIM_SESSIONS_TABLE", "bank_sessions.sim_sessions"),

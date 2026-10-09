@@ -31,22 +31,23 @@ const secret = (nameWithSuffix: string) =>
   `arn:aws:secretsmanager:${REGION}:${ACCOUNT}:secret:${nameWithSuffix}`;
 
 export const SECRETS = {
-  backSp: secret('bank-assistant/databricks-sp-ZWeFJQ'),
+  // Neon Postgres URL (chats and the bank tables) and the Claude API key: the
+  // runtime left Databricks when its trial ended (docs/camino-a-produccion.md).
+  neonUrl: secret('zenit/neon-url-SUFFIX'),
+  anthropicKey: secret('zenit/anthropic-api-key-SUFFIX'),
   sessionSecret: secret('bank-assistant/back/session-secret-8h9UPV'),
   demoUsers: secret('bank-assistant/back/demo-users-C7E3g7'),
   demoLogins: secret('bank-assistant/back/demo-logins-RzcYcV'),
   agentToken: secret('bank-assistant/agent/invoke-token-4dU7bK'),
-  agentSp: secret('bank-assistant/agent/databricks-sp-WXpSqx'),
   jevApiKey: secret('bank-assistant/agent/jev-api-key-PVw714'),
 };
 
 export const BACK_ENV = {
   AUTH_MODE: 'password',
   AGENT_QUEUE_WORKER: 'on',
-  PGHOST: 'ep-twilight-pond-d1ie80dl.database.us-west-2.cloud.databricks.com',
-  PGDATABASE: 'databricks_postgres',
-  PGPORT: '5432',
-  PGSSLMODE: 'require',
+  // The fraud and retention dashboards read the warehouse result stored in
+  // Neon (back/scripts/snapshot-analytics.ts).
+  ANALYTICS_SOURCE: 'snapshot',
   ADMIN_EMAILS: 'admin@demo.bank-assistant.example',
   ADVISOR_EMAILS: 'asesor@demo.bank-assistant.example',
 };
@@ -54,9 +55,8 @@ export const BACK_ENV = {
 export const AGENT_ENV = {
   CLASSIFIER: 'jev',
   AGENT_TRACING: 'off',
-  LLM_ENDPOINT: 'databricks-qwen3-next-80b-a3b-instruct',
-  LAKEBASE_INSTANCE: 'bank-assistant-chat-db',
-  LAKEBASE_DATABASE: 'databricks_postgres',
+  LLM_PROVIDER: 'anthropic',
+  LLM_MODEL: 'claude-haiku-5-5',
 };
 
 // One variable of a Databricks App's app.yaml (`env: [{name, value}]`), the

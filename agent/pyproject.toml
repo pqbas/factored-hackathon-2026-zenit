@@ -21,6 +21,8 @@ dependencies = [
     "pydantic",
     "pyyaml",
     "catboost==1.2.8",
+    "langchain-anthropic>=1.0",
+    "psycopg-pool>=3.2",
 ]
 
 [build-system]
