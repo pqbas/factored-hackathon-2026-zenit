@@ -11,7 +11,7 @@ import {
 import { createDatabricksProvider } from '@databricks/ai-sdk-provider';
 import { extractReasoningMiddleware, wrapLanguageModel } from 'ai';
 import { shouldInjectContextForEndpoint } from './request-context';
-import { setAgentAuth } from './agent-auth';
+import { setAgentAuth, usesAgentToken } from './agent-auth';
 
 // Header keys for passing context through streamText headers
 export const CONTEXT_HEADER_CONVERSATION_ID = 'x-databricks-conversation-id';
@@ -428,9 +428,14 @@ async function getOrCreateDatabricksProvider(): Promise<CachedProvider> {
   }
 
   console.log('Creating new OAuth provider');
-  // Ensure we have a valid token before creating provider
-  await getProviderToken();
-  const hostname = await getWorkspaceHostname();
+  // Ensure we have a valid token before creating provider. With API_PROXY and
+  // AGENT_TOKEN every request goes to the agent with its own secret, so no
+  // Databricks token or workspace is needed (formatUrl ignores the base URL).
+  const proxyOnly = usesAgentToken();
+  if (!proxyOnly) await getProviderToken();
+  const hostname = proxyOnly
+    ? 'http://unused.invalid'
+    : await getWorkspaceHostname();
 
   // Create provider with fetch that always uses fresh token
 const provider = createDatabricksProvider({
