@@ -9,6 +9,8 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.tools import StructuredTool
 from pydantic import BaseModel, Field, ValidationError, create_model
 
+from src.llm.chat import text_of
+
 logger = logging.getLogger(__name__)
 
 # docs/flujo-atencion.md, etapa 5: the local tool the LLM calls once the customer confirmed
@@ -219,5 +221,5 @@ async def case_summary(llm, reason: str, verified_data: dict) -> str | None:
     except Exception as exc:  # noqa: BLE001 - the summary is optional
         logger.warning("Case summary failed: %s", type(exc).__name__)
         return None
-    text = reply.content if isinstance(reply.content, str) else ""
+    text = text_of(reply.content)
     return text.strip() or None

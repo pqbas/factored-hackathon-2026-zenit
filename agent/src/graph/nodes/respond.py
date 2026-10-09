@@ -4,6 +4,8 @@ from pathlib import Path
 
 from langchain_core.messages import AIMessage, SystemMessage, ToolMessage
 
+from src.config import settings
+from src.llm.chat import text_of
 from src.graph.state import AgentState
 from src.prompts.advisor import strip_advisor_prefix
 from src.prompts.situations import SITUATIONS, fixed_reply, situation_for
@@ -91,8 +93,8 @@ async def _respond(
 
 def _without_advisor_prefix(reply):
     # The LLM may imitate the advisor turns in the history; the customer never sees the prefix.
-    if isinstance(reply.content, str):
-        return reply.model_copy(update={"content": strip_advisor_prefix(reply.content)})
+    if isinstance(reply.content, (str, list)):
+        return reply.model_copy(update={"content": strip_advisor_prefix(text_of(reply.content))})
     return reply
 
 
@@ -116,7 +118,9 @@ async def _respond_with_tools(
     # with made-up figures, since the history only holds earlier replies, never tool results.
     # On the customer's yes to the confirmation question the LLM once rewrote the summary
     # instead of handing off, so that turn forces the handoff tool.
-    forced = HANDOFF_TOOL_NAME if state.get("confirmation") and route.handoff_reason else "required"
+    # "required" is the OpenAI-style name Databricks takes; Claude calls it "any".
+    any_tool = "any" if settings.llm_provider == "anthropic" else "required"
+    forced = HANDOFF_TOOL_NAME if state.get("confirmation") and route.handoff_reason else any_tool
     first_llm = llm.bind_tools(tools, tool_choice=forced)
 
     messages = [SystemMessage(content=system_prompt), *state["messages"]]
@@ -191,7 +195,7 @@ async def _respond_with_tools(
 
 
 def _text(reply) -> str:
-    return reply.content if isinstance(reply.content, str) else ""
+    return text_of(reply.content)
 
 
 def _last_customer_text(state: AgentState) -> str:

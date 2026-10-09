@@ -10,7 +10,7 @@ import uuid  # noqa: E402
 from typing import Any, AsyncGenerator, AsyncIterator  # noqa: E402
 
 import mlflow  # noqa: E402
-from langchain_core.messages import AIMessageChunk, ToolMessage  # noqa: E402
+from langchain_core.messages import AIMessage, AIMessageChunk, ToolMessage  # noqa: E402
 from mlflow.genai.agent_server import (  # noqa: E402
     AgentServer,
     invoke,
@@ -31,7 +31,7 @@ from src.db.session_repo import resolve_session  # noqa: E402
 from src.graph.build import GRAPH_NODES, build_graph  # noqa: E402
 from src.diag import add_latency_route, build_probes  # noqa: E402
 from src.inbound_auth import add_token_check  # noqa: E402
-from src.llm.chat import get_chat_model  # noqa: E402
+from src.llm.chat import get_chat_model, text_of  # noqa: E402
 from src.llm.jev import JevClient  # noqa: E402
 from src.llm.llm_classifier import LLMClassifier  # noqa: E402
 from src.llm.usage import TurnUsage  # noqa: E402
@@ -110,6 +110,8 @@ async def _process_agent_astream_events(
                     for msg in node_data["messages"]:
                         if isinstance(msg, ToolMessage) and not isinstance(msg.content, str):
                             msg.content = json.dumps(msg.content)
+                        elif isinstance(msg, AIMessage) and isinstance(msg.content, list):
+                            msg.content = text_of(msg.content)
                     for item in output_to_responses_items_stream(node_data["messages"]):
                         yield item
         elif event[0] == "messages":
@@ -122,7 +124,7 @@ async def _process_agent_astream_events(
                 # hand_off_to_advisor call, and none of it may reach the customer.
                 if turn.get("use_case"):
                     continue
-                if isinstance(chunk, AIMessageChunk) and (content := chunk.content):
+                if isinstance(chunk, AIMessageChunk) and (content := text_of(chunk.content)):
                     if delta := prefix_filter.feed(chunk.id, content):
                         yield ResponsesAgentStreamEvent(
                             **create_text_delta(delta=delta, item_id=chunk.id)

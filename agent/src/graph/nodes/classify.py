@@ -5,6 +5,7 @@ import logging
 import mlflow
 from langchain_core.messages import AIMessage, HumanMessage
 
+from src.llm.chat import text_of
 from src.config import settings
 from src.graph.state import AgentState
 from src.llm.fallback import (
@@ -56,7 +57,7 @@ def conversation_language(
 
 
 def _text(message: HumanMessage) -> str:
-    return message.content if isinstance(message.content, str) else str(message.content)
+    return text_of(message.content)
 
 
 _SUBMENUS = {
@@ -87,7 +88,7 @@ def _transcript(messages: list, start: int = 0) -> str | None:
         earlier = earlier[:-1]
     lines = []
     for message in earlier[-_TRANSCRIPT_MESSAGES:]:
-        content = message.content if isinstance(message.content, str) else str(message.content)
+        content = text_of(message.content)
         if isinstance(message, HumanMessage):
             lines.append(f"Cliente: {mask_sensitive(content)}")
         elif isinstance(message, AIMessage) and content.lstrip().startswith(ADVISOR_PREFIX):
