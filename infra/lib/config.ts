@@ -33,8 +33,8 @@ const secret = (nameWithSuffix: string) =>
 export const SECRETS = {
   // Neon Postgres URL (chats and the bank tables) and the Claude API key: the
   // runtime left Databricks when its trial ended (docs/camino-a-produccion.md).
-  neonUrl: secret('zenit/neon-url-SUFFIX'),
-  anthropicKey: secret('zenit/anthropic-api-key-SUFFIX'),
+  neonUrl: secret('zenit/neon-url-HjMKVg'),
+  anthropicKey: secret('zenit/anthropic-api-key-mIdKhx'),
   sessionSecret: secret('bank-assistant/back/session-secret-8h9UPV'),
   demoUsers: secret('bank-assistant/back/demo-users-C7E3g7'),
   demoLogins: secret('bank-assistant/back/demo-logins-RzcYcV'),
